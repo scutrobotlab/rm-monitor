@@ -1,0 +1,238 @@
+[
+  {
+    "currentMatch": {
+      "id": "18995",
+      "round": 2,
+      "totalRound": 3,
+      "orderNumber": 20,
+      "matchType": "GROUP",
+      "blueSideId": "38115",
+      "blueSide": {
+        "id": "38115",
+        "fillStatus": "DONE",
+        "fillSourceId": "2181",
+        "fillSourceType": "Group",
+        "fillSourceNumber": 8,
+        "playerId": "9216",
+        "player": {
+          "name": "A8",
+          "team": {
+            "id": "183",
+            "collegeLogo": "https://rm-static.djicdn.com/games-backend/2405986e-23a2-4c27-b8e5-04faf04bf2fa",
+            "collegeName": "南京航空航天大学金城学院",
+            "name": "Born of Fire",
+            "logo": ""
+          }
+        }
+      },
+      "redSideId": "38114",
+      "redSide": {
+        "id": "38114",
+        "fillStatus": "DONE",
+        "fillSourceId": "2181",
+        "fillSourceType": "Group",
+        "fillSourceNumber": 7,
+        "playerId": "9209",
+        "player": {
+          "name": "A4",
+          "team": {
+            "id": "755",
+            "collegeLogo": "https://rm-static.djicdn.com/games-backend/01c74eed-fc6a-425d-80ef-15b9ef1ec1d4",
+            "collegeName": "齐鲁工业大学",
+            "name": "Adam",
+            "logo": ""
+          }
+        }
+      },
+      "redSideScore": 0,
+      "blueSideScore": 0,
+      "blueSideWinGameCount": 1,
+      "planGameCount": 3,
+      "planStartedAt": "2024-05-16T00:30:00Z",
+      "redSideWinGameCount": 0,
+      "winnerPlaceholdName": null,
+      "loserPlaceholdName": null,
+      "slug": null,
+      "slugName": "2",
+      "status": "WAITING",
+      "zone": {
+        "id": "498",
+        "name": "东部赛区",
+        "zoneType": "GROUP_ZONE",
+        "eventId": "174",
+        "event": {
+          "id": "174",
+          "title": "RoboMaster 2024超级对抗赛"
+        }
+      }
+    },
+    "nextMatch": {
+      "id": "18995",
+      "round": 1,
+      "totalRound": 3,
+      "orderNumber": 20,
+      "matchType": "GROUP",
+      "blueSideId": "38115",
+      "blueSide": {
+        "id": "38115",
+        "fillStatus": "DONE",
+        "fillSourceId": "2181",
+        "fillSourceType": "Group",
+        "fillSourceNumber": 8,
+        "playerId": "9216",
+        "player": {
+          "name": "A8",
+          "team": {
+            "id": "183",
+            "collegeLogo": "https://rm-static.djicdn.com/games-backend/2405986e-23a2-4c27-b8e5-04faf04bf2fa",
+            "collegeName": "南京航空航天大学金城学院",
+            "name": "Born of Fire",
+            "logo": ""
+          }
+        }
+      },
+      "redSideId": "38114",
+      "redSide": {
+        "id": "38114",
+        "fillStatus": "DONE",
+        "fillSourceId": "2181",
+        "fillSourceType": "Group",
+        "fillSourceNumber": 7,
+        "playerId": "9209",
+        "player": {
+          "name": "A4",
+          "team": {
+            "id": "755",
+            "collegeLogo": "https://rm-static.djicdn.com/games-backend/01c74eed-fc6a-425d-80ef-15b9ef1ec1d4",
+            "collegeName": "齐鲁工业大学",
+            "name": "Adam",
+            "logo": ""
+          }
+        }
+      },
+      "redSideScore": 0,
+      "blueSideScore": 0,
+      "blueSideWinGameCount": 0,
+      "planGameCount": 3,
+      "planStartedAt": "2024-05-16T00:30:00Z",
+      "redSideWinGameCount": 0,
+      "winnerPlaceholdName": null,
+      "loserPlaceholdName": null,
+      "slug": null,
+      "slugName": "2",
+      "status": "WAITING",
+      "zone": {
+        "id": "498",
+        "name": "东部赛区",
+        "zoneType": "GROUP_ZONE",
+        "eventId": "174",
+        "event": {
+          "id": "174",
+          "title": "RoboMaster 2024超级对抗赛"
+        }
+      }
+    }
+  },
+  {
+    "currentMatch": null,
+    "nextMatch": {
+      "id": "19147",
+      "round": 1,
+      "totalRound": 2,
+      "orderNumber": 1,
+      "matchType": "WARMUP",
+      "blueSideId": "38419",
+      "blueSide": {
+        "id": "38419",
+        "fillStatus": "PENDING",
+        "fillSourceId": null,
+        "fillSourceType": null,
+        "fillSourceNumber": null,
+        "playerId": null,
+        "player": null
+      },
+      "redSideId": "38418",
+      "redSide": {
+        "id": "38418",
+        "fillStatus": "PENDING",
+        "fillSourceId": null,
+        "fillSourceType": null,
+        "fillSourceNumber": null,
+        "playerId": null,
+        "player": null
+      },
+      "redSideScore": 0,
+      "blueSideScore": 0,
+      "blueSideWinGameCount": 0,
+      "planGameCount": 2,
+      "planStartedAt": "2024-05-21T01:00:00Z",
+      "redSideWinGameCount": 0,
+      "winnerPlaceholdName": null,
+      "loserPlaceholdName": null,
+      "slug": null,
+      "slugName": "1",
+      "status": "WAITING",
+      "zone": {
+        "id": "499",
+        "name": "中部赛区",
+        "zoneType": "GROUP_ZONE",
+        "eventId": "174",
+        "event": {
+          "id": "174",
+          "title": "RoboMaster 2024超级对抗赛"
+        }
+      }
+    }
+  },
+  {
+    "currentMatch": null,
+    "nextMatch": {
+      "id": "19232",
+      "round": 1,
+      "totalRound": 2,
+      "orderNumber": 1,
+      "matchType": "WARMUP",
+      "blueSideId": "38589",
+      "blueSide": {
+        "id": "38589",
+        "fillStatus": "PENDING",
+        "fillSourceId": null,
+        "fillSourceType": null,
+        "fillSourceNumber": null,
+        "playerId": null,
+        "player": null
+      },
+      "redSideId": "38588",
+      "redSide": {
+        "id": "38588",
+        "fillStatus": "PENDING",
+        "fillSourceId": null,
+        "fillSourceType": null,
+        "fillSourceNumber": null,
+        "playerId": null,
+        "player": null
+      },
+      "redSideScore": 0,
+      "blueSideScore": 0,
+      "blueSideWinGameCount": 0,
+      "planGameCount": 2,
+      "planStartedAt": "2024-05-28T01:00:00Z",
+      "redSideWinGameCount": 0,
+      "winnerPlaceholdName": null,
+      "loserPlaceholdName": null,
+      "slug": null,
+      "slugName": "1",
+      "status": "WAITING",
+      "zone": {
+        "id": "500",
+        "name": "南部赛区",
+        "zoneType": "GROUP_ZONE",
+        "eventId": "174",
+        "event": {
+          "id": "174",
+          "title": "RoboMaster 2024超级对抗赛"
+        }
+      }
+    }
+  }
+]
