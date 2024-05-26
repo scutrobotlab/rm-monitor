@@ -9,9 +9,9 @@
 ### 监控-推送-录制一体化，高速复盘
 > 更多功能需配合 `RoboMaster 赛事录制系统`
 
-![img.png](docs/img.png)
-![img_1.png](docs/img_1.png)
-![img_2.png](docs/img_2.png)
+![img.png](docs/card.png)
+![img_1.png](docs/record.png)
+![img_2.png](docs/table.png)
 
 ## Usage
 ### 编写配置文件
