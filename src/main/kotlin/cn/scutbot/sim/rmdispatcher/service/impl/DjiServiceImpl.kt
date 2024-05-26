@@ -11,7 +11,6 @@ import com.jayway.jsonpath.TypeRef
 import com.jayway.jsonpath.spi.json.JacksonJsonProvider
 import com.jayway.jsonpath.spi.mapper.JacksonMappingProvider
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.web.client.RestTemplateBuilder
 import org.springframework.cache.annotation.Cacheable
 import org.springframework.http.*
@@ -19,11 +18,12 @@ import org.springframework.stereotype.Service
 import org.springframework.web.client.RestTemplate
 import org.springframework.web.client.exchange
 
+const val DJI_SCHEDULE_URL = "https://pro-robomasters-hz-n5i3.oss-cn-hangzhou.aliyuncs.com/live_json/schedule.json"
+const val DJI_TEAMS_URL = "https://pro-robomasters-hz-n5i3.oss-cn-hangzhou.aliyuncs.com/live_json/teams.json"
+const val DJI_API_URL = "https://pro-robomasters-hz-n5i3.oss-cn-hangzhou.aliyuncs.com/live_json/current_and_next_matches.json"
+
 @Service
 class DjiServiceImpl(
-    @Value("\${dji.apiUrl}") val apiUrl: String,
-    @Value("\${dji.scheduleUrl}") val scheduleUrl: String,
-    @Value("\${dji.teamsUrl}") val teamsUrl: String,
     @Autowired val templateBuilder: RestTemplateBuilder,
     @Autowired val mapper: ObjectMapper,
 ) : IDjiService {
@@ -36,7 +36,7 @@ class DjiServiceImpl(
         headers.accept = listOf(MediaType.APPLICATION_JSON)
 
         val resp: ResponseEntity<List<CurrentAndNextMatch>> = restTemplate.exchange(
-            apiUrl,
+            DJI_API_URL,
             HttpMethod.GET
         )
 
@@ -52,7 +52,7 @@ class DjiServiceImpl(
     @Cacheable("match-schedule")
     override fun fetchSchedule(match: Match): Match? {
         val resp = restTemplate.exchange<String>(
-            scheduleUrl,
+            DJI_SCHEDULE_URL,
             HttpMethod.GET,
             HttpEntity.EMPTY
         )
@@ -81,16 +81,16 @@ class DjiServiceImpl(
 
     @Cacheable("colleges", cacheManager = "holdingCacheManager")
     override fun collegeFullNames(): List<String> {
-        logger().info("Refreshing $teamsUrl")
+        logger().info("Refreshing $DJI_TEAMS_URL")
         val resp = restTemplate.exchange(
-            teamsUrl,
+            DJI_TEAMS_URL,
             HttpMethod.GET,
             HttpEntity.EMPTY,
             String::class.java
         )
 
         if (!resp.statusCode.is2xxSuccessful || resp.body == null) {
-            logger().warn("Failed to fetch $teamsUrl: ${resp.statusCode.value()}")
+            logger().warn("Failed to fetch $DJI_TEAMS_URL: ${resp.statusCode.value()}")
         }
 
         val json = JsonPath.parse(resp.body, Configuration.defaultConfiguration()
@@ -105,15 +105,15 @@ class DjiServiceImpl(
 
     @Cacheable("zones", cacheManager = "holdingCacheManager")
     override fun zones(): List<String> {
-        logger().info("Refreshing $scheduleUrl")
+        logger().info("Refreshing $DJI_SCHEDULE_URL")
         val resp = restTemplate.exchange<String>(
-            scheduleUrl,
+            DJI_SCHEDULE_URL,
             HttpMethod.GET,
             HttpEntity.EMPTY
         )
 
         if (!resp.statusCode.is2xxSuccessful || resp.body == null) {
-            logger().warn("Failed to fetch $scheduleUrl: ${resp.statusCode.value()}")
+            logger().warn("Failed to fetch $DJI_SCHEDULE_URL: ${resp.statusCode.value()}")
         }
 
         val json = JsonPath.parse(resp.body, Configuration.defaultConfiguration()
