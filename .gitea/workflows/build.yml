@@ -20,7 +20,9 @@ jobs:
           registry: ${{ secrets.SCUTBOT_HUB_REGISTRY }}
       - uses: docker/build-push-action@v6
         with:
-          context: lark-notifier
+          context: .
+          build-args: |
+            APP=lark-notifier
           push: true
           tags: ${{ secrets.SCUTBOT_HUB_REGISTRY }}/web/rm-monitor/lark-notifier:latest
   monitor:
@@ -37,7 +39,9 @@ jobs:
           registry: ${{ secrets.SCUTBOT_HUB_REGISTRY }}
       - uses: docker/build-push-action@v6
         with:
-          context: monitor
+          context: .
+          build-args: |
+              APP=monitor
           push: true
           tags: ${{ secrets.SCUTBOT_HUB_REGISTRY }}/web/rm-monitor/monitor:latest
   recorder:
@@ -54,6 +58,8 @@ jobs:
           registry: ${{ secrets.SCUTBOT_HUB_REGISTRY }}
       - uses: docker/build-push-action@v6
         with:
-          context: recorder
+          context: .
+          build-args: |
+              APP=recorder
           push: true
           tags: ${{ secrets.SCUTBOT_HUB_REGISTRY }}/web/rm-monitor/recorder:latest
