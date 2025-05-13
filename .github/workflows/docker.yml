@@ -1,4 +1,4 @@
-name: Build
+name: Docker
 
 on: [push, pull_request, workflow_dispatch]
 
@@ -40,17 +40,14 @@ jobs:
           platforms: linux/amd64
           tags: |
             scutrobot/rm-monitor:latest
-            scutrobot/rm-monitor:${{ needs.release.outputs.new_version }}
+            scutrobot/rm-monitor:${{ github.sha }}
             ghcr.io/scutrobotlab/rm-monitor:latest
-            ghcr.io/scutrobotlab/rm-monitor:${{ needs.release.outputs.new_version }}
-          build-args: |
-            VERSION=${{ needs.release.outputs.new_version }}
+            ghcr.io/scutrobotlab/rm-monitor:${{ github.sha }}
           labels: |
             org.opencontainers.image.source=https://github.com/scutrobot/rm-monitor
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.created=${{ github.event.head_commit.timestamp }}
-            org.opencontainers.image.version=${{ needs.release.outputs.new_version }}
-            org.opencontainers.image.title=rm-monitor ${{ needs.release.outputs.new_version }}
+            org.opencontainers.image.title=rm-monitor
             org.opencontainers.image.description="robomaster monitor"
             org.opencontainers.image.licenses=AGPL-3.0
           cache-from: type=gha
