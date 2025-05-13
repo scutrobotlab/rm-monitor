@@ -1,0 +1,15 @@
+LarkConf:
+  AppId: cli_a8a914c216b8101c
+  AppSecret: dGwrJkBWRV2xctXlzJgKnfNfbJUZtQor
+KqConsumerConf:
+  Name: rm-monitor
+  Brokers:
+    - master0.scutbot.cn:9092
+  Group: rm-monitor
+  Topic: rm-monitor
+  Offset: first
+  Consumers: 8
+  Processors: 8
+RedisConf:
+  Host: master0.scutbot.cn:6379
+  Pass: QaRYYoZ1mwK973upLRTtbZjZX056PdvD
