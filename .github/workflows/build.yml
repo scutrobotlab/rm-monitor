@@ -22,7 +22,7 @@ jobs:
       - name: Build
         run: gradle build
       - name: Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: rm-monitor
           path: ./build/libs
