@@ -4,8 +4,6 @@ import (
 	"context"
 	errors2 "errors"
 	"fmt"
-	"io"
-	"os"
 	"slices"
 
 	"github.com/pkg/errors"
@@ -34,34 +32,25 @@ func NewMatchScanLogic(ctx context.Context, svcCtx *svc.ServiceContext) *MatchSc
 
 const (
 	scheduleUrl = "https://pro-robomasters-hz-n5i3.oss-cn-hangzhou.aliyuncs.com/live_json/schedule.json"
+	currentUrl  = "https://pro-robomasters-hz-n5i3.oss-cn-hangzhou.aliyuncs.com/live_json/current_and_next_matches.json"
 	simulateUA  = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
 )
 
 func (l *MatchScanLogic) MatchScan() error {
-	//resp, err := l.svcCtx.RestyClient.R().
-	//	SetHeader("User-Agent", simulateUA).
-	//	Get(scheduleUrl)
-	//if err != nil {
-	//	return errors.Wrap(err, "failed to get schedule")
-	//}
-	//
-	//if !resp.IsSuccess() {
-	//	return errors.Errorf("failed to get schedule, status code: %d", resp.StatusCode())
-	//}
-	//
-	//content := resp.String()
-	f, err := os.OpenFile("./data/schedule.json", os.O_RDONLY, 0o644)
+	resp, err := l.svcCtx.RestyClient.R().
+		SetHeader("User-Agent", simulateUA).
+		Get(scheduleUrl)
 	if err != nil {
-		return errors.Wrap(err, "failed to open schedule file")
+		return errors.Wrap(err, "failed to get schedule")
 	}
-	defer f.Close()
-	contentBytes, err := io.ReadAll(f)
-	if err != nil {
-		return errors.Wrap(err, "failed to read schedule file")
-	}
-	content := string(contentBytes)
 
-	title := gjson.Get(content, "data.event.title").String()
+	if !resp.IsSuccess() {
+		return errors.Errorf("failed to get schedule, status code: %d", resp.StatusCode())
+	}
+
+	contentBytes := resp.Bytes()
+
+	title := gjson.GetBytes(contentBytes, "data.event.title").String()
 	var matches []types.Match
 	for _, node := range gjson.GetBytes(contentBytes, "data.event.zones.nodes").Array() {
 		nodeName := node.Get("name").String()
@@ -105,6 +94,16 @@ func (l *MatchScanLogic) MatchScan() error {
 		return errors.Wrap(err, "failed to compare matches")
 	}
 
+	currentMatchesResp, err := l.svcCtx.RestyClient.R().
+		SetHeader("User-Agent", simulateUA).
+		Get(currentUrl)
+	if err != nil {
+		return errors.Wrap(err, "failed to get current matches")
+	}
+	if !currentMatchesResp.IsSuccess() {
+		return errors.Errorf("failed to get current matches, status code: %d", currentMatchesResp.StatusCode())
+	}
+
 	return nil
 }
 
@@ -146,8 +145,8 @@ func (l *MatchScanLogic) matchCompare(m *types.Match) error {
 	var prev types.Match
 	_ = jsonx.UnmarshalFromString(prevStr, &prev)
 	if prev.Status != m.Status {
-		if m.Status == types.MatchStatusDone || m.Status == types.MatchStatusPending {
-			if err = l.onMatchDone(m); err != nil {
+		if prev.Status == types.MatchStatusSTARTED {
+			if err = l.onMatchDone(&prev); err != nil {
 				return errors.Wrap(err, "failed to handle match done")
 			}
 		}
