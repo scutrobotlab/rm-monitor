@@ -40,14 +40,14 @@ func (l *MatchStartLogic) Consume(key string, m types.Match) error {
 	}
 
 	err = utils.ForeachChat(l.ctx, l.svcCtx, func(chat *larkim.ListChat) {
-		l.Debugf("Sending match %d start message to chat %s(%s)", m.Id, *chat.Name, *chat.ChatId)
+		l.Debugf("Sending match %s start message to chat %s(%s)", m.Id, *chat.Name, *chat.ChatId)
 		req := larkim.NewCreateMessageReqBuilder().
 			ReceiveIdType(larkim.ReceiveIdTypeChatId).
 			Body(larkim.NewCreateMessageReqBodyBuilder().
 				ReceiveId(*chat.ChatId).
 				MsgType(larkim.MsgTypeInteractive).
 				Content(contentData).
-				Uuid(key).
+				Uuid(key + ":" + *chat.ChatId).
 				Build()).
 			Build()
 

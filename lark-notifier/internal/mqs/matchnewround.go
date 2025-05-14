@@ -44,7 +44,7 @@ func (l *MatchNewRoundLogic) Consume(key string, m types.Match) error {
 	}
 
 	err = utils.ForeachChat(l.ctx, l.svcCtx, func(chat *larkim.ListChat) {
-		l.Debugf("Sending match %d new round message to chat %s(%s)", m.Id, *chat.Name, *chat.ChatId)
+		l.Debugf("Sending match %s new round message to chat %s(%s)", m.Id, *chat.Name, *chat.ChatId)
 		messageId, err := utils.GetMatchMessageId(l.ctx, l.svcCtx, *chat.ChatId, m.Id)
 		if err != nil && key != "" {
 			l.Errorf("failed to get message id, rerunning: %v", err)

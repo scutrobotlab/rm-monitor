@@ -2,7 +2,6 @@ package mqs
 
 import (
 	"context"
-	"fmt"
 	larkim "github.com/larksuite/oapi-sdk-go/v3/service/im/v1"
 	"github.com/pkg/errors"
 	"github.com/zeromicro/go-zero/core/jsonx"
@@ -34,9 +33,9 @@ func (l *MatchDoneLogic) Consume(key string, m types.Match) error {
 		return errors.Wrapf(err, "failed to get message card %s", m.Id)
 	}
 
-	content.Data.TemplateVariable.Scores = append(content.Data.TemplateVariable.Scores, utils.MatchScore{
-		RedScore: fmt.Sprintf("%d", m.RedWinGameCount), BlueScore: fmt.Sprintf("%d", m.BlueWinGameCount),
-	})
+	//content.Data.TemplateVariable.Scores = append(content.Data.TemplateVariable.Scores, utils.MatchScore{
+	//	RedScore: fmt.Sprintf("%d", m.RedWinGameCount), BlueScore: fmt.Sprintf("%d", m.BlueWinGameCount),
+	//})
 	content.Data.TemplateVariable.MatchProgress = "结束"
 	content.Data.TemplateVariable.Color = "green"
 
@@ -46,7 +45,7 @@ func (l *MatchDoneLogic) Consume(key string, m types.Match) error {
 	}
 
 	err = utils.ForeachChat(l.ctx, l.svcCtx, func(chat *larkim.ListChat) {
-		l.Debugf("Sending match %d done message to chat %s(%s)", m.Id, *chat.Name, *chat.ChatId)
+		l.Debugf("Sending match %s done message to chat %s(%s)", m.Id, *chat.Name, *chat.ChatId)
 		messageId, err := utils.GetMatchMessageId(l.ctx, l.svcCtx, *chat.ChatId, m.Id)
 		if err != nil {
 			l.Errorf("failed to get message id, rerunning: %v", err)
