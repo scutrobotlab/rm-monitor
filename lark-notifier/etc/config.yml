@@ -1,8 +1,17 @@
 LarkConf:
   AppId: cli_a6a438471df8900d
   AppSecret: eG5j2WxExZcWAwrWajh1MfBBtnpJeDaM
-KqConsumerConf:
+MonitorConsumer:
   Name: rm-monitor
+  Brokers:
+    - master0.scutbot.cn:9092
+  Group: rm-monitor
+  Topic: rm-monitor
+  Offset: first
+  Consumers: 8
+  Processors: 8
+RecordConsumer:
+  Name: rm-monitor-recorder
   Brokers:
     - master0.scutbot.cn:9092
   Group: rm-monitor

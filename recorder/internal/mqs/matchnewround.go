@@ -2,7 +2,7 @@ package mqs
 
 import (
 	"context"
-	"fmt"
+
 	"github.com/pkg/errors"
 
 	"github.com/zeromicro/go-zero/core/logx"
@@ -27,11 +27,9 @@ func NewMatchNewRoundLogic(ctx context.Context, svcCtx *svc.ServiceContext) Cons
 func (l *MatchNewRoundLogic) Consume(key string, m types.Match) error {
 	l.Infof("match new round: %s", key)
 
-	namespace := fmt.Sprintf("%d. %s[%s] VS %s[%s]",
-		m.Order, m.RedTeam.SchoolName, m.RedTeam.Name, m.BlueTeam.SchoolName, m.BlueTeam.Name)
-	if err := l.svcCtx.Recorder.StopBatch(m.ZoneName, namespace); err != nil {
+	if err := l.svcCtx.Recorder.StopBatch(&m); err != nil {
 		return errors.Wrap(err, "failed to stop batch")
 	}
 
-	return l.svcCtx.Recorder.StartBatch(l.ctx, m.ZoneName, namespace, fmt.Sprintf("Round %d", m.Round()))
+	return l.svcCtx.Recorder.StartBatch(l.ctx, &m)
 }

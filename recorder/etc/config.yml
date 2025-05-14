@@ -4,7 +4,7 @@ RedisConf:
 KqPusherConf:
   Brokers:
     - master.scutbot.cn:9092
-  Topic: rm-monitor
+  Topic: rm-monitor-recorder
 KqConsumerConf:
   Name: rm-monitor
   Brokers:

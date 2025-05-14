@@ -6,6 +6,12 @@ import (
 	"os"
 	"os/exec"
 
+	"github.com/zeromicro/go-queue/kq"
+	"github.com/zeromicro/go-zero/core/jsonx"
+
+	"scutbot.cn/web/rm-monitor/monitor/types"
+	types2 "scutbot.cn/web/rm-monitor/recorder/types"
+
 	"github.com/pkg/errors"
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -13,20 +19,25 @@ import (
 type Task struct {
 	ctx    context.Context
 	cancel context.CancelFunc
+	match  *types.Match
+	role   string
+	pusher *kq.Pusher
 	output string
 	name   string
 	url    string
 	logx.Logger
 }
 
-func NewTask(name, url, output string) *Task {
+func NewTask(name, url, output, role string, m *types.Match) *Task {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Task{
 		ctx:    ctx,
 		cancel: cancel,
 		name:   name,
+		role:   role,
 		url:    url,
 		output: output,
+		match:  m,
 		Logger: logx.WithContext(ctx),
 	}
 }
@@ -54,7 +65,22 @@ func (t *Task) Start() error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Cancel = func() error {
-		return cmd.Process.Signal(os.Interrupt)
+		if err := cmd.Process.Signal(os.Interrupt); err != nil {
+			return errors.Wrapf(err, "failed to send interrupt signal to streamlink %s", t.url)
+		}
+		payload := types2.RecordCompletedEvent{
+			Match: t.match,
+			Path:  t.output,
+			Role:  t.role,
+		}
+		p, _ := jsonx.MarshalToString(payload)
+
+		if err := t.pusher.Push(context.Background(), p); err != nil {
+			return errors.Wrapf(err, "failed to push record completed event %s", t.url)
+		}
+
+		t.Infof("pushed record completed event %s", t.url)
+		return nil
 	}
 
 	t.Infof("starting recording %s to %s", t.url, t.output)

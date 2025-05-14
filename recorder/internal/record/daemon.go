@@ -3,16 +3,19 @@ package record
 import (
 	"context"
 	"fmt"
+	"path"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/pkg/errors"
 	"github.com/samber/lo"
 	"github.com/tidwall/gjson"
 	"github.com/zeromicro/go-queue/kq"
 	"github.com/zeromicro/go-zero/core/logx"
-	"path"
+
 	"resty.dev/v3"
-	"strings"
-	"sync"
-	"time"
+	"scutbot.cn/web/rm-monitor/monitor/types"
 )
 
 const liveInfoUrl = "https://rm-static.djicdn.com/live_json/live_game_info.json"
@@ -48,7 +51,12 @@ func (d *Daemon) Close() error {
 	return nil
 }
 
-func (d *Daemon) StartBatch(ctx context.Context, zone, namespace, area string) error {
+func (d *Daemon) StartBatch(ctx context.Context, m *types.Match) error {
+	namespace := fmt.Sprintf("%d. %s[%s] VS %s[%s]",
+		m.Order, m.RedTeam.SchoolName, m.RedTeam.Name, m.BlueTeam.SchoolName, m.BlueTeam.Name)
+	zone := m.ZoneName
+	area := fmt.Sprintf("Round %d", m.Round())
+
 	if _, ok := d.locks[namespace]; !ok {
 		d.locks[namespace] = &sync.Mutex{}
 	}
@@ -98,7 +106,7 @@ func (d *Daemon) StartBatch(ctx context.Context, zone, namespace, area string) e
 		output := path.Join(d.baseDir, namespace, area, fmt.Sprintf("%s_%d", role, time.Now().UnixMilli()))
 		name := fmt.Sprintf("%s:%s:%s", zone, namespace, role)
 
-		if err := d.StartTask(name, url, output); err != nil {
+		if err := d.StartTask(name, url, output, m); err != nil {
 			return errors.Wrapf(err, "failed to start task %s", name)
 		}
 	}
@@ -106,7 +114,11 @@ func (d *Daemon) StartBatch(ctx context.Context, zone, namespace, area string) e
 	return nil
 }
 
-func (d *Daemon) StopBatch(zone, namespace string) error {
+func (d *Daemon) StopBatch(m *types.Match) error {
+	namespace := fmt.Sprintf("%d. %s[%s] VS %s[%s]",
+		m.Order, m.RedTeam.SchoolName, m.RedTeam.Name, m.BlueTeam.SchoolName, m.BlueTeam.Name)
+	zone := m.ZoneName
+
 	names := lo.Filter(lo.Keys(d.tasks), func(item string, index int) bool {
 		return strings.HasPrefix(item, fmt.Sprintf("%s:%s", zone, namespace))
 	})
@@ -124,12 +136,12 @@ func (d *Daemon) StopBatch(zone, namespace string) error {
 	return nil
 }
 
-func (d *Daemon) StartTask(name, url, output string) error {
+func (d *Daemon) StartTask(name, url, output, role string, m *types.Match) error {
 	if _, ok := d.tasks[name]; ok {
 		return errors.New("task already exists")
 	}
 
-	task := NewTask(name, url, output)
+	task := NewTask(name, url, output, role, m)
 	d.tasks[name] = task
 
 	go func() {

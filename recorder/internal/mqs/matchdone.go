@@ -2,7 +2,6 @@ package mqs
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/zeromicro/go-zero/core/logx"
 	"scutbot.cn/web/rm-monitor/monitor/types"
@@ -26,6 +25,5 @@ func NewMatchDoneLogic(ctx context.Context, svcCtx *svc.ServiceContext) Consumer
 func (l *MatchDoneLogic) Consume(key string, m types.Match) error {
 	l.Infof("match done: %s", key)
 
-	return l.svcCtx.Recorder.StopBatch(m.ZoneName, fmt.Sprintf("%d. %s[%s] VS %s[%s]",
-		m.Order, m.RedTeam.SchoolName, m.RedTeam.Name, m.BlueTeam.SchoolName, m.BlueTeam.Name))
+	return l.svcCtx.Recorder.StopBatch(&m)
 }

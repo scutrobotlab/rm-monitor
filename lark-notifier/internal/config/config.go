@@ -10,6 +10,7 @@ type Config struct {
 		AppId     string
 		AppSecret string
 	}
-	KqConsumerConf kq.KqConf
-	RedisConf      redis.RedisConf
+	MonitorConsumer kq.KqConf
+	RecordConsumer  kq.KqConf
+	RedisConf       redis.RedisConf
 }
