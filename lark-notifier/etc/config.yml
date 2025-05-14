@@ -1,6 +1,6 @@
 LarkConf:
-  AppId: cli_a8a914c216b8101c
-  AppSecret: dGwrJkBWRV2xctXlzJgKnfNfbJUZtQor
+  AppId: cli_a6a438471df8900d
+  AppSecret: eG5j2WxExZcWAwrWajh1MfBBtnpJeDaM
 KqConsumerConf:
   Name: rm-monitor
   Brokers:
