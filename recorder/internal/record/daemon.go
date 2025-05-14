@@ -106,7 +106,7 @@ func (d *Daemon) StartBatch(ctx context.Context, m *types.Match) error {
 		output := path.Join(d.baseDir, namespace, area, fmt.Sprintf("%s_%d", role, time.Now().UnixMilli()))
 		name := fmt.Sprintf("%s:%s:%s", zone, namespace, role)
 
-		if err := d.StartTask(name, url, output, m); err != nil {
+		if err := d.StartTask(name, url, output, role, m); err != nil {
 			return errors.Wrapf(err, "failed to start task %s", name)
 		}
 	}
