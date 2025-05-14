@@ -14,12 +14,8 @@ FROM alpine:3.12
 
 ENV TZ=Asia/Shanghai
 WORKDIR /app
-RUN apk add --no-cache alpine-conf dumb-init curl && \
-    setup-timezone -z ${TZ} && \
-    apk del alpine-conf && \
-    rm -rf /var/cache/apk/*
+RUN apk add --no-cache tzdata ca-certificates curl
 
-COPY --from=builder /go/bin/app /app
+COPY --from=builder /go/bin/app /usr/bin/app
 
-ENTRYPOINT ["/usr/bin/dumb-init", "--"]
-CMD ["/app"]
+ENTRYPOINT ["/usr/bin/app"]

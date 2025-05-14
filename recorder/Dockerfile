@@ -14,16 +14,9 @@ FROM python:3.10-alpine3.14
 
 ENV TZ=Asia/Shanghai
 WORKDIR /app
-RUN apk add --no-cache alpine-conf dumb-init curl && \
-    setup-timezone -z ${TZ} && \
-    apk del alpine-conf && \
-    rm -rf /var/cache/apk/*
-
-
 RUN pip install -i https://pypi.tuna.tsinghua.edu.cn/simple streamlink  \
-    && apk add --no-cache ca-certificates curl ffmpeg
+    && apk add --no-cache ca-certificates curl ffmpeg tzdata
 
-COPY --from=builder /go/bin/app /app
+COPY --from=builder /go/bin/app /usr/bin/app
 
-ENTRYPOINT ["/usr/bin/dumb-init", "--"]
-CMD ["/app"]
+ENTRYPOINT ["/usr/bin/app"]
