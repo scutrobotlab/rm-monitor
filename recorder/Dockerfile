@@ -14,7 +14,7 @@ FROM python:3.10-alpine3.14
 
 ENV TZ=Asia/Shanghai
 WORKDIR /app
-RUN apk add --no-cache alpine-conf dumb-init curl streamlink && \
+RUN apk add --no-cache alpine-conf dumb-init curl && \
     setup-timezone -z ${TZ} && \
     apk del alpine-conf && \
     rm -rf /var/cache/apk/*
