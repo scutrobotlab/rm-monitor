@@ -8,7 +8,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
 
-RUN go build -ldflags "-s -w" -trimpath -o /go/bin/app ${APP}
+RUN go build -ldflags "-s -w" -trimpath -o /go/bin/app ${APP}/main.go
 
 FROM alpine:3.12
 
