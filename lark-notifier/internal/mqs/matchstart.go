@@ -2,6 +2,7 @@ package mqs
 
 import (
 	"context"
+
 	larkim "github.com/larksuite/oapi-sdk-go/v3/service/im/v1"
 	"github.com/pkg/errors"
 	"github.com/zeromicro/go-zero/core/jsonx"

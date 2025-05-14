@@ -40,7 +40,7 @@ type Match struct {
 }
 
 func (m *Match) Round() int64 {
-	return m.BlueWinGameCount + m.RedWinGameCount
+	return m.BlueWinGameCount + m.RedWinGameCount + 1
 }
 
 func (m *Match) GetMatchStartKey() string {

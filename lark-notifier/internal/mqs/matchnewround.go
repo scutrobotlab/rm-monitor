@@ -3,8 +3,10 @@ package mqs
 import (
 	"context"
 	"fmt"
+
 	larkim "github.com/larksuite/oapi-sdk-go/v3/service/im/v1"
 	"github.com/pkg/errors"
+	"github.com/samber/lo"
 	"github.com/zeromicro/go-zero/core/jsonx"
 	"github.com/zeromicro/go-zero/core/logx"
 	"scutbot.cn/web/rm-monitor/lark-notifier/internal/svc"
@@ -37,6 +39,7 @@ func (l *MatchNewRoundLogic) Consume(key string, m types.Match) error {
 	content.Data.TemplateVariable.Scores = append(content.Data.TemplateVariable.Scores, utils.MatchScore{
 		RedScore: fmt.Sprintf("%d", m.RedWinGameCount), BlueScore: fmt.Sprintf("%d", m.BlueWinGameCount),
 	})
+	content.Data.TemplateVariable.Scores = lo.Uniq(content.Data.TemplateVariable.Scores)
 
 	contentData, err := jsonx.MarshalToString(content)
 	if err != nil {
@@ -48,12 +51,6 @@ func (l *MatchNewRoundLogic) Consume(key string, m types.Match) error {
 		messageId, err := utils.GetMatchMessageId(l.ctx, l.svcCtx, *chat.ChatId, m.Id)
 		if err != nil && key != "" {
 			l.Errorf("failed to get message id, rerunning: %v", err)
-			if err = NewMatchStartLogic(l.ctx, l.svcCtx).Consume(key, m); err != nil {
-				l.Errorf("failed to create message: %v", err)
-			}
-			if err = l.Consume("", m); err != nil {
-				l.Errorf("failed to update message: %v", err)
-			}
 			return
 		}
 
@@ -64,6 +61,10 @@ func (l *MatchNewRoundLogic) Consume(key string, m types.Match) error {
 			Build()
 
 		resp, err := l.svcCtx.LarkClient.Im.V1.Message.Patch(l.ctx, req)
+		if err != nil {
+			l.Errorf("failed to update message: %v", err)
+			return
+		}
 
 		if !resp.Success() {
 			l.Error(errors.Wrapf(resp, "failed to update message %+v", req))

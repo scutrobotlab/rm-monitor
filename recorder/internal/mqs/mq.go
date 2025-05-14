@@ -5,8 +5,8 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/zeromicro/go-zero/core/jsonx"
-	"scutbot.cn/web/rm-monitor/lark-notifier/internal/svc"
 	"scutbot.cn/web/rm-monitor/monitor/types"
+	"scutbot.cn/web/rm-monitor/recorder/internal/svc"
 
 	"github.com/zeromicro/go-queue/kq"
 	"github.com/zeromicro/go-zero/core/service"

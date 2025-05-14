@@ -2,12 +2,13 @@ package mqs
 
 import (
 	"context"
+	"testing"
+
 	larkim "github.com/larksuite/oapi-sdk-go/v3/service/im/v1"
 	"github.com/zeromicro/go-zero/core/conf"
 	"scutbot.cn/web/rm-monitor/lark-notifier/internal/config"
 	"scutbot.cn/web/rm-monitor/lark-notifier/internal/svc"
 	"scutbot.cn/web/rm-monitor/lark-notifier/internal/utils"
-	"testing"
 )
 
 func TestGroups(t *testing.T) {
