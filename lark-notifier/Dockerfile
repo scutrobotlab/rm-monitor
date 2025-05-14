@@ -19,9 +19,6 @@ RUN apk add --no-cache alpine-conf dumb-init curl && \
     apk del alpine-conf && \
     rm -rf /var/cache/apk/*
 
-RUN pip install -i https://pypi.tuna.tsinghua.edu.cn/simple streamlink  \
-    && apk add --no-cache ca-certificates curl ffmpeg
-
 COPY --from=builder /go/bin/app /app
 
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]

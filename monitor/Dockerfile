@@ -10,7 +10,7 @@ COPY . .
 
 RUN go build -ldflags "-s -w" -trimpath -o /go/bin/app ${APP}/main.go
 
-FROM python:3.10-alpine3.14
+FROM alpine:3.12
 
 ENV TZ=Asia/Shanghai
 WORKDIR /app
