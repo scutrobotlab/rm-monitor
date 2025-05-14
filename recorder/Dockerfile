@@ -13,6 +13,7 @@ RUN go build -ldflags "-s -w" -trimpath -o /go/bin/app ${APP}/main.go
 FROM alpine:3.12
 
 ENV TZ=Asia/Shanghai
+WORKDIR /app
 RUN apk add --no-cache alpine-conf dumb-init curl streamlink && \
     setup-timezone -z ${TZ} && \
     apk del alpine-conf && \
