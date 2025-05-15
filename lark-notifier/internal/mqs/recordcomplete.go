@@ -23,7 +23,7 @@ func NewRecordCompletedLogic(ctx context.Context, svcCtx *svc.ServiceContext) Co
 }
 
 func (l *RecordCompletedLogic) Consume(key string, m types.RecordCompletedEvent) error {
-	l.Infof("record completed: %s %s", m.Match.Id, m.Role)
+	l.Infof("record completed: %+v %s", m.Match, m.Role)
 
 	return nil
 }
