@@ -14,7 +14,7 @@ import (
 )
 
 func NewConsumerRouter(svcContext *svc.ServiceContext) service.Service {
-	return natsq.MustNewConsumerManager(&svcContext.Config.NatsConf, []*natsq.ConsumerQueue{
+	return natsq.MustNewConsumerManager(svcContext.Config.NatsConf.Conf(), []*natsq.ConsumerQueue{
 		natsqMux(svcContext, []string{types.MatchStartSubject}, "matchstart", NewMatchStartLogic),
 		natsqMux(svcContext, []string{types.MatchNewRoundSubject}, "matchnewround", NewMatchNewRoundLogic),
 		natsqMux(svcContext, []string{types.MatchDoneSubject}, "matchdone", NewMatchDoneLogic),

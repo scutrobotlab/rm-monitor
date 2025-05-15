@@ -19,7 +19,7 @@ type ServiceContext struct {
 }
 
 func NewServiceContext(c config.Config) *ServiceContext {
-	p, err := natsq.NewDefaultProducer(&c.NatsConf)
+	p, err := natsq.NewDefaultProducer(c.NatsConf.Conf())
 	if err != nil {
 		logx.Error(err)
 		os.Exit(1)

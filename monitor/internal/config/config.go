@@ -5,7 +5,19 @@ import (
 	"github.com/zeromicro/go-zero/core/stores/redis"
 )
 
+type NatsConf struct {
+	ServerUri  string
+	ClientName string
+}
+
+func (n *NatsConf) Conf() *natsq.NatsConfig {
+	return &natsq.NatsConfig{
+		ServerUri:  n.ServerUri,
+		ClientName: n.ClientName,
+	}
+}
+
 type Config struct {
-	NatsConf  natsq.NatsConfig
+	NatsConf  NatsConf
 	RedisConf redis.RedisConf
 }
