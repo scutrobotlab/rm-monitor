@@ -5,3 +5,6 @@ KqPusherConf:
   Brokers:
     - master.scutbot.cn:9092
   Topic: rm-monitor
+NatsConfig:
+  ServerUri: 127.0.0.1:4222
+  ClientName: monitor

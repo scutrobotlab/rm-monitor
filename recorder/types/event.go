@@ -9,3 +9,5 @@ type RecordCompletedEvent struct {
 	Path  string
 	Role  string
 }
+
+const RecordCompletedSubject = "record:completed"

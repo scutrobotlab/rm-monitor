@@ -1,14 +1,12 @@
 package config
 
-import "github.com/zeromicro/go-queue/kq"
+import (
+	"github.com/zeromicro/go-queue/natsq"
+)
 
 type Config struct {
-	KqPusherConf struct {
-		Brokers []string
-		Topic   string
-	}
-	KqConsumerConf kq.KqConf
-	RecordConf     struct {
+	NatsConf   natsq.NatsConfig
+	RecordConf struct {
 		Res     string
 		BaseDir string
 	}

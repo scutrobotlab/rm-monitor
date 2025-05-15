@@ -66,3 +66,9 @@ func (m *Match) GetMatchDoneKey() string {
 func IsMatchDone(key string) bool {
 	return key[:len("match:done:")] == "match:done:"
 }
+
+const (
+	MatchStartSubject    = "match:start"
+	MatchNewRoundSubject = "match:newRound"
+	MatchDoneSubject     = "match:done"
+)

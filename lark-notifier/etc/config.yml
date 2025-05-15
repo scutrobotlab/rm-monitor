@@ -1,24 +1,9 @@
 LarkConf:
   AppId: cli_a6a438471df8900d
   AppSecret: eG5j2WxExZcWAwrWajh1MfBBtnpJeDaM
-MonitorConsumer:
-  Name: rm-monitor
-  Brokers:
-    - master0.scutbot.cn:9092
-  Group: rm-monitor
-  Topic: rm-monitor
-  Offset: first
-  Consumers: 8
-  Processors: 8
-RecordConsumer:
-  Name: rm-monitor-recorder
-  Brokers:
-    - master0.scutbot.cn:9092
-  Group: rm-monitor
-  Topic: rm-monitor
-  Offset: first
-  Consumers: 8
-  Processors: 8
 RedisConf:
   Host: master0.scutbot.cn:6379
   Pass: QaRYYoZ1mwK973upLRTtbZjZX056PdvD
+NatsConfig:
+  ServerUri: 127.0.0.1:4222
+  ClientName: lark-notifier

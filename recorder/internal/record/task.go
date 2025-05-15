@@ -6,7 +6,8 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/zeromicro/go-queue/kq"
+	"github.com/zeromicro/go-queue/natsq"
+
 	"github.com/zeromicro/go-zero/core/jsonx"
 
 	"scutbot.cn/web/rm-monitor/monitor/types"
@@ -21,14 +22,14 @@ type Task struct {
 	cancel context.CancelFunc
 	match  *types.Match
 	role   string
-	pusher *kq.Pusher
+	pusher *natsq.DefaultProducer
 	output string
 	name   string
 	url    string
 	logx.Logger
 }
 
-func NewTask(name, url, output, role string, pusher *kq.Pusher, m *types.Match) *Task {
+func NewTask(name, url, output, role string, pusher *natsq.DefaultProducer, m *types.Match) *Task {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Task{
 		ctx:    ctx,
@@ -74,9 +75,9 @@ func (t *Task) Start() error {
 			Path:  t.output,
 			Role:  t.role,
 		}
-		p, _ := jsonx.MarshalToString(payload)
+		p, _ := jsonx.Marshal(payload)
 
-		if err := t.pusher.Push(context.Background(), p); err != nil {
+		if err := t.pusher.Publish(types2.RecordCompletedSubject, p); err != nil {
 			return errors.Wrapf(err, "failed to push record completed event %s", t.url)
 		}
 

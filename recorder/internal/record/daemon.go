@@ -11,7 +11,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/samber/lo"
 	"github.com/tidwall/gjson"
-	"github.com/zeromicro/go-queue/kq"
+	"github.com/zeromicro/go-queue/natsq"
 	"github.com/zeromicro/go-zero/core/logx"
 
 	"resty.dev/v3"
@@ -21,25 +21,25 @@ import (
 const liveInfoUrl = "https://rm-static.djicdn.com/live_json/live_game_info.json"
 
 type Daemon struct {
-	res            string
-	baseDir        string
-	restyClient    *resty.Client
-	kqPusherClient *kq.Pusher
+	res         string
+	baseDir     string
+	restyClient *resty.Client
+	pusher      *natsq.DefaultProducer
 
 	tasks map[string]*Task
 	locks map[string]*sync.Mutex
 	logx.Logger
 }
 
-func NewDaemon(res, baseDir string, restyClient resty.Client, kqPusherClient *kq.Pusher) *Daemon {
+func NewDaemon(res, baseDir string, restyClient resty.Client, pusher *natsq.DefaultProducer) *Daemon {
 	return &Daemon{
-		res:            res,
-		baseDir:        baseDir,
-		restyClient:    &restyClient,
-		kqPusherClient: kqPusherClient,
-		tasks:          make(map[string]*Task),
-		locks:          make(map[string]*sync.Mutex),
-		Logger:         logx.WithContext(context.Background()),
+		res:         res,
+		baseDir:     baseDir,
+		restyClient: &restyClient,
+		pusher:      pusher,
+		tasks:       make(map[string]*Task),
+		locks:       make(map[string]*sync.Mutex),
+		Logger:      logx.WithContext(context.Background()),
 	}
 }
 
@@ -141,7 +141,7 @@ func (d *Daemon) StartTask(name, url, output, role string, m *types.Match) error
 		return errors.New("task already exists")
 	}
 
-	task := NewTask(name, url, output, role, d.kqPusherClient, m)
+	task := NewTask(name, url, output, role, d.pusher, m)
 	d.tasks[name] = task
 
 	go func() {

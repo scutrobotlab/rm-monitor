@@ -1,7 +1,7 @@
 package config
 
 import (
-	"github.com/zeromicro/go-queue/kq"
+	"github.com/zeromicro/go-queue/natsq"
 	"github.com/zeromicro/go-zero/core/stores/redis"
 )
 
@@ -10,7 +10,6 @@ type Config struct {
 		AppId     string
 		AppSecret string
 	}
-	MonitorConsumer kq.KqConf
-	RecordConsumer  kq.KqConf
-	RedisConf       redis.RedisConf
+	NatsConf  natsq.NatsConfig
+	RedisConf redis.RedisConf
 }

@@ -1,7 +1,11 @@
 package svc
 
 import (
+	"os"
 	"time"
+
+	"github.com/zeromicro/go-queue/natsq"
+	"github.com/zeromicro/go-zero/core/logx"
 
 	"github.com/zeromicro/go-queue/kq"
 	"resty.dev/v3"
@@ -10,20 +14,26 @@ import (
 )
 
 type ServiceContext struct {
-	Config         config.Config
-	KqPusherClient *kq.Pusher
-	RestyClient    *resty.Client
-	Recorder       *record.Daemon
+	Config      config.Config
+	NatsPusher  *natsq.DefaultProducer
+	RestyClient *resty.Client
+	Recorder    *record.Daemon
 }
 
 func NewServiceContext(c config.Config) *ServiceContext {
-	ctx := &ServiceContext{
-		Config:         c,
-		KqPusherClient: kq.NewPusher(c.KqPusherConf.Brokers, c.KqPusherConf.Topic),
-		RestyClient:    resty.New().SetRetryCount(3).SetRetryWaitTime(1 * time.Second).SetTimeout(5 * time.Second),
+	p, err := natsq.NewDefaultProducer(&c.NatsConf)
+	if err != nil {
+		logx.Error(err)
+		os.Exit(1)
 	}
 
-	ctx.Recorder = record.NewDaemon(c.RecordConf.Res, c.RecordConf.BaseDir, *ctx.RestyClient, ctx.KqPusherClient)
+	ctx := &ServiceContext{
+		Config:      c,
+		NatsPusher:  p,
+		RestyClient: resty.New().SetRetryCount(3).SetRetryWaitTime(1 * time.Second).SetTimeout(5 * time.Second),
+	}
+
+	ctx.Recorder = record.NewDaemon(c.RecordConf.Res, c.RecordConf.BaseDir, *ctx.RestyClient, ctx.NatsPusher)
 
 	return ctx
 }

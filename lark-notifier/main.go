@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"github.com/zeromicro/go-zero/core/service"
 
 	"github.com/zeromicro/go-zero/core/logx"
 	"scutbot.cn/web/rm-monitor/lark-notifier/internal/mqs"
@@ -30,12 +29,8 @@ func main() {
 
 	svcCtx := svc.NewServiceContext(c)
 	s := mqs.NewConsumerRouter(svcCtx)
-	g := service.NewServiceGroup()
-	for _, sv := range s {
-		g.Add(sv)
-	}
-	defer g.Stop()
+	defer s.Stop()
 
 	logx.Info("starting lark notifier")
-	g.Start()
+	s.Start()
 }

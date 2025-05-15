@@ -172,41 +172,35 @@ func (l *MatchScanLogic) matchCompare(m *types.Match) error {
 func (l *MatchScanLogic) onMatchStart(m *types.Match) error {
 	l.Infof("match started: %+v", m)
 
-	data, err := jsonx.MarshalToString(m)
+	data, err := jsonx.Marshal(m)
 	if err != nil {
 		return errors.Wrap(err, "failed to marshal match")
 	}
 
-	return errors.Wrap(l.svcCtx.KqPusherClient.PushWithKey(l.ctx,
-		m.GetMatchStartKey(),
-		data),
+	return errors.Wrap(l.svcCtx.NatsPusher.Publish(types.MatchStartSubject, data),
 		"failed to push match start")
 }
 
 func (l *MatchScanLogic) onMatchNewRound(m *types.Match) error {
 	l.Infof("match new round: %+v", m)
 
-	data, err := jsonx.MarshalToString(m)
+	data, err := jsonx.Marshal(m)
 	if err != nil {
 		return errors.Wrap(err, "failed to marshal match")
 	}
 
-	return errors.Wrap(l.svcCtx.KqPusherClient.PushWithKey(l.ctx,
-		m.GetMatchNewRoundKey(),
-		data),
+	return errors.Wrap(l.svcCtx.NatsPusher.Publish(types.MatchNewRoundSubject, data),
 		"failed to push match new round")
 }
 
 func (l *MatchScanLogic) onMatchDone(m *types.Match) error {
 	l.Infof("match done: %+v", m)
 
-	data, err := jsonx.MarshalToString(m)
+	data, err := jsonx.Marshal(m)
 	if err != nil {
 		return errors.Wrap(err, "failed to marshal match")
 	}
 
-	return errors.Wrap(l.svcCtx.KqPusherClient.PushWithKey(l.ctx,
-		m.GetMatchDoneKey(),
-		data),
+	return errors.Wrap(l.svcCtx.NatsPusher.Publish(types.MatchDoneSubject, data),
 		"failed to push match done")
 }

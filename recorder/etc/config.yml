@@ -1,19 +1,9 @@
 RedisConf:
   Host: master0.scutbot.cn:6379
   Pass: QaRYYoZ1mwK973upLRTtbZjZX056PdvD
-KqPusherConf:
-  Brokers:
-    - master.scutbot.cn:9092
-  Topic: rm-monitor-recorder
-KqConsumerConf:
-  Name: rm-monitor
-  Brokers:
-    - master0.scutbot.cn:9092
-  Group: rm-monitor
-  Topic: rm-monitor
-  Offset: first
-  Consumers: 8
-  Processors: 8
 RecordConf:
   Res: middle
   BaseDir: ./data
+NatsConfig:
+  ServerUri: 127.0.0.1:4222
+  ClientName: recorder
