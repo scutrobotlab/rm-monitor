@@ -2,10 +2,11 @@ package utils
 
 import (
 	"context"
+	"testing"
+
 	"github.com/zeromicro/go-zero/core/conf"
 	"scutbot.cn/web/rm-monitor/lark-notifier/internal/config"
 	"scutbot.cn/web/rm-monitor/lark-notifier/internal/svc"
-	"testing"
 )
 
 func TestGetFolderToken(t *testing.T) {
@@ -23,5 +24,4 @@ func TestGetFolderToken(t *testing.T) {
 }
 
 func TestUploadFile(t *testing.T) {
-
 }

@@ -2,8 +2,9 @@ package larkcache
 
 import (
 	"context"
-	"github.com/zeromicro/go-zero/core/stores/redis"
 	"time"
+
+	"github.com/zeromicro/go-zero/core/stores/redis"
 )
 
 type LarkCache struct {

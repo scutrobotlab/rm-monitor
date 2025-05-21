@@ -3,14 +3,18 @@ package mqs
 import (
 	"bytes"
 	"context"
-	larkdrive "github.com/larksuite/oapi-sdk-go/v3/service/drive/v1"
-	"github.com/pkg/errors"
+	"fmt"
 	"hash/adler32"
 	"io"
 	"os"
 	"path"
-	"scutbot.cn/web/rm-monitor/lark-notifier/internal/utils"
 	"strconv"
+
+	larkdrive "github.com/larksuite/oapi-sdk-go/v3/service/drive/v1"
+	larkim "github.com/larksuite/oapi-sdk-go/v3/service/im/v1"
+	"github.com/pkg/errors"
+
+	"scutbot.cn/web/rm-monitor/lark-notifier/internal/utils"
 
 	"github.com/zeromicro/go-zero/core/logx"
 	"scutbot.cn/web/rm-monitor/lark-notifier/internal/svc"
@@ -112,7 +116,42 @@ func (l *RecordCompletedLogic) Consume(key string, m types.RecordCompletedEvent)
 		return errors.Wrap(completeResp, "failed to complete upload")
 	}
 
-	l.Logger.Infof("completed upload %s %s. file token: %s", m.Path, uploadId, *completeResp.Data.FileToken)
+	fileUrl := fmt.Sprintf("https://scutrobotlab.feishu.cn/drive/file/%s", *completeResp.Data.FileToken)
+
+	l.Logger.Infof("completed upload %s %s. url", m.Path, uploadId, fileUrl)
+
+	err = utils.ForeachChat(l.ctx, l.svcCtx, func(chat *larkim.ListChat) {
+		l.Debugf("Sending match %s new round message to chat %s(%s)", m.Match.Id, *chat.Name, *chat.ChatId)
+		messageId, err := utils.GetMatchMessageId(l.ctx, l.svcCtx, *chat.ChatId, m.Match.Id)
+		if err != nil && key != "" {
+			l.Errorf("failed to get message id, rerunning: %v", err)
+			return
+		}
+
+		req := larkim.NewReplyMessageReqBuilder().
+			Body(larkim.NewReplyMessageReqBodyBuilder().
+				Content(fmt.Sprintf(`{"text":"%s"}`, fileUrl)).
+				MsgType(`text`).
+				ReplyInThread(true).
+				Uuid(m.Path).
+				Build()).
+			MessageId(messageId).
+			Build()
+
+		resp, err := l.svcCtx.LarkClient.Im.V1.Message.Reply(l.ctx, req)
+		if err != nil {
+			l.Errorf("failed to update message: %v", err)
+			return
+		}
+		if !resp.Success() {
+			l.Error(errors.Wrapf(resp, "failed to update message %+v", req))
+			return
+		}
+	})
+	if err != nil {
+		l.Errorf("failed to iterate chats: %v", err)
+		return errors.Wrap(err, "failed to iterate chats")
+	}
 
 	return nil
 }
