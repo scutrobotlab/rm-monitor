@@ -10,6 +10,10 @@ type Config struct {
 		AppId     string
 		AppSecret string
 	}
+	RecordConf struct {
+		BaseDir  string
+		RootNode string
+	}
 	MonitorConsumer kq.KqConf
 	RecordConsumer  kq.KqConf
 	RedisConf       redis.RedisConf

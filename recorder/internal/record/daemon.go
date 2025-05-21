@@ -55,7 +55,7 @@ func (d *Daemon) StartBatch(ctx context.Context, m *types.Match) error {
 	namespace := fmt.Sprintf("%d. %s[%s] VS %s[%s]",
 		m.Order, m.RedTeam.SchoolName, m.RedTeam.Name, m.BlueTeam.SchoolName, m.BlueTeam.Name)
 	zone := m.ZoneName
-	area := fmt.Sprintf("Round %d", m.Round())
+	round := fmt.Sprintf("Round %d", m.Round())
 
 	if _, ok := d.locks[namespace]; !ok {
 		d.locks[namespace] = &sync.Mutex{}
@@ -103,7 +103,7 @@ func (d *Daemon) StartBatch(ctx context.Context, m *types.Match) error {
 	}
 
 	for role, url := range urls {
-		output := path.Join(d.baseDir, namespace, area, fmt.Sprintf("%s_%d", role, time.Now().UnixMilli()))
+		output := path.Join(zone, namespace, round, fmt.Sprintf("%s_%d", role, time.Now().UnixMilli()))
 		name := fmt.Sprintf("%s:%s:%s", zone, namespace, role)
 
 		if err := d.StartTask(name, url, output, role, m); err != nil {
@@ -141,11 +141,11 @@ func (d *Daemon) StartTask(name, url, output, role string, m *types.Match) error
 		return errors.New("task already exists")
 	}
 
-	task := NewTask(name, url, output, role, m)
+	task := NewTask(name, url, d.baseDir, role, m)
 	d.tasks[name] = task
 
 	go func() {
-		if err := task.Start(); err != nil {
+		if err := task.Start(output); err != nil {
 			d.Error(errors.Wrapf(err, "failed to start task %s", name))
 		}
 	}()

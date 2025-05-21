@@ -20,10 +20,14 @@ func GetImageKey(ctx context.Context, svcCtx *svc.ServiceContext, imageUrl strin
 		return imageKey, nil
 	}
 
-	file, err := svcCtx.HttpClient.Get(imageUrl)
+	file, err := svcCtx.RestyClient.R().Get(imageUrl)
 	if err != nil {
 		return "", errors.Wrap(err, "http get image")
 	}
+	if file.IsError() {
+		return "", errors.Wrap(err, "http get image")
+	}
+
 	defer file.Body.Close()
 
 	req := larkim.NewCreateImageReqBuilder().

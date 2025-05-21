@@ -24,6 +24,30 @@ func NewRecordCompletedLogic(ctx context.Context, svcCtx *svc.ServiceContext) Co
 
 func (l *RecordCompletedLogic) Consume(key string, m types.RecordCompletedEvent) error {
 	l.Infof("record completed: %s %s", m.Match.Id, m.Role)
+	//f, err := os.OpenFile(path.Join(l.svcCtx.Config.RecordConf.BaseDir, m.Path), os.O_RDONLY, os.ModePerm)
+	//if err != nil {
+	//	return errors.Wrap(err, "failed to open file")
+	//}
+	//stat, err := f.Stat()
+	//if err != nil {
+	//	return errors.Wrap(err, "failed to stat file")
+	//}
+	//
+	//// upload file
+	//dir, name := path.Split(m.Path)
+	//dirNode, err := utils.GetFolderTokenWithCache(l.ctx, l.svcCtx, l.svcCtx.Config.RecordConf.RootNode, dir)
+	//if err != nil {
+	//	return errors.Wrap(err, "failed to get folder token")
+	//}
+	//
+	//prepareReq := larkdrive.NewUploadPrepareFileReqBuilder().
+	//	FileUploadInfo(larkdrive.NewFileUploadInfoBuilder().
+	//		FileName(name).
+	//		ParentType(larkdrive.ParentTypeExplorer).
+	//		ParentNode(dirNode).
+	//		Size(int(stat.Size())).
+	//		Build()).
+	//	Build()
 
 	return nil
 }
