@@ -2,6 +2,7 @@ package mqs
 
 import (
 	"context"
+	types2 "scutbot.cn/web/rm-monitor/recorder/types"
 
 	"github.com/zeromicro/go-queue/natsq"
 
@@ -18,6 +19,7 @@ func NewConsumerRouter(svcContext *svc.ServiceContext) service.Service {
 		natsqMux(svcContext, []string{types.MatchStartSubject}, "matchstart", NewMatchStartLogic),
 		natsqMux(svcContext, []string{types.MatchNewRoundSubject}, "matchnewround", NewMatchNewRoundLogic),
 		natsqMux(svcContext, []string{types.MatchDoneSubject}, "matchdone", NewMatchDoneLogic),
+		natsqMux(svcContext, []string{types2.RecordCompletedSubject}, "recordcompleted", NewRecordCompletedLogic),
 	}, natsq.NatDefaultMode)
 }
 

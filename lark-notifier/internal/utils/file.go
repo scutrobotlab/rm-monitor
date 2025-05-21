@@ -36,9 +36,7 @@ func GetFolderTokenWithCache(ctx context.Context, svcCtx *svc.ServiceContext, pa
 }
 
 func GetFolderToken(ctx context.Context, svcCtx *svc.ServiceContext, parentNode string, filepath string) (string, error) {
-	if strings.HasPrefix(filepath, `/`) {
-		filepath = filepath[1:]
-	}
+	filepath = strings.TrimPrefix(filepath, "/")
 
 	if filepath == "" {
 		return parentNode, nil
@@ -56,6 +54,7 @@ func GetFolderToken(ctx context.Context, svcCtx *svc.ServiceContext, parentNode 
 		req := larkdrive.NewListFileReqBuilder().
 			OrderBy(`EditedTime`).
 			Direction(`DESC`).
+			FolderToken(parentNode).
 			Build()
 
 		// 发起请求
@@ -69,6 +68,7 @@ func GetFolderToken(ctx context.Context, svcCtx *svc.ServiceContext, parentNode 
 		for ok, node, err = resp.Next(); ok && err == nil; ok, node, err = resp.Next() {
 			if *node.Name == name && *node.Type == larkdrive.FileTypeFolder {
 				resultToken = *node.Token
+				break
 			}
 		}
 		if err != nil {

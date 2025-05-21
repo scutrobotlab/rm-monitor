@@ -4,6 +4,9 @@ LarkConf:
 RedisConf:
   Host: master0.scutbot.cn:6379
   Pass: QaRYYoZ1mwK973upLRTtbZjZX056PdvD
-NatsConfig:
+NatsConf:
   ServerUri: 127.0.0.1:4222
   ClientName: lark-notifier
+RecordConf:
+  BaseDir: ""
+  RootNode: "S1WbfH2QKlvNBmdz3BPcoompnnB"

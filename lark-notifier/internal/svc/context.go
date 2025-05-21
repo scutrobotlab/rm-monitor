@@ -1,6 +1,7 @@
 package svc
 
 import (
+	"scutbot.cn/web/rm-monitor/pkg/larkcache"
 	"time"
 
 	"resty.dev/v3"
@@ -20,11 +21,14 @@ type ServiceContext struct {
 
 func NewServiceContext(c config.Config) *ServiceContext {
 	restyClient := resty.New().SetRetryCount(3).SetRetryWaitTime(1 * time.Second).SetTimeout(5 * time.Second)
-
+	redisClient := redis.MustNewRedis(c.RedisConf)
 	return &ServiceContext{
-		Config:      c,
-		LarkClient:  lark.NewClient(c.LarkConf.AppId, c.LarkConf.AppSecret, lark.WithHttpClient(restyClient.Client())),
-		RedisClient: redis.MustNewRedis(c.RedisConf),
+		Config: c,
+		LarkClient: lark.NewClient(c.LarkConf.AppId, c.LarkConf.AppSecret,
+			lark.WithHttpClient(restyClient.Client()),
+			lark.WithEnableTokenCache(true),
+			lark.WithTokenCache(larkcache.NewLarkCache(redisClient))),
+		RedisClient: redisClient,
 		RestyClient: restyClient,
 	}
 }
