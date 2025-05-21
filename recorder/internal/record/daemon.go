@@ -141,7 +141,7 @@ func (d *Daemon) StartTask(name, url, output, role string, m *types.Match) error
 		return errors.New("task already exists")
 	}
 
-	task := NewTask(name, url, d.baseDir, role, m)
+	task := NewTask(name, url, d.baseDir, role, m, d.pusher)
 	d.tasks[name] = task
 
 	go func() {

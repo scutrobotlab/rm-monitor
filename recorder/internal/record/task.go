@@ -31,7 +31,7 @@ type Task struct {
 	logx.Logger
 }
 
-func NewTask(name, url, baseDir, role string, m *types.Match) *Task {
+func NewTask(name, url, baseDir, role string, m *types.Match, pusher *natsq.DefaultProducer) *Task {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Task{
 		ctx:     ctx,
@@ -41,6 +41,7 @@ func NewTask(name, url, baseDir, role string, m *types.Match) *Task {
 		url:     url,
 		baseDir: baseDir,
 		match:   m,
+		pusher:  pusher,
 		Logger:  logx.WithContext(ctx),
 	}
 }
