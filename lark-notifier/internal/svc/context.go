@@ -3,14 +3,12 @@ package svc
 import (
 	"time"
 
-	"scutbot.cn/web/rm-monitor/pkg/larkcache"
-
-	"resty.dev/v3"
-
 	lark "github.com/larksuite/oapi-sdk-go/v3"
 	"github.com/zeromicro/go-zero/core/stores/redis"
-
+	"resty.dev/v3"
 	"scutbot.cn/web/rm-monitor/lark-notifier/internal/config"
+	"scutbot.cn/web/rm-monitor/pkg/larkcache"
+	"scutbot.cn/web/rm-monitor/pkg/larklog"
 )
 
 type ServiceContext struct {
@@ -28,7 +26,8 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		LarkClient: lark.NewClient(c.LarkConf.AppId, c.LarkConf.AppSecret,
 			lark.WithHttpClient(restyClient.Client()),
 			lark.WithEnableTokenCache(true),
-			lark.WithTokenCache(larkcache.NewLarkCache(redisClient))),
+			lark.WithTokenCache(larkcache.NewLarkCache(redisClient)),
+			lark.WithLogger(larklog.NewLarkLog())),
 		RedisClient: redisClient,
 		RestyClient: restyClient,
 	}

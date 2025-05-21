@@ -7,15 +7,13 @@ import (
 	"os/exec"
 	"path"
 
+	"github.com/pkg/errors"
 	"github.com/zeromicro/go-queue/natsq"
-
 	"github.com/zeromicro/go-zero/core/jsonx"
+	"github.com/zeromicro/go-zero/core/logx"
 
 	"scutbot.cn/web/rm-monitor/monitor/types"
 	types2 "scutbot.cn/web/rm-monitor/recorder/types"
-
-	"github.com/pkg/errors"
-	"github.com/zeromicro/go-zero/core/logx"
 )
 
 type Task struct {

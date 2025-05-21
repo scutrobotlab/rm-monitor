@@ -13,8 +13,8 @@ import (
 var configFile = flag.String("f", "etc/config.yml", "the config file")
 
 func init() {
-	logx.SetUp(logx.LogConf{
-		ServiceName: "monitor",
+	logx.MustSetup(logx.LogConf{
+		ServiceName: "recorder",
 		Mode:        "console",
 		Encoding:    "plain",
 	})
@@ -36,6 +36,6 @@ func main() {
 		}
 	}()
 
-	logx.Info("starting lark notifier")
+	logx.Info("starting recorder")
 	s.Start()
 }

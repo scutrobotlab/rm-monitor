@@ -13,11 +13,10 @@ import (
 	larkdrive "github.com/larksuite/oapi-sdk-go/v3/service/drive/v1"
 	larkim "github.com/larksuite/oapi-sdk-go/v3/service/im/v1"
 	"github.com/pkg/errors"
-
-	"scutbot.cn/web/rm-monitor/lark-notifier/internal/utils"
-
 	"github.com/zeromicro/go-zero/core/logx"
+
 	"scutbot.cn/web/rm-monitor/lark-notifier/internal/svc"
+	"scutbot.cn/web/rm-monitor/lark-notifier/internal/utils"
 	"scutbot.cn/web/rm-monitor/recorder/types"
 )
 

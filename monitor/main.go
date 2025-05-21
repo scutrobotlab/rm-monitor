@@ -18,7 +18,7 @@ import (
 var configFile = flag.String("f", "etc/config.yml", "the config file")
 
 func init() {
-	logx.SetUp(logx.LogConf{
+	logx.MustSetup(logx.LogConf{
 		ServiceName: "monitor",
 		Mode:        "console",
 		Encoding:    "plain",
@@ -41,5 +41,6 @@ func main() {
 		return logic.NewMatchScanLogic(ctx, svcCtx).MatchScan()
 	})
 
+	logx.Info("starting monitor")
 	t.Start()
 }

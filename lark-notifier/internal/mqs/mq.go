@@ -3,16 +3,13 @@ package mqs
 import (
 	"context"
 
-	types2 "scutbot.cn/web/rm-monitor/recorder/types"
-
-	"github.com/zeromicro/go-queue/natsq"
-
 	"github.com/pkg/errors"
+	"github.com/zeromicro/go-queue/natsq"
 	"github.com/zeromicro/go-zero/core/jsonx"
+	"github.com/zeromicro/go-zero/core/service"
 	"scutbot.cn/web/rm-monitor/lark-notifier/internal/svc"
 	"scutbot.cn/web/rm-monitor/monitor/types"
-
-	"github.com/zeromicro/go-zero/core/service"
+	types2 "scutbot.cn/web/rm-monitor/recorder/types"
 )
 
 func NewConsumerRouter(svcContext *svc.ServiceContext) service.Service {
