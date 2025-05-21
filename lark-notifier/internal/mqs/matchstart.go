@@ -40,6 +40,7 @@ func (l *MatchStartLogic) Consume(key string, m types.Match) error {
 		return errors.Wrap(err, "failed to marshal content")
 	}
 
+	messageIds := make(map[string]string)
 	err = utils.ForeachChat(l.ctx, l.svcCtx, func(chat *larkim.ListChat) {
 		l.Debugf("Sending match %s start message to chat %s(%s)", m.Id, *chat.Name, *chat.ChatId)
 		req := larkim.NewCreateMessageReqBuilder().
@@ -63,9 +64,7 @@ func (l *MatchStartLogic) Consume(key string, m types.Match) error {
 			return
 		}
 
-		if err := utils.SaveMatchMessageId(l.ctx, l.svcCtx, *chat.ChatId, m.Id, *resp.Data.MessageId); err != nil {
-			l.Error(errors.Wrapf(err, "failed to save message id %s", *resp.Data.MessageId))
-		}
+		messageIds[*chat.ChatId] = *resp.Data.MessageId
 	})
 	if err != nil {
 		l.Errorf("failed to iterate chats: %v", err)
@@ -74,6 +73,10 @@ func (l *MatchStartLogic) Consume(key string, m types.Match) error {
 
 	if err = utils.SaveMatchMessageCard(l.ctx, l.svcCtx, m.Id, content); err != nil {
 		return errors.Wrapf(err, "failed to save message card %s", contentData)
+	}
+
+	if err = utils.SaveMatchMessageIds(l.ctx, l.svcCtx, m.Id, messageIds); err != nil {
+		return errors.Wrapf(err, "failed to save message ids %s", messageIds)
 	}
 
 	return nil

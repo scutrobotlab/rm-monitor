@@ -109,25 +109,34 @@ func GetMatchMessageCard(ctx context.Context, svcCtx *svc.ServiceContext, matchI
 	return &content, nil
 }
 
-func SaveMatchMessageId(ctx context.Context, svcCtx *svc.ServiceContext, chatId string, matchId string, messageId string) error {
-	messageKey := fmt.Sprintf("rm_monitor:message_id:%s:%s", chatId, matchId)
-	if err := svcCtx.RedisClient.SetexCtx(ctx, messageKey, messageId, 6*60*60); err != nil {
+func SaveMatchMessageIds(ctx context.Context, svcCtx *svc.ServiceContext, matchId string, messageIds map[string]string) error {
+	messageKey := fmt.Sprintf("rm-monitor:message_id:%s", matchId)
+	val, err := jsonx.MarshalToString(messageIds)
+	if err != nil {
+		return errors.Wrap(err, "failed to marshal message ids")
+	}
+	if err := svcCtx.RedisClient.SetexCtx(ctx, messageKey, val, 6*60*60); err != nil {
 		return errors.Wrapf(err, "failed to set message key %s", messageKey)
 	}
 
 	return nil
 }
 
-func GetMatchMessageId(ctx context.Context, svcCtx *svc.ServiceContext, chatId string, matchId string) (string, error) {
-	messageKey := fmt.Sprintf("rm_monitor:message_id:%s:%s", chatId, matchId)
-	messageId, err := svcCtx.RedisClient.GetCtx(ctx, messageKey)
+func GetMatchMessageIds(ctx context.Context, svcCtx *svc.ServiceContext, matchId string) (map[string]string, error) {
+	messageKey := fmt.Sprintf("rm-monitor:message_id:%s", matchId)
+	val, err := svcCtx.RedisClient.GetCtx(ctx, messageKey)
 	if err != nil {
-		return "", errors.Wrapf(err, "failed to get message key %s", messageKey)
+		return nil, errors.Wrapf(err, "failed to get message key %s", messageKey)
 	}
 
-	if messageId == "" {
-		return "", errors.New("message id not found")
+	if val == "" {
+		return nil, errors.New("message id not found")
 	}
 
-	return messageId, nil
+	var messageIds map[string]string
+	if err := jsonx.UnmarshalFromString(val, &messageIds); err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal message ids")
+	}
+
+	return messageIds, nil
 }

@@ -119,14 +119,12 @@ func (l *RecordCompletedLogic) Consume(key string, m types.RecordCompletedEvent)
 
 	l.Logger.Infof("completed upload %s %s. url", m.Path, uploadId, fileUrl)
 
-	err = utils.ForeachChat(l.ctx, l.svcCtx, func(chat *larkim.ListChat) {
-		l.Debugf("Sending match %s new round message to chat %s(%s)", m.Match.Id, *chat.Name, *chat.ChatId)
-		messageId, err := utils.GetMatchMessageId(l.ctx, l.svcCtx, *chat.ChatId, m.Match.Id)
-		if err != nil && key != "" {
-			l.Errorf("failed to get message id, rerunning: %v", err)
-			return
-		}
+	messageIds, err := utils.GetMatchMessageIds(l.ctx, l.svcCtx, m.Match.Id)
+	if err != nil {
+		return errors.Wrap(err, "failed to get message ids")
+	}
 
+	for _, messageId := range messageIds {
 		req := larkim.NewReplyMessageReqBuilder().
 			Body(larkim.NewReplyMessageReqBodyBuilder().
 				Content(fmt.Sprintf(`{"text":"%s"}`, fileUrl)).
@@ -140,16 +138,10 @@ func (l *RecordCompletedLogic) Consume(key string, m types.RecordCompletedEvent)
 		resp, err := l.svcCtx.LarkClient.Im.V1.Message.Reply(l.ctx, req)
 		if err != nil {
 			l.Errorf("failed to update message: %v", err)
-			return
 		}
 		if !resp.Success() {
 			l.Error(errors.Wrapf(resp, "failed to update message %+v", req))
-			return
 		}
-	})
-	if err != nil {
-		l.Errorf("failed to iterate chats: %v", err)
-		return errors.Wrap(err, "failed to iterate chats")
 	}
 
 	return nil

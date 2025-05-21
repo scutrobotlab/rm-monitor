@@ -48,14 +48,12 @@ func (l *MatchDoneLogic) Consume(key string, m types.Match) error {
 		return errors.Wrap(err, "failed to marshal content")
 	}
 
-	err = utils.ForeachChat(l.ctx, l.svcCtx, func(chat *larkim.ListChat) {
-		l.Debugf("Sending match %s done message to chat %s(%s)", m.Id, *chat.Name, *chat.ChatId)
-		messageId, err := utils.GetMatchMessageId(l.ctx, l.svcCtx, *chat.ChatId, m.Id)
-		if err != nil {
-			l.Errorf("failed to get message id, rerunning: %v", err)
-			return
-		}
+	messageIds, err := utils.GetMatchMessageIds(l.ctx, l.svcCtx, m.Id)
+	if err != nil {
+		return errors.Wrap(err, "failed to get message ids")
+	}
 
+	for _, messageId := range messageIds {
 		req := larkim.NewPatchMessageReqBuilder().MessageId(messageId).
 			Body(larkim.NewPatchMessageReqBodyBuilder().
 				Content(contentData).
@@ -65,17 +63,11 @@ func (l *MatchDoneLogic) Consume(key string, m types.Match) error {
 		resp, err := l.svcCtx.LarkClient.Im.V1.Message.Patch(l.ctx, req)
 		if err != nil {
 			l.Error(errors.Wrapf(err, "failed to update message %+v", req))
-			return
 		}
 
 		if !resp.Success() {
 			l.Error(errors.Wrapf(resp, "failed to update message %+v", req))
-			return
 		}
-	})
-	if err != nil {
-		l.Errorf("failed to iterate chats: %v", err)
-		return errors.Wrap(err, "failed to iterate chats")
 	}
 
 	if err = utils.SaveMatchMessageCard(l.ctx, l.svcCtx, m.Id, content); err != nil {
