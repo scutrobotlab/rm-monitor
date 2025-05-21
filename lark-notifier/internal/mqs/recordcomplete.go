@@ -124,11 +124,22 @@ func (l *RecordCompletedLogic) Consume(key string, m types.RecordCompletedEvent)
 		return errors.Wrap(err, "failed to get message ids")
 	}
 
+	content, err := larkim.NewMessagePost().ZhCn(larkim.NewMessagePostContent().
+		ContentTitle(m.Path).AppendContent([]larkim.MessagePostElement{
+		&larkim.MessagePostA{
+			Href: fileUrl,
+		},
+	})).Build()
+	if err != nil {
+		return errors.Wrap(err, "failed to build message post")
+	}
+
 	for _, messageId := range messageIds {
+
 		req := larkim.NewReplyMessageReqBuilder().
 			Body(larkim.NewReplyMessageReqBodyBuilder().
-				Content(fmt.Sprintf(`{"text":"%s"}`, fileUrl)).
-				MsgType(`text`).
+				Content(content).
+				MsgType(larkim.MsgTypePost).
 				ReplyInThread(true).
 				Uuid(m.Path).
 				Build()).
@@ -140,7 +151,7 @@ func (l *RecordCompletedLogic) Consume(key string, m types.RecordCompletedEvent)
 			l.Errorf("failed to update message: %v", err)
 		}
 		if !resp.Success() {
-			l.Error(errors.Wrapf(resp, "failed to update message %+v", req))
+			l.Error(errors.Wrapf(resp, "failed to reply message %+v", req))
 		}
 	}
 
