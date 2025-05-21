@@ -32,7 +32,7 @@ func GetImageKey(ctx context.Context, svcCtx *svc.ServiceContext, imageUrl strin
 
 	req := larkim.NewCreateImageReqBuilder().
 		Body(larkim.NewCreateImageReqBodyBuilder().
-			ImageType(`message`).
+			ImageType(larkim.ImageTypeMessage).
 			Image(file.Body).
 			Build()).
 		Build()
