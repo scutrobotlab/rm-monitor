@@ -2,14 +2,12 @@ package main
 
 import (
 	"flag"
-	"github.com/zeromicro/go-zero/core/service"
-
-	"github.com/zeromicro/go-zero/core/logx"
-	"scutbot.cn/web/rm-monitor/lark-notifier/internal/mqs"
-	"scutbot.cn/web/rm-monitor/lark-notifier/internal/svc"
 
 	"github.com/zeromicro/go-zero/core/conf"
+	"github.com/zeromicro/go-zero/core/logx"
 	"scutbot.cn/web/rm-monitor/lark-notifier/internal/config"
+	"scutbot.cn/web/rm-monitor/lark-notifier/internal/mqs"
+	"scutbot.cn/web/rm-monitor/lark-notifier/internal/svc"
 )
 
 var configFile = flag.String("f", "etc/config.yml", "the config file")

@@ -27,5 +27,5 @@ type Config struct {
 		RootNode string
 	}
 	NatsConf  NatsConf
-	RedisConf       redis.RedisConf
+	RedisConf redis.RedisConf
 }

@@ -19,14 +19,15 @@ import (
 )
 
 type Task struct {
-	ctx    context.Context
-	cancel context.CancelFunc
-	match  *types.Match
-	role   string
-	pusher *natsq.DefaultProducer
-	output string
-	name   string
-	url    string
+	ctx     context.Context
+	cancel  context.CancelFunc
+	match   *types.Match
+	role    string
+	baseDir string
+	pusher  *natsq.DefaultProducer
+	output  string
+	name    string
+	url     string
 	logx.Logger
 }
 
@@ -77,9 +78,9 @@ func (t *Task) Start(output string) error {
 			Path:  oout,
 			Role:  t.role,
 		}
-		p, _ := jsonx.MarshalToString(payload)
+		p, _ := jsonx.Marshal(payload)
 
-		if err := t.pusher.Push(context.Background(), p); err != nil {
+		if err := t.pusher.Publish(types2.RecordCompletedSubject, p); err != nil {
 			return errors.Wrapf(err, "failed to push record completed event %s", t.url)
 		}
 
