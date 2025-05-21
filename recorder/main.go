@@ -30,6 +30,11 @@ func main() {
 	s := mqs.NewConsumerRouter(svcCtx)
 	defer s.Stop()
 	defer svcCtx.Recorder.Close()
+	defer func() {
+		if r := recover(); r != nil {
+			logx.Errorf("recovered from panic: %v", r)
+		}
+	}()
 
 	logx.Info("starting lark notifier")
 	s.Start()

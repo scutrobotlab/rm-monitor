@@ -49,13 +49,14 @@ func NewTask(name, url, baseDir, role string, m *types.Match, pusher *natsq.Defa
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 
 func (t *Task) Start(output string) error {
+	output = output + ".mp4"
 	oout := output
 	output = path.Join(t.baseDir, output)
 	cmd := exec.CommandContext(t.ctx,
 		"streamlink",
 		fmt.Sprintf("hls://%s", t.url),
 		"best",
-		"-o", output+".mp4",
+		"-o", output,
 		"--hls-live-restart",
 		"--ffmpeg-video-transcode",
 		"h264",
