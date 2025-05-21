@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"github.com/zeromicro/go-zero/core/service"
 
 	"github.com/zeromicro/go-zero/core/logx"
 	"scutbot.cn/web/rm-monitor/lark-notifier/internal/mqs"

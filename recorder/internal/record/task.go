@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path"
 
 	"github.com/zeromicro/go-queue/natsq"
 
@@ -29,29 +30,30 @@ type Task struct {
 	logx.Logger
 }
 
-func NewTask(name, url, output, role string, pusher *natsq.DefaultProducer, m *types.Match) *Task {
+func NewTask(name, url, baseDir, role string, m *types.Match) *Task {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Task{
-		ctx:    ctx,
-		cancel: cancel,
-		name:   name,
-		role:   role,
-		url:    url,
-		pusher: pusher,
-		output: output,
-		match:  m,
-		Logger: logx.WithContext(ctx),
+		ctx:     ctx,
+		cancel:  cancel,
+		name:    name,
+		role:    role,
+		url:     url,
+		baseDir: baseDir,
+		match:   m,
+		Logger:  logx.WithContext(ctx),
 	}
 }
 
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 
-func (t *Task) Start() error {
+func (t *Task) Start(output string) error {
+	oout := output
+	output = path.Join(t.baseDir, output)
 	cmd := exec.CommandContext(t.ctx,
 		"streamlink",
 		fmt.Sprintf("hls://%s", t.url),
 		"best",
-		"-o", t.output+".mp4",
+		"-o", output+".mp4",
 		"--hls-live-restart",
 		"--ffmpeg-video-transcode",
 		"h264",
@@ -72,12 +74,12 @@ func (t *Task) Start() error {
 		}
 		payload := types2.RecordCompletedEvent{
 			Match: t.match,
-			Path:  t.output,
+			Path:  oout,
 			Role:  t.role,
 		}
-		p, _ := jsonx.Marshal(payload)
+		p, _ := jsonx.MarshalToString(payload)
 
-		if err := t.pusher.Publish(types2.RecordCompletedSubject, p); err != nil {
+		if err := t.pusher.Push(context.Background(), p); err != nil {
 			return errors.Wrapf(err, "failed to push record completed event %s", t.url)
 		}
 
@@ -85,10 +87,10 @@ func (t *Task) Start() error {
 		return nil
 	}
 
-	t.Infof("starting recording %s to %s", t.url, t.output)
+	t.Infof("starting recording %s to %s", t.url, output)
 	if err := cmd.Run(); err != nil {
 		if errors.Is(err, &exec.ExitError{}) || errors.Is(err, context.Canceled) {
-			t.Infof("stopped recording %s to %s", t.url, t.output)
+			t.Infof("stopped recording %s to %s", t.url, output)
 		} else {
 			t.Error(errors.Wrapf(err, "failed to start streamlink %s", t.url))
 		}
@@ -103,5 +105,5 @@ func (t *Task) Stop() {
 	if err := t.ctx.Err(); err != nil {
 		t.Error(errors.Wrapf(err, "failed to stop streamlink %s", t.url))
 	}
-	t.Info("stopped recording %s to %s", t.url, t.output)
+	t.Info("stopped recording %s", t.url)
 }

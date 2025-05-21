@@ -1,5 +1,5 @@
 ARG APP
-FROM golang:1.23-alpine as builder
+FROM golang:1.23-alpine AS builder
 ARG APP
 
 WORKDIR /go/src

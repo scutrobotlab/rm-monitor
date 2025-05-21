@@ -22,6 +22,10 @@ type Config struct {
 		AppId     string
 		AppSecret string
 	}
+	RecordConf struct {
+		BaseDir  string
+		RootNode string
+	}
 	NatsConf  NatsConf
-	RedisConf redis.RedisConf
+	RedisConf       redis.RedisConf
 }
