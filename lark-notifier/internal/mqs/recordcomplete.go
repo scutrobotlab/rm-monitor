@@ -124,24 +124,14 @@ func (l *RecordCompletedLogic) Consume(key string, m types.RecordCompletedEvent)
 		return errors.Wrap(err, "failed to get message ids")
 	}
 
-	content, err := larkim.NewMessagePost().ZhCn(larkim.NewMessagePostContent().
-		ContentTitle(m.Path).AppendContent([]larkim.MessagePostElement{
-		&larkim.MessagePostA{
-			Href: fileUrl,
-		},
-	})).Build()
-	if err != nil {
-		return errors.Wrap(err, "failed to build message post")
-	}
-
 	for _, messageId := range messageIds {
 
 		req := larkim.NewReplyMessageReqBuilder().
 			Body(larkim.NewReplyMessageReqBodyBuilder().
-				Content(content).
-				MsgType(larkim.MsgTypePost).
+				Content(larkim.NewMessageTextBuilder().Text(fileUrl).Build()).
+				MsgType(larkim.MsgTypeText).
 				ReplyInThread(true).
-				Uuid(m.Path).
+				// Uuid(m.Path).
 				Build()).
 			MessageId(messageId).
 			Build()

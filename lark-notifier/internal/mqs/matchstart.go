@@ -49,7 +49,7 @@ func (l *MatchStartLogic) Consume(key string, m types.Match) error {
 				ReceiveId(*chat.ChatId).
 				MsgType(larkim.MsgTypeInteractive).
 				Content(contentData).
-				Uuid(key + ":" + *chat.ChatId).
+				// Uuid(key + ":" + *chat.ChatId).
 				Build()).
 			Build()
 
