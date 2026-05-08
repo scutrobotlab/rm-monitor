@@ -9,7 +9,6 @@ import (
 	"io"
 	"os"
 	"path"
-	"path/filepath"
 	"strconv"
 	"time"
 
@@ -26,6 +25,7 @@ import (
 	"scutbot.cn/web/rm-monitor/pkg/db"
 	"scutbot.cn/web/rm-monitor/pkg/larkcache"
 	"scutbot.cn/web/rm-monitor/pkg/larklog"
+	"scutbot.cn/web/rm-monitor/pkg/storagepath"
 	"scutbot.cn/web/rm-monitor/uploader-job/internal/config"
 )
 
@@ -73,7 +73,7 @@ func run(ctx context.Context, client *ent.Client, redisClient *redis.Redis, lark
 		return errors.Wrap(err, "get upload task")
 	}
 	uploadConf := c.UploadConf.WithDefaults()
-	filePath := filepath.Join(uploadConf.BaseDir, filepath.FromSlash(task.SourcePath))
+	filePath := storagepath.Resolve(uploadConf.BaseDir, task.SourcePath)
 	f, err := os.Open(filePath)
 	if err != nil {
 		_ = client.UploadTask.UpdateOneID(taskID).SetStatus(uploadtask.StatusFAILED).SetErrorMessage(err.Error()).Exec(ctx)

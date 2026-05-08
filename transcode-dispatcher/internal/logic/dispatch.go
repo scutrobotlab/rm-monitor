@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -18,6 +17,7 @@ import (
 	"scutbot.cn/web/rm-monitor/ent/transcodetask"
 	"scutbot.cn/web/rm-monitor/ent/uploadtask"
 	"scutbot.cn/web/rm-monitor/pkg/kubejob"
+	"scutbot.cn/web/rm-monitor/pkg/storagepath"
 	"scutbot.cn/web/rm-monitor/transcode-dispatcher/internal/svc"
 )
 
@@ -163,7 +163,7 @@ func (l *DispatchLogic) cleanupExpiredSources() error {
 		if upload == nil || upload.Status != uploadtask.StatusSUCCEEDED || transcode == nil || transcode.Status != transcodetask.StatusSUCCEEDED || transcode.Edges.ArchiveArtifact == nil {
 			continue
 		}
-		fullPath := filepath.Join(conf.BaseDir, filepath.FromSlash(artifact.Path))
+		fullPath := storagepath.Resolve(conf.BaseDir, artifact.Path)
 		if err := os.Remove(fullPath); err != nil && !os.IsNotExist(err) {
 			l.Errorf("remove source artifact %s failed: %v", artifact.Path, err)
 			continue

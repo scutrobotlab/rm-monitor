@@ -24,6 +24,7 @@ import (
 	"scutbot.cn/web/rm-monitor/ent/recordtask"
 	"scutbot.cn/web/rm-monitor/pkg/db"
 	"scutbot.cn/web/rm-monitor/pkg/pathfmt"
+	"scutbot.cn/web/rm-monitor/pkg/storagepath"
 	"scutbot.cn/web/rm-monitor/record-job/internal/config"
 )
 
@@ -64,7 +65,7 @@ func run(ctx context.Context, client *ent.Client, c config.Config, taskID int) e
 		return errors.Wrap(err, "get record task")
 	}
 	conf := c.RecordConf.WithDefaults()
-	fullPath := filepath.Join(conf.BaseDir, filepath.FromSlash(task.OutputPath))
+	fullPath := storagepath.Resolve(conf.BaseDir, task.OutputPath)
 	if err := os.MkdirAll(filepath.Dir(fullPath), 0o755); err != nil {
 		return errors.Wrap(err, "create output dir")
 	}

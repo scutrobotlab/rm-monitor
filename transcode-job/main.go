@@ -23,6 +23,7 @@ import (
 	"scutbot.cn/web/rm-monitor/ent/recordtask"
 	"scutbot.cn/web/rm-monitor/ent/transcodetask"
 	"scutbot.cn/web/rm-monitor/pkg/db"
+	"scutbot.cn/web/rm-monitor/pkg/storagepath"
 	"scutbot.cn/web/rm-monitor/transcode-job/internal/config"
 )
 
@@ -70,9 +71,9 @@ func run(ctx context.Context, client *ent.Client, c config.Config, taskID int) e
 		return errors.New("transcode task missing source artifact or record task")
 	}
 	transcodeConf := c.TranscodeConf.WithDefaults()
-	sourcePath := filepath.Join(transcodeConf.BaseDir, filepath.FromSlash(source.Path))
+	sourcePath := storagepath.Resolve(transcodeConf.BaseDir, source.Path)
 	archiveRel := strings.TrimSuffix(source.Path, filepath.Ext(source.Path)) + ".mp4"
-	archivePath := filepath.Join(transcodeConf.BaseDir, filepath.FromSlash(archiveRel))
+	archivePath := storagepath.Resolve(transcodeConf.BaseDir, archiveRel)
 	if err := os.MkdirAll(filepath.Dir(archivePath), 0o755); err != nil {
 		return errors.Wrap(err, "create archive dir")
 	}
