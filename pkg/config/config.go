@@ -4,17 +4,17 @@ import "github.com/zeromicro/go-zero/core/stores/redis"
 
 type PostgresConf struct {
 	DSN         string
-	AutoMigrate bool
+	AutoMigrate bool `json:",optional"`
 }
 
 type RedisConf = redis.RedisConf
 
 type RecordConf struct {
-	Res               string
-	BaseDir           string
-	PathTemplate      string
-	MatchDirTemplate  string
-	MatchNameTemplate string
+	Res               string `json:",optional"`
+	BaseDir           string `json:",optional"`
+	PathTemplate      string `json:",optional"`
+	MatchDirTemplate  string `json:",optional"`
+	MatchNameTemplate string `json:",optional"`
 }
 
 func (c *RecordConf) WithDefaults() RecordConf {
@@ -38,27 +38,27 @@ func (c *RecordConf) WithDefaults() RecordConf {
 }
 
 type K8sJobConf struct {
-	Namespace                string
+	Namespace                string `json:",optional"`
 	Image                    string
-	ConfigMapName            string
-	ServiceAccountName       string
-	StorageNodeSelectorKey   string
-	StorageNodeSelectorValue string
-	RecordsPVC               string
-	RecordsMountPath         string
-	BackoffLimit             int32
-	TTLSecondsAfterFinished  int32
+	ConfigMapName            string `json:",optional"`
+	ServiceAccountName       string `json:",optional"`
+	StorageNodeSelectorKey   string `json:",optional"`
+	StorageNodeSelectorValue string `json:",optional"`
+	RecordsPVC               string `json:",optional"`
+	RecordsMountPath         string `json:",optional"`
+	BackoffLimit             int32  `json:",optional"`
+	TTLSecondsAfterFinished  int32  `json:",optional"`
 }
 
 type TranscodeConf struct {
-	BaseDir                    string
-	AllowedWindow              string
-	SuspendWhenRecordingActive bool
-	SourceRetentionDays        int
-	CPURequest                 string
-	CPULimit                   string
-	MemoryRequest              string
-	MemoryLimit                string
+	BaseDir                    string `json:",optional"`
+	AllowedWindow              string `json:",optional"`
+	SuspendWhenRecordingActive bool   `json:",optional"`
+	SourceRetentionDays        int    `json:",optional"`
+	CPURequest                 string `json:",optional"`
+	CPULimit                   string `json:",optional"`
+	MemoryRequest              string `json:",optional"`
+	MemoryLimit                string `json:",optional"`
 }
 
 func (c *TranscodeConf) WithDefaults() TranscodeConf {
@@ -85,18 +85,18 @@ func (c *TranscodeConf) WithDefaults() TranscodeConf {
 }
 
 type LarkConf struct {
-	AppId     string
-	AppSecret string
+	AppId     string `json:",optional"`
+	AppSecret string `json:",optional"`
 }
 
 type UploadConf struct {
-	BaseDir            string
-	RootNode           string
-	Concurrency        int
-	PartRetries        int
-	RetryBackoff       int
-	RateLimitKey       string
-	RateLimitPerMinute int
+	BaseDir            string `json:",optional"`
+	RootNode           string `json:",optional"`
+	Concurrency        int    `json:",optional"`
+	PartRetries        int    `json:",optional"`
+	RetryBackoff       int    `json:",optional"`
+	RateLimitKey       string `json:",optional"`
+	RateLimitPerMinute int    `json:",optional"`
 }
 
 func (c *UploadConf) WithDefaults() UploadConf {
