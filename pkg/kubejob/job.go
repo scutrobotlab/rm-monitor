@@ -83,7 +83,7 @@ func Build(conf config.K8sJobConf, spec JobSpec) *batchv1.Job {
 		Command:         spec.Command,
 		Args:            spec.Args,
 		Env:             env,
-		ImagePullPolicy: corev1.PullIfNotPresent,
+		ImagePullPolicy: corev1.PullAlways,
 	}
 	if spec.WorkDir != "" {
 		container.WorkingDir = spec.WorkDir
