@@ -1,0 +1,40 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: rm-monitor
+
+resources:
+  - namespace.yaml
+  - rbac.yaml
+  - storage.yaml
+  - monitor.yaml
+  - lark-notifier.yaml
+  - record-dispatcher.yaml
+  - uploader-dispatcher.yaml
+  - transcode-dispatcher.yaml
+
+images:
+  - name: rm-monitor/monitor
+    newName: ghcr.io/scutrobotlab/rm-monitor/monitor
+    newTag: latest
+  - name: rm-monitor/lark-notifier
+    newName: ghcr.io/scutrobotlab/rm-monitor/lark-notifier
+    newTag: latest
+  - name: rm-monitor/record-job
+    newName: ghcr.io/scutrobotlab/rm-monitor/record-job
+    newTag: latest
+  - name: rm-monitor/record-dispatcher
+    newName: ghcr.io/scutrobotlab/rm-monitor/record-dispatcher
+    newTag: latest
+  - name: rm-monitor/uploader-dispatcher
+    newName: ghcr.io/scutrobotlab/rm-monitor/uploader-dispatcher
+    newTag: latest
+  - name: rm-monitor/uploader-job
+    newName: ghcr.io/scutrobotlab/rm-monitor/uploader-job
+    newTag: latest
+  - name: rm-monitor/transcode-dispatcher
+    newName: ghcr.io/scutrobotlab/rm-monitor/transcode-dispatcher
+    newTag: latest
+  - name: rm-monitor/transcode-job
+    newName: ghcr.io/scutrobotlab/rm-monitor/transcode-job
+    newTag: latest

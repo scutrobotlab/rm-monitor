@@ -1,0 +1,73 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: transcode-dispatcher-config
+data:
+  config.yml: |
+    PostgresConf:
+      DSN: postgres://rm_monitor:rm_monitor@postgres:5432/rm_monitor?sslmode=disable
+      AutoMigrate: true
+    TranscodeConf:
+      BaseDir: /records
+      AllowedWindow: "23:00-06:00"
+      SuspendWhenRecordingActive: true
+      SourceRetentionDays: 7
+      CPURequest: "500m"
+      MemoryRequest: "512Mi"
+      MemoryLimit: "2Gi"
+    K8sJobConf:
+      Namespace: rm-monitor
+      Image: rm-monitor/transcode-job:latest
+      ConfigMapName: transcode-job-config
+      RecordsPVC: rm-monitor-records
+      RecordsMountPath: /records
+      TTLSecondsAfterFinished: 86400
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: transcode-job-config
+data:
+  config.yml: |
+    PostgresConf:
+      DSN: postgres://rm_monitor:rm_monitor@postgres:5432/rm_monitor?sslmode=disable
+      AutoMigrate: false
+    TranscodeConf:
+      BaseDir: /records
+      SourceRetentionDays: 7
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: transcode-dispatcher
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: transcode-dispatcher
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: transcode-dispatcher
+    spec:
+      serviceAccountName: rm-monitor-dispatcher
+      nodeSelector:
+        rm-monitor/storage: "true"
+      containers:
+        - name: transcode-dispatcher
+          image: rm-monitor/transcode-dispatcher:latest
+          args: ["-f", "/app/etc/config.yml"]
+          volumeMounts:
+            - name: config
+              mountPath: /app/etc/config.yml
+              subPath: config.yml
+              readOnly: true
+            - name: records
+              mountPath: /records
+      volumes:
+        - name: config
+          configMap:
+            name: transcode-dispatcher-config
+        - name: records
+          persistentVolumeClaim:
+            claimName: rm-monitor-records

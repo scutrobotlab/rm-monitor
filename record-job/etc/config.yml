@@ -1,0 +1,9 @@
+PostgresConf:
+  DSN: postgres://rm_monitor:rm_monitor@127.0.0.1:5432/rm_monitor?sslmode=disable
+  AutoMigrate: false
+RecordConf:
+  Res: middle
+  BaseDir: /records
+  PathTemplate: "{{.Event}}/{{.Zone}}/{{.MatchName}}/Round-{{.RoundNo}}/{{.Role}}.flv"
+  MatchDirTemplate: "{{.Event}}/{{.Zone}}/{{.MatchName}}"
+  MatchNameTemplate: "{{.Order}}. {{.RedSchool}}-{{.RedName}} VS {{.BlueSchool}}-{{.BlueName}}"

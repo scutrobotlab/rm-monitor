@@ -1,0 +1,38 @@
+package schema
+
+import (
+	"time"
+
+	"entgo.io/ent"
+	"entgo.io/ent/schema/edge"
+	"entgo.io/ent/schema/field"
+)
+
+type Match struct {
+	ent.Schema
+}
+
+func (Match) Fields() []ent.Field {
+	return []ent.Field{
+		field.String("id").Unique().Immutable(),
+		field.String("event"),
+		field.String("zone"),
+		field.Int("order"),
+		field.String("match_type").Default(""),
+		field.String("match_slug").Optional().Nillable(),
+		field.Int("total_rounds").Default(0),
+		field.String("latest_status").Default(""),
+		field.JSON("raw_payload", map[string]any{}).Optional(),
+		field.Time("created_at").Default(time.Now).Immutable(),
+		field.Time("updated_at").Default(time.Now).UpdateDefault(time.Now),
+	}
+}
+
+func (Match) Edges() []ent.Edge {
+	return []ent.Edge{
+		edge.From("red_team", Team.Type).Ref("red_matches").Unique().Required(),
+		edge.From("blue_team", Team.Type).Ref("blue_matches").Unique().Required(),
+		edge.To("rounds", MatchRound.Type),
+		edge.To("lark_messages", LarkMessage.Type),
+	}
+}

@@ -1,0 +1,16 @@
+LarkConf:
+  AppId: ""
+  AppSecret: ""
+RedisConf:
+  Host: 127.0.0.1:6379
+  Pass: ""
+PostgresConf:
+  DSN: postgres://rm_monitor:rm_monitor@127.0.0.1:5432/rm_monitor?sslmode=disable
+  AutoMigrate: true
+RecordConf:
+  BaseDir: ""
+  RootNode: ""
+UploadConf:
+  Concurrency: 1
+  PartRetries: 3
+  RetryBackoff: 2
