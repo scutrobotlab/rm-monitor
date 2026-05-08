@@ -1,22 +1,19 @@
+# syntax=docker/dockerfile:1.7
 ARG APP
 FROM golang:1.23-alpine AS builder
 ARG APP
 
 WORKDIR /go/src
-ENV GOPROXY=https://goproxy.cn,direct
 COPY go.mod go.sum ./
-RUN go mod download
+RUN --mount=type=cache,target=/go/pkg/mod go mod download
 COPY . .
 
-RUN go build -ldflags "-s -w" -trimpath -o /go/bin/app ${APP}/main.go
+RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build go build -ldflags "-s -w" -trimpath -o /go/bin/app ${APP}/main.go
 
-FROM alpine:3.12
+FROM alpine:3.20
 
 ENV TZ=Asia/Shanghai
-RUN apk add --no-cache alpine-conf dumb-init curl && \
-    setup-timezone -z ${TZ} && \
-    apk del alpine-conf && \
-    rm -rf /var/cache/apk/*
+RUN apk add --no-cache ca-certificates curl dumb-init tzdata
 
 COPY --from=builder /go/bin/app /app
 
