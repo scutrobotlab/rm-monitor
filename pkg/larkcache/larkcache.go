@@ -4,11 +4,11 @@ import (
 	"context"
 	"time"
 
-	"github.com/zeromicro/go-zero/core/stores/redis"
+	"scutbot.cn/web/rm-monitor/pkg/redisx"
 )
 
 type LarkCache struct {
-	c *redis.Redis
+	c *redisx.Client
 }
 
 func (l LarkCache) Set(ctx context.Context, key string, value string, expireTime time.Duration) error {
@@ -19,7 +19,7 @@ func (l LarkCache) Get(ctx context.Context, key string) (string, error) {
 	return l.c.GetCtx(ctx, key)
 }
 
-func NewLarkCache(c *redis.Redis) *LarkCache {
+func NewLarkCache(c *redisx.Client) *LarkCache {
 	return &LarkCache{
 		c: c,
 	}

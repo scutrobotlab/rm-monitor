@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/zeromicro/go-zero/core/logx"
 	"scutbot.cn/web/rm-monitor/ent"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
 	"scutbot.cn/web/rm-monitor/ent/mediaartifact"
@@ -17,6 +16,7 @@ import (
 	"scutbot.cn/web/rm-monitor/ent/transcodetask"
 	"scutbot.cn/web/rm-monitor/ent/uploadtask"
 	"scutbot.cn/web/rm-monitor/pkg/kubejob"
+	"scutbot.cn/web/rm-monitor/pkg/logx"
 	"scutbot.cn/web/rm-monitor/pkg/storagepath"
 	"scutbot.cn/web/rm-monitor/transcode-dispatcher/internal/svc"
 )

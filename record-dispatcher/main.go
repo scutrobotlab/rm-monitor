@@ -5,9 +5,9 @@ import (
 	"flag"
 	"time"
 
-	"github.com/zeromicro/go-zero/core/conf"
-	"github.com/zeromicro/go-zero/core/logx"
+	"scutbot.cn/web/rm-monitor/pkg/app"
 	"scutbot.cn/web/rm-monitor/pkg/db"
+	"scutbot.cn/web/rm-monitor/pkg/logx"
 	"scutbot.cn/web/rm-monitor/record-dispatcher/internal/config"
 	"scutbot.cn/web/rm-monitor/record-dispatcher/internal/logic"
 	"scutbot.cn/web/rm-monitor/record-dispatcher/internal/svc"
@@ -22,7 +22,7 @@ func init() {
 func main() {
 	flag.Parse()
 	var c config.Config
-	conf.MustLoad(*configFile, &c)
+	app.MustLoadConfig(*configFile, &c)
 
 	svcCtx := svc.NewServiceContext(c)
 	defer svcCtx.DB.Close()

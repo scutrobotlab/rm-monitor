@@ -11,7 +11,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/samber/lo"
 	"github.com/tidwall/gjson"
-	"github.com/zeromicro/go-zero/core/logx"
 	"scutbot.cn/web/rm-monitor/ent"
 	"scutbot.cn/web/rm-monitor/ent/match"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
@@ -19,6 +18,7 @@ import (
 	"scutbot.cn/web/rm-monitor/monitor/internal/svc"
 	"scutbot.cn/web/rm-monitor/monitor/types"
 	"scutbot.cn/web/rm-monitor/pkg/db"
+	"scutbot.cn/web/rm-monitor/pkg/logx"
 )
 
 type MatchScanLogic struct {

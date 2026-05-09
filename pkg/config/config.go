@@ -1,13 +1,13 @@
 package config
 
-import "github.com/zeromicro/go-zero/core/stores/redis"
+import "scutbot.cn/web/rm-monitor/pkg/redisx"
 
 type PostgresConf struct {
 	DSN         string
 	AutoMigrate bool `json:",optional"`
 }
 
-type RedisConf = redis.RedisConf
+type RedisConf = redisx.Conf
 
 type RecordConf struct {
 	Res               string `json:",optional"`

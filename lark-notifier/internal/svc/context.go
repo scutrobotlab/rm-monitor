@@ -6,20 +6,20 @@ import (
 	"time"
 
 	lark "github.com/larksuite/oapi-sdk-go/v3"
-	"github.com/zeromicro/go-zero/core/logx"
-	"github.com/zeromicro/go-zero/core/stores/redis"
 	"resty.dev/v3"
 	"scutbot.cn/web/rm-monitor/ent"
 	"scutbot.cn/web/rm-monitor/lark-notifier/internal/config"
 	"scutbot.cn/web/rm-monitor/pkg/db"
 	"scutbot.cn/web/rm-monitor/pkg/larkcache"
 	"scutbot.cn/web/rm-monitor/pkg/larklog"
+	"scutbot.cn/web/rm-monitor/pkg/logx"
+	"scutbot.cn/web/rm-monitor/pkg/redisx"
 )
 
 type ServiceContext struct {
 	Config      config.Config
 	LarkClient  *lark.Client
-	RedisClient *redis.Redis
+	RedisClient *redisx.Client
 	RestyClient *resty.Client
 	DB          *ent.Client
 	UploadSlots chan struct{}
@@ -27,7 +27,7 @@ type ServiceContext struct {
 
 func NewServiceContext(c config.Config) *ServiceContext {
 	restyClient := resty.New().SetRetryCount(3).SetRetryWaitTime(1 * time.Second).SetTimeout(10 * time.Second)
-	redisClient := redis.MustNewRedis(c.RedisConf)
+	redisClient := redisx.MustNew(c.RedisConf.WithDefaults())
 	client, err := db.Open(context.Background(), c.PostgresConf)
 	if err != nil {
 		logx.Error(err)

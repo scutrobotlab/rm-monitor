@@ -8,10 +8,10 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/zeromicro/go-zero/core/logx"
 	"scutbot.cn/web/rm-monitor/ent/mediaartifact"
 	"scutbot.cn/web/rm-monitor/ent/uploadtask"
 	"scutbot.cn/web/rm-monitor/pkg/kubejob"
+	"scutbot.cn/web/rm-monitor/pkg/logx"
 	"scutbot.cn/web/rm-monitor/uploader-dispatcher/internal/svc"
 )
 

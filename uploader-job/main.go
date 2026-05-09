@@ -15,16 +15,16 @@ import (
 	lark "github.com/larksuite/oapi-sdk-go/v3"
 	larkdrive "github.com/larksuite/oapi-sdk-go/v3/service/drive/v1"
 	"github.com/pkg/errors"
-	"github.com/zeromicro/go-zero/core/conf"
-	"github.com/zeromicro/go-zero/core/logx"
-	"github.com/zeromicro/go-zero/core/stores/redis"
 	"resty.dev/v3"
 	"scutbot.cn/web/rm-monitor/ent"
 	"scutbot.cn/web/rm-monitor/ent/uploadtask"
+	"scutbot.cn/web/rm-monitor/pkg/app"
 	common "scutbot.cn/web/rm-monitor/pkg/config"
 	"scutbot.cn/web/rm-monitor/pkg/db"
 	"scutbot.cn/web/rm-monitor/pkg/larkcache"
 	"scutbot.cn/web/rm-monitor/pkg/larklog"
+	"scutbot.cn/web/rm-monitor/pkg/logx"
+	"scutbot.cn/web/rm-monitor/pkg/redisx"
 	"scutbot.cn/web/rm-monitor/pkg/storagepath"
 	"scutbot.cn/web/rm-monitor/uploader-job/internal/config"
 )
@@ -45,7 +45,7 @@ func main() {
 		os.Exit(1)
 	}
 	var c config.Config
-	conf.MustLoad(*configFile, &c)
+	app.MustLoadConfig(*configFile, &c)
 
 	client, err := db.Open(context.Background(), c.PostgresConf)
 	if err != nil {
@@ -54,7 +54,7 @@ func main() {
 	}
 	defer client.Close()
 
-	redisClient := redis.MustNewRedis(c.RedisConf)
+	redisClient := redisx.MustNew(c.RedisConf.WithDefaults())
 	larkClient := lark.NewClient(c.LarkConf.AppId, c.LarkConf.AppSecret,
 		lark.WithHttpClient(resty.New().SetRetryCount(3).SetRetryWaitTime(time.Second).SetTimeout(30*time.Second).Client()),
 		lark.WithEnableTokenCache(true),
@@ -67,7 +67,7 @@ func main() {
 	}
 }
 
-func run(ctx context.Context, client *ent.Client, redisClient *redis.Redis, larkClient *lark.Client, c config.Config, taskID int) error {
+func run(ctx context.Context, client *ent.Client, redisClient *redisx.Client, larkClient *lark.Client, c config.Config, taskID int) error {
 	task, err := client.UploadTask.Get(ctx, taskID)
 	if err != nil {
 		return errors.Wrap(err, "get upload task")
@@ -167,7 +167,7 @@ func run(ctx context.Context, client *ent.Client, redisClient *redis.Redis, lark
 	return db.Notify(ctx, c.PostgresConf.DSN, db.UploadTaskChangedChannel, strconv.Itoa(taskID))
 }
 
-func waitUploadSlot(ctx context.Context, redisClient *redis.Redis, conf common.UploadConf) error {
+func waitUploadSlot(ctx context.Context, redisClient *redisx.Client, conf common.UploadConf) error {
 	key := fmt.Sprintf("%s:%s", conf.RateLimitKey, time.Now().Format("200601021504"))
 	for {
 		n, err := redisClient.IncrCtx(ctx, key)

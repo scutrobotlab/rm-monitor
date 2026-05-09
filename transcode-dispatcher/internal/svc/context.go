@@ -4,10 +4,10 @@ import (
 	"context"
 	"os"
 
-	"github.com/zeromicro/go-zero/core/logx"
 	"scutbot.cn/web/rm-monitor/ent"
 	"scutbot.cn/web/rm-monitor/pkg/db"
 	"scutbot.cn/web/rm-monitor/pkg/kubejob"
+	"scutbot.cn/web/rm-monitor/pkg/logx"
 	"scutbot.cn/web/rm-monitor/transcode-dispatcher/internal/config"
 )
 

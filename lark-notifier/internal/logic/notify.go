@@ -9,8 +9,6 @@ import (
 	larkim "github.com/larksuite/oapi-sdk-go/v3/service/im/v1"
 	"github.com/pkg/errors"
 	"github.com/samber/lo"
-	"github.com/zeromicro/go-zero/core/jsonx"
-	"github.com/zeromicro/go-zero/core/logx"
 	"scutbot.cn/web/rm-monitor/ent"
 	"scutbot.cn/web/rm-monitor/ent/larkmessage"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
@@ -18,6 +16,7 @@ import (
 	"scutbot.cn/web/rm-monitor/lark-notifier/internal/svc"
 	"scutbot.cn/web/rm-monitor/lark-notifier/internal/utils"
 	"scutbot.cn/web/rm-monitor/monitor/types"
+	"scutbot.cn/web/rm-monitor/pkg/logx"
 )
 
 type NotifyLogic struct {
@@ -68,10 +67,11 @@ func (l *NotifyLogic) createMatchMessages(m *ent.Match) error {
 	if err != nil {
 		return err
 	}
-	contentData, err := jsonx.MarshalToString(content)
+	contentBytes, err := json.Marshal(content)
 	if err != nil {
 		return errors.Wrap(err, "marshal card content")
 	}
+	contentData := string(contentBytes)
 
 	return utils.ForeachChat(l.ctx, l.svcCtx, func(chat *larkim.ListChat) {
 		req := larkim.NewCreateMessageReqBuilder().
@@ -127,10 +127,11 @@ func (l *NotifyLogic) patchChangedCards() error {
 			return err
 		}
 		contentMap := toMap(content)
-		contentData, err := jsonx.MarshalToString(content)
+		contentBytes, err := json.Marshal(content)
 		if err != nil {
 			return errors.Wrap(err, "marshal card content")
 		}
+		contentData := string(contentBytes)
 		if sameJSON(group[0].CardPayload, contentMap) {
 			continue
 		}

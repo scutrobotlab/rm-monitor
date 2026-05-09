@@ -5,11 +5,11 @@ import (
 	"flag"
 	"time"
 
-	"github.com/zeromicro/go-zero/core/conf"
-	"github.com/zeromicro/go-zero/core/logx"
 	"scutbot.cn/web/rm-monitor/lark-notifier/internal/config"
 	"scutbot.cn/web/rm-monitor/lark-notifier/internal/logic"
 	"scutbot.cn/web/rm-monitor/lark-notifier/internal/svc"
+	"scutbot.cn/web/rm-monitor/pkg/app"
+	"scutbot.cn/web/rm-monitor/pkg/logx"
 )
 
 var configFile = flag.String("f", "etc/config.yml", "the config file")
@@ -26,7 +26,7 @@ func main() {
 	flag.Parse()
 
 	var c config.Config
-	conf.MustLoad(*configFile, &c)
+	app.MustLoadConfig(*configFile, &c)
 
 	svcCtx := svc.NewServiceContext(c)
 	defer svcCtx.DB.Close()

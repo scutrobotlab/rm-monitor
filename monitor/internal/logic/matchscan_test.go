@@ -5,9 +5,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/zeromicro/go-zero/core/conf"
 	"scutbot.cn/web/rm-monitor/monitor/internal/config"
 	"scutbot.cn/web/rm-monitor/monitor/internal/svc"
+	"scutbot.cn/web/rm-monitor/pkg/app"
 )
 
 func TestNewMatchScanLogic(t *testing.T) {
@@ -15,7 +15,7 @@ func TestNewMatchScanLogic(t *testing.T) {
 		t.Skip("set RM_MONITOR_INTEGRATION=1 to run live monitor scan")
 	}
 	var c config.Config
-	conf.MustLoad("../../etc/config.yml", &c)
+	app.MustLoadConfig("../../etc/config.yml", &c)
 
 	svcCtx := svc.NewServiceContext(c)
 

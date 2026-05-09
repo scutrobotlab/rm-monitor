@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/zeromicro/go-zero/core/logc"
+	"scutbot.cn/web/rm-monitor/pkg/logc"
 )
 
 type Ticker struct {

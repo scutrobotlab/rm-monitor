@@ -8,7 +8,7 @@ import (
 
 	larkdrive "github.com/larksuite/oapi-sdk-go/v3/service/drive/v1"
 	"github.com/pkg/errors"
-	"github.com/zeromicro/go-zero/core/logc"
+	"scutbot.cn/web/rm-monitor/pkg/logc"
 
 	"scutbot.cn/web/rm-monitor/lark-notifier/internal/svc"
 )

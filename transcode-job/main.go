@@ -16,13 +16,13 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/zeromicro/go-zero/core/conf"
-	"github.com/zeromicro/go-zero/core/logx"
 	"scutbot.cn/web/rm-monitor/ent"
 	"scutbot.cn/web/rm-monitor/ent/mediaartifact"
 	"scutbot.cn/web/rm-monitor/ent/recordtask"
 	"scutbot.cn/web/rm-monitor/ent/transcodetask"
+	"scutbot.cn/web/rm-monitor/pkg/app"
 	"scutbot.cn/web/rm-monitor/pkg/db"
+	"scutbot.cn/web/rm-monitor/pkg/logx"
 	"scutbot.cn/web/rm-monitor/pkg/storagepath"
 	"scutbot.cn/web/rm-monitor/transcode-job/internal/config"
 )
@@ -43,7 +43,7 @@ func main() {
 		os.Exit(1)
 	}
 	var c config.Config
-	conf.MustLoad(*configFile, &c)
+	app.MustLoadConfig(*configFile, &c)
 	client, err := db.Open(context.Background(), c.PostgresConf)
 	if err != nil {
 		logx.Error(err)

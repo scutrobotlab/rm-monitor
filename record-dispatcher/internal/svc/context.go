@@ -5,11 +5,11 @@ import (
 	"os"
 	"time"
 
-	"github.com/zeromicro/go-zero/core/logx"
 	"resty.dev/v3"
 	"scutbot.cn/web/rm-monitor/ent"
 	"scutbot.cn/web/rm-monitor/pkg/db"
 	"scutbot.cn/web/rm-monitor/pkg/kubejob"
+	"scutbot.cn/web/rm-monitor/pkg/logx"
 	"scutbot.cn/web/rm-monitor/record-dispatcher/internal/config"
 )
 
