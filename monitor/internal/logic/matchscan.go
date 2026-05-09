@@ -197,6 +197,9 @@ func (l *MatchScanLogic) reconcileRounds(prev processedSnapshot, cur scannedMatc
 		if cur.Status != types.MatchStatusSTARTED && endTo == prevTotal {
 			endTo = prevTotal + 1
 		}
+		if cur.TotalRounds > 0 && endTo > cur.TotalRounds {
+			endTo = cur.TotalRounds
+		}
 		winners := winnersFromDelta(prev, cur, endTo-prevTotal)
 		for roundNo := prevTotal + 1; roundNo <= endTo; roundNo++ {
 			if err := l.ensureEndedRound(cur.ID, roundNo, winners[roundNo-(prevTotal+1)]); err != nil {
