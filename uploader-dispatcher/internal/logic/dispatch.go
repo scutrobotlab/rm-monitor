@@ -104,11 +104,17 @@ func (l *DispatchLogic) ensureTable(appToken, tableName string) (string, error) 
 	if tableID, err := l.svcCtx.Redis.GetCtx(l.ctx, cacheKey); err != nil {
 		return "", errors.Wrap(err, "get bitable table cache")
 	} else if tableID != "" {
+		if err := l.ensureTableFields(appToken, tableID); err != nil {
+			return "", err
+		}
 		return tableID, nil
 	}
 	if tableID, err := l.findTable(appToken, tableName); err != nil {
 		return "", err
 	} else if tableID != "" {
+		if err := l.ensureTableFields(appToken, tableID); err != nil {
+			return "", err
+		}
 		_ = l.svcCtx.Redis.SetexCtx(l.ctx, cacheKey, tableID, tableCacheTTL)
 		return tableID, nil
 	}
@@ -124,11 +130,17 @@ func (l *DispatchLogic) ensureTable(appToken, tableName string) (string, error) 
 			if tableID, err := l.svcCtx.Redis.GetCtx(l.ctx, cacheKey); err != nil {
 				return "", errors.Wrap(err, "get bitable table cache")
 			} else if tableID != "" {
+				if err := l.ensureTableFields(appToken, tableID); err != nil {
+					return "", err
+				}
 				return tableID, nil
 			}
 			if tableID, err := l.findTable(appToken, tableName); err != nil {
 				return "", err
 			} else if tableID != "" {
+				if err := l.ensureTableFields(appToken, tableID); err != nil {
+					return "", err
+				}
 				_ = l.svcCtx.Redis.SetexCtx(l.ctx, cacheKey, tableID, tableCacheTTL)
 				return tableID, nil
 			}
@@ -139,6 +151,9 @@ func (l *DispatchLogic) ensureTable(appToken, tableName string) (string, error) 
 	if tableID, err := l.findTable(appToken, tableName); err != nil {
 		return "", err
 	} else if tableID != "" {
+		if err := l.ensureTableFields(appToken, tableID); err != nil {
+			return "", err
+		}
 		_ = l.svcCtx.Redis.SetexCtx(l.ctx, cacheKey, tableID, tableCacheTTL)
 		return tableID, nil
 	}
@@ -153,6 +168,9 @@ func (l *DispatchLogic) ensureTable(appToken, tableName string) (string, error) 
 	}
 	if !resp.Success() || resp.Data == nil || resp.Data.TableId == nil {
 		return "", errors.Wrap(resp, "create bitable table")
+	}
+	if err := l.ensureTableFields(appToken, *resp.Data.TableId); err != nil {
+		return "", err
 	}
 	_ = l.svcCtx.Redis.SetexCtx(l.ctx, cacheKey, *resp.Data.TableId, tableCacheTTL)
 	return *resp.Data.TableId, nil
@@ -184,6 +202,77 @@ func (l *DispatchLogic) findTable(appToken, tableName string) (string, error) {
 		}
 		if resp.Data.HasMore == nil || !*resp.Data.HasMore || resp.Data.PageToken == nil || *resp.Data.PageToken == "" {
 			return "", nil
+		}
+		pageToken = *resp.Data.PageToken
+	}
+}
+
+func (l *DispatchLogic) ensureTableFields(appToken, tableID string) error {
+	existing, err := l.listFields(appToken, tableID)
+	if err != nil {
+		return err
+	}
+	required := map[string]int{
+		bitableupload.FieldRole:       larkbitable.TypeSingleSelect,
+		bitableupload.FieldMatch:      larkbitable.TypeSingleSelect,
+		bitableupload.FieldType:       larkbitable.TypeSingleSelect,
+		bitableupload.FieldRedTeam:    larkbitable.TypeSingleSelect,
+		bitableupload.FieldBlueTeam:   larkbitable.TypeSingleSelect,
+		bitableupload.FieldAttachment: larkbitable.TypeAttachment,
+	}
+	for name, fieldType := range required {
+		if _, ok := existing[name]; ok {
+			continue
+		}
+		token := uuid.NewSHA1(uuid.NameSpaceOID, []byte(fmt.Sprintf("rm-monitor:bitable-field:%s:%s:%s", appToken, tableID, name))).String()
+		resp, err := l.svcCtx.Lark.Bitable.V1.AppTableField.Create(l.ctx, larkbitable.NewCreateAppTableFieldReqBuilder().
+			AppToken(appToken).
+			TableId(tableID).
+			ClientToken(token).
+			AppTableField(larkbitable.NewAppTableFieldBuilder().
+				FieldName(name).
+				Type(fieldType).
+				Build()).
+			Build())
+		if err != nil {
+			return errors.Wrapf(err, "create bitable field %s", name)
+		}
+		if !resp.Success() {
+			return errors.Errorf("create bitable field %s: code=%d msg=%s", name, resp.Code, resp.Msg)
+		}
+	}
+	return nil
+}
+
+func (l *DispatchLogic) listFields(appToken, tableID string) (map[string]int, error) {
+	fields := make(map[string]int)
+	pageToken := ""
+	for {
+		builder := larkbitable.NewListAppTableFieldReqBuilder().
+			AppToken(appToken).
+			TableId(tableID).
+			PageSize(100)
+		if pageToken != "" {
+			builder.PageToken(pageToken)
+		}
+		resp, err := l.svcCtx.Lark.Bitable.V1.AppTableField.List(l.ctx, builder.Build())
+		if err != nil {
+			return nil, errors.Wrap(err, "list bitable fields")
+		}
+		if !resp.Success() {
+			return nil, errors.Errorf("list bitable fields: code=%d msg=%s", resp.Code, resp.Msg)
+		}
+		if resp.Data == nil {
+			return fields, nil
+		}
+		for _, field := range resp.Data.Items {
+			if field.FieldName == nil || field.Type == nil {
+				continue
+			}
+			fields[*field.FieldName] = *field.Type
+		}
+		if resp.Data.HasMore == nil || !*resp.Data.HasMore || resp.Data.PageToken == nil || *resp.Data.PageToken == "" {
+			return fields, nil
 		}
 		pageToken = *resp.Data.PageToken
 	}
