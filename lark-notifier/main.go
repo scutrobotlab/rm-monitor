@@ -9,6 +9,7 @@ import (
 	"scutbot.cn/web/rm-monitor/lark-notifier/internal/logic"
 	"scutbot.cn/web/rm-monitor/lark-notifier/internal/svc"
 	"scutbot.cn/web/rm-monitor/pkg/app"
+	"scutbot.cn/web/rm-monitor/pkg/db"
 	"scutbot.cn/web/rm-monitor/pkg/logx"
 )
 
@@ -32,6 +33,8 @@ func main() {
 	defer svcCtx.DB.Close()
 
 	logx.Info("starting lark notifier")
+	wake := make(chan struct{}, 1)
+	go listen(c.PostgresConf.DSN, wake)
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
 	for {
@@ -40,6 +43,30 @@ func main() {
 			logx.Errorf("lark notifier sync failed: %v", err)
 		}
 		cancel()
-		<-ticker.C
+		select {
+		case <-wake:
+		case <-ticker.C:
+		}
+	}
+}
+
+func listen(dsn string, wake chan<- struct{}) {
+	for {
+		l, err := db.NewListener(context.Background(), dsn, db.MatchRoundChangedChannel, db.UploadTaskChangedChannel)
+		if err != nil {
+			logx.Errorf("lark notifier listener failed: %v", err)
+			time.Sleep(5 * time.Second)
+			continue
+		}
+		for {
+			if _, _, err := l.Wait(context.Background()); err != nil {
+				_ = l.Close(context.Background())
+				break
+			}
+			select {
+			case wake <- struct{}{}:
+			default:
+			}
+		}
 	}
 }

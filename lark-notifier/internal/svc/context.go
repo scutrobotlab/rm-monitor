@@ -12,6 +12,7 @@ import (
 	"scutbot.cn/web/rm-monitor/pkg/db"
 	"scutbot.cn/web/rm-monitor/pkg/larkcache"
 	"scutbot.cn/web/rm-monitor/pkg/larklog"
+	"scutbot.cn/web/rm-monitor/pkg/larkrate"
 	"scutbot.cn/web/rm-monitor/pkg/logx"
 	"scutbot.cn/web/rm-monitor/pkg/redisx"
 )
@@ -22,6 +23,7 @@ type ServiceContext struct {
 	RedisClient *redisx.Client
 	RestyClient *resty.Client
 	DB          *ent.Client
+	RateLimiter *larkrate.Limiter
 	UploadSlots chan struct{}
 }
 
@@ -47,6 +49,7 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		RedisClient: redisClient,
 		RestyClient: restyClient,
 		DB:          client,
+		RateLimiter: larkrate.New(redisClient),
 		UploadSlots: make(chan struct{}, uploadConcurrency),
 	}
 }
