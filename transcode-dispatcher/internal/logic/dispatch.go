@@ -53,6 +53,7 @@ func (l *DispatchLogic) createTranscodeTasks() error {
 			mediaartifact.StatusEQ(mediaartifact.StatusAVAILABLE),
 		).
 		WithSourceTranscodeTask().
+		Limit(100).
 		All(l.ctx)
 	if err != nil {
 		return errors.Wrap(err, "query source artifacts")
@@ -79,6 +80,7 @@ func (l *DispatchLogic) recoverDispatching() error {
 	}
 	tasks, err := l.svcCtx.DB.TranscodeTask.Query().
 		Where(transcodetask.StatusEQ(transcodetask.StatusDISPATCHING), transcodetask.UpdatedAtLTE(time.Now().Add(-dispatchingStaleAfter))).
+		Limit(100).
 		All(l.ctx)
 	if err != nil {
 		return errors.Wrap(err, "query stale dispatching transcode tasks")
@@ -124,6 +126,7 @@ func (l *DispatchLogic) dispatchPending() error {
 	}
 	tasks, err := l.svcCtx.DB.TranscodeTask.Query().
 		Where(transcodetask.StatusEQ(transcodetask.StatusPENDING)).
+		Limit(100).
 		All(l.ctx)
 	if err != nil {
 		return errors.Wrap(err, "query pending transcode tasks")
@@ -196,6 +199,7 @@ func (l *DispatchLogic) cleanupExpiredSources() error {
 		WithSourceTranscodeTask(func(q *ent.TranscodeTaskQuery) {
 			q.WithArchiveArtifact()
 		}).
+		Limit(100).
 		All(l.ctx)
 	if err != nil {
 		return errors.Wrap(err, "query deletable sources")

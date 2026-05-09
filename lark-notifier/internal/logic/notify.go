@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
+	"strconv"
 	"time"
 
 	larkim "github.com/larksuite/oapi-sdk-go/v3/service/im/v1"
@@ -12,6 +13,7 @@ import (
 	"github.com/samber/lo"
 	"scutbot.cn/web/rm-monitor/ent"
 	"scutbot.cn/web/rm-monitor/ent/larkmessage"
+	"scutbot.cn/web/rm-monitor/ent/match"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
 	"scutbot.cn/web/rm-monitor/ent/uploadtask"
 	"scutbot.cn/web/rm-monitor/lark-notifier/internal/svc"
@@ -34,10 +36,70 @@ func (l *NotifyLogic) Sync() error {
 	if err := l.ensureStartedMessages(); err != nil {
 		return err
 	}
-	if err := l.patchChangedCards(); err != nil {
+	if err := l.patchRecentlyChangedCards(); err != nil {
 		return err
 	}
 	return l.replyCompletedUploads()
+}
+
+func (l *NotifyLogic) SyncEvent(channel, payload string) error {
+	id, err := strconv.Atoi(payload)
+	if err != nil {
+		return errors.Wrapf(err, "parse notify payload %q", payload)
+	}
+	switch channel {
+	case "match_round_changed":
+		return l.syncMatchRound(id)
+	case "upload_task_changed":
+		return l.syncUploadTask(id)
+	default:
+		return nil
+	}
+}
+
+func (l *NotifyLogic) syncMatchRound(id int) error {
+	r, err := l.svcCtx.DB.MatchRound.Query().
+		Where(matchround.ID(id)).
+		WithMatch(func(q *ent.MatchQuery) {
+			q.WithRedTeam().
+				WithBlueTeam().
+				WithLarkMessages().
+				WithRounds(func(q *ent.MatchRoundQuery) {
+					q.Order(matchround.ByRoundNo())
+				})
+		}).
+		Only(l.ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil
+		}
+		return errors.Wrap(err, "query notified match round")
+	}
+	m := r.Edges.Match
+	if m == nil {
+		return nil
+	}
+	if r.Status == matchround.StatusSTARTED && len(m.Edges.LarkMessages) == 0 {
+		if err := l.createMatchMessages(m); err != nil {
+			return err
+		}
+		m, err = l.matchForPatch(m.ID)
+		if err != nil {
+			return err
+		}
+	}
+	return l.patchMatchCards(m)
+}
+
+func (l *NotifyLogic) syncUploadTask(id int) error {
+	task, err := l.uploadTaskForReply(id)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
+	return l.replyUploadTask(task)
 }
 
 func (l *NotifyLogic) ensureStartedMessages() error {
@@ -46,6 +108,7 @@ func (l *NotifyLogic) ensureStartedMessages() error {
 		WithMatch(func(q *ent.MatchQuery) {
 			q.WithRedTeam().WithBlueTeam().WithLarkMessages()
 		}).
+		Limit(100).
 		All(l.ctx)
 	if err != nil {
 		return errors.Wrap(err, "query started rounds")
@@ -117,63 +180,90 @@ func (l *NotifyLogic) createMatchMessages(m *ent.Match) error {
 	return nil
 }
 
-func (l *NotifyLogic) patchChangedCards() error {
-	messages, err := l.svcCtx.DB.LarkMessage.Query().
+func (l *NotifyLogic) patchRecentlyChangedCards() error {
+	rounds, err := l.svcCtx.DB.MatchRound.Query().
+		Where(matchround.UpdatedAtGTE(time.Now().Add(-10 * time.Minute))).
 		WithMatch(func(q *ent.MatchQuery) {
-			q.WithRedTeam().WithBlueTeam().WithRounds(func(q *ent.MatchRoundQuery) {
-				q.Order(matchround.ByRoundNo())
-			})
+			q.WithRedTeam().
+				WithBlueTeam().
+				WithLarkMessages().
+				WithRounds(func(q *ent.MatchRoundQuery) {
+					q.Order(matchround.ByRoundNo())
+				})
 		}).
+		Limit(100).
 		All(l.ctx)
 	if err != nil {
-		return errors.Wrap(err, "query lark messages")
+		return errors.Wrap(err, "query recently changed rounds")
 	}
-	grouped := lo.GroupBy(messages, func(item *ent.LarkMessage) string {
-		if item.Edges.Match == nil {
-			return ""
-		}
-		return item.Edges.Match.ID
-	})
-	for _, group := range grouped {
-		if len(group) == 0 || group[0].Edges.Match == nil {
+	seen := make(map[string]struct{}, len(rounds))
+	for _, r := range rounds {
+		m := r.Edges.Match
+		if m == nil {
 			continue
 		}
-		content, err := l.cardContent(group[0].Edges.Match)
-		if err != nil {
+		if _, ok := seen[m.ID]; ok {
+			continue
+		}
+		seen[m.ID] = struct{}{}
+		if err := l.patchMatchCards(m); err != nil {
 			return err
 		}
-		contentMap := toMap(content)
-		contentBytes, err := json.Marshal(content)
-		if err != nil {
-			return errors.Wrap(err, "marshal card content")
+	}
+	return nil
+}
+
+func (l *NotifyLogic) matchForPatch(matchID string) (*ent.Match, error) {
+	return l.svcCtx.DB.Match.Query().
+		Where(match.ID(matchID)).
+		WithRedTeam().
+		WithBlueTeam().
+		WithLarkMessages().
+		WithRounds(func(q *ent.MatchRoundQuery) {
+			q.Order(matchround.ByRoundNo())
+		}).
+		Only(l.ctx)
+}
+
+func (l *NotifyLogic) patchMatchCards(m *ent.Match) error {
+	if m == nil || len(m.Edges.LarkMessages) == 0 {
+		return nil
+	}
+	content, err := l.cardContent(m)
+	if err != nil {
+		return err
+	}
+	contentMap := toMap(content)
+	contentBytes, err := json.Marshal(content)
+	if err != nil {
+		return errors.Wrap(err, "marshal card content")
+	}
+	contentData := string(contentBytes)
+	for _, message := range m.Edges.LarkMessages {
+		if sameJSON(message.CardPayload, contentMap) {
+			continue
 		}
-		contentData := string(contentBytes)
-		for _, message := range group {
-			if sameJSON(message.CardPayload, contentMap) {
-				continue
+		req := larkim.NewPatchMessageReqBuilder().MessageId(message.MessageID).
+			Body(larkim.NewPatchMessageReqBodyBuilder().Content(contentData).Build()).
+			Build()
+		var resp *larkim.PatchMessageResp
+		err := l.withLarkRetry("", func() error {
+			var callErr error
+			resp, callErr = l.svcCtx.LarkClient.Im.V1.Message.Patch(l.ctx, req)
+			if callErr != nil {
+				return callErr
 			}
-			req := larkim.NewPatchMessageReqBuilder().MessageId(message.MessageID).
-				Body(larkim.NewPatchMessageReqBodyBuilder().Content(contentData).Build()).
-				Build()
-			var resp *larkim.PatchMessageResp
-			err := l.withLarkRetry("", func() error {
-				var callErr error
-				resp, callErr = l.svcCtx.LarkClient.Im.V1.Message.Patch(l.ctx, req)
-				if callErr != nil {
-					return callErr
-				}
-				if !resp.Success() {
-					return resp
-				}
-				return nil
-			})
-			if err != nil {
-				l.Error(errors.Wrap(err, "patch lark message"))
-				continue
+			if !resp.Success() {
+				return resp
 			}
-			if err := l.svcCtx.DB.LarkMessage.UpdateOneID(message.ID).SetCardPayload(contentMap).Exec(l.ctx); err != nil {
-				l.Error(errors.Wrap(err, "update lark card payload"))
-			}
+			return nil
+		})
+		if err != nil {
+			l.Error(errors.Wrap(err, "patch lark message"))
+			continue
+		}
+		if err := l.svcCtx.DB.LarkMessage.UpdateOneID(message.ID).SetCardPayload(contentMap).Exec(l.ctx); err != nil {
+			l.Error(errors.Wrap(err, "update lark card payload"))
 		}
 	}
 	return nil
@@ -188,46 +278,66 @@ func (l *NotifyLogic) replyCompletedUploads() error {
 					q.WithLarkMessages()
 				})
 			})
-		}).
+		}).Limit(100).
 		All(l.ctx)
 	if err != nil {
 		return errors.Wrap(err, "query completed uploads")
 	}
 	for _, task := range tasks {
-		match := task.Edges.RecordTask.Edges.MatchRound.Edges.Match
-		for _, message := range match.Edges.LarkMessages {
-			if task.FileURL == nil {
-				continue
-			}
-			req := larkim.NewReplyMessageReqBuilder().
-				Body(larkim.NewReplyMessageReqBodyBuilder().
-					Content(larkim.NewMessageTextBuilder().Text(*task.FileURL).Build()).
-					MsgType(larkim.MsgTypeText).
-					ReplyInThread(true).
-					Uuid(utils.UploadReplyUUID(task.ID, message.MessageID)).
-					Build()).
-				MessageId(message.MessageID).
-				Build()
-			var resp *larkim.ReplyMessageResp
-			err := l.withLarkRetry("", func() error {
-				var callErr error
-				resp, callErr = l.svcCtx.LarkClient.Im.V1.Message.Reply(l.ctx, req)
-				if callErr != nil {
-					return callErr
-				}
-				if !resp.Success() {
-					return resp
-				}
-				return nil
+		if err := l.replyUploadTask(task); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (l *NotifyLogic) uploadTaskForReply(id int) (*ent.UploadTask, error) {
+	return l.svcCtx.DB.UploadTask.Query().
+		Where(uploadtask.ID(id), uploadtask.StatusEQ(uploadtask.StatusSUCCEEDED), uploadtask.LarkRepliedAtIsNil()).
+		WithRecordTask(func(q *ent.RecordTaskQuery) {
+			q.WithMatchRound(func(q *ent.MatchRoundQuery) {
+				q.WithMatch(func(q *ent.MatchQuery) {
+					q.WithLarkMessages()
+				})
 			})
-			if err != nil {
-				l.Error(errors.Wrap(err, "reply upload url"))
-				continue
+		}).
+		Only(l.ctx)
+}
+
+func (l *NotifyLogic) replyUploadTask(task *ent.UploadTask) error {
+	if task == nil || task.FileURL == nil || task.Edges.RecordTask == nil || task.Edges.RecordTask.Edges.MatchRound == nil || task.Edges.RecordTask.Edges.MatchRound.Edges.Match == nil {
+		return nil
+	}
+	match := task.Edges.RecordTask.Edges.MatchRound.Edges.Match
+	for _, message := range match.Edges.LarkMessages {
+		req := larkim.NewReplyMessageReqBuilder().
+			Body(larkim.NewReplyMessageReqBodyBuilder().
+				Content(larkim.NewMessageTextBuilder().Text(*task.FileURL).Build()).
+				MsgType(larkim.MsgTypeText).
+				ReplyInThread(true).
+				Uuid(utils.UploadReplyUUID(task.ID, message.MessageID)).
+				Build()).
+			MessageId(message.MessageID).
+			Build()
+		var resp *larkim.ReplyMessageResp
+		err := l.withLarkRetry("", func() error {
+			var callErr error
+			resp, callErr = l.svcCtx.LarkClient.Im.V1.Message.Reply(l.ctx, req)
+			if callErr != nil {
+				return callErr
 			}
+			if !resp.Success() {
+				return resp
+			}
+			return nil
+		})
+		if err != nil {
+			l.Error(errors.Wrap(err, "reply upload url"))
+			continue
 		}
-		if err := l.svcCtx.DB.UploadTask.UpdateOneID(task.ID).SetLarkRepliedAt(time.Now()).Exec(l.ctx); err != nil {
-			return errors.Wrap(err, "mark upload replied")
-		}
+	}
+	if err := l.svcCtx.DB.UploadTask.UpdateOneID(task.ID).SetLarkRepliedAt(time.Now()).Exec(l.ctx); err != nil {
+		return errors.Wrap(err, "mark upload replied")
 	}
 	return nil
 }

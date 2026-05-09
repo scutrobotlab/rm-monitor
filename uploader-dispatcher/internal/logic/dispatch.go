@@ -45,6 +45,7 @@ func (l *DispatchLogic) createUploadTasks() error {
 		).
 		WithRecordTask().
 		WithUploadTask().
+		Limit(100).
 		All(l.ctx)
 	if err != nil {
 		return errors.Wrap(err, "query source artifacts")
@@ -73,6 +74,7 @@ func (l *DispatchLogic) recoverDispatching() error {
 	}
 	tasks, err := l.svcCtx.DB.UploadTask.Query().
 		Where(uploadtask.StatusEQ(uploadtask.StatusDISPATCHING), uploadtask.UpdatedAtLTE(time.Now().Add(-dispatchingStaleAfter))).
+		Limit(100).
 		All(l.ctx)
 	if err != nil {
 		return errors.Wrap(err, "query stale dispatching upload tasks")

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"time"
 
 	"scutbot.cn/web/rm-monitor/lark-notifier/internal/config"
@@ -33,24 +34,34 @@ func main() {
 	defer svcCtx.DB.Close()
 
 	logx.Info("starting lark notifier")
-	wake := make(chan struct{}, 1)
-	go listen(c.PostgresConf.DSN, wake)
+	events := make(chan notifyEvent, 32)
+	go listen(c.PostgresConf.DSN, events)
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
 	for {
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		if err := logic.NewNotifyLogic(ctx, svcCtx).Sync(); err != nil {
-			logx.Errorf("lark notifier sync failed: %v", err)
-		}
-		cancel()
 		select {
-		case <-wake:
+		case event := <-events:
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			if err := logic.NewNotifyLogic(ctx, svcCtx).SyncEvent(event.Channel, event.Payload); err != nil {
+				logx.Errorf("lark notifier event sync failed: %v", err)
+			}
+			cancel()
 		case <-ticker.C:
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			if err := logic.NewNotifyLogic(ctx, svcCtx).Sync(); err != nil {
+				logx.Errorf("lark notifier sync failed: %v", err)
+			}
+			cancel()
 		}
 	}
 }
 
-func listen(dsn string, wake chan<- struct{}) {
+type notifyEvent struct {
+	Channel string
+	Payload string
+}
+
+func listen(dsn string, events chan<- notifyEvent) {
 	for {
 		l, err := db.NewListener(context.Background(), dsn, db.MatchRoundChangedChannel, db.UploadTaskChangedChannel)
 		if err != nil {
@@ -59,13 +70,15 @@ func listen(dsn string, wake chan<- struct{}) {
 			continue
 		}
 		for {
-			if _, _, err := l.Wait(context.Background()); err != nil {
+			channel, payload, err := l.Wait(context.Background())
+			if err != nil {
 				_ = l.Close(context.Background())
 				break
 			}
 			select {
-			case wake <- struct{}{}:
+			case events <- notifyEvent{Channel: channel, Payload: payload}:
 			default:
+				logx.Error(fmt.Errorf("drop lark notifier event: channel=%s payload=%s", channel, payload))
 			}
 		}
 	}

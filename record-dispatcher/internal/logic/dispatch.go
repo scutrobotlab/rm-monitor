@@ -49,6 +49,7 @@ func (l *DispatchLogic) cancelEndedRounds() error {
 	tasks, err := l.svcCtx.DB.RecordTask.Query().
 		Where(recordtask.StatusIn(recordtask.StatusRUNNING, recordtask.StatusDISPATCHING)).
 		WithMatchRound().
+		Limit(200).
 		All(l.ctx)
 	if err != nil {
 		return errors.Wrap(err, "query running record tasks")
@@ -70,6 +71,7 @@ func (l *DispatchLogic) recoverDispatchingTasks() error {
 	}
 	tasks, err := l.svcCtx.DB.RecordTask.Query().
 		Where(recordtask.StatusEQ(recordtask.StatusDISPATCHING), recordtask.UpdatedAtLTE(time.Now().Add(-dispatchingStaleAfter))).
+		Limit(100).
 		All(l.ctx)
 	if err != nil {
 		return errors.Wrap(err, "query stale dispatching record tasks")
@@ -101,6 +103,7 @@ func (l *DispatchLogic) createTasksForStartedRounds() error {
 	rounds, err := l.svcCtx.DB.MatchRound.Query().
 		Where(matchround.StatusEQ(matchround.StatusSTARTED)).
 		WithMatch(func(q *ent.MatchQuery) { q.WithRedTeam().WithBlueTeam() }).
+		Limit(100).
 		All(l.ctx)
 	if err != nil {
 		return errors.Wrap(err, "query started rounds")
