@@ -62,6 +62,7 @@ type K8sJobConf struct {
 	StorageNodeSelectorValue string `json:",optional"`
 	RecordsPVC               string `json:",optional"`
 	RecordsMountPath         string `json:",optional"`
+	ImagePullPolicy          string `json:",optional"`
 	BackoffLimit             int32  `json:",optional"`
 	TTLSecondsAfterFinished  int32  `json:",optional"`
 }
@@ -154,6 +155,9 @@ func (c *K8sJobConf) WithDefaults() K8sJobConf {
 	}
 	if out.RecordsMountPath == "" {
 		out.RecordsMountPath = "/records"
+	}
+	if out.ImagePullPolicy == "" {
+		out.ImagePullPolicy = "Always"
 	}
 	if out.BackoffLimit == 0 {
 		out.BackoffLimit = 1

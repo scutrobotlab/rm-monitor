@@ -26,6 +26,8 @@ jobs:
             dockerfile: record-job/Dockerfile
           - app: record-dispatcher
             dockerfile: record-dispatcher/Dockerfile
+          - app: manifest-job
+            dockerfile: manifest-job/Dockerfile
           - app: uploader-dispatcher
             dockerfile: uploader-dispatcher/Dockerfile
           - app: uploader-job

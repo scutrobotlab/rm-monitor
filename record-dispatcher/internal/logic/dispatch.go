@@ -2,6 +2,8 @@ package logic
 
 import (
 	"context"
+	"crypto/sha1"
+	"encoding/hex"
 	"fmt"
 	"strconv"
 	"strings"
@@ -27,6 +29,7 @@ type DispatchLogic struct {
 }
 
 const dispatchingStaleAfter = 5 * time.Minute
+const manifestLookback = 30 * time.Second
 
 func NewDispatchLogic(ctx context.Context, svcCtx *svc.ServiceContext) *DispatchLogic {
 	return &DispatchLogic{ctx: ctx, svcCtx: svcCtx, Logger: logx.WithContext(ctx)}
@@ -42,7 +45,10 @@ func (l *DispatchLogic) Tick() error {
 	if err := l.recoverDispatchingTasks(); err != nil {
 		return err
 	}
-	return l.dispatchPendingTasks()
+	if err := l.dispatchPendingTasks(); err != nil {
+		return err
+	}
+	return l.dispatchRecentManifestJobs()
 }
 
 func (l *DispatchLogic) cancelEndedRounds() error {
@@ -211,6 +217,57 @@ func (l *DispatchLogic) dispatchPendingTasks() error {
 	return nil
 }
 
+func (l *DispatchLogic) dispatchRecentManifestJobs() error {
+	if l.svcCtx.K8s == nil || strings.TrimSpace(l.svcCtx.Config.ManifestJobConf.Image) == "" {
+		return nil
+	}
+	since := time.Now().Add(-manifestLookback)
+	type manifestCandidate struct {
+		match     *ent.Match
+		updatedAt time.Time
+	}
+	matchesByID := map[string]manifestCandidate{}
+	rounds, err := l.svcCtx.DB.MatchRound.Query().
+		Where(matchround.UpdatedAtGTE(since)).
+		WithMatch().
+		Limit(200).
+		All(l.ctx)
+	if err != nil {
+		return errors.Wrap(err, "query recently changed rounds for manifest")
+	}
+	for _, r := range rounds {
+		if r.Edges.Match != nil {
+			cur := matchesByID[r.Edges.Match.ID]
+			if cur.match == nil || r.UpdatedAt.After(cur.updatedAt) {
+				matchesByID[r.Edges.Match.ID] = manifestCandidate{match: r.Edges.Match, updatedAt: r.UpdatedAt}
+			}
+		}
+	}
+	conf := l.svcCtx.Config.ManifestJobConf.WithDefaults()
+	for _, item := range matchesByID {
+		m := item.match
+		name := manifestJobName(m.ID, item.updatedAt)
+		job := kubejob.Build(l.svcCtx.Config.ManifestJobConf, kubejob.JobSpec{
+			Name:     name,
+			App:      "manifest-job",
+			Image:    conf.Image,
+			Args:     []string{"-f", "/etc/rm-monitor/config.yml", "-match", m.ID},
+			MountPVC: true,
+			CPU:      "50m",
+			Memory:   "128Mi",
+		})
+		if err := l.svcCtx.K8s.CreateJob(l.ctx, conf.Namespace, job); err != nil {
+			return errors.Wrap(err, "create manifest job")
+		}
+	}
+	return nil
+}
+
 func jobName(prefix string, id int) string {
 	return strings.ToLower(fmt.Sprintf("%s-%d", prefix, id))
+}
+
+func manifestJobName(matchID string, updatedAt time.Time) string {
+	h := sha1.Sum([]byte(fmt.Sprintf("%s:%d", matchID, updatedAt.UnixNano())))
+	return "manifest-" + hex.EncodeToString(h[:])[:16]
 }

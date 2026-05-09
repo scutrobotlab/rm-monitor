@@ -20,11 +20,34 @@ data:
       RecordsPVC: rm-monitor-records
       RecordsMountPath: /records
       TTLSecondsAfterFinished: 86400
+    ManifestJobConf:
+      Namespace: rm-monitor
+      Image: rm-monitor/manifest-job:latest
+      ConfigMapName: manifest-job-config
+      RecordsPVC: rm-monitor-records
+      RecordsMountPath: /records
+      TTLSecondsAfterFinished: 86400
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: record-job-config
+data:
+  config.yml: |
+    PostgresConf:
+      DSN: postgres://rm_monitor:rm_monitor@postgres:5432/rm_monitor?sslmode=disable
+      AutoMigrate: false
+    RecordConf:
+      Res: middle
+      BaseDir: /records
+      PathTemplate: "{{.Event}}/{{.Zone}}/{{.MatchName}}/Round-{{.RoundNo}}/{{.Role}}.flv"
+      MatchDirTemplate: "{{.Event}}/{{.Zone}}/{{.MatchName}}"
+      MatchNameTemplate: "{{.Order}}. {{.RedSchool}}-{{.RedName}} VS {{.BlueSchool}}-{{.BlueName}}"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: manifest-job-config
 data:
   config.yml: |
     PostgresConf:

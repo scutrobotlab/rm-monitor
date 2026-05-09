@@ -30,8 +30,8 @@ type MatchCardContent struct {
 			EventTitle    string       `json:"event_title"`
 			RedSchool     string       `json:"red_school"`
 			BlueSchool    string       `json:"blue_school"`
-			RedAvatar     string       `json:"red_avatar"`
-			BlueAvatar    string       `json:"blue_avatar"`
+			RedAvatar     string       `json:"red_avatar,omitempty"`
+			BlueAvatar    string       `json:"blue_avatar,omitempty"`
 			Scores        []MatchScore `json:"scores"`
 			Color         string       `json:"color"`
 			MatchType     string       `json:"match_type"`

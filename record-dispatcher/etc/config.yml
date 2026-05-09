@@ -14,3 +14,10 @@ K8sJobConf:
   RecordsPVC: rm-monitor-records
   RecordsMountPath: /records
   TTLSecondsAfterFinished: 86400
+ManifestJobConf:
+  Namespace: rm-monitor
+  Image: ghcr.io/scutrobotlab/rm-monitor/manifest-job:latest
+  ConfigMapName: manifest-job-config
+  RecordsPVC: rm-monitor-records
+  RecordsMountPath: /records
+  TTLSecondsAfterFinished: 86400

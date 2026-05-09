@@ -2,13 +2,11 @@ package logic
 
 import (
 	"context"
-	"crypto/sha1"
 	"fmt"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	larkbitable "github.com/larksuite/oapi-sdk-go/v3/service/bitable/v1"
 	"github.com/pkg/errors"
 	"scutbot.cn/web/rm-monitor/ent"
@@ -281,12 +279,10 @@ func (l *DispatchLogic) listFields(appToken, tableID string) (map[string]int, er
 	}
 }
 
-func (l *DispatchLogic) createBitableRecord(appToken, tableID string, artifactID int, match *ent.Match, role string) (string, *string, error) {
-	token := stableV4ClientToken(fmt.Sprintf("rm-monitor:upload-task:%d", artifactID))
+func (l *DispatchLogic) createBitableRecord(appToken, tableID string, _ int, match *ent.Match, role string) (string, *string, error) {
 	resp, err := l.svcCtx.Lark.Bitable.V1.AppTableRecord.Create(l.ctx, larkbitable.NewCreateAppTableRecordReqBuilder().
 		AppToken(appToken).
 		TableId(tableID).
-		ClientToken(token).
 		AppTableRecord(larkbitable.NewAppTableRecordBuilder().
 			Fields(bitableupload.RecordFields(match, role)).
 			Build()).
@@ -306,15 +302,6 @@ func (l *DispatchLogic) createBitableRecord(appToken, tableID string, artifactID
 	}
 	url := fmt.Sprintf("https://scutrobotlab.feishu.cn/base/%s?table=%s&record=%s", appToken, tableID, *record.RecordId)
 	return *record.RecordId, &url, nil
-}
-
-func stableV4ClientToken(seed string) string {
-	sum := sha1.Sum([]byte(seed))
-	var id uuid.UUID
-	copy(id[:], sum[:16])
-	id[6] = (id[6] & 0x0f) | 0x40
-	id[8] = (id[8] & 0x3f) | 0x80
-	return id.String()
 }
 
 func (l *DispatchLogic) recoverDispatching() error {

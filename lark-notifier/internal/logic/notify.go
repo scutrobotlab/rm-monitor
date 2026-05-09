@@ -312,12 +312,16 @@ func (l *NotifyLogic) replyUploadTask(task *ent.UploadTask) error {
 	if len(match.Edges.LarkMessages) == 0 {
 		return nil
 	}
+	replyContent, err := uploadReplyContent(task)
+	if err != nil {
+		return err
+	}
 	replied := 0
 	for _, message := range match.Edges.LarkMessages {
 		req := larkim.NewReplyMessageReqBuilder().
 			Body(larkim.NewReplyMessageReqBodyBuilder().
-				Content(larkim.NewMessageTextBuilder().Text(*task.BitableRecordURL).Build()).
-				MsgType(larkim.MsgTypeText).
+				Content(replyContent).
+				MsgType(larkim.MsgTypePost).
 				ReplyInThread(true).
 				Uuid(utils.UploadReplyUUID(task.ID, message.MessageID)).
 				Build()).
@@ -348,6 +352,29 @@ func (l *NotifyLogic) replyUploadTask(task *ent.UploadTask) error {
 		return errors.Wrap(err, "mark upload replied")
 	}
 	return nil
+}
+
+func uploadReplyContent(task *ent.UploadTask) (string, error) {
+	round := task.Edges.RecordTask.Edges.MatchRound
+	title := fmt.Sprintf("Round%d-%s", round.RoundNo, task.Edges.RecordTask.Role)
+	content := map[string]any{
+		"zh_cn": map[string]any{
+			"title": title,
+			"content": [][]map[string]string{
+				{
+					{
+						"tag":  "text",
+						"text": *task.BitableRecordURL,
+					},
+				},
+			},
+		},
+	}
+	b, err := json.Marshal(content)
+	if err != nil {
+		return "", errors.Wrap(err, "marshal upload reply content")
+	}
+	return string(b), nil
 }
 
 func (l *NotifyLogic) withLarkRetry(chatID string, f func() error) error {
