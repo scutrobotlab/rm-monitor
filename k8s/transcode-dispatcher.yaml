@@ -56,10 +56,11 @@ spec:
       containers:
         - name: transcode-dispatcher
           image: rm-monitor/transcode-dispatcher:latest
-          args: ["-f", "/app/etc/config.yml"]
+          imagePullPolicy: Always
+          args: ["-f", "/etc/rm-monitor/config.yml"]
           volumeMounts:
             - name: config
-              mountPath: /app/etc/config.yml
+              mountPath: /etc/rm-monitor/config.yml
               subPath: config.yml
               readOnly: true
             - name: records

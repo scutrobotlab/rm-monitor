@@ -271,7 +271,7 @@ func (l *NotifyLogic) patchMatchCards(m *ent.Match) error {
 
 func (l *NotifyLogic) replyCompletedUploads() error {
 	tasks, err := l.svcCtx.DB.UploadTask.Query().
-		Where(uploadtask.StatusEQ(uploadtask.StatusSUCCEEDED), uploadtask.LarkRepliedAtIsNil()).
+		Where(uploadtask.StatusEQ(uploadtask.StatusSUCCEEDED), uploadtask.LarkRepliedAtIsNil(), uploadtask.BitableRecordURLNotNil()).
 		WithRecordTask(func(q *ent.RecordTaskQuery) {
 			q.WithMatchRound(func(q *ent.MatchRoundQuery) {
 				q.WithMatch(func(q *ent.MatchQuery) {
@@ -293,7 +293,7 @@ func (l *NotifyLogic) replyCompletedUploads() error {
 
 func (l *NotifyLogic) uploadTaskForReply(id int) (*ent.UploadTask, error) {
 	return l.svcCtx.DB.UploadTask.Query().
-		Where(uploadtask.ID(id), uploadtask.StatusEQ(uploadtask.StatusSUCCEEDED), uploadtask.LarkRepliedAtIsNil()).
+		Where(uploadtask.ID(id), uploadtask.StatusEQ(uploadtask.StatusSUCCEEDED), uploadtask.LarkRepliedAtIsNil(), uploadtask.BitableRecordURLNotNil()).
 		WithRecordTask(func(q *ent.RecordTaskQuery) {
 			q.WithMatchRound(func(q *ent.MatchRoundQuery) {
 				q.WithMatch(func(q *ent.MatchQuery) {
@@ -305,14 +305,14 @@ func (l *NotifyLogic) uploadTaskForReply(id int) (*ent.UploadTask, error) {
 }
 
 func (l *NotifyLogic) replyUploadTask(task *ent.UploadTask) error {
-	if task == nil || task.FileURL == nil || task.Edges.RecordTask == nil || task.Edges.RecordTask.Edges.MatchRound == nil || task.Edges.RecordTask.Edges.MatchRound.Edges.Match == nil {
+	if task == nil || task.BitableRecordURL == nil || task.Edges.RecordTask == nil || task.Edges.RecordTask.Edges.MatchRound == nil || task.Edges.RecordTask.Edges.MatchRound.Edges.Match == nil {
 		return nil
 	}
 	match := task.Edges.RecordTask.Edges.MatchRound.Edges.Match
 	for _, message := range match.Edges.LarkMessages {
 		req := larkim.NewReplyMessageReqBuilder().
 			Body(larkim.NewReplyMessageReqBodyBuilder().
-				Content(larkim.NewMessageTextBuilder().Text(*task.FileURL).Build()).
+				Content(larkim.NewMessageTextBuilder().Text(*task.BitableRecordURL).Build()).
 				MsgType(larkim.MsgTypeText).
 				ReplyInThread(true).
 				Uuid(utils.UploadReplyUUID(task.ID, message.MessageID)).

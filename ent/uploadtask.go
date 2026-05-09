@@ -27,10 +27,16 @@ type UploadTask struct {
 	K8sJobName *string `json:"k8s_job_name,omitempty"`
 	// Attempts holds the value of the "attempts" field.
 	Attempts int `json:"attempts,omitempty"`
-	// FileToken holds the value of the "file_token" field.
-	FileToken *string `json:"file_token,omitempty"`
-	// FileURL holds the value of the "file_url" field.
-	FileURL *string `json:"file_url,omitempty"`
+	// BitableAppToken holds the value of the "bitable_app_token" field.
+	BitableAppToken *string `json:"bitable_app_token,omitempty"`
+	// BitableTableID holds the value of the "bitable_table_id" field.
+	BitableTableID *string `json:"bitable_table_id,omitempty"`
+	// BitableRecordID holds the value of the "bitable_record_id" field.
+	BitableRecordID *string `json:"bitable_record_id,omitempty"`
+	// BitableRecordURL holds the value of the "bitable_record_url" field.
+	BitableRecordURL *string `json:"bitable_record_url,omitempty"`
+	// AttachmentFileToken holds the value of the "attachment_file_token" field.
+	AttachmentFileToken *string `json:"attachment_file_token,omitempty"`
 	// ErrorMessage holds the value of the "error_message" field.
 	ErrorMessage *string `json:"error_message,omitempty"`
 	// StartedAt holds the value of the "started_at" field.
@@ -91,7 +97,7 @@ func (*UploadTask) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case uploadtask.FieldID, uploadtask.FieldAttempts:
 			values[i] = new(sql.NullInt64)
-		case uploadtask.FieldSourcePath, uploadtask.FieldStatus, uploadtask.FieldK8sJobName, uploadtask.FieldFileToken, uploadtask.FieldFileURL, uploadtask.FieldErrorMessage:
+		case uploadtask.FieldSourcePath, uploadtask.FieldStatus, uploadtask.FieldK8sJobName, uploadtask.FieldBitableAppToken, uploadtask.FieldBitableTableID, uploadtask.FieldBitableRecordID, uploadtask.FieldBitableRecordURL, uploadtask.FieldAttachmentFileToken, uploadtask.FieldErrorMessage:
 			values[i] = new(sql.NullString)
 		case uploadtask.FieldStartedAt, uploadtask.FieldCompletedAt, uploadtask.FieldLarkRepliedAt, uploadtask.FieldCreatedAt, uploadtask.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -145,19 +151,40 @@ func (_m *UploadTask) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.Attempts = int(value.Int64)
 			}
-		case uploadtask.FieldFileToken:
+		case uploadtask.FieldBitableAppToken:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field file_token", values[i])
+				return fmt.Errorf("unexpected type %T for field bitable_app_token", values[i])
 			} else if value.Valid {
-				_m.FileToken = new(string)
-				*_m.FileToken = value.String
+				_m.BitableAppToken = new(string)
+				*_m.BitableAppToken = value.String
 			}
-		case uploadtask.FieldFileURL:
+		case uploadtask.FieldBitableTableID:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field file_url", values[i])
+				return fmt.Errorf("unexpected type %T for field bitable_table_id", values[i])
 			} else if value.Valid {
-				_m.FileURL = new(string)
-				*_m.FileURL = value.String
+				_m.BitableTableID = new(string)
+				*_m.BitableTableID = value.String
+			}
+		case uploadtask.FieldBitableRecordID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field bitable_record_id", values[i])
+			} else if value.Valid {
+				_m.BitableRecordID = new(string)
+				*_m.BitableRecordID = value.String
+			}
+		case uploadtask.FieldBitableRecordURL:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field bitable_record_url", values[i])
+			} else if value.Valid {
+				_m.BitableRecordURL = new(string)
+				*_m.BitableRecordURL = value.String
+			}
+		case uploadtask.FieldAttachmentFileToken:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field attachment_file_token", values[i])
+			} else if value.Valid {
+				_m.AttachmentFileToken = new(string)
+				*_m.AttachmentFileToken = value.String
 			}
 		case uploadtask.FieldErrorMessage:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -273,13 +300,28 @@ func (_m *UploadTask) String() string {
 	builder.WriteString("attempts=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Attempts))
 	builder.WriteString(", ")
-	if v := _m.FileToken; v != nil {
-		builder.WriteString("file_token=")
+	if v := _m.BitableAppToken; v != nil {
+		builder.WriteString("bitable_app_token=")
 		builder.WriteString(*v)
 	}
 	builder.WriteString(", ")
-	if v := _m.FileURL; v != nil {
-		builder.WriteString("file_url=")
+	if v := _m.BitableTableID; v != nil {
+		builder.WriteString("bitable_table_id=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	if v := _m.BitableRecordID; v != nil {
+		builder.WriteString("bitable_record_id=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	if v := _m.BitableRecordURL; v != nil {
+		builder.WriteString("bitable_record_url=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	if v := _m.AttachmentFileToken; v != nil {
+		builder.WriteString("attachment_file_token=")
 		builder.WriteString(*v)
 	}
 	builder.WriteString(", ")

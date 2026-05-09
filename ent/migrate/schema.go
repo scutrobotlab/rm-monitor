@@ -263,8 +263,11 @@ var (
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"PENDING", "DISPATCHING", "RUNNING", "SUCCEEDED", "FAILED"}, Default: "PENDING"},
 		{Name: "k8s_job_name", Type: field.TypeString, Nullable: true},
 		{Name: "attempts", Type: field.TypeInt, Default: 0},
-		{Name: "file_token", Type: field.TypeString, Nullable: true},
-		{Name: "file_url", Type: field.TypeString, Nullable: true},
+		{Name: "bitable_app_token", Type: field.TypeString, Nullable: true},
+		{Name: "bitable_table_id", Type: field.TypeString, Nullable: true},
+		{Name: "bitable_record_id", Type: field.TypeString, Nullable: true},
+		{Name: "bitable_record_url", Type: field.TypeString, Nullable: true},
+		{Name: "attachment_file_token", Type: field.TypeString, Nullable: true},
 		{Name: "error_message", Type: field.TypeString, Nullable: true},
 		{Name: "started_at", Type: field.TypeTime, Nullable: true},
 		{Name: "completed_at", Type: field.TypeTime, Nullable: true},
@@ -282,13 +285,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "upload_tasks_media_artifacts_upload_task",
-				Columns:    []*schema.Column{UploadTasksColumns[13]},
+				Columns:    []*schema.Column{UploadTasksColumns[16]},
 				RefColumns: []*schema.Column{MediaArtifactsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "upload_tasks_record_tasks_upload_task",
-				Columns:    []*schema.Column{UploadTasksColumns[14]},
+				Columns:    []*schema.Column{UploadTasksColumns[17]},
 				RefColumns: []*schema.Column{RecordTasksColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -297,12 +300,12 @@ var (
 			{
 				Name:    "uploadtask_record_task_upload_task",
 				Unique:  true,
-				Columns: []*schema.Column{UploadTasksColumns[14]},
+				Columns: []*schema.Column{UploadTasksColumns[17]},
 			},
 			{
 				Name:    "uploadtask_media_artifact_upload_task",
 				Unique:  true,
-				Columns: []*schema.Column{UploadTasksColumns[13]},
+				Columns: []*schema.Column{UploadTasksColumns[16]},
 			},
 			{
 				Name:    "uploadtask_status",

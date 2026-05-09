@@ -147,11 +147,11 @@ func init() {
 	// uploadtask.DefaultAttempts holds the default value on creation for the attempts field.
 	uploadtask.DefaultAttempts = uploadtaskDescAttempts.Default.(int)
 	// uploadtaskDescCreatedAt is the schema descriptor for created_at field.
-	uploadtaskDescCreatedAt := uploadtaskFields[10].Descriptor()
+	uploadtaskDescCreatedAt := uploadtaskFields[13].Descriptor()
 	// uploadtask.DefaultCreatedAt holds the default value on creation for the created_at field.
 	uploadtask.DefaultCreatedAt = uploadtaskDescCreatedAt.Default.(func() time.Time)
 	// uploadtaskDescUpdatedAt is the schema descriptor for updated_at field.
-	uploadtaskDescUpdatedAt := uploadtaskFields[11].Descriptor()
+	uploadtaskDescUpdatedAt := uploadtaskFields[14].Descriptor()
 	// uploadtask.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	uploadtask.DefaultUpdatedAt = uploadtaskDescUpdatedAt.Default.(func() time.Time)
 	// uploadtask.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.

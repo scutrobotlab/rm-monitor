@@ -8,7 +8,7 @@ COPY go.mod go.sum ./
 RUN --mount=type=cache,target=/go/pkg/mod go mod download
 COPY . .
 
-RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build go build -ldflags "-s -w" -trimpath -o /go/bin/app ${APP}/main.go
+RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build go build -ldflags "-s -w" -trimpath -o /usr/local/bin/app ${APP}/main.go
 
 FROM alpine:3.20
 
@@ -16,6 +16,6 @@ ENV TZ=Asia/Shanghai
 WORKDIR /app
 RUN apk add --no-cache ca-certificates curl ffmpeg tzdata
 
-COPY --from=builder /go/bin/app /usr/bin/app
+COPY --from=builder /usr/local/bin/app /usr/local/bin/app
 
-ENTRYPOINT ["/usr/bin/app"]
+ENTRYPOINT ["/usr/local/bin/app"]

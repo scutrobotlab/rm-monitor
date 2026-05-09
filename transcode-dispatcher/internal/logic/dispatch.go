@@ -51,17 +51,14 @@ func (l *DispatchLogic) createTranscodeTasks() error {
 		Where(
 			mediaartifact.KindEQ(mediaartifact.KindSource),
 			mediaartifact.StatusEQ(mediaartifact.StatusAVAILABLE),
+			mediaartifact.Not(mediaartifact.HasSourceTranscodeTask()),
 		).
-		WithSourceTranscodeTask().
 		Limit(100).
 		All(l.ctx)
 	if err != nil {
 		return errors.Wrap(err, "query source artifacts")
 	}
 	for _, artifact := range artifacts {
-		if artifact.Edges.SourceTranscodeTask != nil {
-			continue
-		}
 		if err := l.svcCtx.DB.TranscodeTask.Create().
 			SetSourceArtifactID(artifact.ID).
 			SetStatus(transcodetask.StatusPENDING).
@@ -151,7 +148,7 @@ func (l *DispatchLogic) dispatchPending() error {
 				Name:     jobName,
 				App:      "transcode-job",
 				Image:    jobConf.Image,
-				Args:     []string{"-f", "/app/etc/config.yml", "-task", strconv.Itoa(task.ID)},
+				Args:     []string{"-f", "/etc/rm-monitor/config.yml", "-task", strconv.Itoa(task.ID)},
 				MountPVC: true,
 				CPU:      conf.CPURequest,
 				Memory:   conf.MemoryRequest,

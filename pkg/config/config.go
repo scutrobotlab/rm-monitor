@@ -91,7 +91,7 @@ type LarkConf struct {
 
 type UploadConf struct {
 	BaseDir            string `json:",optional"`
-	RootNode           string `json:",optional"`
+	BitableAppToken    string `json:",optional"`
 	Concurrency        int    `json:",optional"`
 	PartRetries        int    `json:",optional"`
 	RetryBackoff       int    `json:",optional"`

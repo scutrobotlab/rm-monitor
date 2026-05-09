@@ -1,8 +1,15 @@
 PostgresConf:
   DSN: postgres://rm_monitor:rm_monitor@127.0.0.1:5432/rm_monitor?sslmode=disable
   AutoMigrate: true
+RedisConf:
+  Host: 127.0.0.1:6379
+  Pass: ""
+LarkConf:
+  AppId: ""
+  AppSecret: ""
 UploadConf:
   BaseDir: /records
+  BitableAppToken: E2embrciuaax6sscQKwcTdHdnZf
   Concurrency: 1
 K8sJobConf:
   Namespace: rm-monitor

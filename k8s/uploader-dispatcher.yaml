@@ -7,8 +7,15 @@ data:
     PostgresConf:
       DSN: postgres://rm_monitor:rm_monitor@postgres:5432/rm_monitor?sslmode=disable
       AutoMigrate: true
+    RedisConf:
+      Host: redis:6379
+      Pass: ""
+    LarkConf:
+      AppId: ""
+      AppSecret: ""
     UploadConf:
       BaseDir: /records
+      BitableAppToken: E2embrciuaax6sscQKwcTdHdnZf
       Concurrency: 1
     K8sJobConf:
       Namespace: rm-monitor
@@ -35,7 +42,6 @@ data:
       Pass: ""
     UploadConf:
       BaseDir: /records
-      RootNode: ""
       PartRetries: 3
       RetryBackoff: 2
       RateLimitPerMinute: 30
@@ -58,10 +64,11 @@ spec:
       containers:
         - name: uploader-dispatcher
           image: rm-monitor/uploader-dispatcher:latest
-          args: ["-f", "/app/etc/config.yml"]
+          imagePullPolicy: Always
+          args: ["-f", "/etc/rm-monitor/config.yml"]
           volumeMounts:
             - name: config
-              mountPath: /app/etc/config.yml
+              mountPath: /etc/rm-monitor/config.yml
               subPath: config.yml
               readOnly: true
       volumes:

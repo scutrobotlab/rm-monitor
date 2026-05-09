@@ -8,17 +8,19 @@ import (
 	"hash/adler32"
 	"io"
 	"os"
-	"path"
+	"path/filepath"
 	"strconv"
 	"time"
 
 	lark "github.com/larksuite/oapi-sdk-go/v3"
+	larkbitable "github.com/larksuite/oapi-sdk-go/v3/service/bitable/v1"
 	larkdrive "github.com/larksuite/oapi-sdk-go/v3/service/drive/v1"
 	"github.com/pkg/errors"
 	"resty.dev/v3"
 	"scutbot.cn/web/rm-monitor/ent"
 	"scutbot.cn/web/rm-monitor/ent/uploadtask"
 	"scutbot.cn/web/rm-monitor/pkg/app"
+	"scutbot.cn/web/rm-monitor/pkg/bitableupload"
 	common "scutbot.cn/web/rm-monitor/pkg/config"
 	"scutbot.cn/web/rm-monitor/pkg/db"
 	"scutbot.cn/web/rm-monitor/pkg/larkcache"
@@ -92,17 +94,17 @@ func run(ctx context.Context, client *ent.Client, redisClient *redisx.Client, la
 		return err
 	}
 
-	dir, name := path.Split(task.SourcePath)
-	dirNode, err := ensureFolder(ctx, larkClient, uploadConf.RootNode, dir)
-	if err != nil {
+	if task.BitableAppToken == nil || task.BitableTableID == nil || task.BitableRecordID == nil {
+		err := errors.New("missing bitable upload context")
 		_ = client.UploadTask.UpdateOneID(taskID).SetStatus(uploadtask.StatusFAILED).SetErrorMessage(err.Error()).Exec(ctx)
 		return err
 	}
-	prepareResp, err := larkClient.Drive.File.UploadPrepare(ctx, larkdrive.NewUploadPrepareFileReqBuilder().
-		FileUploadInfo(larkdrive.NewFileUploadInfoBuilder().
+	name := filepath.Base(task.SourcePath)
+	prepareResp, err := larkClient.Drive.Media.UploadPrepare(ctx, larkdrive.NewUploadPrepareMediaReqBuilder().
+		MediaUploadInfo(larkdrive.NewMediaUploadInfoBuilder().
 			FileName(name).
-			ParentType(larkdrive.ParentTypeExplorer).
-			ParentNode(dirNode).
+			ParentType(larkdrive.ParentTypeUploadPrepareMediaBitableFile).
+			ParentNode(*task.BitableAppToken).
 			Size(int(stat.Size())).
 			Build()).
 		Build())
@@ -117,6 +119,9 @@ func run(ctx context.Context, client *ent.Client, redisClient *redisx.Client, la
 	}
 	uploadID := *prepareResp.Data.UploadId
 	for i := 0; i < *prepareResp.Data.BlockNum; i++ {
+		if err := waitUploadSlot(ctx, redisClient, uploadConf); err != nil {
+			return err
+		}
 		startSize := i * *prepareResp.Data.BlockSize
 		endSize := startSize + *prepareResp.Data.BlockSize
 		if endSize > int(stat.Size()) {
@@ -127,7 +132,7 @@ func run(ctx context.Context, client *ent.Client, redisClient *redisx.Client, la
 		if err != nil {
 			return errors.Wrap(err, "read part")
 		}
-		req := larkdrive.NewUploadPartFileReqBuilder().Body(larkdrive.NewUploadPartFileReqBodyBuilder().
+		req := larkdrive.NewUploadPartMediaReqBuilder().Body(larkdrive.NewUploadPartMediaReqBodyBuilder().
 			UploadId(uploadID).
 			Size(endSize - startSize).
 			File(bytes.NewReader(content)).
@@ -139,8 +144,11 @@ func run(ctx context.Context, client *ent.Client, redisClient *redisx.Client, la
 			return err
 		}
 	}
-	completeResp, err := larkClient.Drive.File.UploadFinish(ctx, larkdrive.NewUploadFinishFileReqBuilder().
-		Body(larkdrive.NewUploadFinishFileReqBodyBuilder().
+	if err := waitUploadSlot(ctx, redisClient, uploadConf); err != nil {
+		return err
+	}
+	completeResp, err := larkClient.Drive.Media.UploadFinish(ctx, larkdrive.NewUploadFinishMediaReqBuilder().
+		Body(larkdrive.NewUploadFinishMediaReqBodyBuilder().
 			UploadId(uploadID).
 			BlockNum(*prepareResp.Data.BlockNum).
 			Build()).
@@ -155,12 +163,14 @@ func run(ctx context.Context, client *ent.Client, redisClient *redisx.Client, la
 		return err
 	}
 	fileToken := *completeResp.Data.FileToken
-	fileURL := fmt.Sprintf("https://scutrobotlab.feishu.cn/drive/file/%s", fileToken)
+	if err := updateBitableAttachment(ctx, larkClient, *task.BitableAppToken, *task.BitableTableID, *task.BitableRecordID, fileToken, name); err != nil {
+		_ = client.UploadTask.UpdateOneID(taskID).SetStatus(uploadtask.StatusFAILED).SetErrorMessage(err.Error()).Exec(ctx)
+		return err
+	}
 	if err := client.UploadTask.UpdateOneID(taskID).
 		SetStatus(uploadtask.StatusSUCCEEDED).
 		SetCompletedAt(time.Now()).
-		SetFileToken(fileToken).
-		SetFileURL(fileURL).
+		SetAttachmentFileToken(fileToken).
 		Exec(ctx); err != nil {
 		return errors.Wrap(err, "mark upload succeeded")
 	}
@@ -188,12 +198,12 @@ func waitUploadSlot(ctx context.Context, redisClient *redisx.Client, conf common
 	}
 }
 
-func uploadPartWithRetry(ctx context.Context, client *lark.Client, req *larkdrive.UploadPartFileReq, conf common.UploadConf) error {
+func uploadPartWithRetry(ctx context.Context, client *lark.Client, req *larkdrive.UploadPartMediaReq, conf common.UploadConf) error {
 	retries := conf.PartRetries
 	backoff := time.Duration(conf.RetryBackoff) * time.Second
 	var lastErr error
 	for attempt := 0; attempt <= retries; attempt++ {
-		resp, err := client.Drive.File.UploadPart(ctx, req)
+		resp, err := client.Drive.Media.UploadPart(ctx, req)
 		if err == nil && resp.Success() {
 			return nil
 		}
@@ -209,50 +219,22 @@ func uploadPartWithRetry(ctx context.Context, client *lark.Client, req *larkdriv
 	return lastErr
 }
 
-func ensureFolder(ctx context.Context, client *lark.Client, root, filepath string) (string, error) {
-	filepath = path.Clean("/" + filepath)
-	if filepath == "/" || filepath == "." {
-		return root, nil
-	}
-	current := root
-	for _, name := range splitPath(filepath) {
-		token, err := ensureChildFolder(ctx, client, current, name)
-		if err != nil {
-			return "", err
-		}
-		current = token
-	}
-	return current, nil
-}
-
-func splitPath(filepath string) []string {
-	var out []string
-	for _, part := range bytes.Split([]byte(filepath), []byte("/")) {
-		if len(part) > 0 {
-			out = append(out, string(part))
-		}
-	}
-	return out
-}
-
-func ensureChildFolder(ctx context.Context, client *lark.Client, parent, name string) (string, error) {
-	iter, err := client.Drive.V1.File.ListByIterator(ctx, larkdrive.NewListFileReqBuilder().FolderToken(parent).Build())
-	if err != nil {
-		return "", errors.Wrap(err, "list folder")
-	}
-	for ok, node, err := iter.Next(); ok && err == nil; ok, node, err = iter.Next() {
-		if node.Name != nil && node.Type != nil && *node.Name == name && *node.Type == larkdrive.FileTypeFolder {
-			return *node.Token, nil
-		}
-	}
-	resp, err := client.Drive.V1.File.CreateFolder(ctx, larkdrive.NewCreateFolderFileReqBuilder().
-		Body(larkdrive.NewCreateFolderFileReqBodyBuilder().Name(name).FolderToken(parent).Build()).
+func updateBitableAttachment(ctx context.Context, client *lark.Client, appToken, tableID, recordID, fileToken, name string) error {
+	resp, err := client.Bitable.V1.AppTableRecord.Update(ctx, larkbitable.NewUpdateAppTableRecordReqBuilder().
+		AppToken(appToken).
+		TableId(tableID).
+		RecordId(recordID).
+		AppTableRecord(larkbitable.NewAppTableRecordBuilder().
+			Fields(map[string]interface{}{
+				bitableupload.FieldAttachment: bitableupload.AttachmentValue(fileToken, name),
+			}).
+			Build()).
 		Build())
 	if err != nil {
-		return "", errors.Wrap(err, "create folder")
+		return errors.Wrap(err, "update bitable attachment")
 	}
 	if !resp.Success() {
-		return "", errors.Wrap(resp, "create folder")
+		return errors.Wrap(resp, "update bitable attachment")
 	}
-	return *resp.Data.Token, nil
+	return nil
 }

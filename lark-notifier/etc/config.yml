@@ -9,7 +9,6 @@ PostgresConf:
   AutoMigrate: true
 RecordConf:
   BaseDir: ""
-  RootNode: ""
 UploadConf:
   Concurrency: 1
   PartRetries: 3

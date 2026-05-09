@@ -8,8 +8,7 @@ type Config struct {
 		AppSecret string
 	}
 	RecordConf struct {
-		BaseDir  string
-		RootNode string
+		BaseDir string
 	}
 	UploadConf struct {
 		Concurrency  int

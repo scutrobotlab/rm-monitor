@@ -47,6 +47,10 @@ func (c *Client) SetexCtx(ctx context.Context, key, value string, seconds int) e
 	return c.c.Set(ctx, key, value, time.Duration(seconds)*time.Second).Err()
 }
 
+func (c *Client) SetNXCtx(ctx context.Context, key, value string, seconds int) (bool, error) {
+	return c.c.SetNX(ctx, key, value, time.Duration(seconds)*time.Second).Result()
+}
+
 func (c *Client) IncrCtx(ctx context.Context, key string) (int64, error) {
 	return c.c.Incr(ctx, key).Result()
 }

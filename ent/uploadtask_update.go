@@ -99,43 +99,103 @@ func (_u *UploadTaskUpdate) AddAttempts(v int) *UploadTaskUpdate {
 	return _u
 }
 
-// SetFileToken sets the "file_token" field.
-func (_u *UploadTaskUpdate) SetFileToken(v string) *UploadTaskUpdate {
-	_u.mutation.SetFileToken(v)
+// SetBitableAppToken sets the "bitable_app_token" field.
+func (_u *UploadTaskUpdate) SetBitableAppToken(v string) *UploadTaskUpdate {
+	_u.mutation.SetBitableAppToken(v)
 	return _u
 }
 
-// SetNillableFileToken sets the "file_token" field if the given value is not nil.
-func (_u *UploadTaskUpdate) SetNillableFileToken(v *string) *UploadTaskUpdate {
+// SetNillableBitableAppToken sets the "bitable_app_token" field if the given value is not nil.
+func (_u *UploadTaskUpdate) SetNillableBitableAppToken(v *string) *UploadTaskUpdate {
 	if v != nil {
-		_u.SetFileToken(*v)
+		_u.SetBitableAppToken(*v)
 	}
 	return _u
 }
 
-// ClearFileToken clears the value of the "file_token" field.
-func (_u *UploadTaskUpdate) ClearFileToken() *UploadTaskUpdate {
-	_u.mutation.ClearFileToken()
+// ClearBitableAppToken clears the value of the "bitable_app_token" field.
+func (_u *UploadTaskUpdate) ClearBitableAppToken() *UploadTaskUpdate {
+	_u.mutation.ClearBitableAppToken()
 	return _u
 }
 
-// SetFileURL sets the "file_url" field.
-func (_u *UploadTaskUpdate) SetFileURL(v string) *UploadTaskUpdate {
-	_u.mutation.SetFileURL(v)
+// SetBitableTableID sets the "bitable_table_id" field.
+func (_u *UploadTaskUpdate) SetBitableTableID(v string) *UploadTaskUpdate {
+	_u.mutation.SetBitableTableID(v)
 	return _u
 }
 
-// SetNillableFileURL sets the "file_url" field if the given value is not nil.
-func (_u *UploadTaskUpdate) SetNillableFileURL(v *string) *UploadTaskUpdate {
+// SetNillableBitableTableID sets the "bitable_table_id" field if the given value is not nil.
+func (_u *UploadTaskUpdate) SetNillableBitableTableID(v *string) *UploadTaskUpdate {
 	if v != nil {
-		_u.SetFileURL(*v)
+		_u.SetBitableTableID(*v)
 	}
 	return _u
 }
 
-// ClearFileURL clears the value of the "file_url" field.
-func (_u *UploadTaskUpdate) ClearFileURL() *UploadTaskUpdate {
-	_u.mutation.ClearFileURL()
+// ClearBitableTableID clears the value of the "bitable_table_id" field.
+func (_u *UploadTaskUpdate) ClearBitableTableID() *UploadTaskUpdate {
+	_u.mutation.ClearBitableTableID()
+	return _u
+}
+
+// SetBitableRecordID sets the "bitable_record_id" field.
+func (_u *UploadTaskUpdate) SetBitableRecordID(v string) *UploadTaskUpdate {
+	_u.mutation.SetBitableRecordID(v)
+	return _u
+}
+
+// SetNillableBitableRecordID sets the "bitable_record_id" field if the given value is not nil.
+func (_u *UploadTaskUpdate) SetNillableBitableRecordID(v *string) *UploadTaskUpdate {
+	if v != nil {
+		_u.SetBitableRecordID(*v)
+	}
+	return _u
+}
+
+// ClearBitableRecordID clears the value of the "bitable_record_id" field.
+func (_u *UploadTaskUpdate) ClearBitableRecordID() *UploadTaskUpdate {
+	_u.mutation.ClearBitableRecordID()
+	return _u
+}
+
+// SetBitableRecordURL sets the "bitable_record_url" field.
+func (_u *UploadTaskUpdate) SetBitableRecordURL(v string) *UploadTaskUpdate {
+	_u.mutation.SetBitableRecordURL(v)
+	return _u
+}
+
+// SetNillableBitableRecordURL sets the "bitable_record_url" field if the given value is not nil.
+func (_u *UploadTaskUpdate) SetNillableBitableRecordURL(v *string) *UploadTaskUpdate {
+	if v != nil {
+		_u.SetBitableRecordURL(*v)
+	}
+	return _u
+}
+
+// ClearBitableRecordURL clears the value of the "bitable_record_url" field.
+func (_u *UploadTaskUpdate) ClearBitableRecordURL() *UploadTaskUpdate {
+	_u.mutation.ClearBitableRecordURL()
+	return _u
+}
+
+// SetAttachmentFileToken sets the "attachment_file_token" field.
+func (_u *UploadTaskUpdate) SetAttachmentFileToken(v string) *UploadTaskUpdate {
+	_u.mutation.SetAttachmentFileToken(v)
+	return _u
+}
+
+// SetNillableAttachmentFileToken sets the "attachment_file_token" field if the given value is not nil.
+func (_u *UploadTaskUpdate) SetNillableAttachmentFileToken(v *string) *UploadTaskUpdate {
+	if v != nil {
+		_u.SetAttachmentFileToken(*v)
+	}
+	return _u
+}
+
+// ClearAttachmentFileToken clears the value of the "attachment_file_token" field.
+func (_u *UploadTaskUpdate) ClearAttachmentFileToken() *UploadTaskUpdate {
+	_u.mutation.ClearAttachmentFileToken()
 	return _u
 }
 
@@ -351,17 +411,35 @@ func (_u *UploadTaskUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	if value, ok := _u.mutation.AddedAttempts(); ok {
 		_spec.AddField(uploadtask.FieldAttempts, field.TypeInt, value)
 	}
-	if value, ok := _u.mutation.FileToken(); ok {
-		_spec.SetField(uploadtask.FieldFileToken, field.TypeString, value)
+	if value, ok := _u.mutation.BitableAppToken(); ok {
+		_spec.SetField(uploadtask.FieldBitableAppToken, field.TypeString, value)
 	}
-	if _u.mutation.FileTokenCleared() {
-		_spec.ClearField(uploadtask.FieldFileToken, field.TypeString)
+	if _u.mutation.BitableAppTokenCleared() {
+		_spec.ClearField(uploadtask.FieldBitableAppToken, field.TypeString)
 	}
-	if value, ok := _u.mutation.FileURL(); ok {
-		_spec.SetField(uploadtask.FieldFileURL, field.TypeString, value)
+	if value, ok := _u.mutation.BitableTableID(); ok {
+		_spec.SetField(uploadtask.FieldBitableTableID, field.TypeString, value)
 	}
-	if _u.mutation.FileURLCleared() {
-		_spec.ClearField(uploadtask.FieldFileURL, field.TypeString)
+	if _u.mutation.BitableTableIDCleared() {
+		_spec.ClearField(uploadtask.FieldBitableTableID, field.TypeString)
+	}
+	if value, ok := _u.mutation.BitableRecordID(); ok {
+		_spec.SetField(uploadtask.FieldBitableRecordID, field.TypeString, value)
+	}
+	if _u.mutation.BitableRecordIDCleared() {
+		_spec.ClearField(uploadtask.FieldBitableRecordID, field.TypeString)
+	}
+	if value, ok := _u.mutation.BitableRecordURL(); ok {
+		_spec.SetField(uploadtask.FieldBitableRecordURL, field.TypeString, value)
+	}
+	if _u.mutation.BitableRecordURLCleared() {
+		_spec.ClearField(uploadtask.FieldBitableRecordURL, field.TypeString)
+	}
+	if value, ok := _u.mutation.AttachmentFileToken(); ok {
+		_spec.SetField(uploadtask.FieldAttachmentFileToken, field.TypeString, value)
+	}
+	if _u.mutation.AttachmentFileTokenCleared() {
+		_spec.ClearField(uploadtask.FieldAttachmentFileToken, field.TypeString)
 	}
 	if value, ok := _u.mutation.ErrorMessage(); ok {
 		_spec.SetField(uploadtask.FieldErrorMessage, field.TypeString, value)
@@ -537,43 +615,103 @@ func (_u *UploadTaskUpdateOne) AddAttempts(v int) *UploadTaskUpdateOne {
 	return _u
 }
 
-// SetFileToken sets the "file_token" field.
-func (_u *UploadTaskUpdateOne) SetFileToken(v string) *UploadTaskUpdateOne {
-	_u.mutation.SetFileToken(v)
+// SetBitableAppToken sets the "bitable_app_token" field.
+func (_u *UploadTaskUpdateOne) SetBitableAppToken(v string) *UploadTaskUpdateOne {
+	_u.mutation.SetBitableAppToken(v)
 	return _u
 }
 
-// SetNillableFileToken sets the "file_token" field if the given value is not nil.
-func (_u *UploadTaskUpdateOne) SetNillableFileToken(v *string) *UploadTaskUpdateOne {
+// SetNillableBitableAppToken sets the "bitable_app_token" field if the given value is not nil.
+func (_u *UploadTaskUpdateOne) SetNillableBitableAppToken(v *string) *UploadTaskUpdateOne {
 	if v != nil {
-		_u.SetFileToken(*v)
+		_u.SetBitableAppToken(*v)
 	}
 	return _u
 }
 
-// ClearFileToken clears the value of the "file_token" field.
-func (_u *UploadTaskUpdateOne) ClearFileToken() *UploadTaskUpdateOne {
-	_u.mutation.ClearFileToken()
+// ClearBitableAppToken clears the value of the "bitable_app_token" field.
+func (_u *UploadTaskUpdateOne) ClearBitableAppToken() *UploadTaskUpdateOne {
+	_u.mutation.ClearBitableAppToken()
 	return _u
 }
 
-// SetFileURL sets the "file_url" field.
-func (_u *UploadTaskUpdateOne) SetFileURL(v string) *UploadTaskUpdateOne {
-	_u.mutation.SetFileURL(v)
+// SetBitableTableID sets the "bitable_table_id" field.
+func (_u *UploadTaskUpdateOne) SetBitableTableID(v string) *UploadTaskUpdateOne {
+	_u.mutation.SetBitableTableID(v)
 	return _u
 }
 
-// SetNillableFileURL sets the "file_url" field if the given value is not nil.
-func (_u *UploadTaskUpdateOne) SetNillableFileURL(v *string) *UploadTaskUpdateOne {
+// SetNillableBitableTableID sets the "bitable_table_id" field if the given value is not nil.
+func (_u *UploadTaskUpdateOne) SetNillableBitableTableID(v *string) *UploadTaskUpdateOne {
 	if v != nil {
-		_u.SetFileURL(*v)
+		_u.SetBitableTableID(*v)
 	}
 	return _u
 }
 
-// ClearFileURL clears the value of the "file_url" field.
-func (_u *UploadTaskUpdateOne) ClearFileURL() *UploadTaskUpdateOne {
-	_u.mutation.ClearFileURL()
+// ClearBitableTableID clears the value of the "bitable_table_id" field.
+func (_u *UploadTaskUpdateOne) ClearBitableTableID() *UploadTaskUpdateOne {
+	_u.mutation.ClearBitableTableID()
+	return _u
+}
+
+// SetBitableRecordID sets the "bitable_record_id" field.
+func (_u *UploadTaskUpdateOne) SetBitableRecordID(v string) *UploadTaskUpdateOne {
+	_u.mutation.SetBitableRecordID(v)
+	return _u
+}
+
+// SetNillableBitableRecordID sets the "bitable_record_id" field if the given value is not nil.
+func (_u *UploadTaskUpdateOne) SetNillableBitableRecordID(v *string) *UploadTaskUpdateOne {
+	if v != nil {
+		_u.SetBitableRecordID(*v)
+	}
+	return _u
+}
+
+// ClearBitableRecordID clears the value of the "bitable_record_id" field.
+func (_u *UploadTaskUpdateOne) ClearBitableRecordID() *UploadTaskUpdateOne {
+	_u.mutation.ClearBitableRecordID()
+	return _u
+}
+
+// SetBitableRecordURL sets the "bitable_record_url" field.
+func (_u *UploadTaskUpdateOne) SetBitableRecordURL(v string) *UploadTaskUpdateOne {
+	_u.mutation.SetBitableRecordURL(v)
+	return _u
+}
+
+// SetNillableBitableRecordURL sets the "bitable_record_url" field if the given value is not nil.
+func (_u *UploadTaskUpdateOne) SetNillableBitableRecordURL(v *string) *UploadTaskUpdateOne {
+	if v != nil {
+		_u.SetBitableRecordURL(*v)
+	}
+	return _u
+}
+
+// ClearBitableRecordURL clears the value of the "bitable_record_url" field.
+func (_u *UploadTaskUpdateOne) ClearBitableRecordURL() *UploadTaskUpdateOne {
+	_u.mutation.ClearBitableRecordURL()
+	return _u
+}
+
+// SetAttachmentFileToken sets the "attachment_file_token" field.
+func (_u *UploadTaskUpdateOne) SetAttachmentFileToken(v string) *UploadTaskUpdateOne {
+	_u.mutation.SetAttachmentFileToken(v)
+	return _u
+}
+
+// SetNillableAttachmentFileToken sets the "attachment_file_token" field if the given value is not nil.
+func (_u *UploadTaskUpdateOne) SetNillableAttachmentFileToken(v *string) *UploadTaskUpdateOne {
+	if v != nil {
+		_u.SetAttachmentFileToken(*v)
+	}
+	return _u
+}
+
+// ClearAttachmentFileToken clears the value of the "attachment_file_token" field.
+func (_u *UploadTaskUpdateOne) ClearAttachmentFileToken() *UploadTaskUpdateOne {
+	_u.mutation.ClearAttachmentFileToken()
 	return _u
 }
 
@@ -819,17 +957,35 @@ func (_u *UploadTaskUpdateOne) sqlSave(ctx context.Context) (_node *UploadTask, 
 	if value, ok := _u.mutation.AddedAttempts(); ok {
 		_spec.AddField(uploadtask.FieldAttempts, field.TypeInt, value)
 	}
-	if value, ok := _u.mutation.FileToken(); ok {
-		_spec.SetField(uploadtask.FieldFileToken, field.TypeString, value)
+	if value, ok := _u.mutation.BitableAppToken(); ok {
+		_spec.SetField(uploadtask.FieldBitableAppToken, field.TypeString, value)
 	}
-	if _u.mutation.FileTokenCleared() {
-		_spec.ClearField(uploadtask.FieldFileToken, field.TypeString)
+	if _u.mutation.BitableAppTokenCleared() {
+		_spec.ClearField(uploadtask.FieldBitableAppToken, field.TypeString)
 	}
-	if value, ok := _u.mutation.FileURL(); ok {
-		_spec.SetField(uploadtask.FieldFileURL, field.TypeString, value)
+	if value, ok := _u.mutation.BitableTableID(); ok {
+		_spec.SetField(uploadtask.FieldBitableTableID, field.TypeString, value)
 	}
-	if _u.mutation.FileURLCleared() {
-		_spec.ClearField(uploadtask.FieldFileURL, field.TypeString)
+	if _u.mutation.BitableTableIDCleared() {
+		_spec.ClearField(uploadtask.FieldBitableTableID, field.TypeString)
+	}
+	if value, ok := _u.mutation.BitableRecordID(); ok {
+		_spec.SetField(uploadtask.FieldBitableRecordID, field.TypeString, value)
+	}
+	if _u.mutation.BitableRecordIDCleared() {
+		_spec.ClearField(uploadtask.FieldBitableRecordID, field.TypeString)
+	}
+	if value, ok := _u.mutation.BitableRecordURL(); ok {
+		_spec.SetField(uploadtask.FieldBitableRecordURL, field.TypeString, value)
+	}
+	if _u.mutation.BitableRecordURLCleared() {
+		_spec.ClearField(uploadtask.FieldBitableRecordURL, field.TypeString)
+	}
+	if value, ok := _u.mutation.AttachmentFileToken(); ok {
+		_spec.SetField(uploadtask.FieldAttachmentFileToken, field.TypeString, value)
+	}
+	if _u.mutation.AttachmentFileTokenCleared() {
+		_spec.ClearField(uploadtask.FieldAttachmentFileToken, field.TypeString)
 	}
 	if value, ok := _u.mutation.ErrorMessage(); ok {
 		_spec.SetField(uploadtask.FieldErrorMessage, field.TypeString, value)

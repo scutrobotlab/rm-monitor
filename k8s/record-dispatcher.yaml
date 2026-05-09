@@ -55,10 +55,11 @@ spec:
       containers:
         - name: record-dispatcher
           image: rm-monitor/record-dispatcher:latest
-          args: ["-f", "/app/etc/config.yml"]
+          imagePullPolicy: Always
+          args: ["-f", "/etc/rm-monitor/config.yml"]
           volumeMounts:
             - name: config
-              mountPath: /app/etc/config.yml
+              mountPath: /etc/rm-monitor/config.yml
               subPath: config.yml
               readOnly: true
       volumes:

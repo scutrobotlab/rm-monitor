@@ -8,7 +8,7 @@ COPY go.mod go.sum ./
 RUN --mount=type=cache,target=/go/pkg/mod go mod download
 COPY . .
 
-RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build go build -ldflags "-s -w" -trimpath -o /go/bin/app ${APP}/main.go
+RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build go build -ldflags "-s -w" -trimpath -o /usr/local/bin/app ${APP}/main.go
 
 FROM debian:bookworm-slim
 
@@ -19,6 +19,6 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/* \
     && ffmpeg -hide_banner -encoders 2>/dev/null | grep -q libsvtav1
 
-COPY --from=builder /go/bin/app /usr/bin/app
+COPY --from=builder /usr/local/bin/app /usr/local/bin/app
 
-ENTRYPOINT ["/usr/bin/app"]
+ENTRYPOINT ["/usr/local/bin/app"]

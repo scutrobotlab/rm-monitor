@@ -23,10 +23,16 @@ const (
 	FieldK8sJobName = "k8s_job_name"
 	// FieldAttempts holds the string denoting the attempts field in the database.
 	FieldAttempts = "attempts"
-	// FieldFileToken holds the string denoting the file_token field in the database.
-	FieldFileToken = "file_token"
-	// FieldFileURL holds the string denoting the file_url field in the database.
-	FieldFileURL = "file_url"
+	// FieldBitableAppToken holds the string denoting the bitable_app_token field in the database.
+	FieldBitableAppToken = "bitable_app_token"
+	// FieldBitableTableID holds the string denoting the bitable_table_id field in the database.
+	FieldBitableTableID = "bitable_table_id"
+	// FieldBitableRecordID holds the string denoting the bitable_record_id field in the database.
+	FieldBitableRecordID = "bitable_record_id"
+	// FieldBitableRecordURL holds the string denoting the bitable_record_url field in the database.
+	FieldBitableRecordURL = "bitable_record_url"
+	// FieldAttachmentFileToken holds the string denoting the attachment_file_token field in the database.
+	FieldAttachmentFileToken = "attachment_file_token"
 	// FieldErrorMessage holds the string denoting the error_message field in the database.
 	FieldErrorMessage = "error_message"
 	// FieldStartedAt holds the string denoting the started_at field in the database.
@@ -68,8 +74,11 @@ var Columns = []string{
 	FieldStatus,
 	FieldK8sJobName,
 	FieldAttempts,
-	FieldFileToken,
-	FieldFileURL,
+	FieldBitableAppToken,
+	FieldBitableTableID,
+	FieldBitableRecordID,
+	FieldBitableRecordURL,
+	FieldAttachmentFileToken,
 	FieldErrorMessage,
 	FieldStartedAt,
 	FieldCompletedAt,
@@ -168,14 +177,29 @@ func ByAttempts(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldAttempts, opts...).ToFunc()
 }
 
-// ByFileToken orders the results by the file_token field.
-func ByFileToken(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldFileToken, opts...).ToFunc()
+// ByBitableAppToken orders the results by the bitable_app_token field.
+func ByBitableAppToken(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldBitableAppToken, opts...).ToFunc()
 }
 
-// ByFileURL orders the results by the file_url field.
-func ByFileURL(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldFileURL, opts...).ToFunc()
+// ByBitableTableID orders the results by the bitable_table_id field.
+func ByBitableTableID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldBitableTableID, opts...).ToFunc()
+}
+
+// ByBitableRecordID orders the results by the bitable_record_id field.
+func ByBitableRecordID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldBitableRecordID, opts...).ToFunc()
+}
+
+// ByBitableRecordURL orders the results by the bitable_record_url field.
+func ByBitableRecordURL(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldBitableRecordURL, opts...).ToFunc()
+}
+
+// ByAttachmentFileToken orders the results by the attachment_file_token field.
+func ByAttachmentFileToken(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldAttachmentFileToken, opts...).ToFunc()
 }
 
 // ByErrorMessage orders the results by the error_message field.

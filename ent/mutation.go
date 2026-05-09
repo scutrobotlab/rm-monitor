@@ -6924,8 +6924,11 @@ type UploadTaskMutation struct {
 	k8s_job_name           *string
 	attempts               *int
 	addattempts            *int
-	file_token             *string
-	file_url               *string
+	bitable_app_token      *string
+	bitable_table_id       *string
+	bitable_record_id      *string
+	bitable_record_url     *string
+	attachment_file_token  *string
 	error_message          *string
 	started_at             *time.Time
 	completed_at           *time.Time
@@ -7217,102 +7220,249 @@ func (m *UploadTaskMutation) ResetAttempts() {
 	m.addattempts = nil
 }
 
-// SetFileToken sets the "file_token" field.
-func (m *UploadTaskMutation) SetFileToken(s string) {
-	m.file_token = &s
+// SetBitableAppToken sets the "bitable_app_token" field.
+func (m *UploadTaskMutation) SetBitableAppToken(s string) {
+	m.bitable_app_token = &s
 }
 
-// FileToken returns the value of the "file_token" field in the mutation.
-func (m *UploadTaskMutation) FileToken() (r string, exists bool) {
-	v := m.file_token
+// BitableAppToken returns the value of the "bitable_app_token" field in the mutation.
+func (m *UploadTaskMutation) BitableAppToken() (r string, exists bool) {
+	v := m.bitable_app_token
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// OldFileToken returns the old "file_token" field's value of the UploadTask entity.
+// OldBitableAppToken returns the old "bitable_app_token" field's value of the UploadTask entity.
 // If the UploadTask object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *UploadTaskMutation) OldFileToken(ctx context.Context) (v *string, err error) {
+func (m *UploadTaskMutation) OldBitableAppToken(ctx context.Context) (v *string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldFileToken is only allowed on UpdateOne operations")
+		return v, errors.New("OldBitableAppToken is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldFileToken requires an ID field in the mutation")
+		return v, errors.New("OldBitableAppToken requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldFileToken: %w", err)
+		return v, fmt.Errorf("querying old value for OldBitableAppToken: %w", err)
 	}
-	return oldValue.FileToken, nil
+	return oldValue.BitableAppToken, nil
 }
 
-// ClearFileToken clears the value of the "file_token" field.
-func (m *UploadTaskMutation) ClearFileToken() {
-	m.file_token = nil
-	m.clearedFields[uploadtask.FieldFileToken] = struct{}{}
+// ClearBitableAppToken clears the value of the "bitable_app_token" field.
+func (m *UploadTaskMutation) ClearBitableAppToken() {
+	m.bitable_app_token = nil
+	m.clearedFields[uploadtask.FieldBitableAppToken] = struct{}{}
 }
 
-// FileTokenCleared returns if the "file_token" field was cleared in this mutation.
-func (m *UploadTaskMutation) FileTokenCleared() bool {
-	_, ok := m.clearedFields[uploadtask.FieldFileToken]
+// BitableAppTokenCleared returns if the "bitable_app_token" field was cleared in this mutation.
+func (m *UploadTaskMutation) BitableAppTokenCleared() bool {
+	_, ok := m.clearedFields[uploadtask.FieldBitableAppToken]
 	return ok
 }
 
-// ResetFileToken resets all changes to the "file_token" field.
-func (m *UploadTaskMutation) ResetFileToken() {
-	m.file_token = nil
-	delete(m.clearedFields, uploadtask.FieldFileToken)
+// ResetBitableAppToken resets all changes to the "bitable_app_token" field.
+func (m *UploadTaskMutation) ResetBitableAppToken() {
+	m.bitable_app_token = nil
+	delete(m.clearedFields, uploadtask.FieldBitableAppToken)
 }
 
-// SetFileURL sets the "file_url" field.
-func (m *UploadTaskMutation) SetFileURL(s string) {
-	m.file_url = &s
+// SetBitableTableID sets the "bitable_table_id" field.
+func (m *UploadTaskMutation) SetBitableTableID(s string) {
+	m.bitable_table_id = &s
 }
 
-// FileURL returns the value of the "file_url" field in the mutation.
-func (m *UploadTaskMutation) FileURL() (r string, exists bool) {
-	v := m.file_url
+// BitableTableID returns the value of the "bitable_table_id" field in the mutation.
+func (m *UploadTaskMutation) BitableTableID() (r string, exists bool) {
+	v := m.bitable_table_id
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// OldFileURL returns the old "file_url" field's value of the UploadTask entity.
+// OldBitableTableID returns the old "bitable_table_id" field's value of the UploadTask entity.
 // If the UploadTask object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *UploadTaskMutation) OldFileURL(ctx context.Context) (v *string, err error) {
+func (m *UploadTaskMutation) OldBitableTableID(ctx context.Context) (v *string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldFileURL is only allowed on UpdateOne operations")
+		return v, errors.New("OldBitableTableID is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldFileURL requires an ID field in the mutation")
+		return v, errors.New("OldBitableTableID requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldFileURL: %w", err)
+		return v, fmt.Errorf("querying old value for OldBitableTableID: %w", err)
 	}
-	return oldValue.FileURL, nil
+	return oldValue.BitableTableID, nil
 }
 
-// ClearFileURL clears the value of the "file_url" field.
-func (m *UploadTaskMutation) ClearFileURL() {
-	m.file_url = nil
-	m.clearedFields[uploadtask.FieldFileURL] = struct{}{}
+// ClearBitableTableID clears the value of the "bitable_table_id" field.
+func (m *UploadTaskMutation) ClearBitableTableID() {
+	m.bitable_table_id = nil
+	m.clearedFields[uploadtask.FieldBitableTableID] = struct{}{}
 }
 
-// FileURLCleared returns if the "file_url" field was cleared in this mutation.
-func (m *UploadTaskMutation) FileURLCleared() bool {
-	_, ok := m.clearedFields[uploadtask.FieldFileURL]
+// BitableTableIDCleared returns if the "bitable_table_id" field was cleared in this mutation.
+func (m *UploadTaskMutation) BitableTableIDCleared() bool {
+	_, ok := m.clearedFields[uploadtask.FieldBitableTableID]
 	return ok
 }
 
-// ResetFileURL resets all changes to the "file_url" field.
-func (m *UploadTaskMutation) ResetFileURL() {
-	m.file_url = nil
-	delete(m.clearedFields, uploadtask.FieldFileURL)
+// ResetBitableTableID resets all changes to the "bitable_table_id" field.
+func (m *UploadTaskMutation) ResetBitableTableID() {
+	m.bitable_table_id = nil
+	delete(m.clearedFields, uploadtask.FieldBitableTableID)
+}
+
+// SetBitableRecordID sets the "bitable_record_id" field.
+func (m *UploadTaskMutation) SetBitableRecordID(s string) {
+	m.bitable_record_id = &s
+}
+
+// BitableRecordID returns the value of the "bitable_record_id" field in the mutation.
+func (m *UploadTaskMutation) BitableRecordID() (r string, exists bool) {
+	v := m.bitable_record_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBitableRecordID returns the old "bitable_record_id" field's value of the UploadTask entity.
+// If the UploadTask object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UploadTaskMutation) OldBitableRecordID(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBitableRecordID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBitableRecordID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBitableRecordID: %w", err)
+	}
+	return oldValue.BitableRecordID, nil
+}
+
+// ClearBitableRecordID clears the value of the "bitable_record_id" field.
+func (m *UploadTaskMutation) ClearBitableRecordID() {
+	m.bitable_record_id = nil
+	m.clearedFields[uploadtask.FieldBitableRecordID] = struct{}{}
+}
+
+// BitableRecordIDCleared returns if the "bitable_record_id" field was cleared in this mutation.
+func (m *UploadTaskMutation) BitableRecordIDCleared() bool {
+	_, ok := m.clearedFields[uploadtask.FieldBitableRecordID]
+	return ok
+}
+
+// ResetBitableRecordID resets all changes to the "bitable_record_id" field.
+func (m *UploadTaskMutation) ResetBitableRecordID() {
+	m.bitable_record_id = nil
+	delete(m.clearedFields, uploadtask.FieldBitableRecordID)
+}
+
+// SetBitableRecordURL sets the "bitable_record_url" field.
+func (m *UploadTaskMutation) SetBitableRecordURL(s string) {
+	m.bitable_record_url = &s
+}
+
+// BitableRecordURL returns the value of the "bitable_record_url" field in the mutation.
+func (m *UploadTaskMutation) BitableRecordURL() (r string, exists bool) {
+	v := m.bitable_record_url
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBitableRecordURL returns the old "bitable_record_url" field's value of the UploadTask entity.
+// If the UploadTask object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UploadTaskMutation) OldBitableRecordURL(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBitableRecordURL is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBitableRecordURL requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBitableRecordURL: %w", err)
+	}
+	return oldValue.BitableRecordURL, nil
+}
+
+// ClearBitableRecordURL clears the value of the "bitable_record_url" field.
+func (m *UploadTaskMutation) ClearBitableRecordURL() {
+	m.bitable_record_url = nil
+	m.clearedFields[uploadtask.FieldBitableRecordURL] = struct{}{}
+}
+
+// BitableRecordURLCleared returns if the "bitable_record_url" field was cleared in this mutation.
+func (m *UploadTaskMutation) BitableRecordURLCleared() bool {
+	_, ok := m.clearedFields[uploadtask.FieldBitableRecordURL]
+	return ok
+}
+
+// ResetBitableRecordURL resets all changes to the "bitable_record_url" field.
+func (m *UploadTaskMutation) ResetBitableRecordURL() {
+	m.bitable_record_url = nil
+	delete(m.clearedFields, uploadtask.FieldBitableRecordURL)
+}
+
+// SetAttachmentFileToken sets the "attachment_file_token" field.
+func (m *UploadTaskMutation) SetAttachmentFileToken(s string) {
+	m.attachment_file_token = &s
+}
+
+// AttachmentFileToken returns the value of the "attachment_file_token" field in the mutation.
+func (m *UploadTaskMutation) AttachmentFileToken() (r string, exists bool) {
+	v := m.attachment_file_token
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAttachmentFileToken returns the old "attachment_file_token" field's value of the UploadTask entity.
+// If the UploadTask object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UploadTaskMutation) OldAttachmentFileToken(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAttachmentFileToken is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAttachmentFileToken requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAttachmentFileToken: %w", err)
+	}
+	return oldValue.AttachmentFileToken, nil
+}
+
+// ClearAttachmentFileToken clears the value of the "attachment_file_token" field.
+func (m *UploadTaskMutation) ClearAttachmentFileToken() {
+	m.attachment_file_token = nil
+	m.clearedFields[uploadtask.FieldAttachmentFileToken] = struct{}{}
+}
+
+// AttachmentFileTokenCleared returns if the "attachment_file_token" field was cleared in this mutation.
+func (m *UploadTaskMutation) AttachmentFileTokenCleared() bool {
+	_, ok := m.clearedFields[uploadtask.FieldAttachmentFileToken]
+	return ok
+}
+
+// ResetAttachmentFileToken resets all changes to the "attachment_file_token" field.
+func (m *UploadTaskMutation) ResetAttachmentFileToken() {
+	m.attachment_file_token = nil
+	delete(m.clearedFields, uploadtask.FieldAttachmentFileToken)
 }
 
 // SetErrorMessage sets the "error_message" field.
@@ -7695,7 +7845,7 @@ func (m *UploadTaskMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *UploadTaskMutation) Fields() []string {
-	fields := make([]string, 0, 12)
+	fields := make([]string, 0, 15)
 	if m.source_path != nil {
 		fields = append(fields, uploadtask.FieldSourcePath)
 	}
@@ -7708,11 +7858,20 @@ func (m *UploadTaskMutation) Fields() []string {
 	if m.attempts != nil {
 		fields = append(fields, uploadtask.FieldAttempts)
 	}
-	if m.file_token != nil {
-		fields = append(fields, uploadtask.FieldFileToken)
+	if m.bitable_app_token != nil {
+		fields = append(fields, uploadtask.FieldBitableAppToken)
 	}
-	if m.file_url != nil {
-		fields = append(fields, uploadtask.FieldFileURL)
+	if m.bitable_table_id != nil {
+		fields = append(fields, uploadtask.FieldBitableTableID)
+	}
+	if m.bitable_record_id != nil {
+		fields = append(fields, uploadtask.FieldBitableRecordID)
+	}
+	if m.bitable_record_url != nil {
+		fields = append(fields, uploadtask.FieldBitableRecordURL)
+	}
+	if m.attachment_file_token != nil {
+		fields = append(fields, uploadtask.FieldAttachmentFileToken)
 	}
 	if m.error_message != nil {
 		fields = append(fields, uploadtask.FieldErrorMessage)
@@ -7748,10 +7907,16 @@ func (m *UploadTaskMutation) Field(name string) (ent.Value, bool) {
 		return m.K8sJobName()
 	case uploadtask.FieldAttempts:
 		return m.Attempts()
-	case uploadtask.FieldFileToken:
-		return m.FileToken()
-	case uploadtask.FieldFileURL:
-		return m.FileURL()
+	case uploadtask.FieldBitableAppToken:
+		return m.BitableAppToken()
+	case uploadtask.FieldBitableTableID:
+		return m.BitableTableID()
+	case uploadtask.FieldBitableRecordID:
+		return m.BitableRecordID()
+	case uploadtask.FieldBitableRecordURL:
+		return m.BitableRecordURL()
+	case uploadtask.FieldAttachmentFileToken:
+		return m.AttachmentFileToken()
 	case uploadtask.FieldErrorMessage:
 		return m.ErrorMessage()
 	case uploadtask.FieldStartedAt:
@@ -7781,10 +7946,16 @@ func (m *UploadTaskMutation) OldField(ctx context.Context, name string) (ent.Val
 		return m.OldK8sJobName(ctx)
 	case uploadtask.FieldAttempts:
 		return m.OldAttempts(ctx)
-	case uploadtask.FieldFileToken:
-		return m.OldFileToken(ctx)
-	case uploadtask.FieldFileURL:
-		return m.OldFileURL(ctx)
+	case uploadtask.FieldBitableAppToken:
+		return m.OldBitableAppToken(ctx)
+	case uploadtask.FieldBitableTableID:
+		return m.OldBitableTableID(ctx)
+	case uploadtask.FieldBitableRecordID:
+		return m.OldBitableRecordID(ctx)
+	case uploadtask.FieldBitableRecordURL:
+		return m.OldBitableRecordURL(ctx)
+	case uploadtask.FieldAttachmentFileToken:
+		return m.OldAttachmentFileToken(ctx)
 	case uploadtask.FieldErrorMessage:
 		return m.OldErrorMessage(ctx)
 	case uploadtask.FieldStartedAt:
@@ -7834,19 +8005,40 @@ func (m *UploadTaskMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetAttempts(v)
 		return nil
-	case uploadtask.FieldFileToken:
+	case uploadtask.FieldBitableAppToken:
 		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetFileToken(v)
+		m.SetBitableAppToken(v)
 		return nil
-	case uploadtask.FieldFileURL:
+	case uploadtask.FieldBitableTableID:
 		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetFileURL(v)
+		m.SetBitableTableID(v)
+		return nil
+	case uploadtask.FieldBitableRecordID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBitableRecordID(v)
+		return nil
+	case uploadtask.FieldBitableRecordURL:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBitableRecordURL(v)
+		return nil
+	case uploadtask.FieldAttachmentFileToken:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAttachmentFileToken(v)
 		return nil
 	case uploadtask.FieldErrorMessage:
 		v, ok := value.(string)
@@ -7938,11 +8130,20 @@ func (m *UploadTaskMutation) ClearedFields() []string {
 	if m.FieldCleared(uploadtask.FieldK8sJobName) {
 		fields = append(fields, uploadtask.FieldK8sJobName)
 	}
-	if m.FieldCleared(uploadtask.FieldFileToken) {
-		fields = append(fields, uploadtask.FieldFileToken)
+	if m.FieldCleared(uploadtask.FieldBitableAppToken) {
+		fields = append(fields, uploadtask.FieldBitableAppToken)
 	}
-	if m.FieldCleared(uploadtask.FieldFileURL) {
-		fields = append(fields, uploadtask.FieldFileURL)
+	if m.FieldCleared(uploadtask.FieldBitableTableID) {
+		fields = append(fields, uploadtask.FieldBitableTableID)
+	}
+	if m.FieldCleared(uploadtask.FieldBitableRecordID) {
+		fields = append(fields, uploadtask.FieldBitableRecordID)
+	}
+	if m.FieldCleared(uploadtask.FieldBitableRecordURL) {
+		fields = append(fields, uploadtask.FieldBitableRecordURL)
+	}
+	if m.FieldCleared(uploadtask.FieldAttachmentFileToken) {
+		fields = append(fields, uploadtask.FieldAttachmentFileToken)
 	}
 	if m.FieldCleared(uploadtask.FieldErrorMessage) {
 		fields = append(fields, uploadtask.FieldErrorMessage)
@@ -7973,11 +8174,20 @@ func (m *UploadTaskMutation) ClearField(name string) error {
 	case uploadtask.FieldK8sJobName:
 		m.ClearK8sJobName()
 		return nil
-	case uploadtask.FieldFileToken:
-		m.ClearFileToken()
+	case uploadtask.FieldBitableAppToken:
+		m.ClearBitableAppToken()
 		return nil
-	case uploadtask.FieldFileURL:
-		m.ClearFileURL()
+	case uploadtask.FieldBitableTableID:
+		m.ClearBitableTableID()
+		return nil
+	case uploadtask.FieldBitableRecordID:
+		m.ClearBitableRecordID()
+		return nil
+	case uploadtask.FieldBitableRecordURL:
+		m.ClearBitableRecordURL()
+		return nil
+	case uploadtask.FieldAttachmentFileToken:
+		m.ClearAttachmentFileToken()
 		return nil
 	case uploadtask.FieldErrorMessage:
 		m.ClearErrorMessage()
@@ -8011,11 +8221,20 @@ func (m *UploadTaskMutation) ResetField(name string) error {
 	case uploadtask.FieldAttempts:
 		m.ResetAttempts()
 		return nil
-	case uploadtask.FieldFileToken:
-		m.ResetFileToken()
+	case uploadtask.FieldBitableAppToken:
+		m.ResetBitableAppToken()
 		return nil
-	case uploadtask.FieldFileURL:
-		m.ResetFileURL()
+	case uploadtask.FieldBitableTableID:
+		m.ResetBitableTableID()
+		return nil
+	case uploadtask.FieldBitableRecordID:
+		m.ResetBitableRecordID()
+		return nil
+	case uploadtask.FieldBitableRecordURL:
+		m.ResetBitableRecordURL()
+		return nil
+	case uploadtask.FieldAttachmentFileToken:
+		m.ResetAttachmentFileToken()
 		return nil
 	case uploadtask.FieldErrorMessage:
 		m.ResetErrorMessage()

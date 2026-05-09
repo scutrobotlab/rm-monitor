@@ -15,7 +15,6 @@ data:
       AutoMigrate: true
     RecordConf:
       BaseDir: /app/data
-      RootNode: ""
     UploadConf:
       Concurrency: 1
       PartRetries: 3
@@ -38,12 +37,13 @@ spec:
       containers:
         - name: lark-notifier
           image: rm-monitor/lark-notifier:latest
+          imagePullPolicy: Always
           args:
             - -f
-            - /app/etc/config.yml
+            - /etc/rm-monitor/config.yml
           volumeMounts:
             - name: config
-              mountPath: /app/etc/config.yml
+              mountPath: /etc/rm-monitor/config.yml
               subPath: config.yml
               readOnly: true
           resources:

@@ -190,7 +190,7 @@ func (l *DispatchLogic) dispatchPendingTasks() error {
 				Name:     jobName,
 				App:      "record-job",
 				Image:    l.svcCtx.Config.K8sJobConf.Image,
-				Args:     []string{"-f", "/app/etc/config.yml", "-task", strconv.Itoa(task.ID)},
+				Args:     []string{"-f", "/etc/rm-monitor/config.yml", "-task", strconv.Itoa(task.ID)},
 				MountPVC: true,
 				CPU:      "500m",
 				Memory:   "512Mi",

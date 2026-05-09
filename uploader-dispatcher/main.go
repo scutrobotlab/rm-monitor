@@ -25,6 +25,7 @@ func main() {
 	app.MustLoadConfig(*configFile, &c)
 	svcCtx := svc.NewServiceContext(c)
 	defer svcCtx.DB.Close()
+	defer svcCtx.Redis.Close()
 
 	wake := make(chan struct{}, 1)
 	go listen(c.PostgresConf.DSN, wake)

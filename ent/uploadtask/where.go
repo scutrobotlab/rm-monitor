@@ -70,14 +70,29 @@ func Attempts(v int) predicate.UploadTask {
 	return predicate.UploadTask(sql.FieldEQ(FieldAttempts, v))
 }
 
-// FileToken applies equality check predicate on the "file_token" field. It's identical to FileTokenEQ.
-func FileToken(v string) predicate.UploadTask {
-	return predicate.UploadTask(sql.FieldEQ(FieldFileToken, v))
+// BitableAppToken applies equality check predicate on the "bitable_app_token" field. It's identical to BitableAppTokenEQ.
+func BitableAppToken(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldEQ(FieldBitableAppToken, v))
 }
 
-// FileURL applies equality check predicate on the "file_url" field. It's identical to FileURLEQ.
-func FileURL(v string) predicate.UploadTask {
-	return predicate.UploadTask(sql.FieldEQ(FieldFileURL, v))
+// BitableTableID applies equality check predicate on the "bitable_table_id" field. It's identical to BitableTableIDEQ.
+func BitableTableID(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldEQ(FieldBitableTableID, v))
+}
+
+// BitableRecordID applies equality check predicate on the "bitable_record_id" field. It's identical to BitableRecordIDEQ.
+func BitableRecordID(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldEQ(FieldBitableRecordID, v))
+}
+
+// BitableRecordURL applies equality check predicate on the "bitable_record_url" field. It's identical to BitableRecordURLEQ.
+func BitableRecordURL(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldEQ(FieldBitableRecordURL, v))
+}
+
+// AttachmentFileToken applies equality check predicate on the "attachment_file_token" field. It's identical to AttachmentFileTokenEQ.
+func AttachmentFileToken(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldEQ(FieldAttachmentFileToken, v))
 }
 
 // ErrorMessage applies equality check predicate on the "error_message" field. It's identical to ErrorMessageEQ.
@@ -310,154 +325,379 @@ func AttemptsLTE(v int) predicate.UploadTask {
 	return predicate.UploadTask(sql.FieldLTE(FieldAttempts, v))
 }
 
-// FileTokenEQ applies the EQ predicate on the "file_token" field.
-func FileTokenEQ(v string) predicate.UploadTask {
-	return predicate.UploadTask(sql.FieldEQ(FieldFileToken, v))
+// BitableAppTokenEQ applies the EQ predicate on the "bitable_app_token" field.
+func BitableAppTokenEQ(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldEQ(FieldBitableAppToken, v))
 }
 
-// FileTokenNEQ applies the NEQ predicate on the "file_token" field.
-func FileTokenNEQ(v string) predicate.UploadTask {
-	return predicate.UploadTask(sql.FieldNEQ(FieldFileToken, v))
+// BitableAppTokenNEQ applies the NEQ predicate on the "bitable_app_token" field.
+func BitableAppTokenNEQ(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldNEQ(FieldBitableAppToken, v))
 }
 
-// FileTokenIn applies the In predicate on the "file_token" field.
-func FileTokenIn(vs ...string) predicate.UploadTask {
-	return predicate.UploadTask(sql.FieldIn(FieldFileToken, vs...))
+// BitableAppTokenIn applies the In predicate on the "bitable_app_token" field.
+func BitableAppTokenIn(vs ...string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldIn(FieldBitableAppToken, vs...))
 }
 
-// FileTokenNotIn applies the NotIn predicate on the "file_token" field.
-func FileTokenNotIn(vs ...string) predicate.UploadTask {
-	return predicate.UploadTask(sql.FieldNotIn(FieldFileToken, vs...))
+// BitableAppTokenNotIn applies the NotIn predicate on the "bitable_app_token" field.
+func BitableAppTokenNotIn(vs ...string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldNotIn(FieldBitableAppToken, vs...))
 }
 
-// FileTokenGT applies the GT predicate on the "file_token" field.
-func FileTokenGT(v string) predicate.UploadTask {
-	return predicate.UploadTask(sql.FieldGT(FieldFileToken, v))
+// BitableAppTokenGT applies the GT predicate on the "bitable_app_token" field.
+func BitableAppTokenGT(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldGT(FieldBitableAppToken, v))
 }
 
-// FileTokenGTE applies the GTE predicate on the "file_token" field.
-func FileTokenGTE(v string) predicate.UploadTask {
-	return predicate.UploadTask(sql.FieldGTE(FieldFileToken, v))
+// BitableAppTokenGTE applies the GTE predicate on the "bitable_app_token" field.
+func BitableAppTokenGTE(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldGTE(FieldBitableAppToken, v))
 }
 
-// FileTokenLT applies the LT predicate on the "file_token" field.
-func FileTokenLT(v string) predicate.UploadTask {
-	return predicate.UploadTask(sql.FieldLT(FieldFileToken, v))
+// BitableAppTokenLT applies the LT predicate on the "bitable_app_token" field.
+func BitableAppTokenLT(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldLT(FieldBitableAppToken, v))
 }
 
-// FileTokenLTE applies the LTE predicate on the "file_token" field.
-func FileTokenLTE(v string) predicate.UploadTask {
-	return predicate.UploadTask(sql.FieldLTE(FieldFileToken, v))
+// BitableAppTokenLTE applies the LTE predicate on the "bitable_app_token" field.
+func BitableAppTokenLTE(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldLTE(FieldBitableAppToken, v))
 }
 
-// FileTokenContains applies the Contains predicate on the "file_token" field.
-func FileTokenContains(v string) predicate.UploadTask {
-	return predicate.UploadTask(sql.FieldContains(FieldFileToken, v))
+// BitableAppTokenContains applies the Contains predicate on the "bitable_app_token" field.
+func BitableAppTokenContains(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldContains(FieldBitableAppToken, v))
 }
 
-// FileTokenHasPrefix applies the HasPrefix predicate on the "file_token" field.
-func FileTokenHasPrefix(v string) predicate.UploadTask {
-	return predicate.UploadTask(sql.FieldHasPrefix(FieldFileToken, v))
+// BitableAppTokenHasPrefix applies the HasPrefix predicate on the "bitable_app_token" field.
+func BitableAppTokenHasPrefix(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldHasPrefix(FieldBitableAppToken, v))
 }
 
-// FileTokenHasSuffix applies the HasSuffix predicate on the "file_token" field.
-func FileTokenHasSuffix(v string) predicate.UploadTask {
-	return predicate.UploadTask(sql.FieldHasSuffix(FieldFileToken, v))
+// BitableAppTokenHasSuffix applies the HasSuffix predicate on the "bitable_app_token" field.
+func BitableAppTokenHasSuffix(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldHasSuffix(FieldBitableAppToken, v))
 }
 
-// FileTokenIsNil applies the IsNil predicate on the "file_token" field.
-func FileTokenIsNil() predicate.UploadTask {
-	return predicate.UploadTask(sql.FieldIsNull(FieldFileToken))
+// BitableAppTokenIsNil applies the IsNil predicate on the "bitable_app_token" field.
+func BitableAppTokenIsNil() predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldIsNull(FieldBitableAppToken))
 }
 
-// FileTokenNotNil applies the NotNil predicate on the "file_token" field.
-func FileTokenNotNil() predicate.UploadTask {
-	return predicate.UploadTask(sql.FieldNotNull(FieldFileToken))
+// BitableAppTokenNotNil applies the NotNil predicate on the "bitable_app_token" field.
+func BitableAppTokenNotNil() predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldNotNull(FieldBitableAppToken))
 }
 
-// FileTokenEqualFold applies the EqualFold predicate on the "file_token" field.
-func FileTokenEqualFold(v string) predicate.UploadTask {
-	return predicate.UploadTask(sql.FieldEqualFold(FieldFileToken, v))
+// BitableAppTokenEqualFold applies the EqualFold predicate on the "bitable_app_token" field.
+func BitableAppTokenEqualFold(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldEqualFold(FieldBitableAppToken, v))
 }
 
-// FileTokenContainsFold applies the ContainsFold predicate on the "file_token" field.
-func FileTokenContainsFold(v string) predicate.UploadTask {
-	return predicate.UploadTask(sql.FieldContainsFold(FieldFileToken, v))
+// BitableAppTokenContainsFold applies the ContainsFold predicate on the "bitable_app_token" field.
+func BitableAppTokenContainsFold(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldContainsFold(FieldBitableAppToken, v))
 }
 
-// FileURLEQ applies the EQ predicate on the "file_url" field.
-func FileURLEQ(v string) predicate.UploadTask {
-	return predicate.UploadTask(sql.FieldEQ(FieldFileURL, v))
+// BitableTableIDEQ applies the EQ predicate on the "bitable_table_id" field.
+func BitableTableIDEQ(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldEQ(FieldBitableTableID, v))
 }
 
-// FileURLNEQ applies the NEQ predicate on the "file_url" field.
-func FileURLNEQ(v string) predicate.UploadTask {
-	return predicate.UploadTask(sql.FieldNEQ(FieldFileURL, v))
+// BitableTableIDNEQ applies the NEQ predicate on the "bitable_table_id" field.
+func BitableTableIDNEQ(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldNEQ(FieldBitableTableID, v))
 }
 
-// FileURLIn applies the In predicate on the "file_url" field.
-func FileURLIn(vs ...string) predicate.UploadTask {
-	return predicate.UploadTask(sql.FieldIn(FieldFileURL, vs...))
+// BitableTableIDIn applies the In predicate on the "bitable_table_id" field.
+func BitableTableIDIn(vs ...string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldIn(FieldBitableTableID, vs...))
 }
 
-// FileURLNotIn applies the NotIn predicate on the "file_url" field.
-func FileURLNotIn(vs ...string) predicate.UploadTask {
-	return predicate.UploadTask(sql.FieldNotIn(FieldFileURL, vs...))
+// BitableTableIDNotIn applies the NotIn predicate on the "bitable_table_id" field.
+func BitableTableIDNotIn(vs ...string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldNotIn(FieldBitableTableID, vs...))
 }
 
-// FileURLGT applies the GT predicate on the "file_url" field.
-func FileURLGT(v string) predicate.UploadTask {
-	return predicate.UploadTask(sql.FieldGT(FieldFileURL, v))
+// BitableTableIDGT applies the GT predicate on the "bitable_table_id" field.
+func BitableTableIDGT(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldGT(FieldBitableTableID, v))
 }
 
-// FileURLGTE applies the GTE predicate on the "file_url" field.
-func FileURLGTE(v string) predicate.UploadTask {
-	return predicate.UploadTask(sql.FieldGTE(FieldFileURL, v))
+// BitableTableIDGTE applies the GTE predicate on the "bitable_table_id" field.
+func BitableTableIDGTE(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldGTE(FieldBitableTableID, v))
 }
 
-// FileURLLT applies the LT predicate on the "file_url" field.
-func FileURLLT(v string) predicate.UploadTask {
-	return predicate.UploadTask(sql.FieldLT(FieldFileURL, v))
+// BitableTableIDLT applies the LT predicate on the "bitable_table_id" field.
+func BitableTableIDLT(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldLT(FieldBitableTableID, v))
 }
 
-// FileURLLTE applies the LTE predicate on the "file_url" field.
-func FileURLLTE(v string) predicate.UploadTask {
-	return predicate.UploadTask(sql.FieldLTE(FieldFileURL, v))
+// BitableTableIDLTE applies the LTE predicate on the "bitable_table_id" field.
+func BitableTableIDLTE(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldLTE(FieldBitableTableID, v))
 }
 
-// FileURLContains applies the Contains predicate on the "file_url" field.
-func FileURLContains(v string) predicate.UploadTask {
-	return predicate.UploadTask(sql.FieldContains(FieldFileURL, v))
+// BitableTableIDContains applies the Contains predicate on the "bitable_table_id" field.
+func BitableTableIDContains(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldContains(FieldBitableTableID, v))
 }
 
-// FileURLHasPrefix applies the HasPrefix predicate on the "file_url" field.
-func FileURLHasPrefix(v string) predicate.UploadTask {
-	return predicate.UploadTask(sql.FieldHasPrefix(FieldFileURL, v))
+// BitableTableIDHasPrefix applies the HasPrefix predicate on the "bitable_table_id" field.
+func BitableTableIDHasPrefix(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldHasPrefix(FieldBitableTableID, v))
 }
 
-// FileURLHasSuffix applies the HasSuffix predicate on the "file_url" field.
-func FileURLHasSuffix(v string) predicate.UploadTask {
-	return predicate.UploadTask(sql.FieldHasSuffix(FieldFileURL, v))
+// BitableTableIDHasSuffix applies the HasSuffix predicate on the "bitable_table_id" field.
+func BitableTableIDHasSuffix(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldHasSuffix(FieldBitableTableID, v))
 }
 
-// FileURLIsNil applies the IsNil predicate on the "file_url" field.
-func FileURLIsNil() predicate.UploadTask {
-	return predicate.UploadTask(sql.FieldIsNull(FieldFileURL))
+// BitableTableIDIsNil applies the IsNil predicate on the "bitable_table_id" field.
+func BitableTableIDIsNil() predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldIsNull(FieldBitableTableID))
 }
 
-// FileURLNotNil applies the NotNil predicate on the "file_url" field.
-func FileURLNotNil() predicate.UploadTask {
-	return predicate.UploadTask(sql.FieldNotNull(FieldFileURL))
+// BitableTableIDNotNil applies the NotNil predicate on the "bitable_table_id" field.
+func BitableTableIDNotNil() predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldNotNull(FieldBitableTableID))
 }
 
-// FileURLEqualFold applies the EqualFold predicate on the "file_url" field.
-func FileURLEqualFold(v string) predicate.UploadTask {
-	return predicate.UploadTask(sql.FieldEqualFold(FieldFileURL, v))
+// BitableTableIDEqualFold applies the EqualFold predicate on the "bitable_table_id" field.
+func BitableTableIDEqualFold(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldEqualFold(FieldBitableTableID, v))
 }
 
-// FileURLContainsFold applies the ContainsFold predicate on the "file_url" field.
-func FileURLContainsFold(v string) predicate.UploadTask {
-	return predicate.UploadTask(sql.FieldContainsFold(FieldFileURL, v))
+// BitableTableIDContainsFold applies the ContainsFold predicate on the "bitable_table_id" field.
+func BitableTableIDContainsFold(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldContainsFold(FieldBitableTableID, v))
+}
+
+// BitableRecordIDEQ applies the EQ predicate on the "bitable_record_id" field.
+func BitableRecordIDEQ(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldEQ(FieldBitableRecordID, v))
+}
+
+// BitableRecordIDNEQ applies the NEQ predicate on the "bitable_record_id" field.
+func BitableRecordIDNEQ(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldNEQ(FieldBitableRecordID, v))
+}
+
+// BitableRecordIDIn applies the In predicate on the "bitable_record_id" field.
+func BitableRecordIDIn(vs ...string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldIn(FieldBitableRecordID, vs...))
+}
+
+// BitableRecordIDNotIn applies the NotIn predicate on the "bitable_record_id" field.
+func BitableRecordIDNotIn(vs ...string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldNotIn(FieldBitableRecordID, vs...))
+}
+
+// BitableRecordIDGT applies the GT predicate on the "bitable_record_id" field.
+func BitableRecordIDGT(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldGT(FieldBitableRecordID, v))
+}
+
+// BitableRecordIDGTE applies the GTE predicate on the "bitable_record_id" field.
+func BitableRecordIDGTE(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldGTE(FieldBitableRecordID, v))
+}
+
+// BitableRecordIDLT applies the LT predicate on the "bitable_record_id" field.
+func BitableRecordIDLT(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldLT(FieldBitableRecordID, v))
+}
+
+// BitableRecordIDLTE applies the LTE predicate on the "bitable_record_id" field.
+func BitableRecordIDLTE(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldLTE(FieldBitableRecordID, v))
+}
+
+// BitableRecordIDContains applies the Contains predicate on the "bitable_record_id" field.
+func BitableRecordIDContains(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldContains(FieldBitableRecordID, v))
+}
+
+// BitableRecordIDHasPrefix applies the HasPrefix predicate on the "bitable_record_id" field.
+func BitableRecordIDHasPrefix(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldHasPrefix(FieldBitableRecordID, v))
+}
+
+// BitableRecordIDHasSuffix applies the HasSuffix predicate on the "bitable_record_id" field.
+func BitableRecordIDHasSuffix(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldHasSuffix(FieldBitableRecordID, v))
+}
+
+// BitableRecordIDIsNil applies the IsNil predicate on the "bitable_record_id" field.
+func BitableRecordIDIsNil() predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldIsNull(FieldBitableRecordID))
+}
+
+// BitableRecordIDNotNil applies the NotNil predicate on the "bitable_record_id" field.
+func BitableRecordIDNotNil() predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldNotNull(FieldBitableRecordID))
+}
+
+// BitableRecordIDEqualFold applies the EqualFold predicate on the "bitable_record_id" field.
+func BitableRecordIDEqualFold(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldEqualFold(FieldBitableRecordID, v))
+}
+
+// BitableRecordIDContainsFold applies the ContainsFold predicate on the "bitable_record_id" field.
+func BitableRecordIDContainsFold(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldContainsFold(FieldBitableRecordID, v))
+}
+
+// BitableRecordURLEQ applies the EQ predicate on the "bitable_record_url" field.
+func BitableRecordURLEQ(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldEQ(FieldBitableRecordURL, v))
+}
+
+// BitableRecordURLNEQ applies the NEQ predicate on the "bitable_record_url" field.
+func BitableRecordURLNEQ(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldNEQ(FieldBitableRecordURL, v))
+}
+
+// BitableRecordURLIn applies the In predicate on the "bitable_record_url" field.
+func BitableRecordURLIn(vs ...string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldIn(FieldBitableRecordURL, vs...))
+}
+
+// BitableRecordURLNotIn applies the NotIn predicate on the "bitable_record_url" field.
+func BitableRecordURLNotIn(vs ...string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldNotIn(FieldBitableRecordURL, vs...))
+}
+
+// BitableRecordURLGT applies the GT predicate on the "bitable_record_url" field.
+func BitableRecordURLGT(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldGT(FieldBitableRecordURL, v))
+}
+
+// BitableRecordURLGTE applies the GTE predicate on the "bitable_record_url" field.
+func BitableRecordURLGTE(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldGTE(FieldBitableRecordURL, v))
+}
+
+// BitableRecordURLLT applies the LT predicate on the "bitable_record_url" field.
+func BitableRecordURLLT(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldLT(FieldBitableRecordURL, v))
+}
+
+// BitableRecordURLLTE applies the LTE predicate on the "bitable_record_url" field.
+func BitableRecordURLLTE(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldLTE(FieldBitableRecordURL, v))
+}
+
+// BitableRecordURLContains applies the Contains predicate on the "bitable_record_url" field.
+func BitableRecordURLContains(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldContains(FieldBitableRecordURL, v))
+}
+
+// BitableRecordURLHasPrefix applies the HasPrefix predicate on the "bitable_record_url" field.
+func BitableRecordURLHasPrefix(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldHasPrefix(FieldBitableRecordURL, v))
+}
+
+// BitableRecordURLHasSuffix applies the HasSuffix predicate on the "bitable_record_url" field.
+func BitableRecordURLHasSuffix(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldHasSuffix(FieldBitableRecordURL, v))
+}
+
+// BitableRecordURLIsNil applies the IsNil predicate on the "bitable_record_url" field.
+func BitableRecordURLIsNil() predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldIsNull(FieldBitableRecordURL))
+}
+
+// BitableRecordURLNotNil applies the NotNil predicate on the "bitable_record_url" field.
+func BitableRecordURLNotNil() predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldNotNull(FieldBitableRecordURL))
+}
+
+// BitableRecordURLEqualFold applies the EqualFold predicate on the "bitable_record_url" field.
+func BitableRecordURLEqualFold(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldEqualFold(FieldBitableRecordURL, v))
+}
+
+// BitableRecordURLContainsFold applies the ContainsFold predicate on the "bitable_record_url" field.
+func BitableRecordURLContainsFold(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldContainsFold(FieldBitableRecordURL, v))
+}
+
+// AttachmentFileTokenEQ applies the EQ predicate on the "attachment_file_token" field.
+func AttachmentFileTokenEQ(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldEQ(FieldAttachmentFileToken, v))
+}
+
+// AttachmentFileTokenNEQ applies the NEQ predicate on the "attachment_file_token" field.
+func AttachmentFileTokenNEQ(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldNEQ(FieldAttachmentFileToken, v))
+}
+
+// AttachmentFileTokenIn applies the In predicate on the "attachment_file_token" field.
+func AttachmentFileTokenIn(vs ...string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldIn(FieldAttachmentFileToken, vs...))
+}
+
+// AttachmentFileTokenNotIn applies the NotIn predicate on the "attachment_file_token" field.
+func AttachmentFileTokenNotIn(vs ...string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldNotIn(FieldAttachmentFileToken, vs...))
+}
+
+// AttachmentFileTokenGT applies the GT predicate on the "attachment_file_token" field.
+func AttachmentFileTokenGT(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldGT(FieldAttachmentFileToken, v))
+}
+
+// AttachmentFileTokenGTE applies the GTE predicate on the "attachment_file_token" field.
+func AttachmentFileTokenGTE(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldGTE(FieldAttachmentFileToken, v))
+}
+
+// AttachmentFileTokenLT applies the LT predicate on the "attachment_file_token" field.
+func AttachmentFileTokenLT(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldLT(FieldAttachmentFileToken, v))
+}
+
+// AttachmentFileTokenLTE applies the LTE predicate on the "attachment_file_token" field.
+func AttachmentFileTokenLTE(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldLTE(FieldAttachmentFileToken, v))
+}
+
+// AttachmentFileTokenContains applies the Contains predicate on the "attachment_file_token" field.
+func AttachmentFileTokenContains(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldContains(FieldAttachmentFileToken, v))
+}
+
+// AttachmentFileTokenHasPrefix applies the HasPrefix predicate on the "attachment_file_token" field.
+func AttachmentFileTokenHasPrefix(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldHasPrefix(FieldAttachmentFileToken, v))
+}
+
+// AttachmentFileTokenHasSuffix applies the HasSuffix predicate on the "attachment_file_token" field.
+func AttachmentFileTokenHasSuffix(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldHasSuffix(FieldAttachmentFileToken, v))
+}
+
+// AttachmentFileTokenIsNil applies the IsNil predicate on the "attachment_file_token" field.
+func AttachmentFileTokenIsNil() predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldIsNull(FieldAttachmentFileToken))
+}
+
+// AttachmentFileTokenNotNil applies the NotNil predicate on the "attachment_file_token" field.
+func AttachmentFileTokenNotNil() predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldNotNull(FieldAttachmentFileToken))
+}
+
+// AttachmentFileTokenEqualFold applies the EqualFold predicate on the "attachment_file_token" field.
+func AttachmentFileTokenEqualFold(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldEqualFold(FieldAttachmentFileToken, v))
+}
+
+// AttachmentFileTokenContainsFold applies the ContainsFold predicate on the "attachment_file_token" field.
+func AttachmentFileTokenContainsFold(v string) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldContainsFold(FieldAttachmentFileToken, v))
 }
 
 // ErrorMessageEQ applies the EQ predicate on the "error_message" field.

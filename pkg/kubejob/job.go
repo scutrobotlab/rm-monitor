@@ -127,7 +127,7 @@ func Build(conf config.K8sJobConf, spec JobSpec) *batchv1.Job {
 	if conf.ConfigMapName != "" {
 		container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{
 			Name:      "config",
-			MountPath: "/app/etc/config.yml",
+			MountPath: "/etc/rm-monitor/config.yml",
 			SubPath:   "config.yml",
 			ReadOnly:  true,
 		})

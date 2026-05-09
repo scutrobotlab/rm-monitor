@@ -28,12 +28,13 @@ spec:
       containers:
         - name: monitor
           image: rm-monitor/monitor:latest
+          imagePullPolicy: Always
           args:
             - -f
-            - /app/etc/config.yml
+            - /etc/rm-monitor/config.yml
           volumeMounts:
             - name: config
-              mountPath: /app/etc/config.yml
+              mountPath: /etc/rm-monitor/config.yml
               subPath: config.yml
               readOnly: true
           resources:

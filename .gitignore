@@ -27,4 +27,5 @@ go.work.sum
 
 .idea
 build
+.local-bin/
 recorder/data
