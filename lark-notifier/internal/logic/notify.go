@@ -309,6 +309,10 @@ func (l *NotifyLogic) replyUploadTask(task *ent.UploadTask) error {
 		return nil
 	}
 	match := task.Edges.RecordTask.Edges.MatchRound.Edges.Match
+	if len(match.Edges.LarkMessages) == 0 {
+		return nil
+	}
+	replied := 0
 	for _, message := range match.Edges.LarkMessages {
 		req := larkim.NewReplyMessageReqBuilder().
 			Body(larkim.NewReplyMessageReqBodyBuilder().
@@ -335,6 +339,10 @@ func (l *NotifyLogic) replyUploadTask(task *ent.UploadTask) error {
 			l.Error(errors.Wrap(err, "reply upload url"))
 			continue
 		}
+		replied++
+	}
+	if replied != len(match.Edges.LarkMessages) {
+		return nil
 	}
 	if err := l.svcCtx.DB.UploadTask.UpdateOneID(task.ID).SetLarkRepliedAt(time.Now()).Exec(l.ctx); err != nil {
 		return errors.Wrap(err, "mark upload replied")
