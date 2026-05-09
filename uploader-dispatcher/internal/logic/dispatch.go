@@ -15,6 +15,7 @@ import (
 	"scutbot.cn/web/rm-monitor/ent/mediaartifact"
 	"scutbot.cn/web/rm-monitor/ent/uploadtask"
 	"scutbot.cn/web/rm-monitor/pkg/bitableupload"
+	"scutbot.cn/web/rm-monitor/pkg/db"
 	"scutbot.cn/web/rm-monitor/pkg/kubejob"
 	"scutbot.cn/web/rm-monitor/pkg/logx"
 	"scutbot.cn/web/rm-monitor/uploader-dispatcher/internal/svc"
@@ -94,6 +95,9 @@ func (l *DispatchLogic) createUploadTasks() error {
 			OnConflictColumns(uploadtask.SourceArtifactColumn).
 			DoNothing().
 			Exec(l.ctx); err != nil {
+			if db.IsNoRows(err) {
+				continue
+			}
 			return errors.Wrap(err, "create upload task")
 		}
 	}

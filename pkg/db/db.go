@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	stdsql "database/sql"
+	"strings"
 
 	"entgo.io/ent/dialect"
 	entsql "entgo.io/ent/dialect/sql"
@@ -13,6 +14,10 @@ import (
 	"scutbot.cn/web/rm-monitor/ent/migrate"
 	"scutbot.cn/web/rm-monitor/pkg/config"
 )
+
+func IsNoRows(err error) bool {
+	return err != nil && (errors.Cause(err) == stdsql.ErrNoRows || strings.Contains(err.Error(), "no rows in result set"))
+}
 
 func Open(ctx context.Context, c config.PostgresConf) (*ent.Client, error) {
 	if c.DSN == "" {

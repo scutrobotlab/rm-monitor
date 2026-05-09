@@ -15,6 +15,7 @@ import (
 	"scutbot.cn/web/rm-monitor/ent/recordtask"
 	"scutbot.cn/web/rm-monitor/ent/transcodetask"
 	"scutbot.cn/web/rm-monitor/ent/uploadtask"
+	"scutbot.cn/web/rm-monitor/pkg/db"
 	"scutbot.cn/web/rm-monitor/pkg/kubejob"
 	"scutbot.cn/web/rm-monitor/pkg/logx"
 	"scutbot.cn/web/rm-monitor/pkg/storagepath"
@@ -65,6 +66,9 @@ func (l *DispatchLogic) createTranscodeTasks() error {
 			OnConflictColumns(transcodetask.SourceArtifactColumn).
 			DoNothing().
 			Exec(l.ctx); err != nil {
+			if db.IsNoRows(err) {
+				continue
+			}
 			return errors.Wrap(err, "create transcode task")
 		}
 	}

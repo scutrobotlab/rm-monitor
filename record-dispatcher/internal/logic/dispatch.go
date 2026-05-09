@@ -134,6 +134,9 @@ func (l *DispatchLogic) createTasksForStartedRounds() error {
 				DoNothing().
 				Exec(l.ctx)
 			if err != nil {
+				if db.IsNoRows(err) {
+					continue
+				}
 				return errors.Wrap(err, "create record task")
 			}
 		}

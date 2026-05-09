@@ -3,6 +3,7 @@ package utils
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	larkim "github.com/larksuite/oapi-sdk-go/v3/service/im/v1"
 	"github.com/pkg/errors"
@@ -13,6 +14,9 @@ import (
 var imageGroup singleflight.Group
 
 func GetImageKey(ctx context.Context, svcCtx *svc.ServiceContext, imageUrl string) (string, error) {
+	if strings.TrimSpace(imageUrl) == "" {
+		return "", nil
+	}
 	key := fmt.Sprintf("rm-monitor:image-key:%s", imageUrl)
 	imageKey, err := svcCtx.RedisClient.GetCtx(ctx, key)
 	if err != nil {
