@@ -114,7 +114,7 @@ func (l *DispatchLogic) createTasksForStartedRounds() error {
 		if m == nil {
 			continue
 		}
-		urls, err := recording.LiveURLs(l.ctx, l.svcCtx.RestyClient, m.Zone, conf.Res)
+		urls, err := recording.LiveURLs(l.ctx, l.svcCtx.RestyClient, conf.LiveInfoURL, m.Zone, conf.Res)
 		if err != nil {
 			l.Errorf("live urls for match %s: %v", m.ID, err)
 			continue

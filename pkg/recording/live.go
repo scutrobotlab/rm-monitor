@@ -9,10 +9,13 @@ import (
 	"resty.dev/v3"
 )
 
-const LiveInfoURL = "https://rm-static.djicdn.com/live_json/live_game_info.json"
+const DefaultLiveInfoURL = "https://rm-static.djicdn.com/live_json/live_game_info.json"
 
-func LiveURLs(ctx context.Context, client *resty.Client, zone, res string) (map[string]string, error) {
-	resp, err := client.R().SetContext(ctx).Get(LiveInfoURL)
+func LiveURLs(ctx context.Context, client *resty.Client, liveInfoURL, zone, res string) (map[string]string, error) {
+	if liveInfoURL == "" {
+		liveInfoURL = DefaultLiveInfoURL
+	}
+	resp, err := client.R().SetContext(ctx).Get(liveInfoURL)
 	if err != nil {
 		return nil, errors.Wrap(err, "get live info")
 	}

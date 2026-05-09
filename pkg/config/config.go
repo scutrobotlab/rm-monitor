@@ -9,8 +9,21 @@ type PostgresConf struct {
 
 type RedisConf = redisx.Conf
 
+type MonitorConf struct {
+	ScheduleURL string `json:",optional"`
+}
+
+func (c *MonitorConf) WithDefaults() MonitorConf {
+	out := *c
+	if out.ScheduleURL == "" {
+		out.ScheduleURL = "https://pro-robomasters-hz-n5i3.oss-cn-hangzhou.aliyuncs.com/live_json/schedule.json"
+	}
+	return out
+}
+
 type RecordConf struct {
 	Res               string `json:",optional"`
+	LiveInfoURL       string `json:",optional"`
 	BaseDir           string `json:",optional"`
 	PathTemplate      string `json:",optional"`
 	MatchDirTemplate  string `json:",optional"`
@@ -21,6 +34,9 @@ func (c *RecordConf) WithDefaults() RecordConf {
 	out := *c
 	if out.Res == "" {
 		out.Res = "middle"
+	}
+	if out.LiveInfoURL == "" {
+		out.LiveInfoURL = "https://rm-static.djicdn.com/live_json/live_game_info.json"
 	}
 	if out.BaseDir == "" {
 		out.BaseDir = "/records"

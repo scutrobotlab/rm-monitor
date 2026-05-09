@@ -36,8 +36,7 @@ func NewMatchScanLogic(ctx context.Context, svcCtx *svc.ServiceContext) *MatchSc
 }
 
 const (
-	scheduleUrl = "https://pro-robomasters-hz-n5i3.oss-cn-hangzhou.aliyuncs.com/live_json/schedule.json"
-	simulateUA  = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
+	simulateUA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
 )
 
 type scannedMatch struct {
@@ -75,9 +74,10 @@ func (m scannedMatch) RoundNo() int {
 }
 
 func (l *MatchScanLogic) MatchScan() error {
+	conf := l.svcCtx.Config.MonitorConf.WithDefaults()
 	resp, err := l.svcCtx.RestyClient.R().
 		SetHeader("User-Agent", simulateUA).
-		Get(scheduleUrl)
+		Get(conf.ScheduleURL)
 	if err != nil {
 		return errors.Wrap(err, "failed to get schedule")
 	}
