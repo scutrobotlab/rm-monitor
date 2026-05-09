@@ -2,6 +2,7 @@ package logic
 
 import (
 	"context"
+	"crypto/sha1"
 	"fmt"
 	"strconv"
 	"strings"
@@ -277,7 +278,7 @@ func (l *DispatchLogic) listFields(appToken, tableID string) (map[string]int, er
 }
 
 func (l *DispatchLogic) createBitableRecord(appToken, tableID string, artifactID int, match *ent.Match, role string) (string, *string, error) {
-	token := uuid.NewSHA1(uuid.NameSpaceOID, []byte(fmt.Sprintf("rm-monitor:upload-task:%d", artifactID))).String()
+	token := stableV4ClientToken(fmt.Sprintf("rm-monitor:upload-task:%d", artifactID))
 	resp, err := l.svcCtx.Lark.Bitable.V1.AppTableRecord.Create(l.ctx, larkbitable.NewCreateAppTableRecordReqBuilder().
 		AppToken(appToken).
 		TableId(tableID).
@@ -301,6 +302,15 @@ func (l *DispatchLogic) createBitableRecord(appToken, tableID string, artifactID
 	}
 	url := fmt.Sprintf("https://scutrobotlab.feishu.cn/base/%s?table=%s&record=%s", appToken, tableID, *record.RecordId)
 	return *record.RecordId, &url, nil
+}
+
+func stableV4ClientToken(seed string) string {
+	sum := sha1.Sum([]byte(seed))
+	var id uuid.UUID
+	copy(id[:], sum[:16])
+	id[6] = (id[6] & 0x0f) | 0x40
+	id[8] = (id[8] & 0x3f) | 0x80
+	return id.String()
 }
 
 func (l *DispatchLogic) recoverDispatching() error {
