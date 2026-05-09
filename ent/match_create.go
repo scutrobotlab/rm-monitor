@@ -100,12 +100,6 @@ func (_c *MatchCreate) SetNillableLatestStatus(v *string) *MatchCreate {
 	return _c
 }
 
-// SetRawPayload sets the "raw_payload" field.
-func (_c *MatchCreate) SetRawPayload(v map[string]interface{}) *MatchCreate {
-	_c.mutation.SetRawPayload(v)
-	return _c
-}
-
 // SetCreatedAt sets the "created_at" field.
 func (_c *MatchCreate) SetCreatedAt(v time.Time) *MatchCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -345,10 +339,6 @@ func (_c *MatchCreate) createSpec() (*Match, *sqlgraph.CreateSpec) {
 		_spec.SetField(match.FieldLatestStatus, field.TypeString, value)
 		_node.LatestStatus = value
 	}
-	if value, ok := _c.mutation.RawPayload(); ok {
-		_spec.SetField(match.FieldRawPayload, field.TypeJSON, value)
-		_node.RawPayload = value
-	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(match.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
@@ -577,24 +567,6 @@ func (u *MatchUpsert) UpdateLatestStatus() *MatchUpsert {
 	return u
 }
 
-// SetRawPayload sets the "raw_payload" field.
-func (u *MatchUpsert) SetRawPayload(v map[string]interface{}) *MatchUpsert {
-	u.Set(match.FieldRawPayload, v)
-	return u
-}
-
-// UpdateRawPayload sets the "raw_payload" field to the value that was provided on create.
-func (u *MatchUpsert) UpdateRawPayload() *MatchUpsert {
-	u.SetExcluded(match.FieldRawPayload)
-	return u
-}
-
-// ClearRawPayload clears the value of the "raw_payload" field.
-func (u *MatchUpsert) ClearRawPayload() *MatchUpsert {
-	u.SetNull(match.FieldRawPayload)
-	return u
-}
-
 // SetUpdatedAt sets the "updated_at" field.
 func (u *MatchUpsert) SetUpdatedAt(v time.Time) *MatchUpsert {
 	u.Set(match.FieldUpdatedAt, v)
@@ -774,27 +746,6 @@ func (u *MatchUpsertOne) SetLatestStatus(v string) *MatchUpsertOne {
 func (u *MatchUpsertOne) UpdateLatestStatus() *MatchUpsertOne {
 	return u.Update(func(s *MatchUpsert) {
 		s.UpdateLatestStatus()
-	})
-}
-
-// SetRawPayload sets the "raw_payload" field.
-func (u *MatchUpsertOne) SetRawPayload(v map[string]interface{}) *MatchUpsertOne {
-	return u.Update(func(s *MatchUpsert) {
-		s.SetRawPayload(v)
-	})
-}
-
-// UpdateRawPayload sets the "raw_payload" field to the value that was provided on create.
-func (u *MatchUpsertOne) UpdateRawPayload() *MatchUpsertOne {
-	return u.Update(func(s *MatchUpsert) {
-		s.UpdateRawPayload()
-	})
-}
-
-// ClearRawPayload clears the value of the "raw_payload" field.
-func (u *MatchUpsertOne) ClearRawPayload() *MatchUpsertOne {
-	return u.Update(func(s *MatchUpsert) {
-		s.ClearRawPayload()
 	})
 }
 
@@ -1146,27 +1097,6 @@ func (u *MatchUpsertBulk) SetLatestStatus(v string) *MatchUpsertBulk {
 func (u *MatchUpsertBulk) UpdateLatestStatus() *MatchUpsertBulk {
 	return u.Update(func(s *MatchUpsert) {
 		s.UpdateLatestStatus()
-	})
-}
-
-// SetRawPayload sets the "raw_payload" field.
-func (u *MatchUpsertBulk) SetRawPayload(v map[string]interface{}) *MatchUpsertBulk {
-	return u.Update(func(s *MatchUpsert) {
-		s.SetRawPayload(v)
-	})
-}
-
-// UpdateRawPayload sets the "raw_payload" field to the value that was provided on create.
-func (u *MatchUpsertBulk) UpdateRawPayload() *MatchUpsertBulk {
-	return u.Update(func(s *MatchUpsert) {
-		s.UpdateRawPayload()
-	})
-}
-
-// ClearRawPayload clears the value of the "raw_payload" field.
-func (u *MatchUpsertBulk) ClearRawPayload() *MatchUpsertBulk {
-	return u.Update(func(s *MatchUpsert) {
-		s.ClearRawPayload()
 	})
 }
 

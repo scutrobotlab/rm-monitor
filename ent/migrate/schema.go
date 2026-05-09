@@ -41,7 +41,6 @@ var (
 		{Name: "match_slug", Type: field.TypeString, Nullable: true},
 		{Name: "total_rounds", Type: field.TypeInt, Default: 0},
 		{Name: "latest_status", Type: field.TypeString, Default: ""},
-		{Name: "raw_payload", Type: field.TypeJSON, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "team_red_matches", Type: field.TypeString},
@@ -55,13 +54,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "matches_teams_red_matches",
-				Columns:    []*schema.Column{MatchesColumns[11]},
+				Columns:    []*schema.Column{MatchesColumns[10]},
 				RefColumns: []*schema.Column{TeamsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "matches_teams_blue_matches",
-				Columns:    []*schema.Column{MatchesColumns[12]},
+				Columns:    []*schema.Column{MatchesColumns[11]},
 				RefColumns: []*schema.Column{TeamsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -202,7 +201,6 @@ var (
 		{Name: "name", Type: field.TypeString, Default: ""},
 		{Name: "school_name", Type: field.TypeString, Default: ""},
 		{Name: "school_logo", Type: field.TypeString, Default: ""},
-		{Name: "raw_payload", Type: field.TypeJSON, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
 	}

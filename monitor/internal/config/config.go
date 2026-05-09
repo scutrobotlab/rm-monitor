@@ -6,4 +6,5 @@ import (
 
 type Config struct {
 	PostgresConf common.PostgresConf
+	RedisConf    common.RedisConf
 }

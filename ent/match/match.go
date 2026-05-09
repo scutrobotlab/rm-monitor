@@ -28,8 +28,6 @@ const (
 	FieldTotalRounds = "total_rounds"
 	// FieldLatestStatus holds the string denoting the latest_status field in the database.
 	FieldLatestStatus = "latest_status"
-	// FieldRawPayload holds the string denoting the raw_payload field in the database.
-	FieldRawPayload = "raw_payload"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
@@ -84,7 +82,6 @@ var Columns = []string{
 	FieldMatchSlug,
 	FieldTotalRounds,
 	FieldLatestStatus,
-	FieldRawPayload,
 	FieldCreatedAt,
 	FieldUpdatedAt,
 }

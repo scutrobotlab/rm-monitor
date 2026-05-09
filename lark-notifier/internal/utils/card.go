@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/zeromicro/go-zero/core/jsonx"
 	"scutbot.cn/web/rm-monitor/lark-notifier/internal/svc"
 	"scutbot.cn/web/rm-monitor/monitor/types"
 )
@@ -74,69 +73,4 @@ func NewMatchCardContent(ctx context.Context, svcCtx *svc.ServiceContext, m *typ
 	}
 
 	return &content, nil
-}
-
-func SaveMatchMessageCard(ctx context.Context, svcCtx *svc.ServiceContext, matchId string, content *MatchCardContent) error {
-	contentData, err := jsonx.MarshalToString(content)
-	if err != nil {
-		return errors.Wrap(err, "failed to marshal content")
-	}
-
-	messagePayloadKey := fmt.Sprintf("rm_monitor:message_payload:%s", matchId)
-	if err := svcCtx.RedisClient.SetexCtx(ctx, messagePayloadKey, contentData, 6*60*60); err != nil {
-		return errors.Wrapf(err, "failed to set message payload key %s", messagePayloadKey)
-	}
-
-	return nil
-}
-
-func GetMatchMessageCard(ctx context.Context, svcCtx *svc.ServiceContext, matchId string) (*MatchCardContent, error) {
-	messagePayloadKey := fmt.Sprintf("rm_monitor:message_payload:%s", matchId)
-	contentData, err := svcCtx.RedisClient.GetCtx(ctx, messagePayloadKey)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get message payload key %s", messagePayloadKey)
-	}
-
-	if contentData == "" {
-		return nil, errors.New("message payload not found")
-	}
-
-	var content MatchCardContent
-	if err := jsonx.UnmarshalFromString(contentData, &content); err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal content")
-	}
-
-	return &content, nil
-}
-
-func SaveMatchMessageIds(ctx context.Context, svcCtx *svc.ServiceContext, matchId string, messageIds map[string]string) error {
-	messageKey := fmt.Sprintf("rm-monitor:message_id:%s", matchId)
-	val, err := jsonx.MarshalToString(messageIds)
-	if err != nil {
-		return errors.Wrap(err, "failed to marshal message ids")
-	}
-	if err := svcCtx.RedisClient.SetexCtx(ctx, messageKey, val, 6*60*60); err != nil {
-		return errors.Wrapf(err, "failed to set message key %s", messageKey)
-	}
-
-	return nil
-}
-
-func GetMatchMessageIds(ctx context.Context, svcCtx *svc.ServiceContext, matchId string) (map[string]string, error) {
-	messageKey := fmt.Sprintf("rm-monitor:message_id:%s", matchId)
-	val, err := svcCtx.RedisClient.GetCtx(ctx, messageKey)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get message key %s", messageKey)
-	}
-
-	if val == "" {
-		return nil, errors.New("message id not found")
-	}
-
-	var messageIds map[string]string
-	if err := jsonx.UnmarshalFromString(val, &messageIds); err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal message ids")
-	}
-
-	return messageIds, nil
 }

@@ -27,6 +27,8 @@ type DispatchLogic struct {
 	logx.Logger
 }
 
+const dispatchingStaleAfter = 5 * time.Minute
+
 func NewDispatchLogic(ctx context.Context, svcCtx *svc.ServiceContext) *DispatchLogic {
 	return &DispatchLogic{ctx: ctx, svcCtx: svcCtx, Logger: logx.WithContext(ctx)}
 }
@@ -36,6 +38,9 @@ func (l *DispatchLogic) Tick() error {
 		return err
 	}
 	if err := l.cleanupExpiredSources(); err != nil {
+		return err
+	}
+	if err := l.recoverDispatching(); err != nil {
 		return err
 	}
 	return l.dispatchPending()
@@ -68,6 +73,39 @@ func (l *DispatchLogic) createTranscodeTasks() error {
 	return nil
 }
 
+func (l *DispatchLogic) recoverDispatching() error {
+	if l.svcCtx.K8s == nil {
+		return nil
+	}
+	tasks, err := l.svcCtx.DB.TranscodeTask.Query().
+		Where(transcodetask.StatusEQ(transcodetask.StatusDISPATCHING), transcodetask.UpdatedAtLTE(time.Now().Add(-dispatchingStaleAfter))).
+		All(l.ctx)
+	if err != nil {
+		return errors.Wrap(err, "query stale dispatching transcode tasks")
+	}
+	namespace := l.svcCtx.Config.K8sJobConf.WithDefaults().Namespace
+	for _, task := range tasks {
+		name := jobName("transcode", task.ID)
+		if task.K8sJobName != nil && *task.K8sJobName != "" {
+			name = *task.K8sJobName
+		}
+		exists, err := l.svcCtx.K8s.JobExists(l.ctx, namespace, name)
+		if err != nil {
+			return err
+		}
+		if exists {
+			if err := l.svcCtx.DB.TranscodeTask.UpdateOneID(task.ID).SetStatus(transcodetask.StatusRUNNING).SetStartedAt(time.Now()).Exec(l.ctx); err != nil {
+				return errors.Wrap(err, "recover running transcode task")
+			}
+			continue
+		}
+		if err := l.svcCtx.DB.TranscodeTask.UpdateOneID(task.ID).SetStatus(transcodetask.StatusPENDING).Exec(l.ctx); err != nil {
+			return errors.Wrap(err, "requeue stale transcode task")
+		}
+	}
+	return nil
+}
+
 func (l *DispatchLogic) dispatchPending() error {
 	conf := l.svcCtx.Config.TranscodeConf.WithDefaults()
 	if ok, err := inAllowedWindow(time.Now(), conf.AllowedWindow); err != nil {
@@ -93,12 +131,17 @@ func (l *DispatchLogic) dispatchPending() error {
 	jobConf := l.svcCtx.Config.K8sJobConf.WithDefaults()
 	for _, task := range tasks {
 		jobName := jobName("transcode", task.ID)
-		if err := l.svcCtx.DB.TranscodeTask.UpdateOneID(task.ID).
+		claimed, err := l.svcCtx.DB.TranscodeTask.Update().
+			Where(transcodetask.ID(task.ID), transcodetask.StatusEQ(transcodetask.StatusPENDING)).
 			SetStatus(transcodetask.StatusDISPATCHING).
 			AddAttempts(1).
 			SetK8sJobName(jobName).
-			Exec(l.ctx); err != nil {
+			Save(l.ctx)
+		if err != nil {
 			return errors.Wrap(err, "mark transcode dispatching")
+		}
+		if claimed == 0 {
+			continue
 		}
 		if l.svcCtx.K8s != nil {
 			job := kubejob.Build(l.svcCtx.Config.K8sJobConf, kubejob.JobSpec{

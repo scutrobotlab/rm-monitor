@@ -149,18 +149,6 @@ func (_u *MatchUpdate) SetNillableLatestStatus(v *string) *MatchUpdate {
 	return _u
 }
 
-// SetRawPayload sets the "raw_payload" field.
-func (_u *MatchUpdate) SetRawPayload(v map[string]interface{}) *MatchUpdate {
-	_u.mutation.SetRawPayload(v)
-	return _u
-}
-
-// ClearRawPayload clears the value of the "raw_payload" field.
-func (_u *MatchUpdate) ClearRawPayload() *MatchUpdate {
-	_u.mutation.ClearRawPayload()
-	return _u
-}
-
 // SetUpdatedAt sets the "updated_at" field.
 func (_u *MatchUpdate) SetUpdatedAt(v time.Time) *MatchUpdate {
 	_u.mutation.SetUpdatedAt(v)
@@ -366,12 +354,6 @@ func (_u *MatchUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.LatestStatus(); ok {
 		_spec.SetField(match.FieldLatestStatus, field.TypeString, value)
-	}
-	if value, ok := _u.mutation.RawPayload(); ok {
-		_spec.SetField(match.FieldRawPayload, field.TypeJSON, value)
-	}
-	if _u.mutation.RawPayloadCleared() {
-		_spec.ClearField(match.FieldRawPayload, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(match.FieldUpdatedAt, field.TypeTime, value)
@@ -662,18 +644,6 @@ func (_u *MatchUpdateOne) SetNillableLatestStatus(v *string) *MatchUpdateOne {
 	return _u
 }
 
-// SetRawPayload sets the "raw_payload" field.
-func (_u *MatchUpdateOne) SetRawPayload(v map[string]interface{}) *MatchUpdateOne {
-	_u.mutation.SetRawPayload(v)
-	return _u
-}
-
-// ClearRawPayload clears the value of the "raw_payload" field.
-func (_u *MatchUpdateOne) ClearRawPayload() *MatchUpdateOne {
-	_u.mutation.ClearRawPayload()
-	return _u
-}
-
 // SetUpdatedAt sets the "updated_at" field.
 func (_u *MatchUpdateOne) SetUpdatedAt(v time.Time) *MatchUpdateOne {
 	_u.mutation.SetUpdatedAt(v)
@@ -909,12 +879,6 @@ func (_u *MatchUpdateOne) sqlSave(ctx context.Context) (_node *Match, err error)
 	}
 	if value, ok := _u.mutation.LatestStatus(); ok {
 		_spec.SetField(match.FieldLatestStatus, field.TypeString, value)
-	}
-	if value, ok := _u.mutation.RawPayload(); ok {
-		_spec.SetField(match.FieldRawPayload, field.TypeJSON, value)
-	}
-	if _u.mutation.RawPayloadCleared() {
-		_spec.ClearField(match.FieldRawPayload, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(match.FieldUpdatedAt, field.TypeTime, value)

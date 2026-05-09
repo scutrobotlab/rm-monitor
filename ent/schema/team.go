@@ -18,7 +18,6 @@ func (Team) Fields() []ent.Field {
 		field.String("name").Default(""),
 		field.String("school_name").Default(""),
 		field.String("school_logo").Default(""),
-		field.JSON("raw_payload", map[string]any{}).Optional(),
 		field.Time("created_at").Default(time.Now).Immutable(),
 		field.Time("updated_at").Default(time.Now).UpdateDefault(time.Now),
 	}

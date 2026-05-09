@@ -66,12 +66,6 @@ func (_c *TeamCreate) SetNillableSchoolLogo(v *string) *TeamCreate {
 	return _c
 }
 
-// SetRawPayload sets the "raw_payload" field.
-func (_c *TeamCreate) SetRawPayload(v map[string]interface{}) *TeamCreate {
-	_c.mutation.SetRawPayload(v)
-	return _c
-}
-
 // SetCreatedAt sets the "created_at" field.
 func (_c *TeamCreate) SetCreatedAt(v time.Time) *TeamCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -258,10 +252,6 @@ func (_c *TeamCreate) createSpec() (*Team, *sqlgraph.CreateSpec) {
 		_spec.SetField(team.FieldSchoolLogo, field.TypeString, value)
 		_node.SchoolLogo = value
 	}
-	if value, ok := _c.mutation.RawPayload(); ok {
-		_spec.SetField(team.FieldRawPayload, field.TypeJSON, value)
-		_node.RawPayload = value
-	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(team.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
@@ -390,24 +380,6 @@ func (u *TeamUpsert) UpdateSchoolLogo() *TeamUpsert {
 	return u
 }
 
-// SetRawPayload sets the "raw_payload" field.
-func (u *TeamUpsert) SetRawPayload(v map[string]interface{}) *TeamUpsert {
-	u.Set(team.FieldRawPayload, v)
-	return u
-}
-
-// UpdateRawPayload sets the "raw_payload" field to the value that was provided on create.
-func (u *TeamUpsert) UpdateRawPayload() *TeamUpsert {
-	u.SetExcluded(team.FieldRawPayload)
-	return u
-}
-
-// ClearRawPayload clears the value of the "raw_payload" field.
-func (u *TeamUpsert) ClearRawPayload() *TeamUpsert {
-	u.SetNull(team.FieldRawPayload)
-	return u
-}
-
 // SetUpdatedAt sets the "updated_at" field.
 func (u *TeamUpsert) SetUpdatedAt(v time.Time) *TeamUpsert {
 	u.Set(team.FieldUpdatedAt, v)
@@ -510,27 +482,6 @@ func (u *TeamUpsertOne) SetSchoolLogo(v string) *TeamUpsertOne {
 func (u *TeamUpsertOne) UpdateSchoolLogo() *TeamUpsertOne {
 	return u.Update(func(s *TeamUpsert) {
 		s.UpdateSchoolLogo()
-	})
-}
-
-// SetRawPayload sets the "raw_payload" field.
-func (u *TeamUpsertOne) SetRawPayload(v map[string]interface{}) *TeamUpsertOne {
-	return u.Update(func(s *TeamUpsert) {
-		s.SetRawPayload(v)
-	})
-}
-
-// UpdateRawPayload sets the "raw_payload" field to the value that was provided on create.
-func (u *TeamUpsertOne) UpdateRawPayload() *TeamUpsertOne {
-	return u.Update(func(s *TeamUpsert) {
-		s.UpdateRawPayload()
-	})
-}
-
-// ClearRawPayload clears the value of the "raw_payload" field.
-func (u *TeamUpsertOne) ClearRawPayload() *TeamUpsertOne {
-	return u.Update(func(s *TeamUpsert) {
-		s.ClearRawPayload()
 	})
 }
 
@@ -805,27 +756,6 @@ func (u *TeamUpsertBulk) SetSchoolLogo(v string) *TeamUpsertBulk {
 func (u *TeamUpsertBulk) UpdateSchoolLogo() *TeamUpsertBulk {
 	return u.Update(func(s *TeamUpsert) {
 		s.UpdateSchoolLogo()
-	})
-}
-
-// SetRawPayload sets the "raw_payload" field.
-func (u *TeamUpsertBulk) SetRawPayload(v map[string]interface{}) *TeamUpsertBulk {
-	return u.Update(func(s *TeamUpsert) {
-		s.SetRawPayload(v)
-	})
-}
-
-// UpdateRawPayload sets the "raw_payload" field to the value that was provided on create.
-func (u *TeamUpsertBulk) UpdateRawPayload() *TeamUpsertBulk {
-	return u.Update(func(s *TeamUpsert) {
-		s.UpdateRawPayload()
-	})
-}
-
-// ClearRawPayload clears the value of the "raw_payload" field.
-func (u *TeamUpsertBulk) ClearRawPayload() *TeamUpsertBulk {
-	return u.Update(func(s *TeamUpsert) {
-		s.ClearRawPayload()
 	})
 }
 

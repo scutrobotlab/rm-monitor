@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 
 	"scutbot.cn/web/rm-monitor/ent"
+	"scutbot.cn/web/rm-monitor/ent/migrate"
 	"scutbot.cn/web/rm-monitor/pkg/config"
 )
 
@@ -26,7 +27,7 @@ func Open(ctx context.Context, c config.PostgresConf) (*ent.Client, error) {
 
 	client := ent.NewClient(ent.Driver(drv), ent.Debug())
 	if c.AutoMigrate {
-		if err := client.Schema.Create(ctx); err != nil {
+		if err := client.Schema.Create(ctx, migrate.WithDropColumn(true)); err != nil {
 			_ = client.Close()
 			return nil, errors.Wrap(err, "run ent schema migration")
 		}

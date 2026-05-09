@@ -633,7 +633,6 @@ type MatchMutation struct {
 	total_rounds         *int
 	addtotal_rounds      *int
 	latest_status        *string
-	raw_payload          *map[string]interface{}
 	created_at           *time.Time
 	updated_at           *time.Time
 	clearedFields        map[string]struct{}
@@ -1061,55 +1060,6 @@ func (m *MatchMutation) ResetLatestStatus() {
 	m.latest_status = nil
 }
 
-// SetRawPayload sets the "raw_payload" field.
-func (m *MatchMutation) SetRawPayload(value map[string]interface{}) {
-	m.raw_payload = &value
-}
-
-// RawPayload returns the value of the "raw_payload" field in the mutation.
-func (m *MatchMutation) RawPayload() (r map[string]interface{}, exists bool) {
-	v := m.raw_payload
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldRawPayload returns the old "raw_payload" field's value of the Match entity.
-// If the Match object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *MatchMutation) OldRawPayload(ctx context.Context) (v map[string]interface{}, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldRawPayload is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldRawPayload requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldRawPayload: %w", err)
-	}
-	return oldValue.RawPayload, nil
-}
-
-// ClearRawPayload clears the value of the "raw_payload" field.
-func (m *MatchMutation) ClearRawPayload() {
-	m.raw_payload = nil
-	m.clearedFields[match.FieldRawPayload] = struct{}{}
-}
-
-// RawPayloadCleared returns if the "raw_payload" field was cleared in this mutation.
-func (m *MatchMutation) RawPayloadCleared() bool {
-	_, ok := m.clearedFields[match.FieldRawPayload]
-	return ok
-}
-
-// ResetRawPayload resets all changes to the "raw_payload" field.
-func (m *MatchMutation) ResetRawPayload() {
-	m.raw_payload = nil
-	delete(m.clearedFields, match.FieldRawPayload)
-}
-
 // SetCreatedAt sets the "created_at" field.
 func (m *MatchMutation) SetCreatedAt(t time.Time) {
 	m.created_at = &t
@@ -1402,7 +1352,7 @@ func (m *MatchMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *MatchMutation) Fields() []string {
-	fields := make([]string, 0, 10)
+	fields := make([]string, 0, 9)
 	if m.event != nil {
 		fields = append(fields, match.FieldEvent)
 	}
@@ -1423,9 +1373,6 @@ func (m *MatchMutation) Fields() []string {
 	}
 	if m.latest_status != nil {
 		fields = append(fields, match.FieldLatestStatus)
-	}
-	if m.raw_payload != nil {
-		fields = append(fields, match.FieldRawPayload)
 	}
 	if m.created_at != nil {
 		fields = append(fields, match.FieldCreatedAt)
@@ -1455,8 +1402,6 @@ func (m *MatchMutation) Field(name string) (ent.Value, bool) {
 		return m.TotalRounds()
 	case match.FieldLatestStatus:
 		return m.LatestStatus()
-	case match.FieldRawPayload:
-		return m.RawPayload()
 	case match.FieldCreatedAt:
 		return m.CreatedAt()
 	case match.FieldUpdatedAt:
@@ -1484,8 +1429,6 @@ func (m *MatchMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldTotalRounds(ctx)
 	case match.FieldLatestStatus:
 		return m.OldLatestStatus(ctx)
-	case match.FieldRawPayload:
-		return m.OldRawPayload(ctx)
 	case match.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	case match.FieldUpdatedAt:
@@ -1547,13 +1490,6 @@ func (m *MatchMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetLatestStatus(v)
-		return nil
-	case match.FieldRawPayload:
-		v, ok := value.(map[string]interface{})
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetRawPayload(v)
 		return nil
 	case match.FieldCreatedAt:
 		v, ok := value.(time.Time)
@@ -1629,9 +1565,6 @@ func (m *MatchMutation) ClearedFields() []string {
 	if m.FieldCleared(match.FieldMatchSlug) {
 		fields = append(fields, match.FieldMatchSlug)
 	}
-	if m.FieldCleared(match.FieldRawPayload) {
-		fields = append(fields, match.FieldRawPayload)
-	}
 	return fields
 }
 
@@ -1648,9 +1581,6 @@ func (m *MatchMutation) ClearField(name string) error {
 	switch name {
 	case match.FieldMatchSlug:
 		m.ClearMatchSlug()
-		return nil
-	case match.FieldRawPayload:
-		m.ClearRawPayload()
 		return nil
 	}
 	return fmt.Errorf("unknown Match nullable field %s", name)
@@ -1680,9 +1610,6 @@ func (m *MatchMutation) ResetField(name string) error {
 		return nil
 	case match.FieldLatestStatus:
 		m.ResetLatestStatus()
-		return nil
-	case match.FieldRawPayload:
-		m.ResetRawPayload()
 		return nil
 	case match.FieldCreatedAt:
 		m.ResetCreatedAt()
@@ -5326,7 +5253,6 @@ type TeamMutation struct {
 	name                *string
 	school_name         *string
 	school_logo         *string
-	raw_payload         *map[string]interface{}
 	created_at          *time.Time
 	updated_at          *time.Time
 	clearedFields       map[string]struct{}
@@ -5553,55 +5479,6 @@ func (m *TeamMutation) ResetSchoolLogo() {
 	m.school_logo = nil
 }
 
-// SetRawPayload sets the "raw_payload" field.
-func (m *TeamMutation) SetRawPayload(value map[string]interface{}) {
-	m.raw_payload = &value
-}
-
-// RawPayload returns the value of the "raw_payload" field in the mutation.
-func (m *TeamMutation) RawPayload() (r map[string]interface{}, exists bool) {
-	v := m.raw_payload
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldRawPayload returns the old "raw_payload" field's value of the Team entity.
-// If the Team object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *TeamMutation) OldRawPayload(ctx context.Context) (v map[string]interface{}, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldRawPayload is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldRawPayload requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldRawPayload: %w", err)
-	}
-	return oldValue.RawPayload, nil
-}
-
-// ClearRawPayload clears the value of the "raw_payload" field.
-func (m *TeamMutation) ClearRawPayload() {
-	m.raw_payload = nil
-	m.clearedFields[team.FieldRawPayload] = struct{}{}
-}
-
-// RawPayloadCleared returns if the "raw_payload" field was cleared in this mutation.
-func (m *TeamMutation) RawPayloadCleared() bool {
-	_, ok := m.clearedFields[team.FieldRawPayload]
-	return ok
-}
-
-// ResetRawPayload resets all changes to the "raw_payload" field.
-func (m *TeamMutation) ResetRawPayload() {
-	m.raw_payload = nil
-	delete(m.clearedFields, team.FieldRawPayload)
-}
-
 // SetCreatedAt sets the "created_at" field.
 func (m *TeamMutation) SetCreatedAt(t time.Time) {
 	m.created_at = &t
@@ -5816,7 +5693,7 @@ func (m *TeamMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *TeamMutation) Fields() []string {
-	fields := make([]string, 0, 6)
+	fields := make([]string, 0, 5)
 	if m.name != nil {
 		fields = append(fields, team.FieldName)
 	}
@@ -5825,9 +5702,6 @@ func (m *TeamMutation) Fields() []string {
 	}
 	if m.school_logo != nil {
 		fields = append(fields, team.FieldSchoolLogo)
-	}
-	if m.raw_payload != nil {
-		fields = append(fields, team.FieldRawPayload)
 	}
 	if m.created_at != nil {
 		fields = append(fields, team.FieldCreatedAt)
@@ -5849,8 +5723,6 @@ func (m *TeamMutation) Field(name string) (ent.Value, bool) {
 		return m.SchoolName()
 	case team.FieldSchoolLogo:
 		return m.SchoolLogo()
-	case team.FieldRawPayload:
-		return m.RawPayload()
 	case team.FieldCreatedAt:
 		return m.CreatedAt()
 	case team.FieldUpdatedAt:
@@ -5870,8 +5742,6 @@ func (m *TeamMutation) OldField(ctx context.Context, name string) (ent.Value, er
 		return m.OldSchoolName(ctx)
 	case team.FieldSchoolLogo:
 		return m.OldSchoolLogo(ctx)
-	case team.FieldRawPayload:
-		return m.OldRawPayload(ctx)
 	case team.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	case team.FieldUpdatedAt:
@@ -5905,13 +5775,6 @@ func (m *TeamMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetSchoolLogo(v)
-		return nil
-	case team.FieldRawPayload:
-		v, ok := value.(map[string]interface{})
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetRawPayload(v)
 		return nil
 	case team.FieldCreatedAt:
 		v, ok := value.(time.Time)
@@ -5956,11 +5819,7 @@ func (m *TeamMutation) AddField(name string, value ent.Value) error {
 // ClearedFields returns all nullable fields that were cleared during this
 // mutation.
 func (m *TeamMutation) ClearedFields() []string {
-	var fields []string
-	if m.FieldCleared(team.FieldRawPayload) {
-		fields = append(fields, team.FieldRawPayload)
-	}
-	return fields
+	return nil
 }
 
 // FieldCleared returns a boolean indicating if a field with the given name was
@@ -5973,11 +5832,6 @@ func (m *TeamMutation) FieldCleared(name string) bool {
 // ClearField clears the value of the field with the given name. It returns an
 // error if the field is not defined in the schema.
 func (m *TeamMutation) ClearField(name string) error {
-	switch name {
-	case team.FieldRawPayload:
-		m.ClearRawPayload()
-		return nil
-	}
 	return fmt.Errorf("unknown Team nullable field %s", name)
 }
 
@@ -5993,9 +5847,6 @@ func (m *TeamMutation) ResetField(name string) error {
 		return nil
 	case team.FieldSchoolLogo:
 		m.ResetSchoolLogo()
-		return nil
-	case team.FieldRawPayload:
-		m.ResetRawPayload()
 		return nil
 	case team.FieldCreatedAt:
 		m.ResetCreatedAt()

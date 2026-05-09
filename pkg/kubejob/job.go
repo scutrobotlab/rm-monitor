@@ -55,6 +55,23 @@ func (c *Client) CreateJob(ctx context.Context, namespace string, job *batchv1.J
 	return errors.Wrap(err, "create k8s job")
 }
 
+func (c *Client) JobExists(ctx context.Context, namespace, name string) (bool, error) {
+	var job batchv1.Job
+	err := c.rest.Get().
+		Namespace(namespace).
+		Resource("jobs").
+		Name(name).
+		Do(ctx).
+		Into(&job)
+	if apierrors.IsNotFound(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, errors.Wrap(err, "get k8s job")
+	}
+	return true, nil
+}
+
 type JobSpec struct {
 	Name     string
 	App      string

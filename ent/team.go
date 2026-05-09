@@ -3,7 +3,6 @@
 package ent
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -24,8 +23,6 @@ type Team struct {
 	SchoolName string `json:"school_name,omitempty"`
 	// SchoolLogo holds the value of the "school_logo" field.
 	SchoolLogo string `json:"school_logo,omitempty"`
-	// RawPayload holds the value of the "raw_payload" field.
-	RawPayload map[string]interface{} `json:"raw_payload,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
@@ -70,8 +67,6 @@ func (*Team) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case team.FieldRawPayload:
-			values[i] = new([]byte)
 		case team.FieldID, team.FieldName, team.FieldSchoolName, team.FieldSchoolLogo:
 			values[i] = new(sql.NullString)
 		case team.FieldCreatedAt, team.FieldUpdatedAt:
@@ -114,14 +109,6 @@ func (_m *Team) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field school_logo", values[i])
 			} else if value.Valid {
 				_m.SchoolLogo = value.String
-			}
-		case team.FieldRawPayload:
-			if value, ok := values[i].(*[]byte); !ok {
-				return fmt.Errorf("unexpected type %T for field raw_payload", values[i])
-			} else if value != nil && len(*value) > 0 {
-				if err := json.Unmarshal(*value, &_m.RawPayload); err != nil {
-					return fmt.Errorf("unmarshal field raw_payload: %w", err)
-				}
 			}
 		case team.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -189,9 +176,6 @@ func (_m *Team) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("school_logo=")
 	builder.WriteString(_m.SchoolLogo)
-	builder.WriteString(", ")
-	builder.WriteString("raw_payload=")
-	builder.WriteString(fmt.Sprintf("%v", _m.RawPayload))
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))

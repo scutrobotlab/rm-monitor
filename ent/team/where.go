@@ -285,16 +285,6 @@ func SchoolLogoContainsFold(v string) predicate.Team {
 	return predicate.Team(sql.FieldContainsFold(FieldSchoolLogo, v))
 }
 
-// RawPayloadIsNil applies the IsNil predicate on the "raw_payload" field.
-func RawPayloadIsNil() predicate.Team {
-	return predicate.Team(sql.FieldIsNull(FieldRawPayload))
-}
-
-// RawPayloadNotNil applies the NotNil predicate on the "raw_payload" field.
-func RawPayloadNotNil() predicate.Team {
-	return predicate.Team(sql.FieldNotNull(FieldRawPayload))
-}
-
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.Team {
 	return predicate.Team(sql.FieldEQ(FieldCreatedAt, v))

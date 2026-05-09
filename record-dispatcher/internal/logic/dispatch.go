@@ -26,6 +26,8 @@ type DispatchLogic struct {
 	logx.Logger
 }
 
+const dispatchingStaleAfter = 5 * time.Minute
+
 func NewDispatchLogic(ctx context.Context, svcCtx *svc.ServiceContext) *DispatchLogic {
 	return &DispatchLogic{ctx: ctx, svcCtx: svcCtx, Logger: logx.WithContext(ctx)}
 }
@@ -35,6 +37,9 @@ func (l *DispatchLogic) Tick() error {
 		return err
 	}
 	if err := l.createTasksForStartedRounds(); err != nil {
+		return err
+	}
+	if err := l.recoverDispatchingTasks(); err != nil {
 		return err
 	}
 	return l.dispatchPendingTasks()
@@ -54,6 +59,39 @@ func (l *DispatchLogic) cancelEndedRounds() error {
 				return errors.Wrap(err, "request record cancel")
 			}
 			_ = db.Notify(l.ctx, l.svcCtx.Config.PostgresConf.DSN, db.RecordTaskChangedChannel, strconv.Itoa(task.ID))
+		}
+	}
+	return nil
+}
+
+func (l *DispatchLogic) recoverDispatchingTasks() error {
+	if l.svcCtx.K8s == nil {
+		return nil
+	}
+	tasks, err := l.svcCtx.DB.RecordTask.Query().
+		Where(recordtask.StatusEQ(recordtask.StatusDISPATCHING), recordtask.UpdatedAtLTE(time.Now().Add(-dispatchingStaleAfter))).
+		All(l.ctx)
+	if err != nil {
+		return errors.Wrap(err, "query stale dispatching record tasks")
+	}
+	namespace := l.svcCtx.Config.K8sJobConf.WithDefaults().Namespace
+	for _, task := range tasks {
+		name := jobName("record", task.ID)
+		if task.K8sJobName != nil && *task.K8sJobName != "" {
+			name = *task.K8sJobName
+		}
+		exists, err := l.svcCtx.K8s.JobExists(l.ctx, namespace, name)
+		if err != nil {
+			return err
+		}
+		if exists {
+			if err := l.svcCtx.DB.RecordTask.UpdateOneID(task.ID).SetStatus(recordtask.StatusRUNNING).SetStartedAt(time.Now()).Exec(l.ctx); err != nil {
+				return errors.Wrap(err, "recover running record task")
+			}
+			continue
+		}
+		if err := l.svcCtx.DB.RecordTask.UpdateOneID(task.ID).SetStatus(recordtask.StatusPENDING).Exec(l.ctx); err != nil {
+			return errors.Wrap(err, "requeue stale record task")
 		}
 	}
 	return nil
@@ -132,12 +170,17 @@ func (l *DispatchLogic) dispatchPendingTasks() error {
 	}
 	for _, task := range tasks {
 		jobName := jobName("record", task.ID)
-		if err := l.svcCtx.DB.RecordTask.UpdateOneID(task.ID).
+		claimed, err := l.svcCtx.DB.RecordTask.Update().
+			Where(recordtask.ID(task.ID), recordtask.StatusEQ(recordtask.StatusPENDING)).
 			SetStatus(recordtask.StatusDISPATCHING).
 			AddAttempts(1).
 			SetK8sJobName(jobName).
-			Exec(l.ctx); err != nil {
+			Save(l.ctx)
+		if err != nil {
 			return errors.Wrap(err, "mark record dispatching")
+		}
+		if claimed == 0 {
+			continue
 		}
 		if l.svcCtx.K8s != nil {
 			job := kubejob.Build(l.svcCtx.Config.K8sJobConf, kubejob.JobSpec{

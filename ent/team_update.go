@@ -71,18 +71,6 @@ func (_u *TeamUpdate) SetNillableSchoolLogo(v *string) *TeamUpdate {
 	return _u
 }
 
-// SetRawPayload sets the "raw_payload" field.
-func (_u *TeamUpdate) SetRawPayload(v map[string]interface{}) *TeamUpdate {
-	_u.mutation.SetRawPayload(v)
-	return _u
-}
-
-// ClearRawPayload clears the value of the "raw_payload" field.
-func (_u *TeamUpdate) ClearRawPayload() *TeamUpdate {
-	_u.mutation.ClearRawPayload()
-	return _u
-}
-
 // SetUpdatedAt sets the "updated_at" field.
 func (_u *TeamUpdate) SetUpdatedAt(v time.Time) *TeamUpdate {
 	_u.mutation.SetUpdatedAt(v)
@@ -219,12 +207,6 @@ func (_u *TeamUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.SchoolLogo(); ok {
 		_spec.SetField(team.FieldSchoolLogo, field.TypeString, value)
-	}
-	if value, ok := _u.mutation.RawPayload(); ok {
-		_spec.SetField(team.FieldRawPayload, field.TypeJSON, value)
-	}
-	if _u.mutation.RawPayloadCleared() {
-		_spec.ClearField(team.FieldRawPayload, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(team.FieldUpdatedAt, field.TypeTime, value)
@@ -378,18 +360,6 @@ func (_u *TeamUpdateOne) SetNillableSchoolLogo(v *string) *TeamUpdateOne {
 	if v != nil {
 		_u.SetSchoolLogo(*v)
 	}
-	return _u
-}
-
-// SetRawPayload sets the "raw_payload" field.
-func (_u *TeamUpdateOne) SetRawPayload(v map[string]interface{}) *TeamUpdateOne {
-	_u.mutation.SetRawPayload(v)
-	return _u
-}
-
-// ClearRawPayload clears the value of the "raw_payload" field.
-func (_u *TeamUpdateOne) ClearRawPayload() *TeamUpdateOne {
-	_u.mutation.ClearRawPayload()
 	return _u
 }
 
@@ -559,12 +529,6 @@ func (_u *TeamUpdateOne) sqlSave(ctx context.Context) (_node *Team, err error) {
 	}
 	if value, ok := _u.mutation.SchoolLogo(); ok {
 		_spec.SetField(team.FieldSchoolLogo, field.TypeString, value)
-	}
-	if value, ok := _u.mutation.RawPayload(); ok {
-		_spec.SetField(team.FieldRawPayload, field.TypeJSON, value)
-	}
-	if _u.mutation.RawPayloadCleared() {
-		_spec.ClearField(team.FieldRawPayload, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(team.FieldUpdatedAt, field.TypeTime, value)

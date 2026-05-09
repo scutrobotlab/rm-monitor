@@ -21,12 +21,17 @@ type DispatchLogic struct {
 	logx.Logger
 }
 
+const dispatchingStaleAfter = 5 * time.Minute
+
 func NewDispatchLogic(ctx context.Context, svcCtx *svc.ServiceContext) *DispatchLogic {
 	return &DispatchLogic{ctx: ctx, svcCtx: svcCtx, Logger: logx.WithContext(ctx)}
 }
 
 func (l *DispatchLogic) Tick() error {
 	if err := l.createUploadTasks(); err != nil {
+		return err
+	}
+	if err := l.recoverDispatching(); err != nil {
 		return err
 	}
 	return l.dispatchPending()
@@ -62,6 +67,39 @@ func (l *DispatchLogic) createUploadTasks() error {
 	return nil
 }
 
+func (l *DispatchLogic) recoverDispatching() error {
+	if l.svcCtx.K8s == nil {
+		return nil
+	}
+	tasks, err := l.svcCtx.DB.UploadTask.Query().
+		Where(uploadtask.StatusEQ(uploadtask.StatusDISPATCHING), uploadtask.UpdatedAtLTE(time.Now().Add(-dispatchingStaleAfter))).
+		All(l.ctx)
+	if err != nil {
+		return errors.Wrap(err, "query stale dispatching upload tasks")
+	}
+	namespace := l.svcCtx.Config.K8sJobConf.WithDefaults().Namespace
+	for _, task := range tasks {
+		name := jobName("upload", task.ID)
+		if task.K8sJobName != nil && *task.K8sJobName != "" {
+			name = *task.K8sJobName
+		}
+		exists, err := l.svcCtx.K8s.JobExists(l.ctx, namespace, name)
+		if err != nil {
+			return err
+		}
+		if exists {
+			if err := l.svcCtx.DB.UploadTask.UpdateOneID(task.ID).SetStatus(uploadtask.StatusRUNNING).SetStartedAt(time.Now()).Exec(l.ctx); err != nil {
+				return errors.Wrap(err, "recover running upload task")
+			}
+			continue
+		}
+		if err := l.svcCtx.DB.UploadTask.UpdateOneID(task.ID).SetStatus(uploadtask.StatusPENDING).Exec(l.ctx); err != nil {
+			return errors.Wrap(err, "requeue stale upload task")
+		}
+	}
+	return nil
+}
+
 func (l *DispatchLogic) dispatchPending() error {
 	conf := l.svcCtx.Config.UploadConf.WithDefaults()
 	running, err := l.svcCtx.DB.UploadTask.Query().Where(uploadtask.StatusIn(uploadtask.StatusDISPATCHING, uploadtask.StatusRUNNING)).Count(l.ctx)
@@ -78,12 +116,17 @@ func (l *DispatchLogic) dispatchPending() error {
 	}
 	for _, task := range tasks {
 		jobName := jobName("upload", task.ID)
-		if err := l.svcCtx.DB.UploadTask.UpdateOneID(task.ID).
+		claimed, err := l.svcCtx.DB.UploadTask.Update().
+			Where(uploadtask.ID(task.ID), uploadtask.StatusEQ(uploadtask.StatusPENDING)).
 			SetStatus(uploadtask.StatusDISPATCHING).
 			AddAttempts(1).
 			SetK8sJobName(jobName).
-			Exec(l.ctx); err != nil {
+			Save(l.ctx)
+		if err != nil {
 			return errors.Wrap(err, "mark upload dispatching")
+		}
+		if claimed == 0 {
+			continue
 		}
 		if l.svcCtx.K8s != nil {
 			job := kubejob.Build(l.svcCtx.Config.K8sJobConf, kubejob.JobSpec{

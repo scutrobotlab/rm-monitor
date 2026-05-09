@@ -7,6 +7,9 @@ data:
     PostgresConf:
       DSN: postgres://rm_monitor:rm_monitor@postgres:5432/rm_monitor?sslmode=disable
       AutoMigrate: true
+    RedisConf:
+      Host: redis:6379
+      Type: node
 ---
 apiVersion: apps/v1
 kind: Deployment

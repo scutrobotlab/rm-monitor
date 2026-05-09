@@ -525,16 +525,6 @@ func LatestStatusContainsFold(v string) predicate.Match {
 	return predicate.Match(sql.FieldContainsFold(FieldLatestStatus, v))
 }
 
-// RawPayloadIsNil applies the IsNil predicate on the "raw_payload" field.
-func RawPayloadIsNil() predicate.Match {
-	return predicate.Match(sql.FieldIsNull(FieldRawPayload))
-}
-
-// RawPayloadNotNil applies the NotNil predicate on the "raw_payload" field.
-func RawPayloadNotNil() predicate.Match {
-	return predicate.Match(sql.FieldNotNull(FieldRawPayload))
-}
-
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.Match {
 	return predicate.Match(sql.FieldEQ(FieldCreatedAt, v))

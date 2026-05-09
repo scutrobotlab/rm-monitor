@@ -47,11 +47,11 @@ func init() {
 	// match.DefaultLatestStatus holds the default value on creation for the latest_status field.
 	match.DefaultLatestStatus = matchDescLatestStatus.Default.(string)
 	// matchDescCreatedAt is the schema descriptor for created_at field.
-	matchDescCreatedAt := matchFields[9].Descriptor()
+	matchDescCreatedAt := matchFields[8].Descriptor()
 	// match.DefaultCreatedAt holds the default value on creation for the created_at field.
 	match.DefaultCreatedAt = matchDescCreatedAt.Default.(func() time.Time)
 	// matchDescUpdatedAt is the schema descriptor for updated_at field.
-	matchDescUpdatedAt := matchFields[10].Descriptor()
+	matchDescUpdatedAt := matchFields[9].Descriptor()
 	// match.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	match.DefaultUpdatedAt = matchDescUpdatedAt.Default.(func() time.Time)
 	// match.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
@@ -115,11 +115,11 @@ func init() {
 	// team.DefaultSchoolLogo holds the default value on creation for the school_logo field.
 	team.DefaultSchoolLogo = teamDescSchoolLogo.Default.(string)
 	// teamDescCreatedAt is the schema descriptor for created_at field.
-	teamDescCreatedAt := teamFields[5].Descriptor()
+	teamDescCreatedAt := teamFields[4].Descriptor()
 	// team.DefaultCreatedAt holds the default value on creation for the created_at field.
 	team.DefaultCreatedAt = teamDescCreatedAt.Default.(func() time.Time)
 	// teamDescUpdatedAt is the schema descriptor for updated_at field.
-	teamDescUpdatedAt := teamFields[6].Descriptor()
+	teamDescUpdatedAt := teamFields[5].Descriptor()
 	// team.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	team.DefaultUpdatedAt = teamDescUpdatedAt.Default.(func() time.Time)
 	// team.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.

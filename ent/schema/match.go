@@ -22,7 +22,6 @@ func (Match) Fields() []ent.Field {
 		field.String("match_slug").Optional().Nillable(),
 		field.Int("total_rounds").Default(0),
 		field.String("latest_status").Default(""),
-		field.JSON("raw_payload", map[string]any{}).Optional(),
 		field.Time("created_at").Default(time.Now).Immutable(),
 		field.Time("updated_at").Default(time.Now).UpdateDefault(time.Now),
 	}

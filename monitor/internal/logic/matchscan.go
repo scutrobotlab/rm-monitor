@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	errors2 "errors"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -36,7 +37,6 @@ func NewMatchScanLogic(ctx context.Context, svcCtx *svc.ServiceContext) *MatchSc
 
 const (
 	scheduleUrl = "https://pro-robomasters-hz-n5i3.oss-cn-hangzhou.aliyuncs.com/live_json/schedule.json"
-	currentUrl  = "https://pro-robomasters-hz-n5i3.oss-cn-hangzhou.aliyuncs.com/live_json/current_and_next_matches.json"
 	simulateUA  = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
 )
 
@@ -46,7 +46,6 @@ type scannedMatch struct {
 	Zone             string
 	Order            int
 	Status           string
-	Result           string
 	MatchType        string
 	MatchSlug        string
 	TotalRounds      int
@@ -54,7 +53,6 @@ type scannedMatch struct {
 	BlueWinGameCount int
 	RedTeam          scannedTeam
 	BlueTeam         scannedTeam
-	Raw              map[string]any
 }
 
 type scannedTeam struct {
@@ -62,7 +60,14 @@ type scannedTeam struct {
 	Name       string
 	SchoolName string
 	SchoolLogo string
-	Raw        map[string]any
+}
+
+type processedSnapshot struct {
+	Status           string    `json:"status"`
+	RedWinGameCount  int       `json:"red_win_game_count"`
+	BlueWinGameCount int       `json:"blue_win_game_count"`
+	RoundNo          int       `json:"round_no"`
+	ObservedAt       time.Time `json:"observed_at"`
 }
 
 func (m scannedMatch) RoundNo() int {
@@ -89,16 +94,6 @@ func (l *MatchScanLogic) MatchScan() error {
 	if err != nil {
 		return errors.Wrap(err, "failed to upsert matches")
 	}
-
-	currentMatchesResp, err := l.svcCtx.RestyClient.R().
-		SetHeader("User-Agent", simulateUA).
-		Get(currentUrl)
-	if err != nil {
-		return errors.Wrap(err, "failed to get current matches")
-	}
-	if !currentMatchesResp.IsSuccess() {
-		return errors.Errorf("failed to get current matches, status code: %d", currentMatchesResp.StatusCode())
-	}
 	return nil
 }
 
@@ -108,15 +103,12 @@ func parseMatches(contentBytes []byte) []scannedMatch {
 	for _, node := range gjson.GetBytes(contentBytes, "data.event.zones.nodes").Array() {
 		zone := node.Get("name").String()
 		for _, item := range append(node.Get("groupMatches.nodes").Array(), node.Get("knockoutMatches.nodes").Array()...) {
-			var raw map[string]any
-			_ = json.Unmarshal([]byte(item.Raw), &raw)
 			out = append(out, scannedMatch{
 				ID:               item.Get("id").String(),
 				Event:            event,
 				Zone:             zone,
 				Order:            int(item.Get("orderNumber").Int()),
 				Status:           item.Get("status").String(),
-				Result:           item.Get("result").String(),
 				MatchType:        item.Get("matchType").String(),
 				MatchSlug:        item.Get("slug").String(),
 				TotalRounds:      int(item.Get("planGameCount").Int()),
@@ -124,7 +116,6 @@ func parseMatches(contentBytes []byte) []scannedMatch {
 				BlueWinGameCount: int(item.Get("blueSideWinGameCount").Int()),
 				RedTeam:          parseTeam(item.Get("redSide.player")),
 				BlueTeam:         parseTeam(item.Get("blueSide.player")),
-				Raw:              raw,
 			})
 		}
 	}
@@ -133,8 +124,6 @@ func parseMatches(contentBytes []byte) []scannedMatch {
 
 func parseTeam(player gjson.Result) scannedTeam {
 	teamNode := player.Get("team")
-	var raw map[string]any
-	_ = json.Unmarshal([]byte(teamNode.Raw), &raw)
 	id := teamNode.Get("id").String()
 	if id == "" {
 		id = player.Get("teamId").String()
@@ -144,7 +133,6 @@ func parseTeam(player gjson.Result) scannedTeam {
 		Name:       teamNode.Get("name").String(),
 		SchoolName: teamNode.Get("collegeName").String(),
 		SchoolLogo: teamNode.Get("collegeLogo").String(),
-		Raw:        raw,
 	}
 }
 
@@ -153,9 +141,9 @@ func (l *MatchScanLogic) upsertMatch(m scannedMatch) error {
 		return nil
 	}
 
-	prev, err := l.svcCtx.DB.Match.Query().Where(match.ID(m.ID)).Only(l.ctx)
-	if err != nil && !ent.IsNotFound(err) {
-		return errors.Wrap(err, "query previous match")
+	prev, ok, err := l.loadLastProcessed(m.ID)
+	if err != nil {
+		return err
 	}
 
 	if err := l.upsertTeam(m.RedTeam); err != nil {
@@ -173,7 +161,6 @@ func (l *MatchScanLogic) upsertMatch(m scannedMatch) error {
 		SetMatchType(m.MatchType).
 		SetTotalRounds(m.TotalRounds).
 		SetLatestStatus(m.Status).
-		SetRawPayload(m.Raw).
 		SetRedTeamID(m.RedTeam.ID).
 		SetBlueTeamID(m.BlueTeam.ID)
 	if m.MatchSlug != "" {
@@ -183,31 +170,12 @@ func (l *MatchScanLogic) upsertMatch(m scannedMatch) error {
 		return errors.Wrap(err, "upsert match")
 	}
 
-	if prev == nil {
-		if m.Status == types.MatchStatusSTARTED {
-			return l.ensureStartedRound(m, m.RoundNo())
-		}
-		return nil
-	}
-
-	prevScan := matchFromRaw(prev.RawPayload)
-	if prev.LatestStatus == types.MatchStatusSTARTED && m.Status != types.MatchStatusSTARTED {
-		return l.endRound(m.ID, prevScan.RoundNo(), winnerFromDelta(prevScan, m))
-	}
-	if m.Status != types.MatchStatusSTARTED {
-		return nil
-	}
-
-	if prev.LatestStatus != types.MatchStatusSTARTED {
-		return l.ensureStartedRound(m, m.RoundNo())
-	}
-	if prevScan.RedWinGameCount != m.RedWinGameCount || prevScan.BlueWinGameCount != m.BlueWinGameCount {
-		if err := l.endRound(m.ID, prevScan.RoundNo(), winnerFromDelta(prevScan, m)); err != nil {
+	if ok {
+		if err := l.reconcileRounds(prev, m); err != nil {
 			return err
 		}
-		return l.ensureStartedRound(m, m.RoundNo())
 	}
-	return l.ensureStartedRound(m, m.RoundNo())
+	return l.saveLastProcessed(m)
 }
 
 func (l *MatchScanLogic) upsertTeam(t scannedTeam) error {
@@ -216,10 +184,30 @@ func (l *MatchScanLogic) upsertTeam(t scannedTeam) error {
 		SetName(t.Name).
 		SetSchoolName(t.SchoolName).
 		SetSchoolLogo(t.SchoolLogo).
-		SetRawPayload(t.Raw).
 		OnConflictColumns(team.FieldID).
 		UpdateNewValues().
 		Exec(l.ctx)
+}
+
+func (l *MatchScanLogic) reconcileRounds(prev processedSnapshot, cur scannedMatch) error {
+	prevTotal := prev.RedWinGameCount + prev.BlueWinGameCount
+	curTotal := cur.RedWinGameCount + cur.BlueWinGameCount
+	if prev.Status == types.MatchStatusSTARTED {
+		endTo := curTotal
+		if cur.Status != types.MatchStatusSTARTED && endTo == prevTotal {
+			endTo = prevTotal + 1
+		}
+		winners := winnersFromDelta(prev, cur, endTo-prevTotal)
+		for roundNo := prevTotal + 1; roundNo <= endTo; roundNo++ {
+			if err := l.ensureEndedRound(cur.ID, roundNo, winners[roundNo-(prevTotal+1)]); err != nil {
+				return err
+			}
+		}
+	}
+	if cur.Status == types.MatchStatusSTARTED {
+		return l.ensureStartedRound(cur, cur.RoundNo())
+	}
+	return nil
 }
 
 func (l *MatchScanLogic) ensureStartedRound(m scannedMatch, roundNo int) error {
@@ -252,51 +240,97 @@ func (l *MatchScanLogic) ensureStartedRound(m scannedMatch, roundNo int) error {
 	return db.Notify(l.ctx, l.svcCtx.Config.PostgresConf.DSN, db.MatchRoundChangedChannel, strconv.Itoa(created.ID))
 }
 
-func (l *MatchScanLogic) endRound(matchID string, roundNo int, winner *matchround.Winner) error {
+func (l *MatchScanLogic) ensureEndedRound(matchID string, roundNo int, winner matchround.Winner) error {
+	if roundNo <= 0 {
+		return nil
+	}
 	r, err := l.svcCtx.DB.MatchRound.Query().
 		Where(matchround.HasMatchWith(match.ID(matchID)), matchround.RoundNo(roundNo)).
 		Only(l.ctx)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil
+	if err != nil && !ent.IsNotFound(err) {
+		return errors.Wrap(err, "query ended round")
+	}
+	now := time.Now()
+	if r == nil {
+		created, err := l.svcCtx.DB.MatchRound.Create().
+			SetMatchID(matchID).
+			SetRoundNo(roundNo).
+			SetStatus(matchround.StatusENDED).
+			SetWinner(winner).
+			SetEndedAt(now).
+			Save(l.ctx)
+		if err != nil {
+			if ent.IsConstraintError(err) {
+				return nil
+			}
+			return errors.Wrap(err, "create ended round")
 		}
-		return errors.Wrap(err, "query ending round")
+		return db.Notify(l.ctx, l.svcCtx.Config.PostgresConf.DSN, db.MatchRoundChangedChannel, strconv.Itoa(created.ID))
 	}
 	if r.Status == matchround.StatusENDED {
 		return nil
 	}
-	u := l.svcCtx.DB.MatchRound.UpdateOneID(r.ID).
+	if err := l.svcCtx.DB.MatchRound.UpdateOneID(r.ID).
 		SetStatus(matchround.StatusENDED).
-		SetEndedAt(time.Now())
-	if winner != nil {
-		u.SetWinner(*winner)
-	}
-	if err := u.Exec(l.ctx); err != nil {
+		SetWinner(winner).
+		SetEndedAt(now).
+		Exec(l.ctx); err != nil {
 		return errors.Wrap(err, "end round")
 	}
 	return db.Notify(l.ctx, l.svcCtx.Config.PostgresConf.DSN, db.MatchRoundChangedChannel, strconv.Itoa(r.ID))
 }
 
-func matchFromRaw(raw map[string]any) scannedMatch {
-	b, _ := json.Marshal(raw)
-	node := gjson.ParseBytes(b)
-	return scannedMatch{
-		Status:           node.Get("status").String(),
-		RedWinGameCount:  int(node.Get("redSideWinGameCount").Int()),
-		BlueWinGameCount: int(node.Get("blueSideWinGameCount").Int()),
+func (l *MatchScanLogic) loadLastProcessed(matchID string) (processedSnapshot, bool, error) {
+	val, err := l.svcCtx.RedisClient.GetCtx(l.ctx, lastProcessedKey(matchID))
+	if err != nil {
+		return processedSnapshot{}, false, errors.Wrap(err, "get last processed match snapshot")
 	}
+	if val == "" {
+		return processedSnapshot{}, false, nil
+	}
+	var out processedSnapshot
+	if err := json.Unmarshal([]byte(val), &out); err != nil {
+		return processedSnapshot{}, false, errors.Wrap(err, "decode last processed match snapshot")
+	}
+	return out, true, nil
 }
 
-func winnerFromDelta(prev, cur scannedMatch) *matchround.Winner {
-	switch {
-	case cur.BlueWinGameCount > prev.BlueWinGameCount:
-		w := matchround.WinnerBlue
-		return &w
-	case cur.RedWinGameCount > prev.RedWinGameCount:
-		w := matchround.WinnerRed
-		return &w
-	default:
-		w := matchround.WinnerDraw
-		return &w
+func (l *MatchScanLogic) saveLastProcessed(m scannedMatch) error {
+	b, err := json.Marshal(processedSnapshot{
+		Status:           m.Status,
+		RedWinGameCount:  m.RedWinGameCount,
+		BlueWinGameCount: m.BlueWinGameCount,
+		RoundNo:          m.RoundNo(),
+		ObservedAt:       time.Now(),
+	})
+	if err != nil {
+		return errors.Wrap(err, "encode last processed match snapshot")
 	}
+	return l.svcCtx.RedisClient.SetexCtx(l.ctx, lastProcessedKey(m.ID), string(b), 24*60*60)
+}
+
+func lastProcessedKey(matchID string) string {
+	return fmt.Sprintf("rm-monitor:monitor:last_processed:%s", matchID)
+}
+
+func winnersFromDelta(prev processedSnapshot, cur scannedMatch, count int) []matchround.Winner {
+	if count <= 0 {
+		return nil
+	}
+	redDelta := cur.RedWinGameCount - prev.RedWinGameCount
+	blueDelta := cur.BlueWinGameCount - prev.BlueWinGameCount
+	out := make([]matchround.Winner, 0, count)
+	for i := 0; i < count; i++ {
+		switch {
+		case redDelta > 0:
+			out = append(out, matchround.WinnerRed)
+			redDelta--
+		case blueDelta > 0:
+			out = append(out, matchround.WinnerBlue)
+			blueDelta--
+		default:
+			out = append(out, matchround.WinnerDraw)
+		}
+	}
+	return out
 }
