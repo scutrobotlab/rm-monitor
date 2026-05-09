@@ -32,11 +32,11 @@ func NewNotifyLogic(ctx context.Context, svcCtx *svc.ServiceContext) *NotifyLogi
 	return &NotifyLogic{ctx: ctx, svcCtx: svcCtx, Logger: logx.WithContext(ctx)}
 }
 
-func (l *NotifyLogic) Sync() error {
+func (l *NotifyLogic) Sync(since time.Time) error {
 	if err := l.ensureStartedMessages(); err != nil {
 		return err
 	}
-	if err := l.patchRecentlyChangedCards(); err != nil {
+	if err := l.patchChangedCardsSince(since); err != nil {
 		return err
 	}
 	return l.replyCompletedUploads()
@@ -180,9 +180,9 @@ func (l *NotifyLogic) createMatchMessages(m *ent.Match) error {
 	return nil
 }
 
-func (l *NotifyLogic) patchRecentlyChangedCards() error {
+func (l *NotifyLogic) patchChangedCardsSince(since time.Time) error {
 	rounds, err := l.svcCtx.DB.MatchRound.Query().
-		Where(matchround.UpdatedAtGTE(time.Now().Add(-10 * time.Minute))).
+		Where(matchround.UpdatedAtGTE(since)).
 		WithMatch(func(q *ent.MatchQuery) {
 			q.WithRedTeam().
 				WithBlueTeam().

@@ -16,6 +16,12 @@ import (
 
 var configFile = flag.String("f", "etc/config.yml", "the config file")
 
+const (
+	compensationStartupLookback = 30 * time.Minute
+	compensationOverlap         = 5 * time.Second
+	notifyBufferSize            = 32
+)
+
 func init() {
 	logx.MustSetup(logx.LogConf{
 		ServiceName: "lark-notifier",
@@ -34,10 +40,11 @@ func main() {
 	defer svcCtx.DB.Close()
 
 	logx.Info("starting lark notifier")
-	events := make(chan notifyEvent, 32)
+	events := make(chan notifyEvent, notifyBufferSize)
 	go listen(c.PostgresConf.DSN, events)
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
+	lastCompensationScan := time.Now().Add(-compensationStartupLookback)
 	for {
 		select {
 		case event := <-events:
@@ -47,9 +54,13 @@ func main() {
 			}
 			cancel()
 		case <-ticker.C:
+			scanSince := lastCompensationScan.Add(-compensationOverlap)
+			scanStartedAt := time.Now()
 			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-			if err := logic.NewNotifyLogic(ctx, svcCtx).Sync(); err != nil {
+			if err := logic.NewNotifyLogic(ctx, svcCtx).Sync(scanSince); err != nil {
 				logx.Errorf("lark notifier sync failed: %v", err)
+			} else {
+				lastCompensationScan = scanStartedAt
 			}
 			cancel()
 		}
