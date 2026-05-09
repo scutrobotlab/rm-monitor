@@ -4,8 +4,9 @@ import common "scutbot.cn/web/rm-monitor/pkg/config"
 
 type Config struct {
 	LarkConf struct {
-		AppId     string
-		AppSecret string
+		AppId               string
+		AppSecret           string
+		MatchCardTemplateID string `json:",optional"`
 	}
 	RecordConf struct {
 		BaseDir  string

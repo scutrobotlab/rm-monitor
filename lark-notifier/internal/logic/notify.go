@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"time"
 
 	larkim "github.com/larksuite/oapi-sdk-go/v3/service/im/v1"
@@ -52,7 +53,14 @@ func (l *NotifyLogic) ensureStartedMessages() error {
 
 	for _, r := range rounds {
 		m := r.Edges.Match
-		if m == nil || len(m.Edges.LarkMessages) > 0 {
+		if m == nil {
+			continue
+		}
+		pending, err := l.pendingMatchSendProgress(m.ID)
+		if err != nil {
+			return err
+		}
+		if len(m.Edges.LarkMessages) > 0 && pending == nil {
 			continue
 		}
 		if err := l.createMatchMessages(m); err != nil {
@@ -77,7 +85,20 @@ func (l *NotifyLogic) createMatchMessages(m *ent.Match) error {
 	if err != nil {
 		return err
 	}
+	sent, err := l.pendingMatchSendProgress(m.ID)
+	if err != nil {
+		return err
+	}
+	if sent == nil {
+		sent = map[string]bool{}
+	}
+	if err := l.savePendingMatchSendProgress(m.ID, sent); err != nil {
+		return err
+	}
 	for _, chatID := range chatIDs {
+		if sent[chatID] {
+			continue
+		}
 		req := larkim.NewCreateMessageReqBuilder().
 			ReceiveIdType(larkim.ReceiveIdTypeChatId).
 			Body(larkim.NewCreateMessageReqBodyBuilder().
@@ -103,6 +124,10 @@ func (l *NotifyLogic) createMatchMessages(m *ent.Match) error {
 			l.Error(errors.Wrap(err, "create lark message"))
 			continue
 		}
+		sent[chatID] = true
+		if err := l.savePendingMatchSendProgress(m.ID, sent); err != nil {
+			l.Error(errors.Wrap(err, "save pending lark message progress"))
+		}
 		if _, err := l.svcCtx.DB.LarkMessage.Create().
 			SetMatchID(m.ID).
 			SetMessageID(*resp.Data.MessageId).
@@ -111,6 +136,11 @@ func (l *NotifyLogic) createMatchMessages(m *ent.Match) error {
 			UpdateNewValues().
 			ID(l.ctx); err != nil {
 			l.Error(errors.Wrap(err, "save lark message"))
+		}
+	}
+	if len(sent) >= len(chatIDs) {
+		if err := l.svcCtx.RedisClient.DelCtx(l.ctx, pendingMatchSendKey(m.ID)); err != nil {
+			l.Error(errors.Wrap(err, "clear pending lark message progress"))
 		}
 	}
 	return nil
@@ -251,6 +281,42 @@ func (l *NotifyLogic) withLarkRetry(chatID string, f func() error) error {
 		return nil
 	}
 	return last
+}
+
+func (l *NotifyLogic) pendingMatchSendProgress(matchID string) (map[string]bool, error) {
+	raw, err := l.svcCtx.RedisClient.GetCtx(l.ctx, pendingMatchSendKey(matchID))
+	if err != nil {
+		return nil, errors.Wrap(err, "get pending lark message progress")
+	}
+	if raw == "" {
+		return nil, nil
+	}
+	var chatIDs []string
+	if err := json.Unmarshal([]byte(raw), &chatIDs); err != nil {
+		return nil, errors.Wrap(err, "decode pending lark message progress")
+	}
+	out := make(map[string]bool, len(chatIDs))
+	for _, chatID := range chatIDs {
+		out[chatID] = true
+	}
+	return out, nil
+}
+
+func (l *NotifyLogic) savePendingMatchSendProgress(matchID string, sent map[string]bool) error {
+	chatIDs := make([]string, 0, len(sent))
+	for chatID := range sent {
+		chatIDs = append(chatIDs, chatID)
+	}
+	sort.Strings(chatIDs)
+	b, err := json.Marshal(chatIDs)
+	if err != nil {
+		return errors.Wrap(err, "encode pending lark message progress")
+	}
+	return l.svcCtx.RedisClient.SetexCtx(l.ctx, pendingMatchSendKey(matchID), string(b), 60*60)
+}
+
+func pendingMatchSendKey(matchID string) string {
+	return fmt.Sprintf("rm-monitor:lark:match-card-pending:%s", matchID)
 }
 
 func (l *NotifyLogic) cardContent(m *ent.Match) (*utils.MatchCardContent, error) {
