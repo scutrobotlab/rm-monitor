@@ -13,6 +13,7 @@ import (
 	"path"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -81,15 +82,20 @@ func run(ctx context.Context, client *ent.Client, c config.Config, taskID int) e
 		logx.Errorf("write match readme before record failed: %v", err)
 	}
 
-	cmd := exec.CommandContext(jobCtx,
-		"ffmpeg",
+	args := []string{
 		"-hide_banner",
 		"-loglevel", "info",
-		"-user_agent", UA,
-		"-rw_timeout", "15000000",
-		"-reconnect", "1",
-		"-reconnect_streamed", "1",
-		"-reconnect_delay_max", "5",
+	}
+	if isNetworkSource(task.SourceURL) {
+		args = append(args,
+			"-user_agent", UA,
+			"-rw_timeout", "15000000",
+			"-reconnect", "1",
+			"-reconnect_streamed", "1",
+			"-reconnect_delay_max", "5",
+		)
+	}
+	args = append(args,
 		"-i", task.SourceURL,
 		"-map", "0:v:0",
 		"-an",
@@ -99,6 +105,7 @@ func run(ctx context.Context, client *ent.Client, c config.Config, taskID int) e
 		"-f", "flv",
 		"-y", fullPath,
 	)
+	cmd := exec.CommandContext(jobCtx, "ffmpeg", args...)
 	var stderr bytes.Buffer
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = io.MultiWriter(os.Stderr, &stderr)
@@ -146,6 +153,11 @@ func run(ctx context.Context, client *ent.Client, c config.Config, taskID int) e
 		logx.Errorf("write match readme after record failed: %v", err)
 	}
 	return db.Notify(ctx, c.PostgresConf.DSN, db.RecordTaskChangedChannel, strconv.Itoa(taskID))
+}
+
+func isNetworkSource(source string) bool {
+	lower := strings.ToLower(source)
+	return strings.HasPrefix(lower, "http://") || strings.HasPrefix(lower, "https://")
 }
 
 func upsertSourceArtifact(ctx context.Context, client *ent.Client, taskID int, outputPath string, size int64, sum string) error {
