@@ -224,11 +224,9 @@ func (l *DispatchLogic) ensureTableFields(appToken, tableID string) error {
 		if _, ok := existing[name]; ok {
 			continue
 		}
-		token := uuid.NewSHA1(uuid.NameSpaceOID, []byte(fmt.Sprintf("rm-monitor:bitable-field:%s:%s:%s", appToken, tableID, name))).String()
 		resp, err := l.svcCtx.Lark.Bitable.V1.AppTableField.Create(l.ctx, larkbitable.NewCreateAppTableFieldReqBuilder().
 			AppToken(appToken).
 			TableId(tableID).
-			ClientToken(token).
 			AppTableField(larkbitable.NewAppTableFieldBuilder().
 				FieldName(name).
 				Type(fieldType).
