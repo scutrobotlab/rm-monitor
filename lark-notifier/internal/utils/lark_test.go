@@ -4,8 +4,26 @@ import "testing"
 
 func TestMatchCardUUID(t *testing.T) {
 	got := MatchCardUUID("match-1", "chat-1")
-	want := "rm-monitor:match-card:match-1:chat-1"
-	if got != want {
-		t.Fatalf("MatchCardUUID() = %q, want %q", got, want)
+	if got != MatchCardUUID("match-1", "chat-1") {
+		t.Fatalf("MatchCardUUID() is not stable")
+	}
+	if got == MatchCardUUID("match-1", "chat-2") {
+		t.Fatalf("MatchCardUUID() should include chat id")
+	}
+	if len(got) > 50 {
+		t.Fatalf("MatchCardUUID() length = %d, want <= 50", len(got))
+	}
+}
+
+func TestUploadReplyUUID(t *testing.T) {
+	got := UploadReplyUUID(123, "om_long_message_id")
+	if got != UploadReplyUUID(123, "om_long_message_id") {
+		t.Fatalf("UploadReplyUUID() is not stable")
+	}
+	if got == UploadReplyUUID(124, "om_long_message_id") {
+		t.Fatalf("UploadReplyUUID() should include upload task id")
+	}
+	if len(got) > 50 {
+		t.Fatalf("UploadReplyUUID() length = %d, want <= 50", len(got))
 	}
 }

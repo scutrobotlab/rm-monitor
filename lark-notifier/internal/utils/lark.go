@@ -2,6 +2,8 @@ package utils
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 
@@ -92,5 +94,19 @@ func listChatIDs(ctx context.Context, svcCtx *svc.ServiceContext) ([]string, err
 }
 
 func MatchCardUUID(matchID, chatID string) string {
-	return fmt.Sprintf("rm-monitor:match-card:%s:%s", matchID, chatID)
+	return shortUUID("rm-match-card", matchID, chatID)
+}
+
+func UploadReplyUUID(uploadTaskID int, messageID string) string {
+	return shortUUID("rm-upload-reply", fmt.Sprintf("%d", uploadTaskID), messageID)
+}
+
+func shortUUID(prefix string, parts ...string) string {
+	h := sha256.New()
+	for _, part := range parts {
+		_, _ = h.Write([]byte{0})
+		_, _ = h.Write([]byte(part))
+	}
+	sum := hex.EncodeToString(h.Sum(nil))
+	return fmt.Sprintf("%s:%s", prefix, sum[:24])
 }

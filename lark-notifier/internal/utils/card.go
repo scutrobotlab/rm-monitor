@@ -9,7 +9,7 @@ import (
 	"scutbot.cn/web/rm-monitor/monitor/types"
 )
 
-const defaultMatchCardTemplateID = "AAqkpd7LuaV0s"
+const matchCardId = "AAqkpd7LuaV0s"
 
 type MatchScore struct {
 	RedScore  string `json:"red_score"`
@@ -43,12 +43,8 @@ type MatchCardContent struct {
 func NewMatchCardContent(ctx context.Context, svcCtx *svc.ServiceContext, m *types.Match) (*MatchCardContent, error) {
 	var content MatchCardContent
 	var err error
-	templateID := svcCtx.Config.LarkConf.MatchCardTemplateID
-	if templateID == "" {
-		templateID = defaultMatchCardTemplateID
-	}
 	content.Type = "template"
-	content.Data.TemplateId = templateID
+	content.Data.TemplateId = matchCardId
 	content.Data.TemplateVariable.RedTeam = m.RedTeam.Name
 	content.Data.TemplateVariable.BlueTeam = m.BlueTeam.Name
 	content.Data.TemplateVariable.MatchProgress = "进行中"

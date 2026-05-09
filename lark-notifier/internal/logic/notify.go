@@ -233,7 +233,7 @@ func (l *NotifyLogic) replyCompletedUploads() error {
 					Content(larkim.NewMessageTextBuilder().Text(*task.FileURL).Build()).
 					MsgType(larkim.MsgTypeText).
 					ReplyInThread(true).
-					Uuid(fmt.Sprintf("rm-monitor:upload-reply:%d:%s", task.ID, message.MessageID)).
+					Uuid(utils.UploadReplyUUID(task.ID, message.MessageID)).
 					Build()).
 				MessageId(message.MessageID).
 				Build()
