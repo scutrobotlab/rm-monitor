@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/pkg/errors"
@@ -73,7 +74,8 @@ func run(ctx context.Context, client *ent.Client, c config.Config, taskID int) e
 
 	jobCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	go watchCancel(jobCtx, client, taskID, cancel)
+	var stopRequested atomic.Bool
+	go watchCancel(jobCtx, client, taskID, &stopRequested, cancel)
 
 	if err := client.RecordTask.UpdateOneID(taskID).SetStatus(recordtask.StatusRUNNING).SetStartedAt(time.Now()).Exec(ctx); err != nil {
 		return errors.Wrap(err, "mark running")
@@ -118,11 +120,11 @@ func run(ctx context.Context, client *ent.Client, c config.Config, taskID int) e
 	cmd.WaitDelay = 10 * time.Second
 	logx.Infof("recording %s to %s", task.SourceURL, path.Clean(task.OutputPath))
 	err = cmd.Run()
-	if jobCtx.Err() != nil {
+	if jobCtx.Err() != nil && !stopRequested.Load() {
 		_ = client.RecordTask.UpdateOneID(taskID).SetStatus(recordtask.StatusCANCELED).SetErrorMessage(jobCtx.Err().Error()).Exec(ctx)
 		return jobCtx.Err()
 	}
-	if err != nil {
+	if err != nil && !stopRequested.Load() {
 		msg := commandError(err, stderr.String())
 		_ = client.RecordTask.UpdateOneID(taskID).SetStatus(recordtask.StatusFAILED).SetErrorMessage(msg).Exec(ctx)
 		return errors.New(msg)
@@ -347,7 +349,7 @@ func formatOptionalTime(t *time.Time) string {
 	return formatTime(*t)
 }
 
-func watchCancel(ctx context.Context, client *ent.Client, taskID int, cancel context.CancelFunc) {
+func watchCancel(ctx context.Context, client *ent.Client, taskID int, stopRequested *atomic.Bool, cancel context.CancelFunc) {
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
 	for {
@@ -357,6 +359,7 @@ func watchCancel(ctx context.Context, client *ent.Client, taskID int, cancel con
 		case <-ticker.C:
 			task, err := client.RecordTask.Get(ctx, taskID)
 			if err == nil && task.Status == recordtask.StatusCANCEL_REQUESTED {
+				stopRequested.Store(true)
 				cancel()
 				return
 			}
