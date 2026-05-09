@@ -145,6 +145,7 @@ func run(ctx context.Context, client *ent.Client, c config.Config, taskID int) e
 		SetCompletedAt(time.Now()).
 		SetFileSize(stat.Size()).
 		SetChecksum(sum).
+		ClearErrorMessage().
 		Exec(ctx); err != nil {
 		return errors.Wrap(err, "mark record succeeded")
 	}

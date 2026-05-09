@@ -214,6 +214,9 @@ func (l *MatchScanLogic) ensureStartedRound(m scannedMatch, roundNo int) error {
 	if roundNo <= 0 {
 		return nil
 	}
+	if m.TotalRounds > 0 && roundNo > m.TotalRounds {
+		return nil
+	}
 	r, err := l.svcCtx.DB.MatchRound.Query().
 		Where(matchround.HasMatchWith(match.ID(m.ID)), matchround.RoundNo(roundNo)).
 		Only(l.ctx)
