@@ -30,6 +30,7 @@ data:
       ConfigMapName: manifest-job-config
       RecordsPVC: rm-monitor-records
       RecordsMountPath: /records
+      ImagePullPolicy: Always
       TTLSecondsAfterFinished: 86400
 ---
 apiVersion: v1
