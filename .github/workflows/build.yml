@@ -28,6 +28,8 @@ jobs:
             dockerfile: record-dispatcher/Dockerfile
           - app: manifest-job
             dockerfile: manifest-job/Dockerfile
+          - app: artifact-cleaner
+            dockerfile: artifact-cleaner/Dockerfile
           - app: uploader-dispatcher
             dockerfile: uploader-dispatcher/Dockerfile
           - app: uploader-job

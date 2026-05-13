@@ -3,22 +3,18 @@ package logic
 import (
 	"context"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/pkg/errors"
-	"scutbot.cn/web/rm-monitor/ent"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
 	"scutbot.cn/web/rm-monitor/ent/mediaartifact"
 	"scutbot.cn/web/rm-monitor/ent/recordtask"
 	"scutbot.cn/web/rm-monitor/ent/transcodetask"
-	"scutbot.cn/web/rm-monitor/ent/uploadtask"
 	"scutbot.cn/web/rm-monitor/pkg/db"
 	"scutbot.cn/web/rm-monitor/pkg/kubejob"
 	"scutbot.cn/web/rm-monitor/pkg/logx"
-	"scutbot.cn/web/rm-monitor/pkg/storagepath"
 	"scutbot.cn/web/rm-monitor/transcode-dispatcher/internal/svc"
 )
 
@@ -36,9 +32,6 @@ func NewDispatchLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Dispatch
 
 func (l *DispatchLogic) Tick() error {
 	if err := l.createTranscodeTasks(); err != nil {
-		return err
-	}
-	if err := l.cleanupExpiredSources(); err != nil {
 		return err
 	}
 	if err := l.recoverDispatching(); err != nil {
@@ -194,46 +187,6 @@ func (l *DispatchLogic) recordingActive() (bool, error) {
 		return false, errors.Wrap(err, "count active record tasks")
 	}
 	return records > 0, nil
-}
-
-func (l *DispatchLogic) cleanupExpiredSources() error {
-	conf := l.svcCtx.Config.TranscodeConf.WithDefaults()
-	now := time.Now()
-	artifacts, err := l.svcCtx.DB.MediaArtifact.Query().
-		Where(
-			mediaartifact.KindEQ(mediaartifact.KindSource),
-			mediaartifact.StatusEQ(mediaartifact.StatusAVAILABLE),
-			mediaartifact.DeletableAtNotNil(),
-			mediaartifact.DeletableAtLTE(now),
-		).
-		WithUploadTask().
-		WithSourceTranscodeTask(func(q *ent.TranscodeTaskQuery) {
-			q.WithArchiveArtifact()
-		}).
-		Limit(100).
-		All(l.ctx)
-	if err != nil {
-		return errors.Wrap(err, "query deletable sources")
-	}
-	for _, artifact := range artifacts {
-		upload := artifact.Edges.UploadTask
-		transcode := artifact.Edges.SourceTranscodeTask
-		if upload == nil || upload.Status != uploadtask.StatusSUCCEEDED || transcode == nil || transcode.Status != transcodetask.StatusSUCCEEDED || transcode.Edges.ArchiveArtifact == nil {
-			continue
-		}
-		fullPath := storagepath.Resolve(conf.BaseDir, artifact.Path)
-		if err := os.Remove(fullPath); err != nil && !os.IsNotExist(err) {
-			l.Errorf("remove source artifact %s failed: %v", artifact.Path, err)
-			continue
-		}
-		if err := l.svcCtx.DB.MediaArtifact.UpdateOneID(artifact.ID).
-			SetStatus(mediaartifact.StatusDELETED).
-			SetDeletedAt(now).
-			Exec(l.ctx); err != nil {
-			return errors.Wrap(err, "mark source deleted")
-		}
-	}
-	return nil
 }
 
 func inAllowedWindow(now time.Time, window string) (bool, error) {
