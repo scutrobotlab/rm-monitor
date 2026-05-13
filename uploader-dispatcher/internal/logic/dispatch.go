@@ -211,20 +211,35 @@ func (l *DispatchLogic) findTable(appToken, tableName string) (string, error) {
 }
 
 func (l *DispatchLogic) ensureTableFields(appToken, tableID string) error {
+	lockKey := fmt.Sprintf("rm-monitor:bitable:fields:%s:%s:lock", appToken, tableID)
+	locked, err := l.svcCtx.Redis.SetNXCtx(l.ctx, lockKey, "1", tableLockTTL)
+	if err != nil {
+		return errors.Wrap(err, "lock bitable field creation")
+	}
+	if !locked {
+		deadline := time.Now().Add(10 * time.Second)
+		for time.Now().Before(deadline) {
+			time.Sleep(500 * time.Millisecond)
+			existing, err := l.listFields(appToken, tableID)
+			if err != nil {
+				return err
+			}
+			if requiredFieldsReady(existing) {
+				return nil
+			}
+		}
+		return errors.Errorf("wait bitable field creation timeout: %s", tableID)
+	}
+	defer func() { _ = l.svcCtx.Redis.DelCtx(context.Background(), lockKey) }()
+	return l.ensureTableFieldsLocked(appToken, tableID)
+}
+
+func (l *DispatchLogic) ensureTableFieldsLocked(appToken, tableID string) error {
 	existing, err := l.listFields(appToken, tableID)
 	if err != nil {
 		return err
 	}
-	required := map[string]int{
-		bitableupload.FieldRole:       larkbitable.TypeSingleSelect,
-		bitableupload.FieldMatch:      larkbitable.TypeNumber,
-		bitableupload.FieldRound:      larkbitable.TypeNumber,
-		bitableupload.FieldType:       larkbitable.TypeSingleSelect,
-		bitableupload.FieldRedTeam:    larkbitable.TypeSingleSelect,
-		bitableupload.FieldBlueTeam:   larkbitable.TypeSingleSelect,
-		bitableupload.FieldAttachment: larkbitable.TypeAttachment,
-	}
-	for name, fieldType := range required {
+	for name, fieldType := range requiredBitableFields() {
 		if existingField, ok := existing[name]; ok {
 			if existingField.Type == fieldType {
 				continue
@@ -250,6 +265,28 @@ func (l *DispatchLogic) ensureTableFields(appToken, tableID string) error {
 		}
 	}
 	return nil
+}
+
+func requiredFieldsReady(existing map[string]bitableFieldInfo) bool {
+	for name, fieldType := range requiredBitableFields() {
+		existingField, ok := existing[name]
+		if !ok || existingField.Type != fieldType {
+			return false
+		}
+	}
+	return true
+}
+
+func requiredBitableFields() map[string]int {
+	return map[string]int{
+		bitableupload.FieldRole:       larkbitable.TypeSingleSelect,
+		bitableupload.FieldMatch:      larkbitable.TypeNumber,
+		bitableupload.FieldRound:      larkbitable.TypeNumber,
+		bitableupload.FieldType:       larkbitable.TypeSingleSelect,
+		bitableupload.FieldRedTeam:    larkbitable.TypeSingleSelect,
+		bitableupload.FieldBlueTeam:   larkbitable.TypeSingleSelect,
+		bitableupload.FieldAttachment: larkbitable.TypeAttachment,
+	}
 }
 
 type bitableFieldInfo struct {
