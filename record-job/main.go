@@ -35,6 +35,7 @@ var (
 )
 
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+const maxPrematureExitAttempts = 3
 
 func init() {
 	logx.MustSetup(logx.LogConf{ServiceName: "record-job", Mode: "console", Encoding: "plain"})
@@ -124,6 +125,25 @@ func run(ctx context.Context, client *ent.Client, c config.Config, taskID int) e
 		msg := commandError(err, stderr.String())
 		_ = client.RecordTask.UpdateOneID(taskID).SetStatus(recordtask.StatusFAILED).SetErrorMessage(msg).Exec(ctx)
 		return errors.New(msg)
+	}
+	if !stopRequested.Load() {
+		latest, latestErr := loadTask(ctx, client, taskID)
+		if latestErr != nil {
+			_ = client.RecordTask.UpdateOneID(taskID).SetStatus(recordtask.StatusFAILED).SetErrorMessage(latestErr.Error()).Exec(ctx)
+			return errors.Wrap(latestErr, "reload record task after ffmpeg exit")
+		}
+		if latest.Edges.MatchRound != nil && latest.Edges.MatchRound.Status == matchround.StatusSTARTED {
+			msg := "ffmpeg exited before match round ended"
+			update := client.RecordTask.UpdateOneID(taskID).SetErrorMessage(msg)
+			if latest.Attempts < maxPrematureExitAttempts {
+				update.SetStatus(recordtask.StatusPENDING).ClearStartedAt()
+			} else {
+				update.SetStatus(recordtask.StatusFAILED)
+			}
+			_ = update.Exec(ctx)
+			_ = db.Notify(ctx, c.PostgresConf.DSN, db.RecordTaskChangedChannel, strconv.Itoa(taskID))
+			return errors.New(msg)
+		}
 	}
 
 	stat, statErr := os.Stat(fullPath)

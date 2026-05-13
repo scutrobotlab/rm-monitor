@@ -77,7 +77,7 @@ func (l *DispatchLogic) createUploadTasks() error {
 		if err != nil {
 			return err
 		}
-		recordID, recordURL, err := l.createBitableRecord(conf.BitableAppToken, tableID, artifact.ID, match, recordTask.Role)
+		recordID, recordURL, err := l.createBitableRecord(conf.BitableAppToken, tableID, artifact.ID, match, recordTask.Edges.MatchRound.RoundNo, recordTask.Role)
 		if err != nil {
 			return err
 		}
@@ -217,14 +217,21 @@ func (l *DispatchLogic) ensureTableFields(appToken, tableID string) error {
 	}
 	required := map[string]int{
 		bitableupload.FieldRole:       larkbitable.TypeSingleSelect,
-		bitableupload.FieldMatch:      larkbitable.TypeSingleSelect,
+		bitableupload.FieldMatch:      larkbitable.TypeNumber,
+		bitableupload.FieldRound:      larkbitable.TypeNumber,
 		bitableupload.FieldType:       larkbitable.TypeSingleSelect,
 		bitableupload.FieldRedTeam:    larkbitable.TypeSingleSelect,
 		bitableupload.FieldBlueTeam:   larkbitable.TypeSingleSelect,
 		bitableupload.FieldAttachment: larkbitable.TypeAttachment,
 	}
 	for name, fieldType := range required {
-		if _, ok := existing[name]; ok {
+		if existingField, ok := existing[name]; ok {
+			if existingField.Type == fieldType {
+				continue
+			}
+			if err := l.updateFieldType(appToken, tableID, existingField.ID, name, fieldType); err != nil {
+				return err
+			}
 			continue
 		}
 		resp, err := l.svcCtx.Lark.Bitable.V1.AppTableField.Create(l.ctx, larkbitable.NewCreateAppTableFieldReqBuilder().
@@ -245,8 +252,13 @@ func (l *DispatchLogic) ensureTableFields(appToken, tableID string) error {
 	return nil
 }
 
-func (l *DispatchLogic) listFields(appToken, tableID string) (map[string]int, error) {
-	fields := make(map[string]int)
+type bitableFieldInfo struct {
+	ID   string
+	Type int
+}
+
+func (l *DispatchLogic) listFields(appToken, tableID string) (map[string]bitableFieldInfo, error) {
+	fields := make(map[string]bitableFieldInfo)
 	pageToken := ""
 	for {
 		builder := larkbitable.NewListAppTableFieldReqBuilder().
@@ -267,10 +279,10 @@ func (l *DispatchLogic) listFields(appToken, tableID string) (map[string]int, er
 			return fields, nil
 		}
 		for _, field := range resp.Data.Items {
-			if field.FieldName == nil || field.Type == nil {
+			if field.FieldName == nil || field.FieldId == nil || field.Type == nil {
 				continue
 			}
-			fields[*field.FieldName] = *field.Type
+			fields[*field.FieldName] = bitableFieldInfo{ID: *field.FieldId, Type: *field.Type}
 		}
 		if resp.Data.HasMore == nil || !*resp.Data.HasMore || resp.Data.PageToken == nil || *resp.Data.PageToken == "" {
 			return fields, nil
@@ -279,12 +291,31 @@ func (l *DispatchLogic) listFields(appToken, tableID string) (map[string]int, er
 	}
 }
 
-func (l *DispatchLogic) createBitableRecord(appToken, tableID string, _ int, match *ent.Match, role string) (string, *string, error) {
+func (l *DispatchLogic) updateFieldType(appToken, tableID, fieldID, fieldName string, fieldType int) error {
+	resp, err := l.svcCtx.Lark.Bitable.V1.AppTableField.Update(l.ctx, larkbitable.NewUpdateAppTableFieldReqBuilder().
+		AppToken(appToken).
+		TableId(tableID).
+		FieldId(fieldID).
+		AppTableField(larkbitable.NewAppTableFieldBuilder().
+			FieldName(fieldName).
+			Type(fieldType).
+			Build()).
+		Build())
+	if err != nil {
+		return errors.Wrapf(err, "update bitable field %s", fieldName)
+	}
+	if !resp.Success() {
+		return errors.Errorf("update bitable field %s: code=%d msg=%s", fieldName, resp.Code, resp.Msg)
+	}
+	return nil
+}
+
+func (l *DispatchLogic) createBitableRecord(appToken, tableID string, _ int, match *ent.Match, roundNo int, role string) (string, *string, error) {
 	resp, err := l.svcCtx.Lark.Bitable.V1.AppTableRecord.Create(l.ctx, larkbitable.NewCreateAppTableRecordReqBuilder().
 		AppToken(appToken).
 		TableId(tableID).
 		AppTableRecord(larkbitable.NewAppTableRecordBuilder().
-			Fields(bitableupload.RecordFields(match, role)).
+			Fields(bitableupload.RecordFields(match, roundNo, role)).
 			Build()).
 		Build())
 	if err != nil {

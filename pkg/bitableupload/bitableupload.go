@@ -10,6 +10,7 @@ import (
 const (
 	FieldRole       = "视角"
 	FieldMatch      = "场次"
+	FieldRound      = "对局"
 	FieldType       = "类型"
 	FieldRedTeam    = "红方"
 	FieldBlueTeam   = "蓝方"
@@ -49,10 +50,11 @@ func teamName(t *ent.Team) string {
 	}
 }
 
-func RecordFields(m *ent.Match, role string) map[string]interface{} {
+func RecordFields(m *ent.Match, roundNo int, role string) map[string]interface{} {
 	return map[string]interface{}{
 		FieldRole:     role,
-		FieldMatch:    MatchName(m),
+		FieldMatch:    m.Order,
+		FieldRound:    roundNo,
 		FieldType:     m.MatchType,
 		FieldRedTeam:  TeamName(m.Edges.RedTeam),
 		FieldBlueTeam: TeamName(m.Edges.BlueTeam),

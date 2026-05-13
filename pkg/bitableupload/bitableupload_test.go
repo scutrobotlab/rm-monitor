@@ -21,12 +21,15 @@ func TestRecordFields(t *testing.T) {
 			BlueTeam: &ent.Team{Name: "蓝队", SchoolName: "蓝校"},
 		},
 	}
-	fields := RecordFields(m, "big")
+	fields := RecordFields(m, 2, "big")
 	if fields[FieldRole] != "big" {
 		t.Fatalf("role = %v", fields[FieldRole])
 	}
-	if fields[FieldMatch] != "3. 红校-红队 VS 蓝校-蓝队" {
+	if fields[FieldMatch] != 3 {
 		t.Fatalf("match = %v", fields[FieldMatch])
+	}
+	if fields[FieldRound] != 2 {
+		t.Fatalf("round = %v", fields[FieldRound])
 	}
 	if fields[FieldType] != "bo3" || fields[FieldRedTeam] != "红校-红队" || fields[FieldBlueTeam] != "蓝校-蓝队" {
 		t.Fatalf("unexpected fields: %#v", fields)
