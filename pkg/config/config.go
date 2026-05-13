@@ -91,16 +91,19 @@ func (c *TranscodeConf) WithDefaults() TranscodeConf {
 		out.SourceRetentionDays = 7
 	}
 	if out.MaxConcurrent <= 0 {
-		out.MaxConcurrent = 1
+		out.MaxConcurrent = 4
 	}
 	if out.CPURequest == "" {
-		out.CPURequest = "4000m"
+		out.CPURequest = "6000m"
+	}
+	if out.CPULimit == "" {
+		out.CPULimit = "8000m"
 	}
 	if out.MemoryRequest == "" {
-		out.MemoryRequest = "1Gi"
+		out.MemoryRequest = "2Gi"
 	}
 	if out.MemoryLimit == "" {
-		out.MemoryLimit = "4Gi"
+		out.MemoryLimit = "6Gi"
 	}
 	return out
 }
