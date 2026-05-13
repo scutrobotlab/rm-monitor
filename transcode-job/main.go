@@ -101,6 +101,7 @@ func run(ctx context.Context, client *ent.Client, c config.Config, taskID int) e
 		"-g", "125",
 		"-pix_fmt", "yuv420p",
 		"-movflags", "+faststart",
+		"-f", "mp4",
 		"-y", tmpArchivePath,
 	)
 	var stderr bytes.Buffer
