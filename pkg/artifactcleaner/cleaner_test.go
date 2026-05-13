@@ -18,8 +18,8 @@ func TestCanDeleteSourceSkipsOnlyActiveUploads(t *testing.T) {
 		t.Fatal("failed upload should be deletable")
 	}
 	artifact = sourceWith(uploadtask.StatusPENDING)
-	if !canDeleteSource(artifact) {
-		t.Fatal("pending upload should be deletable after source retention")
+	if canDeleteSource(artifact) {
+		t.Fatal("pending upload should not be deleted")
 	}
 	artifact = sourceWith(uploadtask.StatusDISPATCHING)
 	if canDeleteSource(artifact) {
@@ -39,6 +39,20 @@ func TestCanDeleteSourceRequiresArchive(t *testing.T) {
 	}
 	if canDeleteSource(artifact) {
 		t.Fatal("source without archive artifact should not be deleted")
+	}
+}
+
+func TestCanDeleteSourceRequiresUploadResult(t *testing.T) {
+	artifact := &ent.MediaArtifact{
+		Edges: ent.MediaArtifactEdges{
+			SourceTranscodeTask: &ent.TranscodeTask{
+				Status: transcodetask.StatusSUCCEEDED,
+				Edges:  ent.TranscodeTaskEdges{ArchiveArtifact: &ent.MediaArtifact{}},
+			},
+		},
+	}
+	if canDeleteSource(artifact) {
+		t.Fatal("source without upload result should not be deleted")
 	}
 }
 

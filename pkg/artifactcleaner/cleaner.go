@@ -70,7 +70,7 @@ func canDeleteSource(artifact *ent.MediaArtifact) bool {
 	}
 	upload := artifact.Edges.UploadTask
 	if upload == nil {
-		return true
+		return false
 	}
-	return upload.Status != uploadtask.StatusDISPATCHING && upload.Status != uploadtask.StatusRUNNING
+	return upload.Status == uploadtask.StatusSUCCEEDED || upload.Status == uploadtask.StatusFAILED
 }
