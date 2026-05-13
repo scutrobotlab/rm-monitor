@@ -125,6 +125,7 @@ func (l *DispatchLogic) createTasksForStartedRounds() error {
 			l.Errorf("live urls for match %s: %v", m.ID, err)
 			continue
 		}
+		urls = filterBlacklistedRoles(urls, conf.RoleBlackList)
 		for role, url := range urls {
 			output, err := l.outputPath(conf, m, r.RoundNo, role)
 			if err != nil {
@@ -148,6 +149,24 @@ func (l *DispatchLogic) createTasksForStartedRounds() error {
 		}
 	}
 	return nil
+}
+
+func filterBlacklistedRoles(urls map[string]string, blacklist []string) map[string]string {
+	if len(blacklist) == 0 || len(urls) == 0 {
+		return urls
+	}
+	blocked := make(map[string]struct{}, len(blacklist))
+	for _, role := range blacklist {
+		blocked[role] = struct{}{}
+	}
+	out := make(map[string]string, len(urls))
+	for role, url := range urls {
+		if _, ok := blocked[role]; ok {
+			continue
+		}
+		out[role] = url
+	}
+	return out
 }
 
 func (l *DispatchLogic) outputPath(conf common.RecordConf, m *ent.Match, roundNo int, role string) (string, error) {

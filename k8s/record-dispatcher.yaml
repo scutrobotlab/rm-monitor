@@ -9,6 +9,10 @@ data:
       AutoMigrate: true
     RecordConf:
       Res: middle
+      RoleBlackList:
+        - "主视角（无解说版）"
+        - "蓝方机器人第一视角合集"
+        - "红方机器人第一视角合集"
       BaseDir: /records
       PathTemplate: "{{.Event}}/{{.Zone}}/{{.MatchName}}/Round-{{.RoundNo}}/{{.Role}}.flv"
       MatchDirTemplate: "{{.Event}}/{{.Zone}}/{{.MatchName}}"

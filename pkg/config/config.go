@@ -22,12 +22,13 @@ func (c *MonitorConf) WithDefaults() MonitorConf {
 }
 
 type RecordConf struct {
-	Res               string `json:",optional"`
-	LiveInfoURL       string `json:",optional"`
-	BaseDir           string `json:",optional"`
-	PathTemplate      string `json:",optional"`
-	MatchDirTemplate  string `json:",optional"`
-	MatchNameTemplate string `json:",optional"`
+	Res               string   `json:",optional"`
+	LiveInfoURL       string   `json:",optional"`
+	BaseDir           string   `json:",optional"`
+	PathTemplate      string   `json:",optional"`
+	MatchDirTemplate  string   `json:",optional"`
+	MatchNameTemplate string   `json:",optional"`
+	RoleBlackList     []string `json:",optional"`
 }
 
 func (c *RecordConf) WithDefaults() RecordConf {
