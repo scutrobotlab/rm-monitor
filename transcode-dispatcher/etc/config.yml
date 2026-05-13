@@ -6,9 +6,11 @@ TranscodeConf:
   AllowedWindow: "23:00-06:00"
   SuspendWhenRecordingActive: true
   SourceRetentionDays: 7
-  CPURequest: "500m"
-  MemoryRequest: "512Mi"
-  MemoryLimit: "2Gi"
+  MaxConcurrent: 1
+  CPURequest: "4000m"
+  CPULimit: "6000m"
+  MemoryRequest: "1Gi"
+  MemoryLimit: "4Gi"
 K8sJobConf:
   Namespace: rm-monitor
   Image: ghcr.io/scutrobotlab/rm-monitor/transcode-job:latest

@@ -28,6 +28,7 @@ type DispatchLogic struct {
 const dispatchingStaleAfter = 5 * time.Minute
 const tableCacheTTL = 24 * 3600
 const tableLockTTL = 30
+const uploadTaskCreateLockTTL = 120
 
 func NewDispatchLogic(ctx context.Context, svcCtx *svc.ServiceContext) *DispatchLogic {
 	return &DispatchLogic{ctx: ctx, svcCtx: svcCtx, Logger: logx.WithContext(ctx)}
@@ -68,38 +69,69 @@ func (l *DispatchLogic) createUploadTasks() error {
 		return errors.Wrap(err, "query source artifacts")
 	}
 	for _, artifact := range artifacts {
-		recordTask := artifact.Edges.RecordTask
-		if recordTask == nil || recordTask.Edges.MatchRound == nil || recordTask.Edges.MatchRound.Edges.Match == nil {
+		created, err := l.createUploadTaskForArtifact(conf.BitableAppToken, artifact)
+		if err != nil {
+			return err
+		}
+		if !created {
 			continue
-		}
-		match := recordTask.Edges.MatchRound.Edges.Match
-		tableID, err := l.ensureTable(conf.BitableAppToken, bitableupload.TableName(match.Event, match.Zone))
-		if err != nil {
-			return err
-		}
-		recordID, recordURL, err := l.createBitableRecord(conf.BitableAppToken, tableID, artifact.ID, match, recordTask.Edges.MatchRound.RoundNo, recordTask.Role)
-		if err != nil {
-			return err
-		}
-		if err := l.svcCtx.DB.UploadTask.Create().
-			SetRecordTaskID(recordTask.ID).
-			SetSourceArtifactID(artifact.ID).
-			SetSourcePath(artifact.Path).
-			SetBitableAppToken(conf.BitableAppToken).
-			SetBitableTableID(tableID).
-			SetBitableRecordID(recordID).
-			SetNillableBitableRecordURL(recordURL).
-			SetStatus(uploadtask.StatusPENDING).
-			OnConflictColumns(uploadtask.SourceArtifactColumn).
-			DoNothing().
-			Exec(l.ctx); err != nil {
-			if db.IsNoRows(err) {
-				continue
-			}
-			return errors.Wrap(err, "create upload task")
 		}
 	}
 	return nil
+}
+
+func (l *DispatchLogic) createUploadTaskForArtifact(appToken string, artifact *ent.MediaArtifact) (bool, error) {
+	lockKey := fmt.Sprintf("rm-monitor:upload-task:create:%d", artifact.ID)
+	locked, err := l.svcCtx.Redis.SetNXCtx(l.ctx, lockKey, "1", uploadTaskCreateLockTTL)
+	if err != nil {
+		return false, errors.Wrap(err, "lock upload task creation")
+	}
+	if !locked {
+		return false, nil
+	}
+	defer func() { _ = l.svcCtx.Redis.DelCtx(context.Background(), lockKey) }()
+
+	exists, err := l.svcCtx.DB.MediaArtifact.Query().
+		Where(mediaartifact.ID(artifact.ID), mediaartifact.HasUploadTask()).
+		Exist(l.ctx)
+	if err != nil {
+		return false, errors.Wrap(err, "check existing upload task")
+	}
+	if exists {
+		return false, nil
+	}
+
+	recordTask := artifact.Edges.RecordTask
+	if recordTask == nil || recordTask.Edges.MatchRound == nil || recordTask.Edges.MatchRound.Edges.Match == nil {
+		return false, nil
+	}
+	match := recordTask.Edges.MatchRound.Edges.Match
+	tableID, err := l.ensureTable(appToken, bitableupload.TableName(match.Event, match.Zone))
+	if err != nil {
+		return false, err
+	}
+	recordID, recordURL, err := l.createBitableRecord(appToken, tableID, artifact.ID, match, recordTask.Edges.MatchRound.RoundNo, recordTask.Role)
+	if err != nil {
+		return false, err
+	}
+	if err := l.svcCtx.DB.UploadTask.Create().
+		SetRecordTaskID(recordTask.ID).
+		SetSourceArtifactID(artifact.ID).
+		SetSourcePath(artifact.Path).
+		SetBitableAppToken(appToken).
+		SetBitableTableID(tableID).
+		SetBitableRecordID(recordID).
+		SetNillableBitableRecordURL(recordURL).
+		SetStatus(uploadtask.StatusPENDING).
+		OnConflictColumns(uploadtask.SourceArtifactColumn).
+		DoNothing().
+		Exec(l.ctx); err != nil {
+		if db.IsNoRows(err) {
+			return false, nil
+		}
+		return false, errors.Wrap(err, "create upload task")
+	}
+	return true, nil
 }
 
 func (l *DispatchLogic) ensureTable(appToken, tableName string) (string, error) {
@@ -347,10 +379,11 @@ func (l *DispatchLogic) updateFieldType(appToken, tableID, fieldID, fieldName st
 	return nil
 }
 
-func (l *DispatchLogic) createBitableRecord(appToken, tableID string, _ int, match *ent.Match, roundNo int, role string) (string, *string, error) {
+func (l *DispatchLogic) createBitableRecord(appToken, tableID string, artifactID int, match *ent.Match, roundNo int, role string) (string, *string, error) {
 	resp, err := l.svcCtx.Lark.Bitable.V1.AppTableRecord.Create(l.ctx, larkbitable.NewCreateAppTableRecordReqBuilder().
 		AppToken(appToken).
 		TableId(tableID).
+		ClientToken(fmt.Sprintf("upload-task:%d", artifactID)).
 		AppTableRecord(larkbitable.NewAppTableRecordBuilder().
 			Fields(bitableupload.RecordFields(match, roundNo, role)).
 			Build()).

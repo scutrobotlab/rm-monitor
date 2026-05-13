@@ -74,9 +74,11 @@ func run(ctx context.Context, client *ent.Client, c config.Config, taskID int) e
 	sourcePath := storagepath.Resolve(transcodeConf.BaseDir, source.Path)
 	archiveRel := strings.TrimSuffix(source.Path, filepath.Ext(source.Path)) + ".mp4"
 	archivePath := storagepath.Resolve(transcodeConf.BaseDir, archiveRel)
+	tmpArchivePath := fmt.Sprintf("%s.tmp-%d", archivePath, taskID)
 	if err := os.MkdirAll(filepath.Dir(archivePath), 0o755); err != nil {
 		return errors.Wrap(err, "create archive dir")
 	}
+	_ = os.Remove(tmpArchivePath)
 	if err := ensureSVTAV1(ctx); err != nil {
 		_ = client.TranscodeTask.UpdateOneID(taskID).SetStatus(transcodetask.StatusFAILED).SetErrorMessage(err.Error()).Exec(ctx)
 		return err
@@ -99,7 +101,7 @@ func run(ctx context.Context, client *ent.Client, c config.Config, taskID int) e
 		"-g", "125",
 		"-pix_fmt", "yuv420p",
 		"-movflags", "+faststart",
-		"-y", archivePath,
+		"-y", tmpArchivePath,
 	)
 	var stderr bytes.Buffer
 	cmd.Stdout = os.Stdout
@@ -107,18 +109,29 @@ func run(ctx context.Context, client *ent.Client, c config.Config, taskID int) e
 	cmd.WaitDelay = 10 * time.Second
 	if err := cmd.Run(); err != nil {
 		msg := commandError(err, stderr.String())
+		_ = os.Remove(tmpArchivePath)
 		_ = client.TranscodeTask.UpdateOneID(taskID).SetStatus(transcodetask.StatusFAILED).SetErrorMessage(msg).Exec(ctx)
 		return errors.New(msg)
 	}
-	stat, err := os.Stat(archivePath)
+	stat, err := os.Stat(tmpArchivePath)
 	if err != nil {
 		_ = client.TranscodeTask.UpdateOneID(taskID).SetStatus(transcodetask.StatusFAILED).SetErrorMessage(err.Error()).Exec(ctx)
 		return errors.Wrap(err, "stat archive")
 	}
-	sum, err := checksum(archivePath)
+	if stat.Size() == 0 {
+		err := errors.New("archive output is empty")
+		_ = os.Remove(tmpArchivePath)
+		_ = client.TranscodeTask.UpdateOneID(taskID).SetStatus(transcodetask.StatusFAILED).SetErrorMessage(err.Error()).Exec(ctx)
+		return err
+	}
+	sum, err := checksum(tmpArchivePath)
 	if err != nil {
 		_ = client.TranscodeTask.UpdateOneID(taskID).SetStatus(transcodetask.StatusFAILED).SetErrorMessage(err.Error()).Exec(ctx)
 		return err
+	}
+	if err := os.Rename(tmpArchivePath, archivePath); err != nil {
+		_ = client.TranscodeTask.UpdateOneID(taskID).SetStatus(transcodetask.StatusFAILED).SetErrorMessage(err.Error()).Exec(ctx)
+		return errors.Wrap(err, "publish archive")
 	}
 	if err := client.MediaArtifact.Create().
 		SetRecordTaskID(source.Edges.RecordTask.ID).

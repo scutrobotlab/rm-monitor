@@ -125,9 +125,19 @@ func (l *DispatchLogic) dispatchPending() error {
 			return nil
 		}
 	}
+	running, err := l.svcCtx.DB.TranscodeTask.Query().
+		Where(transcodetask.StatusIn(transcodetask.StatusDISPATCHING, transcodetask.StatusRUNNING)).
+		Count(l.ctx)
+	if err != nil {
+		return errors.Wrap(err, "count running transcode tasks")
+	}
+	limit := conf.MaxConcurrent - running
+	if limit <= 0 {
+		return nil
+	}
 	tasks, err := l.svcCtx.DB.TranscodeTask.Query().
 		Where(transcodetask.StatusEQ(transcodetask.StatusPENDING)).
-		Limit(100).
+		Limit(limit).
 		All(l.ctx)
 	if err != nil {
 		return errors.Wrap(err, "query pending transcode tasks")

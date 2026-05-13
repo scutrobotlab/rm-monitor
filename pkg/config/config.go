@@ -72,6 +72,7 @@ type TranscodeConf struct {
 	AllowedWindow              string `json:",optional"`
 	SuspendWhenRecordingActive bool   `json:",optional"`
 	SourceRetentionDays        int    `json:",optional"`
+	MaxConcurrent              int    `json:",optional"`
 	CPURequest                 string `json:",optional"`
 	CPULimit                   string `json:",optional"`
 	MemoryRequest              string `json:",optional"`
@@ -89,14 +90,17 @@ func (c *TranscodeConf) WithDefaults() TranscodeConf {
 	if out.SourceRetentionDays <= 0 {
 		out.SourceRetentionDays = 7
 	}
+	if out.MaxConcurrent <= 0 {
+		out.MaxConcurrent = 1
+	}
 	if out.CPURequest == "" {
-		out.CPURequest = "500m"
+		out.CPURequest = "4000m"
 	}
 	if out.MemoryRequest == "" {
-		out.MemoryRequest = "512Mi"
+		out.MemoryRequest = "1Gi"
 	}
 	if out.MemoryLimit == "" {
-		out.MemoryLimit = "2Gi"
+		out.MemoryLimit = "4Gi"
 	}
 	return out
 }
