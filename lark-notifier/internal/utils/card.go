@@ -9,7 +9,7 @@ import (
 	"scutbot.cn/web/rm-monitor/monitor/types"
 )
 
-const matchCardId = "AAqtgv8IIbOr4"
+const matchCardId = "AAqkpd7LuaV0s"
 
 type MatchScore struct {
 	RedScore  string `json:"red_score"`
