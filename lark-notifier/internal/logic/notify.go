@@ -28,6 +28,8 @@ type NotifyLogic struct {
 	logx.Logger
 }
 
+const completedMatchRoundLookback = 30 * time.Minute
+
 func NewNotifyLogic(ctx context.Context, svcCtx *svc.ServiceContext) *NotifyLogic {
 	return &NotifyLogic{ctx: ctx, svcCtx: svcCtx, Logger: logx.WithContext(ctx)}
 }
@@ -37,6 +39,9 @@ func (l *NotifyLogic) Sync(since time.Time) error {
 		return err
 	}
 	if err := l.patchChangedCardsSince(since); err != nil {
+		return err
+	}
+	if err := l.patchRecentlyCompletedMatches(); err != nil {
 		return err
 	}
 	return l.replyCompletedUploads()
@@ -206,6 +211,31 @@ func (l *NotifyLogic) patchChangedCardsSince(since time.Time) error {
 			continue
 		}
 		seen[m.ID] = struct{}{}
+		if err := l.patchMatchCards(m); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (l *NotifyLogic) patchRecentlyCompletedMatches() error {
+	matches, err := l.svcCtx.DB.Match.Query().
+		Where(
+			match.LatestStatusEQ("DONE"),
+			match.HasRoundsWith(matchround.UpdatedAtGTE(time.Now().Add(-completedMatchRoundLookback))),
+		).
+		WithRedTeam().
+		WithBlueTeam().
+		WithLarkMessages().
+		WithRounds(func(q *ent.MatchRoundQuery) {
+			q.Order(matchround.ByRoundNo())
+		}).
+		Limit(100).
+		All(l.ctx)
+	if err != nil {
+		return errors.Wrap(err, "query recently completed matches")
+	}
+	for _, m := range matches {
 		if err := l.patchMatchCards(m); err != nil {
 			return err
 		}
