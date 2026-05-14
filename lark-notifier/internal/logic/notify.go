@@ -469,7 +469,7 @@ func (l *NotifyLogic) cardContent(m *ent.Match) (*utils.MatchCardContent, error)
 }
 
 func matchCardCompleted(m *ent.Match) bool {
-	if m == nil || len(m.Edges.Rounds) == 0 {
+	if m == nil || m.LatestStatus != "DONE" || len(m.Edges.Rounds) == 0 {
 		return false
 	}
 	return lo.EveryBy(m.Edges.Rounds, func(item *ent.MatchRound) bool {
