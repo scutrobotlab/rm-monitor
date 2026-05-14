@@ -7,6 +7,7 @@ data:
     LarkConf:
       AppId: ""
       AppSecret: ""
+    ResultWebhookURLs: []
     RedisConf:
       Host: redis:6379
       Pass: ""

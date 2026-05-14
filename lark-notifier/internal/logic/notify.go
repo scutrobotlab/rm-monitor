@@ -226,7 +226,7 @@ func (l *NotifyLogic) matchForPatch(matchID string) (*ent.Match, error) {
 }
 
 func (l *NotifyLogic) patchMatchCards(m *ent.Match) error {
-	if m == nil || len(m.Edges.LarkMessages) == 0 {
+	if m == nil {
 		return nil
 	}
 	content, err := l.cardContent(m)
@@ -265,6 +265,9 @@ func (l *NotifyLogic) patchMatchCards(m *ent.Match) error {
 		if err := l.svcCtx.DB.LarkMessage.UpdateOneID(message.ID).SetCardPayload(contentMap).Exec(l.ctx); err != nil {
 			l.Error(errors.Wrap(err, "update lark card payload"))
 		}
+	}
+	if matchCardCompleted(m) {
+		l.pushResultWebhooks(m.ID, content)
 	}
 	return nil
 }
@@ -457,14 +460,21 @@ func (l *NotifyLogic) cardContent(m *ent.Match) (*utils.MatchCardContent, error)
 			BlueScore: fmt.Sprintf("%d", msg.BlueWinGameCount),
 		})
 	}
-	if len(rounds) > 0 && lo.EveryBy(rounds, func(item *ent.MatchRound) bool {
-		return item.Status == matchround.StatusENDED
-	}) {
+	if matchCardCompleted(m) {
 		content.Data.TemplateVariable.MatchProgress = "结束"
 		content.Data.TemplateVariable.Color = "green"
 	}
 	content.Data.TemplateVariable.Scores = lo.Uniq(content.Data.TemplateVariable.Scores)
 	return content, nil
+}
+
+func matchCardCompleted(m *ent.Match) bool {
+	if m == nil || len(m.Edges.Rounds) == 0 {
+		return false
+	}
+	return lo.EveryBy(m.Edges.Rounds, func(item *ent.MatchRound) bool {
+		return item.Status == matchround.StatusENDED
+	})
 }
 
 func toMap(v any) map[string]any {

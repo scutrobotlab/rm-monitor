@@ -7,7 +7,8 @@ type Config struct {
 		AppId     string
 		AppSecret string
 	}
-	RecordConf struct {
+	ResultWebhookURLs []string `json:",optional"`
+	RecordConf        struct {
 		BaseDir string
 	}
 	UploadConf struct {
