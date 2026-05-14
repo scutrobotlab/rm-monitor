@@ -13,7 +13,6 @@ import (
 	"scutbot.cn/web/rm-monitor/ent/mediaartifact"
 	"scutbot.cn/web/rm-monitor/ent/uploadtask"
 	"scutbot.cn/web/rm-monitor/pkg/bitableupload"
-	"scutbot.cn/web/rm-monitor/pkg/db"
 	"scutbot.cn/web/rm-monitor/pkg/kubejob"
 	"scutbot.cn/web/rm-monitor/pkg/logx"
 	"scutbot.cn/web/rm-monitor/uploader-dispatcher/internal/svc"
@@ -29,6 +28,7 @@ const dispatchingStaleAfter = 5 * time.Minute
 const tableCacheTTL = 24 * 3600
 const tableLockTTL = 30
 const uploadTaskCreateLockTTL = 120
+const uploadTaskPrepareLockTTL = 120
 
 func NewDispatchLogic(ctx context.Context, svcCtx *svc.ServiceContext) *DispatchLogic {
 	return &DispatchLogic{ctx: ctx, svcCtx: svcCtx, Logger: logx.WithContext(ctx)}
@@ -36,6 +36,9 @@ func NewDispatchLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Dispatch
 
 func (l *DispatchLogic) Tick() error {
 	if err := l.createUploadTasks(); err != nil {
+		return err
+	}
+	if err := l.prepareUploadTasks(); err != nil {
 		return err
 	}
 	if err := l.recoverDispatching(); err != nil {
@@ -105,33 +108,95 @@ func (l *DispatchLogic) createUploadTaskForArtifact(appToken string, artifact *e
 	if recordTask == nil || recordTask.Edges.MatchRound == nil || recordTask.Edges.MatchRound.Edges.Match == nil {
 		return false, nil
 	}
-	match := recordTask.Edges.MatchRound.Edges.Match
-	tableID, err := l.ensureTable(appToken, bitableupload.TableName(match.Event, match.Zone))
-	if err != nil {
-		return false, err
-	}
-	recordID, recordURL, err := l.createBitableRecord(appToken, tableID, artifact.ID, match, recordTask.Edges.MatchRound.RoundNo, recordTask.Role)
-	if err != nil {
-		return false, err
-	}
-	if err := l.svcCtx.DB.UploadTask.Create().
+	if _, err := l.svcCtx.DB.UploadTask.Create().
 		SetRecordTaskID(recordTask.ID).
 		SetSourceArtifactID(artifact.ID).
 		SetSourcePath(artifact.Path).
+		SetStatus(uploadtask.StatusPENDING).
+		Save(l.ctx); err != nil {
+		if ent.IsConstraintError(err) {
+			return false, nil
+		}
+		return false, errors.Wrap(err, "create upload task placeholder")
+	}
+	return true, nil
+}
+
+func (l *DispatchLogic) prepareUploadTasks() error {
+	conf := l.svcCtx.Config.UploadConf.WithDefaults()
+	tasks, err := l.svcCtx.DB.UploadTask.Query().
+		Where(
+			uploadtask.StatusEQ(uploadtask.StatusPENDING),
+			uploadtask.BitableRecordIDIsNil(),
+		).
+		WithSourceArtifact().
+		WithRecordTask(func(q *ent.RecordTaskQuery) {
+			q.WithMatchRound(func(q *ent.MatchRoundQuery) {
+				q.WithMatch(func(q *ent.MatchQuery) {
+					q.WithRedTeam().WithBlueTeam()
+				})
+			})
+		}).
+		Limit(100).
+		All(l.ctx)
+	if err != nil {
+		return errors.Wrap(err, "query upload tasks missing bitable context")
+	}
+	for _, task := range tasks {
+		if err := l.prepareUploadTask(conf.BitableAppToken, task); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (l *DispatchLogic) prepareUploadTask(appToken string, task *ent.UploadTask) error {
+	if task.Edges.SourceArtifact == nil || task.Edges.RecordTask == nil || task.Edges.RecordTask.Edges.MatchRound == nil || task.Edges.RecordTask.Edges.MatchRound.Edges.Match == nil {
+		return nil
+	}
+	lockKey := fmt.Sprintf("rm-monitor:upload-task:prepare:%d", task.ID)
+	locked, err := l.svcCtx.Redis.SetNXCtx(l.ctx, lockKey, "1", uploadTaskPrepareLockTTL)
+	if err != nil {
+		return errors.Wrap(err, "lock upload task preparation")
+	}
+	if !locked {
+		return nil
+	}
+	defer func() { _ = l.svcCtx.Redis.DelCtx(context.Background(), lockKey) }()
+
+	needsPrepare, err := l.svcCtx.DB.UploadTask.Query().
+		Where(uploadtask.ID(task.ID), uploadtask.BitableRecordIDIsNil()).
+		Exist(l.ctx)
+	if err != nil {
+		return errors.Wrap(err, "check upload task preparation")
+	}
+	if !needsPrepare {
+		return nil
+	}
+	recordTask := task.Edges.RecordTask
+	match := recordTask.Edges.MatchRound.Edges.Match
+	tableID, err := l.ensureTable(appToken, bitableupload.TableName(match.Event, match.Zone))
+	if err != nil {
+		return err
+	}
+	recordID, recordURL, err := l.createBitableRecord(appToken, tableID, task.Edges.SourceArtifact.ID, match, recordTask.Edges.MatchRound.RoundNo, recordTask.Role)
+	if err != nil {
+		return err
+	}
+	updated, err := l.svcCtx.DB.UploadTask.Update().
+		Where(uploadtask.ID(task.ID), uploadtask.BitableRecordIDIsNil()).
 		SetBitableAppToken(appToken).
 		SetBitableTableID(tableID).
 		SetBitableRecordID(recordID).
 		SetNillableBitableRecordURL(recordURL).
-		SetStatus(uploadtask.StatusPENDING).
-		OnConflictColumns(uploadtask.SourceArtifactColumn).
-		DoNothing().
-		Exec(l.ctx); err != nil {
-		if db.IsNoRows(err) {
-			return false, nil
-		}
-		return false, errors.Wrap(err, "create upload task")
+		Save(l.ctx)
+	if err != nil {
+		return errors.Wrap(err, "update upload task bitable context")
 	}
-	return true, nil
+	if updated == 0 {
+		return nil
+	}
+	return nil
 }
 
 func (l *DispatchLogic) ensureTable(appToken, tableName string) (string, error) {
@@ -449,7 +514,15 @@ func (l *DispatchLogic) dispatchPending() error {
 	if limit <= 0 {
 		return nil
 	}
-	tasks, err := l.svcCtx.DB.UploadTask.Query().Where(uploadtask.StatusEQ(uploadtask.StatusPENDING)).Limit(limit).All(l.ctx)
+	tasks, err := l.svcCtx.DB.UploadTask.Query().
+		Where(
+			uploadtask.StatusEQ(uploadtask.StatusPENDING),
+			uploadtask.BitableRecordIDNotNil(),
+			uploadtask.BitableTableIDNotNil(),
+			uploadtask.BitableAppTokenNotNil(),
+		).
+		Limit(limit).
+		All(l.ctx)
 	if err != nil {
 		return errors.Wrap(err, "query pending upload tasks")
 	}

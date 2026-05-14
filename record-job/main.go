@@ -71,6 +71,8 @@ func run(ctx context.Context, client *ent.Client, c config.Config, taskID int) e
 	if err := os.MkdirAll(filepath.Dir(fullPath), 0o755); err != nil {
 		return errors.Wrap(err, "create output dir")
 	}
+	partPath := fullPath + ".part"
+	_ = os.Remove(partPath)
 
 	jobCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -84,6 +86,8 @@ func run(ctx context.Context, client *ent.Client, c config.Config, taskID int) e
 	args := []string{
 		"-hide_banner",
 		"-loglevel", "info",
+		"-nostdin",
+		"-stats_period", "10",
 	}
 	if isNetworkSource(task.SourceURL) {
 		args = append(args,
@@ -91,6 +95,9 @@ func run(ctx context.Context, client *ent.Client, c config.Config, taskID int) e
 			"-rw_timeout", "15000000",
 			"-reconnect", "1",
 			"-reconnect_streamed", "1",
+			"-reconnect_on_network_error", "1",
+			"-reconnect_on_http_error", "429,500,502,503,504",
+			"-respect_retry_after", "1",
 			"-reconnect_delay_max", "5",
 		)
 	}
@@ -102,7 +109,7 @@ func run(ctx context.Context, client *ent.Client, c config.Config, taskID int) e
 		"-dn",
 		"-c:v", "copy",
 		"-f", "flv",
-		"-y", fullPath,
+		"-y", partPath,
 	)
 	cmd := exec.CommandContext(jobCtx, "ffmpeg", args...)
 	var stderr bytes.Buffer
@@ -146,6 +153,10 @@ func run(ctx context.Context, client *ent.Client, c config.Config, taskID int) e
 		}
 	}
 
+	if err := os.Rename(partPath, fullPath); err != nil {
+		_ = client.RecordTask.UpdateOneID(taskID).SetStatus(recordtask.StatusFAILED).SetErrorMessage(err.Error()).Exec(ctx)
+		return errors.Wrap(err, "commit output")
+	}
 	stat, statErr := os.Stat(fullPath)
 	if statErr != nil {
 		_ = client.RecordTask.UpdateOneID(taskID).SetStatus(recordtask.StatusFAILED).SetErrorMessage(statErr.Error()).Exec(ctx)
