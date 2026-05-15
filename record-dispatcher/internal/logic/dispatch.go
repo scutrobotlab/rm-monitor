@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"entgo.io/ent/dialect/sql"
 	"github.com/pkg/errors"
 	"scutbot.cn/web/rm-monitor/ent"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
@@ -136,6 +137,7 @@ func (l *DispatchLogic) createTasksForStartedRounds() error {
 				SetRole(role).
 				SetSourceURL(url).
 				SetOutputPath(output).
+				SetPriority(m.Priority).
 				SetStatus(recordtask.StatusPENDING).
 				OnConflictColumns(recordtask.MatchRoundColumn, recordtask.FieldRole).
 				DoNothing().
@@ -194,6 +196,7 @@ func (l *DispatchLogic) outputPath(conf common.RecordConf, m *ent.Match, roundNo
 func (l *DispatchLogic) dispatchPendingTasks() error {
 	tasks, err := l.svcCtx.DB.RecordTask.Query().
 		Where(recordtask.StatusEQ(recordtask.StatusPENDING)).
+		Order(recordtask.ByPriority(sql.OrderDesc()), recordtask.ByCreatedAt()).
 		Limit(20).
 		All(l.ctx)
 	if err != nil {

@@ -72,6 +72,20 @@ func (_c *UploadTaskCreate) SetNillableAttempts(v *int) *UploadTaskCreate {
 	return _c
 }
 
+// SetPriority sets the "priority" field.
+func (_c *UploadTaskCreate) SetPriority(v int) *UploadTaskCreate {
+	_c.mutation.SetPriority(v)
+	return _c
+}
+
+// SetNillablePriority sets the "priority" field if the given value is not nil.
+func (_c *UploadTaskCreate) SetNillablePriority(v *int) *UploadTaskCreate {
+	if v != nil {
+		_c.SetPriority(*v)
+	}
+	return _c
+}
+
 // SetBitableAppToken sets the "bitable_app_token" field.
 func (_c *UploadTaskCreate) SetBitableAppToken(v string) *UploadTaskCreate {
 	_c.mutation.SetBitableAppToken(v)
@@ -299,6 +313,10 @@ func (_c *UploadTaskCreate) defaults() {
 		v := uploadtask.DefaultAttempts
 		_c.mutation.SetAttempts(v)
 	}
+	if _, ok := _c.mutation.Priority(); !ok {
+		v := uploadtask.DefaultPriority
+		_c.mutation.SetPriority(v)
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		v := uploadtask.DefaultCreatedAt()
 		_c.mutation.SetCreatedAt(v)
@@ -324,6 +342,9 @@ func (_c *UploadTaskCreate) check() error {
 	}
 	if _, ok := _c.mutation.Attempts(); !ok {
 		return &ValidationError{Name: "attempts", err: errors.New(`ent: missing required field "UploadTask.attempts"`)}
+	}
+	if _, ok := _c.mutation.Priority(); !ok {
+		return &ValidationError{Name: "priority", err: errors.New(`ent: missing required field "UploadTask.priority"`)}
 	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "UploadTask.created_at"`)}
@@ -376,6 +397,10 @@ func (_c *UploadTaskCreate) createSpec() (*UploadTask, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Attempts(); ok {
 		_spec.SetField(uploadtask.FieldAttempts, field.TypeInt, value)
 		_node.Attempts = value
+	}
+	if value, ok := _c.mutation.Priority(); ok {
+		_spec.SetField(uploadtask.FieldPriority, field.TypeInt, value)
+		_node.Priority = value
 	}
 	if value, ok := _c.mutation.BitableAppToken(); ok {
 		_spec.SetField(uploadtask.FieldBitableAppToken, field.TypeString, value)
@@ -564,6 +589,24 @@ func (u *UploadTaskUpsert) UpdateAttempts() *UploadTaskUpsert {
 // AddAttempts adds v to the "attempts" field.
 func (u *UploadTaskUpsert) AddAttempts(v int) *UploadTaskUpsert {
 	u.Add(uploadtask.FieldAttempts, v)
+	return u
+}
+
+// SetPriority sets the "priority" field.
+func (u *UploadTaskUpsert) SetPriority(v int) *UploadTaskUpsert {
+	u.Set(uploadtask.FieldPriority, v)
+	return u
+}
+
+// UpdatePriority sets the "priority" field to the value that was provided on create.
+func (u *UploadTaskUpsert) UpdatePriority() *UploadTaskUpsert {
+	u.SetExcluded(uploadtask.FieldPriority)
+	return u
+}
+
+// AddPriority adds v to the "priority" field.
+func (u *UploadTaskUpsert) AddPriority(v int) *UploadTaskUpsert {
+	u.Add(uploadtask.FieldPriority, v)
 	return u
 }
 
@@ -853,6 +896,27 @@ func (u *UploadTaskUpsertOne) AddAttempts(v int) *UploadTaskUpsertOne {
 func (u *UploadTaskUpsertOne) UpdateAttempts() *UploadTaskUpsertOne {
 	return u.Update(func(s *UploadTaskUpsert) {
 		s.UpdateAttempts()
+	})
+}
+
+// SetPriority sets the "priority" field.
+func (u *UploadTaskUpsertOne) SetPriority(v int) *UploadTaskUpsertOne {
+	return u.Update(func(s *UploadTaskUpsert) {
+		s.SetPriority(v)
+	})
+}
+
+// AddPriority adds v to the "priority" field.
+func (u *UploadTaskUpsertOne) AddPriority(v int) *UploadTaskUpsertOne {
+	return u.Update(func(s *UploadTaskUpsert) {
+		s.AddPriority(v)
+	})
+}
+
+// UpdatePriority sets the "priority" field to the value that was provided on create.
+func (u *UploadTaskUpsertOne) UpdatePriority() *UploadTaskUpsertOne {
+	return u.Update(func(s *UploadTaskUpsert) {
+		s.UpdatePriority()
 	})
 }
 
@@ -1337,6 +1401,27 @@ func (u *UploadTaskUpsertBulk) AddAttempts(v int) *UploadTaskUpsertBulk {
 func (u *UploadTaskUpsertBulk) UpdateAttempts() *UploadTaskUpsertBulk {
 	return u.Update(func(s *UploadTaskUpsert) {
 		s.UpdateAttempts()
+	})
+}
+
+// SetPriority sets the "priority" field.
+func (u *UploadTaskUpsertBulk) SetPriority(v int) *UploadTaskUpsertBulk {
+	return u.Update(func(s *UploadTaskUpsert) {
+		s.SetPriority(v)
+	})
+}
+
+// AddPriority adds v to the "priority" field.
+func (u *UploadTaskUpsertBulk) AddPriority(v int) *UploadTaskUpsertBulk {
+	return u.Update(func(s *UploadTaskUpsert) {
+		s.AddPriority(v)
+	})
+}
+
+// UpdatePriority sets the "priority" field to the value that was provided on create.
+func (u *UploadTaskUpsertBulk) UpdatePriority() *UploadTaskUpsertBulk {
+	return u.Update(func(s *UploadTaskUpsert) {
+		s.UpdatePriority()
 	})
 }
 

@@ -135,6 +135,27 @@ func (_u *MatchUpdate) AddTotalRounds(v int) *MatchUpdate {
 	return _u
 }
 
+// SetPriority sets the "priority" field.
+func (_u *MatchUpdate) SetPriority(v int) *MatchUpdate {
+	_u.mutation.ResetPriority()
+	_u.mutation.SetPriority(v)
+	return _u
+}
+
+// SetNillablePriority sets the "priority" field if the given value is not nil.
+func (_u *MatchUpdate) SetNillablePriority(v *int) *MatchUpdate {
+	if v != nil {
+		_u.SetPriority(*v)
+	}
+	return _u
+}
+
+// AddPriority adds value to the "priority" field.
+func (_u *MatchUpdate) AddPriority(v int) *MatchUpdate {
+	_u.mutation.AddPriority(v)
+	return _u
+}
+
 // SetLatestStatus sets the "latest_status" field.
 func (_u *MatchUpdate) SetLatestStatus(v string) *MatchUpdate {
 	_u.mutation.SetLatestStatus(v)
@@ -351,6 +372,12 @@ func (_u *MatchUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.AddedTotalRounds(); ok {
 		_spec.AddField(match.FieldTotalRounds, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.Priority(); ok {
+		_spec.SetField(match.FieldPriority, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedPriority(); ok {
+		_spec.AddField(match.FieldPriority, field.TypeInt, value)
 	}
 	if value, ok := _u.mutation.LatestStatus(); ok {
 		_spec.SetField(match.FieldLatestStatus, field.TypeString, value)
@@ -630,6 +657,27 @@ func (_u *MatchUpdateOne) AddTotalRounds(v int) *MatchUpdateOne {
 	return _u
 }
 
+// SetPriority sets the "priority" field.
+func (_u *MatchUpdateOne) SetPriority(v int) *MatchUpdateOne {
+	_u.mutation.ResetPriority()
+	_u.mutation.SetPriority(v)
+	return _u
+}
+
+// SetNillablePriority sets the "priority" field if the given value is not nil.
+func (_u *MatchUpdateOne) SetNillablePriority(v *int) *MatchUpdateOne {
+	if v != nil {
+		_u.SetPriority(*v)
+	}
+	return _u
+}
+
+// AddPriority adds value to the "priority" field.
+func (_u *MatchUpdateOne) AddPriority(v int) *MatchUpdateOne {
+	_u.mutation.AddPriority(v)
+	return _u
+}
+
 // SetLatestStatus sets the "latest_status" field.
 func (_u *MatchUpdateOne) SetLatestStatus(v string) *MatchUpdateOne {
 	_u.mutation.SetLatestStatus(v)
@@ -876,6 +924,12 @@ func (_u *MatchUpdateOne) sqlSave(ctx context.Context) (_node *Match, err error)
 	}
 	if value, ok := _u.mutation.AddedTotalRounds(); ok {
 		_spec.AddField(match.FieldTotalRounds, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.Priority(); ok {
+		_spec.SetField(match.FieldPriority, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedPriority(); ok {
+		_spec.AddField(match.FieldPriority, field.TypeInt, value)
 	}
 	if value, ok := _u.mutation.LatestStatus(); ok {
 		_spec.SetField(match.FieldLatestStatus, field.TypeString, value)

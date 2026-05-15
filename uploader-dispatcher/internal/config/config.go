@@ -8,4 +8,5 @@ type Config struct {
 	LarkConf     common.LarkConf
 	UploadConf   common.UploadConf
 	K8sJobConf   common.K8sJobConf
+	Priority     []common.PriorityItem `json:",optional"`
 }

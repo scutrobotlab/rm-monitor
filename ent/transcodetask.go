@@ -24,6 +24,8 @@ type TranscodeTask struct {
 	K8sJobName *string `json:"k8s_job_name,omitempty"`
 	// Attempts holds the value of the "attempts" field.
 	Attempts int `json:"attempts,omitempty"`
+	// Priority holds the value of the "priority" field.
+	Priority int `json:"priority,omitempty"`
 	// ErrorMessage holds the value of the "error_message" field.
 	ErrorMessage *string `json:"error_message,omitempty"`
 	// StartedAt holds the value of the "started_at" field.
@@ -80,7 +82,7 @@ func (*TranscodeTask) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case transcodetask.FieldID, transcodetask.FieldAttempts:
+		case transcodetask.FieldID, transcodetask.FieldAttempts, transcodetask.FieldPriority:
 			values[i] = new(sql.NullInt64)
 		case transcodetask.FieldStatus, transcodetask.FieldK8sJobName, transcodetask.FieldErrorMessage:
 			values[i] = new(sql.NullString)
@@ -129,6 +131,12 @@ func (_m *TranscodeTask) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field attempts", values[i])
 			} else if value.Valid {
 				_m.Attempts = int(value.Int64)
+			}
+		case transcodetask.FieldPriority:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field priority", values[i])
+			} else if value.Valid {
+				_m.Priority = int(value.Int64)
 			}
 		case transcodetask.FieldErrorMessage:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -233,6 +241,9 @@ func (_m *TranscodeTask) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("attempts=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Attempts))
+	builder.WriteString(", ")
+	builder.WriteString("priority=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Priority))
 	builder.WriteString(", ")
 	if v := _m.ErrorMessage; v != nil {
 		builder.WriteString("error_message=")

@@ -8,4 +8,5 @@ type Config struct {
 	MonitorConf  common.MonitorConf
 	PostgresConf common.PostgresConf
 	RedisConf    common.RedisConf
+	Priority     []common.PriorityItem `json:",optional"`
 }

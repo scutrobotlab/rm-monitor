@@ -99,6 +99,27 @@ func (_u *UploadTaskUpdate) AddAttempts(v int) *UploadTaskUpdate {
 	return _u
 }
 
+// SetPriority sets the "priority" field.
+func (_u *UploadTaskUpdate) SetPriority(v int) *UploadTaskUpdate {
+	_u.mutation.ResetPriority()
+	_u.mutation.SetPriority(v)
+	return _u
+}
+
+// SetNillablePriority sets the "priority" field if the given value is not nil.
+func (_u *UploadTaskUpdate) SetNillablePriority(v *int) *UploadTaskUpdate {
+	if v != nil {
+		_u.SetPriority(*v)
+	}
+	return _u
+}
+
+// AddPriority adds value to the "priority" field.
+func (_u *UploadTaskUpdate) AddPriority(v int) *UploadTaskUpdate {
+	_u.mutation.AddPriority(v)
+	return _u
+}
+
 // SetBitableAppToken sets the "bitable_app_token" field.
 func (_u *UploadTaskUpdate) SetBitableAppToken(v string) *UploadTaskUpdate {
 	_u.mutation.SetBitableAppToken(v)
@@ -411,6 +432,12 @@ func (_u *UploadTaskUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	if value, ok := _u.mutation.AddedAttempts(); ok {
 		_spec.AddField(uploadtask.FieldAttempts, field.TypeInt, value)
 	}
+	if value, ok := _u.mutation.Priority(); ok {
+		_spec.SetField(uploadtask.FieldPriority, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedPriority(); ok {
+		_spec.AddField(uploadtask.FieldPriority, field.TypeInt, value)
+	}
 	if value, ok := _u.mutation.BitableAppToken(); ok {
 		_spec.SetField(uploadtask.FieldBitableAppToken, field.TypeString, value)
 	}
@@ -612,6 +639,27 @@ func (_u *UploadTaskUpdateOne) SetNillableAttempts(v *int) *UploadTaskUpdateOne 
 // AddAttempts adds value to the "attempts" field.
 func (_u *UploadTaskUpdateOne) AddAttempts(v int) *UploadTaskUpdateOne {
 	_u.mutation.AddAttempts(v)
+	return _u
+}
+
+// SetPriority sets the "priority" field.
+func (_u *UploadTaskUpdateOne) SetPriority(v int) *UploadTaskUpdateOne {
+	_u.mutation.ResetPriority()
+	_u.mutation.SetPriority(v)
+	return _u
+}
+
+// SetNillablePriority sets the "priority" field if the given value is not nil.
+func (_u *UploadTaskUpdateOne) SetNillablePriority(v *int) *UploadTaskUpdateOne {
+	if v != nil {
+		_u.SetPriority(*v)
+	}
+	return _u
+}
+
+// AddPriority adds value to the "priority" field.
+func (_u *UploadTaskUpdateOne) AddPriority(v int) *UploadTaskUpdateOne {
+	_u.mutation.AddPriority(v)
 	return _u
 }
 
@@ -956,6 +1004,12 @@ func (_u *UploadTaskUpdateOne) sqlSave(ctx context.Context) (_node *UploadTask, 
 	}
 	if value, ok := _u.mutation.AddedAttempts(); ok {
 		_spec.AddField(uploadtask.FieldAttempts, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.Priority(); ok {
+		_spec.SetField(uploadtask.FieldPriority, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedPriority(); ok {
+		_spec.AddField(uploadtask.FieldPriority, field.TypeInt, value)
 	}
 	if value, ok := _u.mutation.BitableAppToken(); ok {
 		_spec.SetField(uploadtask.FieldBitableAppToken, field.TypeString, value)

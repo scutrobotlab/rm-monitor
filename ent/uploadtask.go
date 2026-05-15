@@ -27,6 +27,8 @@ type UploadTask struct {
 	K8sJobName *string `json:"k8s_job_name,omitempty"`
 	// Attempts holds the value of the "attempts" field.
 	Attempts int `json:"attempts,omitempty"`
+	// Priority holds the value of the "priority" field.
+	Priority int `json:"priority,omitempty"`
 	// BitableAppToken holds the value of the "bitable_app_token" field.
 	BitableAppToken *string `json:"bitable_app_token,omitempty"`
 	// BitableTableID holds the value of the "bitable_table_id" field.
@@ -95,7 +97,7 @@ func (*UploadTask) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case uploadtask.FieldID, uploadtask.FieldAttempts:
+		case uploadtask.FieldID, uploadtask.FieldAttempts, uploadtask.FieldPriority:
 			values[i] = new(sql.NullInt64)
 		case uploadtask.FieldSourcePath, uploadtask.FieldStatus, uploadtask.FieldK8sJobName, uploadtask.FieldBitableAppToken, uploadtask.FieldBitableTableID, uploadtask.FieldBitableRecordID, uploadtask.FieldBitableRecordURL, uploadtask.FieldAttachmentFileToken, uploadtask.FieldErrorMessage:
 			values[i] = new(sql.NullString)
@@ -150,6 +152,12 @@ func (_m *UploadTask) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field attempts", values[i])
 			} else if value.Valid {
 				_m.Attempts = int(value.Int64)
+			}
+		case uploadtask.FieldPriority:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field priority", values[i])
+			} else if value.Valid {
+				_m.Priority = int(value.Int64)
 			}
 		case uploadtask.FieldBitableAppToken:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -299,6 +307,9 @@ func (_m *UploadTask) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("attempts=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Attempts))
+	builder.WriteString(", ")
+	builder.WriteString("priority=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Priority))
 	builder.WriteString(", ")
 	if v := _m.BitableAppToken; v != nil {
 		builder.WriteString("bitable_app_token=")

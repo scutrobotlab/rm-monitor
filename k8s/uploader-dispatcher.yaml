@@ -24,6 +24,7 @@ data:
       RecordsPVC: rm-monitor-records
       RecordsMountPath: /records
       TTLSecondsAfterFinished: 86400
+    Priority: []
 ---
 apiVersion: v1
 kind: ConfigMap

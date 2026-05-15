@@ -80,6 +80,11 @@ func Attempts(v int) predicate.RecordTask {
 	return predicate.RecordTask(sql.FieldEQ(FieldAttempts, v))
 }
 
+// Priority applies equality check predicate on the "priority" field. It's identical to PriorityEQ.
+func Priority(v int) predicate.RecordTask {
+	return predicate.RecordTask(sql.FieldEQ(FieldPriority, v))
+}
+
 // FileSize applies equality check predicate on the "file_size" field. It's identical to FileSizeEQ.
 func FileSize(v int64) predicate.RecordTask {
 	return predicate.RecordTask(sql.FieldEQ(FieldFileSize, v))
@@ -443,6 +448,46 @@ func AttemptsLT(v int) predicate.RecordTask {
 // AttemptsLTE applies the LTE predicate on the "attempts" field.
 func AttemptsLTE(v int) predicate.RecordTask {
 	return predicate.RecordTask(sql.FieldLTE(FieldAttempts, v))
+}
+
+// PriorityEQ applies the EQ predicate on the "priority" field.
+func PriorityEQ(v int) predicate.RecordTask {
+	return predicate.RecordTask(sql.FieldEQ(FieldPriority, v))
+}
+
+// PriorityNEQ applies the NEQ predicate on the "priority" field.
+func PriorityNEQ(v int) predicate.RecordTask {
+	return predicate.RecordTask(sql.FieldNEQ(FieldPriority, v))
+}
+
+// PriorityIn applies the In predicate on the "priority" field.
+func PriorityIn(vs ...int) predicate.RecordTask {
+	return predicate.RecordTask(sql.FieldIn(FieldPriority, vs...))
+}
+
+// PriorityNotIn applies the NotIn predicate on the "priority" field.
+func PriorityNotIn(vs ...int) predicate.RecordTask {
+	return predicate.RecordTask(sql.FieldNotIn(FieldPriority, vs...))
+}
+
+// PriorityGT applies the GT predicate on the "priority" field.
+func PriorityGT(v int) predicate.RecordTask {
+	return predicate.RecordTask(sql.FieldGT(FieldPriority, v))
+}
+
+// PriorityGTE applies the GTE predicate on the "priority" field.
+func PriorityGTE(v int) predicate.RecordTask {
+	return predicate.RecordTask(sql.FieldGTE(FieldPriority, v))
+}
+
+// PriorityLT applies the LT predicate on the "priority" field.
+func PriorityLT(v int) predicate.RecordTask {
+	return predicate.RecordTask(sql.FieldLT(FieldPriority, v))
+}
+
+// PriorityLTE applies the LTE predicate on the "priority" field.
+func PriorityLTE(v int) predicate.RecordTask {
+	return predicate.RecordTask(sql.FieldLTE(FieldPriority, v))
 }
 
 // FileSizeEQ applies the EQ predicate on the "file_size" field.

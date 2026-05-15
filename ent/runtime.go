@@ -42,16 +42,20 @@ func init() {
 	matchDescTotalRounds := matchFields[6].Descriptor()
 	// match.DefaultTotalRounds holds the default value on creation for the total_rounds field.
 	match.DefaultTotalRounds = matchDescTotalRounds.Default.(int)
+	// matchDescPriority is the schema descriptor for priority field.
+	matchDescPriority := matchFields[7].Descriptor()
+	// match.DefaultPriority holds the default value on creation for the priority field.
+	match.DefaultPriority = matchDescPriority.Default.(int)
 	// matchDescLatestStatus is the schema descriptor for latest_status field.
-	matchDescLatestStatus := matchFields[7].Descriptor()
+	matchDescLatestStatus := matchFields[8].Descriptor()
 	// match.DefaultLatestStatus holds the default value on creation for the latest_status field.
 	match.DefaultLatestStatus = matchDescLatestStatus.Default.(string)
 	// matchDescCreatedAt is the schema descriptor for created_at field.
-	matchDescCreatedAt := matchFields[8].Descriptor()
+	matchDescCreatedAt := matchFields[9].Descriptor()
 	// match.DefaultCreatedAt holds the default value on creation for the created_at field.
 	match.DefaultCreatedAt = matchDescCreatedAt.Default.(func() time.Time)
 	// matchDescUpdatedAt is the schema descriptor for updated_at field.
-	matchDescUpdatedAt := matchFields[9].Descriptor()
+	matchDescUpdatedAt := matchFields[10].Descriptor()
 	// match.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	match.DefaultUpdatedAt = matchDescUpdatedAt.Default.(func() time.Time)
 	// match.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
@@ -90,12 +94,16 @@ func init() {
 	recordtaskDescAttempts := recordtaskFields[5].Descriptor()
 	// recordtask.DefaultAttempts holds the default value on creation for the attempts field.
 	recordtask.DefaultAttempts = recordtaskDescAttempts.Default.(int)
+	// recordtaskDescPriority is the schema descriptor for priority field.
+	recordtaskDescPriority := recordtaskFields[6].Descriptor()
+	// recordtask.DefaultPriority holds the default value on creation for the priority field.
+	recordtask.DefaultPriority = recordtaskDescPriority.Default.(int)
 	// recordtaskDescCreatedAt is the schema descriptor for created_at field.
-	recordtaskDescCreatedAt := recordtaskFields[11].Descriptor()
+	recordtaskDescCreatedAt := recordtaskFields[12].Descriptor()
 	// recordtask.DefaultCreatedAt holds the default value on creation for the created_at field.
 	recordtask.DefaultCreatedAt = recordtaskDescCreatedAt.Default.(func() time.Time)
 	// recordtaskDescUpdatedAt is the schema descriptor for updated_at field.
-	recordtaskDescUpdatedAt := recordtaskFields[12].Descriptor()
+	recordtaskDescUpdatedAt := recordtaskFields[13].Descriptor()
 	// recordtask.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	recordtask.DefaultUpdatedAt = recordtaskDescUpdatedAt.Default.(func() time.Time)
 	// recordtask.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
@@ -130,12 +138,16 @@ func init() {
 	transcodetaskDescAttempts := transcodetaskFields[2].Descriptor()
 	// transcodetask.DefaultAttempts holds the default value on creation for the attempts field.
 	transcodetask.DefaultAttempts = transcodetaskDescAttempts.Default.(int)
+	// transcodetaskDescPriority is the schema descriptor for priority field.
+	transcodetaskDescPriority := transcodetaskFields[3].Descriptor()
+	// transcodetask.DefaultPriority holds the default value on creation for the priority field.
+	transcodetask.DefaultPriority = transcodetaskDescPriority.Default.(int)
 	// transcodetaskDescCreatedAt is the schema descriptor for created_at field.
-	transcodetaskDescCreatedAt := transcodetaskFields[6].Descriptor()
+	transcodetaskDescCreatedAt := transcodetaskFields[7].Descriptor()
 	// transcodetask.DefaultCreatedAt holds the default value on creation for the created_at field.
 	transcodetask.DefaultCreatedAt = transcodetaskDescCreatedAt.Default.(func() time.Time)
 	// transcodetaskDescUpdatedAt is the schema descriptor for updated_at field.
-	transcodetaskDescUpdatedAt := transcodetaskFields[7].Descriptor()
+	transcodetaskDescUpdatedAt := transcodetaskFields[8].Descriptor()
 	// transcodetask.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	transcodetask.DefaultUpdatedAt = transcodetaskDescUpdatedAt.Default.(func() time.Time)
 	// transcodetask.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
@@ -146,12 +158,16 @@ func init() {
 	uploadtaskDescAttempts := uploadtaskFields[3].Descriptor()
 	// uploadtask.DefaultAttempts holds the default value on creation for the attempts field.
 	uploadtask.DefaultAttempts = uploadtaskDescAttempts.Default.(int)
+	// uploadtaskDescPriority is the schema descriptor for priority field.
+	uploadtaskDescPriority := uploadtaskFields[4].Descriptor()
+	// uploadtask.DefaultPriority holds the default value on creation for the priority field.
+	uploadtask.DefaultPriority = uploadtaskDescPriority.Default.(int)
 	// uploadtaskDescCreatedAt is the schema descriptor for created_at field.
-	uploadtaskDescCreatedAt := uploadtaskFields[13].Descriptor()
+	uploadtaskDescCreatedAt := uploadtaskFields[14].Descriptor()
 	// uploadtask.DefaultCreatedAt holds the default value on creation for the created_at field.
 	uploadtask.DefaultCreatedAt = uploadtaskDescCreatedAt.Default.(func() time.Time)
 	// uploadtaskDescUpdatedAt is the schema descriptor for updated_at field.
-	uploadtaskDescUpdatedAt := uploadtaskFields[14].Descriptor()
+	uploadtaskDescUpdatedAt := uploadtaskFields[15].Descriptor()
 	// uploadtask.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	uploadtask.DefaultUpdatedAt = uploadtaskDescUpdatedAt.Default.(func() time.Time)
 	// uploadtask.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.

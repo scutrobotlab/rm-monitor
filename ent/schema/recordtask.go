@@ -21,6 +21,7 @@ func (RecordTask) Fields() []ent.Field {
 		field.Enum("status").Values("PENDING", "DISPATCHING", "RUNNING", "SUCCEEDED", "FAILED", "CANCEL_REQUESTED", "CANCELED").Default("PENDING"),
 		field.String("k8s_job_name").Optional().Nillable(),
 		field.Int("attempts").Default(0),
+		field.Int("priority").Default(0),
 		field.Int64("file_size").Optional().Nillable(),
 		field.String("checksum").Optional().Nillable(),
 		field.String("error_message").Optional().Nillable(),
@@ -43,5 +44,6 @@ func (RecordTask) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Edges("match_round").Fields("role").Unique(),
 		index.Fields("status"),
+		index.Fields("status", "priority", "created_at"),
 	}
 }

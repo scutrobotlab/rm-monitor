@@ -26,6 +26,8 @@ const (
 	FieldMatchSlug = "match_slug"
 	// FieldTotalRounds holds the string denoting the total_rounds field in the database.
 	FieldTotalRounds = "total_rounds"
+	// FieldPriority holds the string denoting the priority field in the database.
+	FieldPriority = "priority"
 	// FieldLatestStatus holds the string denoting the latest_status field in the database.
 	FieldLatestStatus = "latest_status"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
@@ -81,6 +83,7 @@ var Columns = []string{
 	FieldMatchType,
 	FieldMatchSlug,
 	FieldTotalRounds,
+	FieldPriority,
 	FieldLatestStatus,
 	FieldCreatedAt,
 	FieldUpdatedAt,
@@ -113,6 +116,8 @@ var (
 	DefaultMatchType string
 	// DefaultTotalRounds holds the default value on creation for the "total_rounds" field.
 	DefaultTotalRounds int
+	// DefaultPriority holds the default value on creation for the "priority" field.
+	DefaultPriority int
 	// DefaultLatestStatus holds the default value on creation for the "latest_status" field.
 	DefaultLatestStatus string
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
@@ -159,6 +164,11 @@ func ByMatchSlug(opts ...sql.OrderTermOption) OrderOption {
 // ByTotalRounds orders the results by the total_rounds field.
 func ByTotalRounds(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldTotalRounds, opts...).ToFunc()
+}
+
+// ByPriority orders the results by the priority field.
+func ByPriority(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPriority, opts...).ToFunc()
 }
 
 // ByLatestStatus orders the results by the latest_status field.

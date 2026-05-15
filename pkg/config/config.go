@@ -9,6 +9,11 @@ type PostgresConf struct {
 
 type RedisConf = redisx.Conf
 
+type PriorityItem struct {
+	School   string `json:",optional"`
+	Priority int    `json:",optional"`
+}
+
 type MonitorConf struct {
 	ScheduleURL string `json:",optional"`
 }

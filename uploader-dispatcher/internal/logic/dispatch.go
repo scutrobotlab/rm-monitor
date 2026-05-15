@@ -8,11 +8,13 @@ import (
 	"strings"
 	"time"
 
+	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
 	larkbitable "github.com/larksuite/oapi-sdk-go/v3/service/bitable/v1"
 	"github.com/pkg/errors"
 	"scutbot.cn/web/rm-monitor/ent"
 	"scutbot.cn/web/rm-monitor/ent/mediaartifact"
+	"scutbot.cn/web/rm-monitor/ent/recordtask"
 	"scutbot.cn/web/rm-monitor/ent/uploadtask"
 	"scutbot.cn/web/rm-monitor/pkg/bitableupload"
 	"scutbot.cn/web/rm-monitor/pkg/kubejob"
@@ -68,6 +70,7 @@ func (l *DispatchLogic) createUploadTasks() error {
 				})
 			})
 		}).
+		Order(mediaartifact.ByRecordTaskField(recordtask.FieldPriority, sql.OrderDesc()), mediaartifact.ByCreatedAt()).
 		Limit(100).
 		All(l.ctx)
 	if err != nil {
@@ -114,6 +117,7 @@ func (l *DispatchLogic) createUploadTaskForArtifact(appToken string, artifact *e
 		SetRecordTaskID(recordTask.ID).
 		SetSourceArtifactID(artifact.ID).
 		SetSourcePath(artifact.Path).
+		SetPriority(recordTask.Priority).
 		SetStatus(uploadtask.StatusPENDING).
 		Save(l.ctx); err != nil {
 		if ent.IsConstraintError(err) {
@@ -139,6 +143,7 @@ func (l *DispatchLogic) prepareUploadTasks() error {
 				})
 			})
 		}).
+		Order(uploadtask.ByPriority(sql.OrderDesc()), uploadtask.ByCreatedAt()).
 		Limit(100).
 		All(l.ctx)
 	if err != nil {
@@ -536,6 +541,7 @@ func (l *DispatchLogic) dispatchPending() error {
 			uploadtask.BitableTableIDNotNil(),
 			uploadtask.BitableAppTokenNotNil(),
 		).
+		Order(uploadtask.ByPriority(sql.OrderDesc()), uploadtask.ByCreatedAt()).
 		Limit(limit).
 		All(l.ctx)
 	if err != nil {

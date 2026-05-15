@@ -86,6 +86,20 @@ func (_c *MatchCreate) SetNillableTotalRounds(v *int) *MatchCreate {
 	return _c
 }
 
+// SetPriority sets the "priority" field.
+func (_c *MatchCreate) SetPriority(v int) *MatchCreate {
+	_c.mutation.SetPriority(v)
+	return _c
+}
+
+// SetNillablePriority sets the "priority" field if the given value is not nil.
+func (_c *MatchCreate) SetNillablePriority(v *int) *MatchCreate {
+	if v != nil {
+		_c.SetPriority(*v)
+	}
+	return _c
+}
+
 // SetLatestStatus sets the "latest_status" field.
 func (_c *MatchCreate) SetLatestStatus(v string) *MatchCreate {
 	_c.mutation.SetLatestStatus(v)
@@ -229,6 +243,10 @@ func (_c *MatchCreate) defaults() {
 		v := match.DefaultTotalRounds
 		_c.mutation.SetTotalRounds(v)
 	}
+	if _, ok := _c.mutation.Priority(); !ok {
+		v := match.DefaultPriority
+		_c.mutation.SetPriority(v)
+	}
 	if _, ok := _c.mutation.LatestStatus(); !ok {
 		v := match.DefaultLatestStatus
 		_c.mutation.SetLatestStatus(v)
@@ -259,6 +277,9 @@ func (_c *MatchCreate) check() error {
 	}
 	if _, ok := _c.mutation.TotalRounds(); !ok {
 		return &ValidationError{Name: "total_rounds", err: errors.New(`ent: missing required field "Match.total_rounds"`)}
+	}
+	if _, ok := _c.mutation.Priority(); !ok {
+		return &ValidationError{Name: "priority", err: errors.New(`ent: missing required field "Match.priority"`)}
 	}
 	if _, ok := _c.mutation.LatestStatus(); !ok {
 		return &ValidationError{Name: "latest_status", err: errors.New(`ent: missing required field "Match.latest_status"`)}
@@ -334,6 +355,10 @@ func (_c *MatchCreate) createSpec() (*Match, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.TotalRounds(); ok {
 		_spec.SetField(match.FieldTotalRounds, field.TypeInt, value)
 		_node.TotalRounds = value
+	}
+	if value, ok := _c.mutation.Priority(); ok {
+		_spec.SetField(match.FieldPriority, field.TypeInt, value)
+		_node.Priority = value
 	}
 	if value, ok := _c.mutation.LatestStatus(); ok {
 		_spec.SetField(match.FieldLatestStatus, field.TypeString, value)
@@ -555,6 +580,24 @@ func (u *MatchUpsert) AddTotalRounds(v int) *MatchUpsert {
 	return u
 }
 
+// SetPriority sets the "priority" field.
+func (u *MatchUpsert) SetPriority(v int) *MatchUpsert {
+	u.Set(match.FieldPriority, v)
+	return u
+}
+
+// UpdatePriority sets the "priority" field to the value that was provided on create.
+func (u *MatchUpsert) UpdatePriority() *MatchUpsert {
+	u.SetExcluded(match.FieldPriority)
+	return u
+}
+
+// AddPriority adds v to the "priority" field.
+func (u *MatchUpsert) AddPriority(v int) *MatchUpsert {
+	u.Add(match.FieldPriority, v)
+	return u
+}
+
 // SetLatestStatus sets the "latest_status" field.
 func (u *MatchUpsert) SetLatestStatus(v string) *MatchUpsert {
 	u.Set(match.FieldLatestStatus, v)
@@ -732,6 +775,27 @@ func (u *MatchUpsertOne) AddTotalRounds(v int) *MatchUpsertOne {
 func (u *MatchUpsertOne) UpdateTotalRounds() *MatchUpsertOne {
 	return u.Update(func(s *MatchUpsert) {
 		s.UpdateTotalRounds()
+	})
+}
+
+// SetPriority sets the "priority" field.
+func (u *MatchUpsertOne) SetPriority(v int) *MatchUpsertOne {
+	return u.Update(func(s *MatchUpsert) {
+		s.SetPriority(v)
+	})
+}
+
+// AddPriority adds v to the "priority" field.
+func (u *MatchUpsertOne) AddPriority(v int) *MatchUpsertOne {
+	return u.Update(func(s *MatchUpsert) {
+		s.AddPriority(v)
+	})
+}
+
+// UpdatePriority sets the "priority" field to the value that was provided on create.
+func (u *MatchUpsertOne) UpdatePriority() *MatchUpsertOne {
+	return u.Update(func(s *MatchUpsert) {
+		s.UpdatePriority()
 	})
 }
 
@@ -1083,6 +1147,27 @@ func (u *MatchUpsertBulk) AddTotalRounds(v int) *MatchUpsertBulk {
 func (u *MatchUpsertBulk) UpdateTotalRounds() *MatchUpsertBulk {
 	return u.Update(func(s *MatchUpsert) {
 		s.UpdateTotalRounds()
+	})
+}
+
+// SetPriority sets the "priority" field.
+func (u *MatchUpsertBulk) SetPriority(v int) *MatchUpsertBulk {
+	return u.Update(func(s *MatchUpsert) {
+		s.SetPriority(v)
+	})
+}
+
+// AddPriority adds v to the "priority" field.
+func (u *MatchUpsertBulk) AddPriority(v int) *MatchUpsertBulk {
+	return u.Update(func(s *MatchUpsert) {
+		s.AddPriority(v)
+	})
+}
+
+// UpdatePriority sets the "priority" field to the value that was provided on create.
+func (u *MatchUpsertBulk) UpdatePriority() *MatchUpsertBulk {
+	return u.Update(func(s *MatchUpsert) {
+		s.UpdatePriority()
 	})
 }
 

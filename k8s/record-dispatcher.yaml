@@ -32,6 +32,7 @@ data:
       RecordsMountPath: /records
       ImagePullPolicy: Always
       TTLSecondsAfterFinished: 86400
+    Priority: []
 ---
 apiVersion: v1
 kind: ConfigMap

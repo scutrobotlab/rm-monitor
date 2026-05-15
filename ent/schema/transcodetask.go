@@ -18,6 +18,7 @@ func (TranscodeTask) Fields() []ent.Field {
 		field.Enum("status").Values("PENDING", "DISPATCHING", "RUNNING", "SUCCEEDED", "FAILED").Default("PENDING"),
 		field.String("k8s_job_name").Optional().Nillable(),
 		field.Int("attempts").Default(0),
+		field.Int("priority").Default(0),
 		field.String("error_message").Optional().Nillable(),
 		field.Time("started_at").Optional().Nillable(),
 		field.Time("completed_at").Optional().Nillable(),
@@ -37,5 +38,6 @@ func (TranscodeTask) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Edges("source_artifact").Unique(),
 		index.Fields("status"),
+		index.Fields("status", "priority", "created_at"),
 	}
 }

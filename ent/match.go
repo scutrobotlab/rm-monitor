@@ -30,6 +30,8 @@ type Match struct {
 	MatchSlug *string `json:"match_slug,omitempty"`
 	// TotalRounds holds the value of the "total_rounds" field.
 	TotalRounds int `json:"total_rounds,omitempty"`
+	// Priority holds the value of the "priority" field.
+	Priority int `json:"priority,omitempty"`
 	// LatestStatus holds the value of the "latest_status" field.
 	LatestStatus string `json:"latest_status,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
@@ -104,7 +106,7 @@ func (*Match) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case match.FieldOrder, match.FieldTotalRounds:
+		case match.FieldOrder, match.FieldTotalRounds, match.FieldPriority:
 			values[i] = new(sql.NullInt64)
 		case match.FieldID, match.FieldEvent, match.FieldZone, match.FieldMatchType, match.FieldMatchSlug, match.FieldLatestStatus:
 			values[i] = new(sql.NullString)
@@ -171,6 +173,12 @@ func (_m *Match) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field total_rounds", values[i])
 			} else if value.Valid {
 				_m.TotalRounds = int(value.Int64)
+			}
+		case match.FieldPriority:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field priority", values[i])
+			} else if value.Valid {
+				_m.Priority = int(value.Int64)
 			}
 		case match.FieldLatestStatus:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -279,6 +287,9 @@ func (_m *Match) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("total_rounds=")
 	builder.WriteString(fmt.Sprintf("%v", _m.TotalRounds))
+	builder.WriteString(", ")
+	builder.WriteString("priority=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Priority))
 	builder.WriteString(", ")
 	builder.WriteString("latest_status=")
 	builder.WriteString(_m.LatestStatus)

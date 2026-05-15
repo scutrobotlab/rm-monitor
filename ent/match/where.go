@@ -95,6 +95,11 @@ func TotalRounds(v int) predicate.Match {
 	return predicate.Match(sql.FieldEQ(FieldTotalRounds, v))
 }
 
+// Priority applies equality check predicate on the "priority" field. It's identical to PriorityEQ.
+func Priority(v int) predicate.Match {
+	return predicate.Match(sql.FieldEQ(FieldPriority, v))
+}
+
 // LatestStatus applies equality check predicate on the "latest_status" field. It's identical to LatestStatusEQ.
 func LatestStatus(v string) predicate.Match {
 	return predicate.Match(sql.FieldEQ(FieldLatestStatus, v))
@@ -458,6 +463,46 @@ func TotalRoundsLT(v int) predicate.Match {
 // TotalRoundsLTE applies the LTE predicate on the "total_rounds" field.
 func TotalRoundsLTE(v int) predicate.Match {
 	return predicate.Match(sql.FieldLTE(FieldTotalRounds, v))
+}
+
+// PriorityEQ applies the EQ predicate on the "priority" field.
+func PriorityEQ(v int) predicate.Match {
+	return predicate.Match(sql.FieldEQ(FieldPriority, v))
+}
+
+// PriorityNEQ applies the NEQ predicate on the "priority" field.
+func PriorityNEQ(v int) predicate.Match {
+	return predicate.Match(sql.FieldNEQ(FieldPriority, v))
+}
+
+// PriorityIn applies the In predicate on the "priority" field.
+func PriorityIn(vs ...int) predicate.Match {
+	return predicate.Match(sql.FieldIn(FieldPriority, vs...))
+}
+
+// PriorityNotIn applies the NotIn predicate on the "priority" field.
+func PriorityNotIn(vs ...int) predicate.Match {
+	return predicate.Match(sql.FieldNotIn(FieldPriority, vs...))
+}
+
+// PriorityGT applies the GT predicate on the "priority" field.
+func PriorityGT(v int) predicate.Match {
+	return predicate.Match(sql.FieldGT(FieldPriority, v))
+}
+
+// PriorityGTE applies the GTE predicate on the "priority" field.
+func PriorityGTE(v int) predicate.Match {
+	return predicate.Match(sql.FieldGTE(FieldPriority, v))
+}
+
+// PriorityLT applies the LT predicate on the "priority" field.
+func PriorityLT(v int) predicate.Match {
+	return predicate.Match(sql.FieldLT(FieldPriority, v))
+}
+
+// PriorityLTE applies the LTE predicate on the "priority" field.
+func PriorityLTE(v int) predicate.Match {
+	return predicate.Match(sql.FieldLTE(FieldPriority, v))
 }
 
 // LatestStatusEQ applies the EQ predicate on the "latest_status" field.

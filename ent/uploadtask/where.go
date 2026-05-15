@@ -70,6 +70,11 @@ func Attempts(v int) predicate.UploadTask {
 	return predicate.UploadTask(sql.FieldEQ(FieldAttempts, v))
 }
 
+// Priority applies equality check predicate on the "priority" field. It's identical to PriorityEQ.
+func Priority(v int) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldEQ(FieldPriority, v))
+}
+
 // BitableAppToken applies equality check predicate on the "bitable_app_token" field. It's identical to BitableAppTokenEQ.
 func BitableAppToken(v string) predicate.UploadTask {
 	return predicate.UploadTask(sql.FieldEQ(FieldBitableAppToken, v))
@@ -323,6 +328,46 @@ func AttemptsLT(v int) predicate.UploadTask {
 // AttemptsLTE applies the LTE predicate on the "attempts" field.
 func AttemptsLTE(v int) predicate.UploadTask {
 	return predicate.UploadTask(sql.FieldLTE(FieldAttempts, v))
+}
+
+// PriorityEQ applies the EQ predicate on the "priority" field.
+func PriorityEQ(v int) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldEQ(FieldPriority, v))
+}
+
+// PriorityNEQ applies the NEQ predicate on the "priority" field.
+func PriorityNEQ(v int) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldNEQ(FieldPriority, v))
+}
+
+// PriorityIn applies the In predicate on the "priority" field.
+func PriorityIn(vs ...int) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldIn(FieldPriority, vs...))
+}
+
+// PriorityNotIn applies the NotIn predicate on the "priority" field.
+func PriorityNotIn(vs ...int) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldNotIn(FieldPriority, vs...))
+}
+
+// PriorityGT applies the GT predicate on the "priority" field.
+func PriorityGT(v int) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldGT(FieldPriority, v))
+}
+
+// PriorityGTE applies the GTE predicate on the "priority" field.
+func PriorityGTE(v int) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldGTE(FieldPriority, v))
+}
+
+// PriorityLT applies the LT predicate on the "priority" field.
+func PriorityLT(v int) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldLT(FieldPriority, v))
+}
+
+// PriorityLTE applies the LTE predicate on the "priority" field.
+func PriorityLTE(v int) predicate.UploadTask {
+	return predicate.UploadTask(sql.FieldLTE(FieldPriority, v))
 }
 
 // BitableAppTokenEQ applies the EQ predicate on the "bitable_app_token" field.

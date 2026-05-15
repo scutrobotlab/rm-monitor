@@ -31,6 +31,8 @@ type RecordTask struct {
 	K8sJobName *string `json:"k8s_job_name,omitempty"`
 	// Attempts holds the value of the "attempts" field.
 	Attempts int `json:"attempts,omitempty"`
+	// Priority holds the value of the "priority" field.
+	Priority int `json:"priority,omitempty"`
 	// FileSize holds the value of the "file_size" field.
 	FileSize *int64 `json:"file_size,omitempty"`
 	// Checksum holds the value of the "checksum" field.
@@ -101,7 +103,7 @@ func (*RecordTask) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case recordtask.FieldID, recordtask.FieldAttempts, recordtask.FieldFileSize:
+		case recordtask.FieldID, recordtask.FieldAttempts, recordtask.FieldPriority, recordtask.FieldFileSize:
 			values[i] = new(sql.NullInt64)
 		case recordtask.FieldRole, recordtask.FieldSourceURL, recordtask.FieldOutputPath, recordtask.FieldStatus, recordtask.FieldK8sJobName, recordtask.FieldChecksum, recordtask.FieldErrorMessage:
 			values[i] = new(sql.NullString)
@@ -166,6 +168,12 @@ func (_m *RecordTask) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field attempts", values[i])
 			} else if value.Valid {
 				_m.Attempts = int(value.Int64)
+			}
+		case recordtask.FieldPriority:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field priority", values[i])
+			} else if value.Valid {
+				_m.Priority = int(value.Int64)
 			}
 		case recordtask.FieldFileSize:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
@@ -291,6 +299,9 @@ func (_m *RecordTask) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("attempts=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Attempts))
+	builder.WriteString(", ")
+	builder.WriteString("priority=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Priority))
 	builder.WriteString(", ")
 	if v := _m.FileSize; v != nil {
 		builder.WriteString("file_size=")

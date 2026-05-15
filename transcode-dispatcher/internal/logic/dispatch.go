@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"entgo.io/ent/dialect/sql"
 	"github.com/pkg/errors"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
 	"scutbot.cn/web/rm-monitor/ent/mediaartifact"
@@ -47,14 +48,21 @@ func (l *DispatchLogic) createTranscodeTasks() error {
 			mediaartifact.StatusEQ(mediaartifact.StatusAVAILABLE),
 			mediaartifact.Not(mediaartifact.HasSourceTranscodeTask()),
 		).
+		WithRecordTask().
+		Order(mediaartifact.ByRecordTaskField(recordtask.FieldPriority, sql.OrderDesc()), mediaartifact.ByCreatedAt()).
 		Limit(100).
 		All(l.ctx)
 	if err != nil {
 		return errors.Wrap(err, "query source artifacts")
 	}
 	for _, artifact := range artifacts {
+		priority := 0
+		if artifact.Edges.RecordTask != nil {
+			priority = artifact.Edges.RecordTask.Priority
+		}
 		if err := l.svcCtx.DB.TranscodeTask.Create().
 			SetSourceArtifactID(artifact.ID).
+			SetPriority(priority).
 			SetStatus(transcodetask.StatusPENDING).
 			OnConflictColumns(transcodetask.SourceArtifactColumn).
 			DoNothing().
@@ -130,6 +138,7 @@ func (l *DispatchLogic) dispatchPending() error {
 	}
 	tasks, err := l.svcCtx.DB.TranscodeTask.Query().
 		Where(transcodetask.StatusEQ(transcodetask.StatusPENDING)).
+		Order(transcodetask.ByPriority(sql.OrderDesc()), transcodetask.ByCreatedAt()).
 		Limit(limit).
 		All(l.ctx)
 	if err != nil {

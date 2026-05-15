@@ -14,11 +14,16 @@ import (
 	"scutbot.cn/web/rm-monitor/ent"
 	"scutbot.cn/web/rm-monitor/ent/match"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
+	"scutbot.cn/web/rm-monitor/ent/mediaartifact"
+	"scutbot.cn/web/rm-monitor/ent/recordtask"
 	"scutbot.cn/web/rm-monitor/ent/team"
+	"scutbot.cn/web/rm-monitor/ent/transcodetask"
+	"scutbot.cn/web/rm-monitor/ent/uploadtask"
 	"scutbot.cn/web/rm-monitor/monitor/internal/svc"
 	"scutbot.cn/web/rm-monitor/monitor/types"
 	"scutbot.cn/web/rm-monitor/pkg/db"
 	"scutbot.cn/web/rm-monitor/pkg/logx"
+	"scutbot.cn/web/rm-monitor/pkg/priority"
 )
 
 type MatchScanLogic struct {
@@ -153,6 +158,7 @@ func (l *MatchScanLogic) upsertMatch(m scannedMatch) error {
 		return err
 	}
 
+	matchPriority := priority.ForSchools(l.svcCtx.Config.Priority, m.RedTeam.SchoolName, m.BlueTeam.SchoolName)
 	create := l.svcCtx.DB.Match.Create().
 		SetID(m.ID).
 		SetEvent(m.Event).
@@ -160,6 +166,7 @@ func (l *MatchScanLogic) upsertMatch(m scannedMatch) error {
 		SetOrder(m.Order).
 		SetMatchType(m.MatchType).
 		SetTotalRounds(m.TotalRounds).
+		SetPriority(matchPriority).
 		SetLatestStatus(m.Status).
 		SetRedTeamID(m.RedTeam.ID).
 		SetBlueTeamID(m.BlueTeam.ID)
@@ -168,6 +175,9 @@ func (l *MatchScanLogic) upsertMatch(m scannedMatch) error {
 	}
 	if err := create.OnConflictColumns(match.FieldID).UpdateNewValues().Exec(l.ctx); err != nil {
 		return errors.Wrap(err, "upsert match")
+	}
+	if err := l.syncPendingTaskPriority(m.ID, matchPriority); err != nil {
+		return err
 	}
 
 	if ok {
@@ -209,6 +219,37 @@ func (l *MatchScanLogic) reconcileRounds(prev processedSnapshot, cur scannedMatc
 	}
 	if cur.Status == types.MatchStatusSTARTED {
 		return l.ensureStartedRound(cur, cur.RoundNo())
+	}
+	return nil
+}
+
+func (l *MatchScanLogic) syncPendingTaskPriority(matchID string, priorityValue int) error {
+	if _, err := l.svcCtx.DB.RecordTask.Update().
+		Where(
+			recordtask.StatusIn(recordtask.StatusPENDING, recordtask.StatusDISPATCHING),
+			recordtask.HasMatchRoundWith(matchround.HasMatchWith(match.ID(matchID))),
+		).
+		SetPriority(priorityValue).
+		Save(l.ctx); err != nil {
+		return errors.Wrap(err, "sync record task priority")
+	}
+	if _, err := l.svcCtx.DB.UploadTask.Update().
+		Where(
+			uploadtask.StatusIn(uploadtask.StatusPENDING, uploadtask.StatusDISPATCHING),
+			uploadtask.HasRecordTaskWith(recordtask.HasMatchRoundWith(matchround.HasMatchWith(match.ID(matchID)))),
+		).
+		SetPriority(priorityValue).
+		Save(l.ctx); err != nil {
+		return errors.Wrap(err, "sync upload task priority")
+	}
+	if _, err := l.svcCtx.DB.TranscodeTask.Update().
+		Where(
+			transcodetask.StatusIn(transcodetask.StatusPENDING, transcodetask.StatusDISPATCHING),
+			transcodetask.HasSourceArtifactWith(mediaartifact.HasRecordTaskWith(recordtask.HasMatchRoundWith(matchround.HasMatchWith(match.ID(matchID))))),
+		).
+		SetPriority(priorityValue).
+		Save(l.ctx); err != nil {
+		return errors.Wrap(err, "sync transcode task priority")
 	}
 	return nil
 }

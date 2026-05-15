@@ -632,6 +632,8 @@ type MatchMutation struct {
 	match_slug           *string
 	total_rounds         *int
 	addtotal_rounds      *int
+	priority             *int
+	addpriority          *int
 	latest_status        *string
 	created_at           *time.Time
 	updated_at           *time.Time
@@ -1024,6 +1026,62 @@ func (m *MatchMutation) ResetTotalRounds() {
 	m.addtotal_rounds = nil
 }
 
+// SetPriority sets the "priority" field.
+func (m *MatchMutation) SetPriority(i int) {
+	m.priority = &i
+	m.addpriority = nil
+}
+
+// Priority returns the value of the "priority" field in the mutation.
+func (m *MatchMutation) Priority() (r int, exists bool) {
+	v := m.priority
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPriority returns the old "priority" field's value of the Match entity.
+// If the Match object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MatchMutation) OldPriority(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPriority is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPriority requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPriority: %w", err)
+	}
+	return oldValue.Priority, nil
+}
+
+// AddPriority adds i to the "priority" field.
+func (m *MatchMutation) AddPriority(i int) {
+	if m.addpriority != nil {
+		*m.addpriority += i
+	} else {
+		m.addpriority = &i
+	}
+}
+
+// AddedPriority returns the value that was added to the "priority" field in this mutation.
+func (m *MatchMutation) AddedPriority() (r int, exists bool) {
+	v := m.addpriority
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetPriority resets all changes to the "priority" field.
+func (m *MatchMutation) ResetPriority() {
+	m.priority = nil
+	m.addpriority = nil
+}
+
 // SetLatestStatus sets the "latest_status" field.
 func (m *MatchMutation) SetLatestStatus(s string) {
 	m.latest_status = &s
@@ -1352,7 +1410,7 @@ func (m *MatchMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *MatchMutation) Fields() []string {
-	fields := make([]string, 0, 9)
+	fields := make([]string, 0, 10)
 	if m.event != nil {
 		fields = append(fields, match.FieldEvent)
 	}
@@ -1370,6 +1428,9 @@ func (m *MatchMutation) Fields() []string {
 	}
 	if m.total_rounds != nil {
 		fields = append(fields, match.FieldTotalRounds)
+	}
+	if m.priority != nil {
+		fields = append(fields, match.FieldPriority)
 	}
 	if m.latest_status != nil {
 		fields = append(fields, match.FieldLatestStatus)
@@ -1400,6 +1461,8 @@ func (m *MatchMutation) Field(name string) (ent.Value, bool) {
 		return m.MatchSlug()
 	case match.FieldTotalRounds:
 		return m.TotalRounds()
+	case match.FieldPriority:
+		return m.Priority()
 	case match.FieldLatestStatus:
 		return m.LatestStatus()
 	case match.FieldCreatedAt:
@@ -1427,6 +1490,8 @@ func (m *MatchMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldMatchSlug(ctx)
 	case match.FieldTotalRounds:
 		return m.OldTotalRounds(ctx)
+	case match.FieldPriority:
+		return m.OldPriority(ctx)
 	case match.FieldLatestStatus:
 		return m.OldLatestStatus(ctx)
 	case match.FieldCreatedAt:
@@ -1484,6 +1549,13 @@ func (m *MatchMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetTotalRounds(v)
 		return nil
+	case match.FieldPriority:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPriority(v)
+		return nil
 	case match.FieldLatestStatus:
 		v, ok := value.(string)
 		if !ok {
@@ -1519,6 +1591,9 @@ func (m *MatchMutation) AddedFields() []string {
 	if m.addtotal_rounds != nil {
 		fields = append(fields, match.FieldTotalRounds)
 	}
+	if m.addpriority != nil {
+		fields = append(fields, match.FieldPriority)
+	}
 	return fields
 }
 
@@ -1531,6 +1606,8 @@ func (m *MatchMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedOrder()
 	case match.FieldTotalRounds:
 		return m.AddedTotalRounds()
+	case match.FieldPriority:
+		return m.AddedPriority()
 	}
 	return nil, false
 }
@@ -1553,6 +1630,13 @@ func (m *MatchMutation) AddField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddTotalRounds(v)
+		return nil
+	case match.FieldPriority:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddPriority(v)
 		return nil
 	}
 	return fmt.Errorf("unknown Match numeric field %s", name)
@@ -1607,6 +1691,9 @@ func (m *MatchMutation) ResetField(name string) error {
 		return nil
 	case match.FieldTotalRounds:
 		m.ResetTotalRounds()
+		return nil
+	case match.FieldPriority:
+		m.ResetPriority()
 		return nil
 	case match.FieldLatestStatus:
 		m.ResetLatestStatus()
@@ -3885,6 +3972,8 @@ type RecordTaskMutation struct {
 	k8s_job_name           *string
 	attempts               *int
 	addattempts            *int
+	priority               *int
+	addpriority            *int
 	file_size              *int64
 	addfile_size           *int64
 	checksum               *string
@@ -4251,6 +4340,62 @@ func (m *RecordTaskMutation) AddedAttempts() (r int, exists bool) {
 func (m *RecordTaskMutation) ResetAttempts() {
 	m.attempts = nil
 	m.addattempts = nil
+}
+
+// SetPriority sets the "priority" field.
+func (m *RecordTaskMutation) SetPriority(i int) {
+	m.priority = &i
+	m.addpriority = nil
+}
+
+// Priority returns the value of the "priority" field in the mutation.
+func (m *RecordTaskMutation) Priority() (r int, exists bool) {
+	v := m.priority
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPriority returns the old "priority" field's value of the RecordTask entity.
+// If the RecordTask object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RecordTaskMutation) OldPriority(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPriority is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPriority requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPriority: %w", err)
+	}
+	return oldValue.Priority, nil
+}
+
+// AddPriority adds i to the "priority" field.
+func (m *RecordTaskMutation) AddPriority(i int) {
+	if m.addpriority != nil {
+		*m.addpriority += i
+	} else {
+		m.addpriority = &i
+	}
+}
+
+// AddedPriority returns the value that was added to the "priority" field in this mutation.
+func (m *RecordTaskMutation) AddedPriority() (r int, exists bool) {
+	v := m.addpriority
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetPriority resets all changes to the "priority" field.
+func (m *RecordTaskMutation) ResetPriority() {
+	m.priority = nil
+	m.addpriority = nil
 }
 
 // SetFileSize sets the "file_size" field.
@@ -4757,7 +4902,7 @@ func (m *RecordTaskMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *RecordTaskMutation) Fields() []string {
-	fields := make([]string, 0, 13)
+	fields := make([]string, 0, 14)
 	if m.role != nil {
 		fields = append(fields, recordtask.FieldRole)
 	}
@@ -4775,6 +4920,9 @@ func (m *RecordTaskMutation) Fields() []string {
 	}
 	if m.attempts != nil {
 		fields = append(fields, recordtask.FieldAttempts)
+	}
+	if m.priority != nil {
+		fields = append(fields, recordtask.FieldPriority)
 	}
 	if m.file_size != nil {
 		fields = append(fields, recordtask.FieldFileSize)
@@ -4817,6 +4965,8 @@ func (m *RecordTaskMutation) Field(name string) (ent.Value, bool) {
 		return m.K8sJobName()
 	case recordtask.FieldAttempts:
 		return m.Attempts()
+	case recordtask.FieldPriority:
+		return m.Priority()
 	case recordtask.FieldFileSize:
 		return m.FileSize()
 	case recordtask.FieldChecksum:
@@ -4852,6 +5002,8 @@ func (m *RecordTaskMutation) OldField(ctx context.Context, name string) (ent.Val
 		return m.OldK8sJobName(ctx)
 	case recordtask.FieldAttempts:
 		return m.OldAttempts(ctx)
+	case recordtask.FieldPriority:
+		return m.OldPriority(ctx)
 	case recordtask.FieldFileSize:
 		return m.OldFileSize(ctx)
 	case recordtask.FieldChecksum:
@@ -4917,6 +5069,13 @@ func (m *RecordTaskMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetAttempts(v)
 		return nil
+	case recordtask.FieldPriority:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPriority(v)
+		return nil
 	case recordtask.FieldFileSize:
 		v, ok := value.(int64)
 		if !ok {
@@ -4977,6 +5136,9 @@ func (m *RecordTaskMutation) AddedFields() []string {
 	if m.addattempts != nil {
 		fields = append(fields, recordtask.FieldAttempts)
 	}
+	if m.addpriority != nil {
+		fields = append(fields, recordtask.FieldPriority)
+	}
 	if m.addfile_size != nil {
 		fields = append(fields, recordtask.FieldFileSize)
 	}
@@ -4990,6 +5152,8 @@ func (m *RecordTaskMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
 	case recordtask.FieldAttempts:
 		return m.AddedAttempts()
+	case recordtask.FieldPriority:
+		return m.AddedPriority()
 	case recordtask.FieldFileSize:
 		return m.AddedFileSize()
 	}
@@ -5007,6 +5171,13 @@ func (m *RecordTaskMutation) AddField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddAttempts(v)
+		return nil
+	case recordtask.FieldPriority:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddPriority(v)
 		return nil
 	case recordtask.FieldFileSize:
 		v, ok := value.(int64)
@@ -5098,6 +5269,9 @@ func (m *RecordTaskMutation) ResetField(name string) error {
 		return nil
 	case recordtask.FieldAttempts:
 		m.ResetAttempts()
+		return nil
+	case recordtask.FieldPriority:
+		m.ResetPriority()
 		return nil
 	case recordtask.FieldFileSize:
 		m.ResetFileSize()
@@ -5978,6 +6152,8 @@ type TranscodeTaskMutation struct {
 	k8s_job_name            *string
 	attempts                *int
 	addattempts             *int
+	priority                *int
+	addpriority             *int
 	error_message           *string
 	started_at              *time.Time
 	completed_at            *time.Time
@@ -6230,6 +6406,62 @@ func (m *TranscodeTaskMutation) AddedAttempts() (r int, exists bool) {
 func (m *TranscodeTaskMutation) ResetAttempts() {
 	m.attempts = nil
 	m.addattempts = nil
+}
+
+// SetPriority sets the "priority" field.
+func (m *TranscodeTaskMutation) SetPriority(i int) {
+	m.priority = &i
+	m.addpriority = nil
+}
+
+// Priority returns the value of the "priority" field in the mutation.
+func (m *TranscodeTaskMutation) Priority() (r int, exists bool) {
+	v := m.priority
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPriority returns the old "priority" field's value of the TranscodeTask entity.
+// If the TranscodeTask object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TranscodeTaskMutation) OldPriority(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPriority is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPriority requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPriority: %w", err)
+	}
+	return oldValue.Priority, nil
+}
+
+// AddPriority adds i to the "priority" field.
+func (m *TranscodeTaskMutation) AddPriority(i int) {
+	if m.addpriority != nil {
+		*m.addpriority += i
+	} else {
+		m.addpriority = &i
+	}
+}
+
+// AddedPriority returns the value that was added to the "priority" field in this mutation.
+func (m *TranscodeTaskMutation) AddedPriority() (r int, exists bool) {
+	v := m.addpriority
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetPriority resets all changes to the "priority" field.
+func (m *TranscodeTaskMutation) ResetPriority() {
+	m.priority = nil
+	m.addpriority = nil
 }
 
 // SetErrorMessage sets the "error_message" field.
@@ -6563,7 +6795,7 @@ func (m *TranscodeTaskMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *TranscodeTaskMutation) Fields() []string {
-	fields := make([]string, 0, 8)
+	fields := make([]string, 0, 9)
 	if m.status != nil {
 		fields = append(fields, transcodetask.FieldStatus)
 	}
@@ -6572,6 +6804,9 @@ func (m *TranscodeTaskMutation) Fields() []string {
 	}
 	if m.attempts != nil {
 		fields = append(fields, transcodetask.FieldAttempts)
+	}
+	if m.priority != nil {
+		fields = append(fields, transcodetask.FieldPriority)
 	}
 	if m.error_message != nil {
 		fields = append(fields, transcodetask.FieldErrorMessage)
@@ -6602,6 +6837,8 @@ func (m *TranscodeTaskMutation) Field(name string) (ent.Value, bool) {
 		return m.K8sJobName()
 	case transcodetask.FieldAttempts:
 		return m.Attempts()
+	case transcodetask.FieldPriority:
+		return m.Priority()
 	case transcodetask.FieldErrorMessage:
 		return m.ErrorMessage()
 	case transcodetask.FieldStartedAt:
@@ -6627,6 +6864,8 @@ func (m *TranscodeTaskMutation) OldField(ctx context.Context, name string) (ent.
 		return m.OldK8sJobName(ctx)
 	case transcodetask.FieldAttempts:
 		return m.OldAttempts(ctx)
+	case transcodetask.FieldPriority:
+		return m.OldPriority(ctx)
 	case transcodetask.FieldErrorMessage:
 		return m.OldErrorMessage(ctx)
 	case transcodetask.FieldStartedAt:
@@ -6666,6 +6905,13 @@ func (m *TranscodeTaskMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetAttempts(v)
+		return nil
+	case transcodetask.FieldPriority:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPriority(v)
 		return nil
 	case transcodetask.FieldErrorMessage:
 		v, ok := value.(string)
@@ -6713,6 +6959,9 @@ func (m *TranscodeTaskMutation) AddedFields() []string {
 	if m.addattempts != nil {
 		fields = append(fields, transcodetask.FieldAttempts)
 	}
+	if m.addpriority != nil {
+		fields = append(fields, transcodetask.FieldPriority)
+	}
 	return fields
 }
 
@@ -6723,6 +6972,8 @@ func (m *TranscodeTaskMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
 	case transcodetask.FieldAttempts:
 		return m.AddedAttempts()
+	case transcodetask.FieldPriority:
+		return m.AddedPriority()
 	}
 	return nil, false
 }
@@ -6738,6 +6989,13 @@ func (m *TranscodeTaskMutation) AddField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddAttempts(v)
+		return nil
+	case transcodetask.FieldPriority:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddPriority(v)
 		return nil
 	}
 	return fmt.Errorf("unknown TranscodeTask numeric field %s", name)
@@ -6801,6 +7059,9 @@ func (m *TranscodeTaskMutation) ResetField(name string) error {
 		return nil
 	case transcodetask.FieldAttempts:
 		m.ResetAttempts()
+		return nil
+	case transcodetask.FieldPriority:
+		m.ResetPriority()
 		return nil
 	case transcodetask.FieldErrorMessage:
 		m.ResetErrorMessage()
@@ -6924,6 +7185,8 @@ type UploadTaskMutation struct {
 	k8s_job_name           *string
 	attempts               *int
 	addattempts            *int
+	priority               *int
+	addpriority            *int
 	bitable_app_token      *string
 	bitable_table_id       *string
 	bitable_record_id      *string
@@ -7218,6 +7481,62 @@ func (m *UploadTaskMutation) AddedAttempts() (r int, exists bool) {
 func (m *UploadTaskMutation) ResetAttempts() {
 	m.attempts = nil
 	m.addattempts = nil
+}
+
+// SetPriority sets the "priority" field.
+func (m *UploadTaskMutation) SetPriority(i int) {
+	m.priority = &i
+	m.addpriority = nil
+}
+
+// Priority returns the value of the "priority" field in the mutation.
+func (m *UploadTaskMutation) Priority() (r int, exists bool) {
+	v := m.priority
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPriority returns the old "priority" field's value of the UploadTask entity.
+// If the UploadTask object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UploadTaskMutation) OldPriority(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPriority is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPriority requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPriority: %w", err)
+	}
+	return oldValue.Priority, nil
+}
+
+// AddPriority adds i to the "priority" field.
+func (m *UploadTaskMutation) AddPriority(i int) {
+	if m.addpriority != nil {
+		*m.addpriority += i
+	} else {
+		m.addpriority = &i
+	}
+}
+
+// AddedPriority returns the value that was added to the "priority" field in this mutation.
+func (m *UploadTaskMutation) AddedPriority() (r int, exists bool) {
+	v := m.addpriority
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetPriority resets all changes to the "priority" field.
+func (m *UploadTaskMutation) ResetPriority() {
+	m.priority = nil
+	m.addpriority = nil
 }
 
 // SetBitableAppToken sets the "bitable_app_token" field.
@@ -7845,7 +8164,7 @@ func (m *UploadTaskMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *UploadTaskMutation) Fields() []string {
-	fields := make([]string, 0, 15)
+	fields := make([]string, 0, 16)
 	if m.source_path != nil {
 		fields = append(fields, uploadtask.FieldSourcePath)
 	}
@@ -7857,6 +8176,9 @@ func (m *UploadTaskMutation) Fields() []string {
 	}
 	if m.attempts != nil {
 		fields = append(fields, uploadtask.FieldAttempts)
+	}
+	if m.priority != nil {
+		fields = append(fields, uploadtask.FieldPriority)
 	}
 	if m.bitable_app_token != nil {
 		fields = append(fields, uploadtask.FieldBitableAppToken)
@@ -7907,6 +8229,8 @@ func (m *UploadTaskMutation) Field(name string) (ent.Value, bool) {
 		return m.K8sJobName()
 	case uploadtask.FieldAttempts:
 		return m.Attempts()
+	case uploadtask.FieldPriority:
+		return m.Priority()
 	case uploadtask.FieldBitableAppToken:
 		return m.BitableAppToken()
 	case uploadtask.FieldBitableTableID:
@@ -7946,6 +8270,8 @@ func (m *UploadTaskMutation) OldField(ctx context.Context, name string) (ent.Val
 		return m.OldK8sJobName(ctx)
 	case uploadtask.FieldAttempts:
 		return m.OldAttempts(ctx)
+	case uploadtask.FieldPriority:
+		return m.OldPriority(ctx)
 	case uploadtask.FieldBitableAppToken:
 		return m.OldBitableAppToken(ctx)
 	case uploadtask.FieldBitableTableID:
@@ -8004,6 +8330,13 @@ func (m *UploadTaskMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetAttempts(v)
+		return nil
+	case uploadtask.FieldPriority:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPriority(v)
 		return nil
 	case uploadtask.FieldBitableAppToken:
 		v, ok := value.(string)
@@ -8093,6 +8426,9 @@ func (m *UploadTaskMutation) AddedFields() []string {
 	if m.addattempts != nil {
 		fields = append(fields, uploadtask.FieldAttempts)
 	}
+	if m.addpriority != nil {
+		fields = append(fields, uploadtask.FieldPriority)
+	}
 	return fields
 }
 
@@ -8103,6 +8439,8 @@ func (m *UploadTaskMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
 	case uploadtask.FieldAttempts:
 		return m.AddedAttempts()
+	case uploadtask.FieldPriority:
+		return m.AddedPriority()
 	}
 	return nil, false
 }
@@ -8118,6 +8456,13 @@ func (m *UploadTaskMutation) AddField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddAttempts(v)
+		return nil
+	case uploadtask.FieldPriority:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddPriority(v)
 		return nil
 	}
 	return fmt.Errorf("unknown UploadTask numeric field %s", name)
@@ -8220,6 +8565,9 @@ func (m *UploadTaskMutation) ResetField(name string) error {
 		return nil
 	case uploadtask.FieldAttempts:
 		m.ResetAttempts()
+		return nil
+	case uploadtask.FieldPriority:
+		m.ResetPriority()
 		return nil
 	case uploadtask.FieldBitableAppToken:
 		m.ResetBitableAppToken()

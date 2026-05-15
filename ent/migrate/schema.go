@@ -40,6 +40,7 @@ var (
 		{Name: "match_type", Type: field.TypeString, Default: ""},
 		{Name: "match_slug", Type: field.TypeString, Nullable: true},
 		{Name: "total_rounds", Type: field.TypeInt, Default: 0},
+		{Name: "priority", Type: field.TypeInt, Default: 0},
 		{Name: "latest_status", Type: field.TypeString, Default: ""},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
@@ -54,13 +55,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "matches_teams_red_matches",
-				Columns:    []*schema.Column{MatchesColumns[10]},
+				Columns:    []*schema.Column{MatchesColumns[11]},
 				RefColumns: []*schema.Column{TeamsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "matches_teams_blue_matches",
-				Columns:    []*schema.Column{MatchesColumns[11]},
+				Columns:    []*schema.Column{MatchesColumns[12]},
 				RefColumns: []*schema.Column{TeamsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -160,6 +161,7 @@ var (
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"PENDING", "DISPATCHING", "RUNNING", "SUCCEEDED", "FAILED", "CANCEL_REQUESTED", "CANCELED"}, Default: "PENDING"},
 		{Name: "k8s_job_name", Type: field.TypeString, Nullable: true},
 		{Name: "attempts", Type: field.TypeInt, Default: 0},
+		{Name: "priority", Type: field.TypeInt, Default: 0},
 		{Name: "file_size", Type: field.TypeInt64, Nullable: true},
 		{Name: "checksum", Type: field.TypeString, Nullable: true},
 		{Name: "error_message", Type: field.TypeString, Nullable: true},
@@ -177,7 +179,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "record_tasks_match_rounds_record_tasks",
-				Columns:    []*schema.Column{RecordTasksColumns[14]},
+				Columns:    []*schema.Column{RecordTasksColumns[15]},
 				RefColumns: []*schema.Column{MatchRoundsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -186,12 +188,17 @@ var (
 			{
 				Name:    "recordtask_role_match_round_record_tasks",
 				Unique:  true,
-				Columns: []*schema.Column{RecordTasksColumns[1], RecordTasksColumns[14]},
+				Columns: []*schema.Column{RecordTasksColumns[1], RecordTasksColumns[15]},
 			},
 			{
 				Name:    "recordtask_status",
 				Unique:  false,
 				Columns: []*schema.Column{RecordTasksColumns[4]},
+			},
+			{
+				Name:    "recordtask_status_priority_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{RecordTasksColumns[4], RecordTasksColumns[7], RecordTasksColumns[13]},
 			},
 		},
 	}
@@ -216,6 +223,7 @@ var (
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"PENDING", "DISPATCHING", "RUNNING", "SUCCEEDED", "FAILED"}, Default: "PENDING"},
 		{Name: "k8s_job_name", Type: field.TypeString, Nullable: true},
 		{Name: "attempts", Type: field.TypeInt, Default: 0},
+		{Name: "priority", Type: field.TypeInt, Default: 0},
 		{Name: "error_message", Type: field.TypeString, Nullable: true},
 		{Name: "started_at", Type: field.TypeTime, Nullable: true},
 		{Name: "completed_at", Type: field.TypeTime, Nullable: true},
@@ -232,13 +240,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "transcode_tasks_media_artifacts_source_transcode_task",
-				Columns:    []*schema.Column{TranscodeTasksColumns[9]},
+				Columns:    []*schema.Column{TranscodeTasksColumns[10]},
 				RefColumns: []*schema.Column{MediaArtifactsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "transcode_tasks_media_artifacts_archive_transcode_task",
-				Columns:    []*schema.Column{TranscodeTasksColumns[10]},
+				Columns:    []*schema.Column{TranscodeTasksColumns[11]},
 				RefColumns: []*schema.Column{MediaArtifactsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
@@ -247,12 +255,17 @@ var (
 			{
 				Name:    "transcodetask_media_artifact_source_transcode_task",
 				Unique:  true,
-				Columns: []*schema.Column{TranscodeTasksColumns[9]},
+				Columns: []*schema.Column{TranscodeTasksColumns[10]},
 			},
 			{
 				Name:    "transcodetask_status",
 				Unique:  false,
 				Columns: []*schema.Column{TranscodeTasksColumns[1]},
+			},
+			{
+				Name:    "transcodetask_status_priority_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{TranscodeTasksColumns[1], TranscodeTasksColumns[4], TranscodeTasksColumns[8]},
 			},
 		},
 	}
@@ -263,6 +276,7 @@ var (
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"PENDING", "DISPATCHING", "RUNNING", "SUCCEEDED", "FAILED"}, Default: "PENDING"},
 		{Name: "k8s_job_name", Type: field.TypeString, Nullable: true},
 		{Name: "attempts", Type: field.TypeInt, Default: 0},
+		{Name: "priority", Type: field.TypeInt, Default: 0},
 		{Name: "bitable_app_token", Type: field.TypeString, Nullable: true},
 		{Name: "bitable_table_id", Type: field.TypeString, Nullable: true},
 		{Name: "bitable_record_id", Type: field.TypeString, Nullable: true},
@@ -285,13 +299,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "upload_tasks_media_artifacts_upload_task",
-				Columns:    []*schema.Column{UploadTasksColumns[16]},
+				Columns:    []*schema.Column{UploadTasksColumns[17]},
 				RefColumns: []*schema.Column{MediaArtifactsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "upload_tasks_record_tasks_upload_task",
-				Columns:    []*schema.Column{UploadTasksColumns[17]},
+				Columns:    []*schema.Column{UploadTasksColumns[18]},
 				RefColumns: []*schema.Column{RecordTasksColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -300,17 +314,22 @@ var (
 			{
 				Name:    "uploadtask_record_task_upload_task",
 				Unique:  true,
-				Columns: []*schema.Column{UploadTasksColumns[17]},
+				Columns: []*schema.Column{UploadTasksColumns[18]},
 			},
 			{
 				Name:    "uploadtask_media_artifact_upload_task",
 				Unique:  true,
-				Columns: []*schema.Column{UploadTasksColumns[16]},
+				Columns: []*schema.Column{UploadTasksColumns[17]},
 			},
 			{
 				Name:    "uploadtask_status",
 				Unique:  false,
 				Columns: []*schema.Column{UploadTasksColumns[2]},
+			},
+			{
+				Name:    "uploadtask_status_priority_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{UploadTasksColumns[2], UploadTasksColumns[5], UploadTasksColumns[15]},
 			},
 		},
 	}

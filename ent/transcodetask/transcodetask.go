@@ -21,6 +21,8 @@ const (
 	FieldK8sJobName = "k8s_job_name"
 	// FieldAttempts holds the string denoting the attempts field in the database.
 	FieldAttempts = "attempts"
+	// FieldPriority holds the string denoting the priority field in the database.
+	FieldPriority = "priority"
 	// FieldErrorMessage holds the string denoting the error_message field in the database.
 	FieldErrorMessage = "error_message"
 	// FieldStartedAt holds the string denoting the started_at field in the database.
@@ -59,6 +61,7 @@ var Columns = []string{
 	FieldStatus,
 	FieldK8sJobName,
 	FieldAttempts,
+	FieldPriority,
 	FieldErrorMessage,
 	FieldStartedAt,
 	FieldCompletedAt,
@@ -91,6 +94,8 @@ func ValidColumn(column string) bool {
 var (
 	// DefaultAttempts holds the default value on creation for the "attempts" field.
 	DefaultAttempts int
+	// DefaultPriority holds the default value on creation for the "priority" field.
+	DefaultPriority int
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
 	DefaultCreatedAt func() time.Time
 	// DefaultUpdatedAt holds the default value on creation for the "updated_at" field.
@@ -149,6 +154,11 @@ func ByK8sJobName(opts ...sql.OrderTermOption) OrderOption {
 // ByAttempts orders the results by the attempts field.
 func ByAttempts(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldAttempts, opts...).ToFunc()
+}
+
+// ByPriority orders the results by the priority field.
+func ByPriority(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPriority, opts...).ToFunc()
 }
 
 // ByErrorMessage orders the results by the error_message field.

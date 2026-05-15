@@ -65,6 +65,11 @@ func Attempts(v int) predicate.TranscodeTask {
 	return predicate.TranscodeTask(sql.FieldEQ(FieldAttempts, v))
 }
 
+// Priority applies equality check predicate on the "priority" field. It's identical to PriorityEQ.
+func Priority(v int) predicate.TranscodeTask {
+	return predicate.TranscodeTask(sql.FieldEQ(FieldPriority, v))
+}
+
 // ErrorMessage applies equality check predicate on the "error_message" field. It's identical to ErrorMessageEQ.
 func ErrorMessage(v string) predicate.TranscodeTask {
 	return predicate.TranscodeTask(sql.FieldEQ(FieldErrorMessage, v))
@@ -223,6 +228,46 @@ func AttemptsLT(v int) predicate.TranscodeTask {
 // AttemptsLTE applies the LTE predicate on the "attempts" field.
 func AttemptsLTE(v int) predicate.TranscodeTask {
 	return predicate.TranscodeTask(sql.FieldLTE(FieldAttempts, v))
+}
+
+// PriorityEQ applies the EQ predicate on the "priority" field.
+func PriorityEQ(v int) predicate.TranscodeTask {
+	return predicate.TranscodeTask(sql.FieldEQ(FieldPriority, v))
+}
+
+// PriorityNEQ applies the NEQ predicate on the "priority" field.
+func PriorityNEQ(v int) predicate.TranscodeTask {
+	return predicate.TranscodeTask(sql.FieldNEQ(FieldPriority, v))
+}
+
+// PriorityIn applies the In predicate on the "priority" field.
+func PriorityIn(vs ...int) predicate.TranscodeTask {
+	return predicate.TranscodeTask(sql.FieldIn(FieldPriority, vs...))
+}
+
+// PriorityNotIn applies the NotIn predicate on the "priority" field.
+func PriorityNotIn(vs ...int) predicate.TranscodeTask {
+	return predicate.TranscodeTask(sql.FieldNotIn(FieldPriority, vs...))
+}
+
+// PriorityGT applies the GT predicate on the "priority" field.
+func PriorityGT(v int) predicate.TranscodeTask {
+	return predicate.TranscodeTask(sql.FieldGT(FieldPriority, v))
+}
+
+// PriorityGTE applies the GTE predicate on the "priority" field.
+func PriorityGTE(v int) predicate.TranscodeTask {
+	return predicate.TranscodeTask(sql.FieldGTE(FieldPriority, v))
+}
+
+// PriorityLT applies the LT predicate on the "priority" field.
+func PriorityLT(v int) predicate.TranscodeTask {
+	return predicate.TranscodeTask(sql.FieldLT(FieldPriority, v))
+}
+
+// PriorityLTE applies the LTE predicate on the "priority" field.
+func PriorityLTE(v int) predicate.TranscodeTask {
+	return predicate.TranscodeTask(sql.FieldLTE(FieldPriority, v))
 }
 
 // ErrorMessageEQ applies the EQ predicate on the "error_message" field.

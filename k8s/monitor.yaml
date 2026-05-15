@@ -10,6 +10,7 @@ data:
     RedisConf:
       Host: redis:6379
       Type: node
+    Priority: []
 ---
 apiVersion: apps/v1
 kind: Deployment

@@ -65,6 +65,20 @@ func (_c *TranscodeTaskCreate) SetNillableAttempts(v *int) *TranscodeTaskCreate 
 	return _c
 }
 
+// SetPriority sets the "priority" field.
+func (_c *TranscodeTaskCreate) SetPriority(v int) *TranscodeTaskCreate {
+	_c.mutation.SetPriority(v)
+	return _c
+}
+
+// SetNillablePriority sets the "priority" field if the given value is not nil.
+func (_c *TranscodeTaskCreate) SetNillablePriority(v *int) *TranscodeTaskCreate {
+	if v != nil {
+		_c.SetPriority(*v)
+	}
+	return _c
+}
+
 // SetErrorMessage sets the "error_message" field.
 func (_c *TranscodeTaskCreate) SetErrorMessage(v string) *TranscodeTaskCreate {
 	_c.mutation.SetErrorMessage(v)
@@ -208,6 +222,10 @@ func (_c *TranscodeTaskCreate) defaults() {
 		v := transcodetask.DefaultAttempts
 		_c.mutation.SetAttempts(v)
 	}
+	if _, ok := _c.mutation.Priority(); !ok {
+		v := transcodetask.DefaultPriority
+		_c.mutation.SetPriority(v)
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		v := transcodetask.DefaultCreatedAt()
 		_c.mutation.SetCreatedAt(v)
@@ -230,6 +248,9 @@ func (_c *TranscodeTaskCreate) check() error {
 	}
 	if _, ok := _c.mutation.Attempts(); !ok {
 		return &ValidationError{Name: "attempts", err: errors.New(`ent: missing required field "TranscodeTask.attempts"`)}
+	}
+	if _, ok := _c.mutation.Priority(); !ok {
+		return &ValidationError{Name: "priority", err: errors.New(`ent: missing required field "TranscodeTask.priority"`)}
 	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "TranscodeTask.created_at"`)}
@@ -278,6 +299,10 @@ func (_c *TranscodeTaskCreate) createSpec() (*TranscodeTask, *sqlgraph.CreateSpe
 	if value, ok := _c.mutation.Attempts(); ok {
 		_spec.SetField(transcodetask.FieldAttempts, field.TypeInt, value)
 		_node.Attempts = value
+	}
+	if value, ok := _c.mutation.Priority(); ok {
+		_spec.SetField(transcodetask.FieldPriority, field.TypeInt, value)
+		_node.Priority = value
 	}
 	if value, ok := _c.mutation.ErrorMessage(); ok {
 		_spec.SetField(transcodetask.FieldErrorMessage, field.TypeString, value)
@@ -430,6 +455,24 @@ func (u *TranscodeTaskUpsert) UpdateAttempts() *TranscodeTaskUpsert {
 // AddAttempts adds v to the "attempts" field.
 func (u *TranscodeTaskUpsert) AddAttempts(v int) *TranscodeTaskUpsert {
 	u.Add(transcodetask.FieldAttempts, v)
+	return u
+}
+
+// SetPriority sets the "priority" field.
+func (u *TranscodeTaskUpsert) SetPriority(v int) *TranscodeTaskUpsert {
+	u.Set(transcodetask.FieldPriority, v)
+	return u
+}
+
+// UpdatePriority sets the "priority" field to the value that was provided on create.
+func (u *TranscodeTaskUpsert) UpdatePriority() *TranscodeTaskUpsert {
+	u.SetExcluded(transcodetask.FieldPriority)
+	return u
+}
+
+// AddPriority adds v to the "priority" field.
+func (u *TranscodeTaskUpsert) AddPriority(v int) *TranscodeTaskUpsert {
+	u.Add(transcodetask.FieldPriority, v)
 	return u
 }
 
@@ -597,6 +640,27 @@ func (u *TranscodeTaskUpsertOne) AddAttempts(v int) *TranscodeTaskUpsertOne {
 func (u *TranscodeTaskUpsertOne) UpdateAttempts() *TranscodeTaskUpsertOne {
 	return u.Update(func(s *TranscodeTaskUpsert) {
 		s.UpdateAttempts()
+	})
+}
+
+// SetPriority sets the "priority" field.
+func (u *TranscodeTaskUpsertOne) SetPriority(v int) *TranscodeTaskUpsertOne {
+	return u.Update(func(s *TranscodeTaskUpsert) {
+		s.SetPriority(v)
+	})
+}
+
+// AddPriority adds v to the "priority" field.
+func (u *TranscodeTaskUpsertOne) AddPriority(v int) *TranscodeTaskUpsertOne {
+	return u.Update(func(s *TranscodeTaskUpsert) {
+		s.AddPriority(v)
+	})
+}
+
+// UpdatePriority sets the "priority" field to the value that was provided on create.
+func (u *TranscodeTaskUpsertOne) UpdatePriority() *TranscodeTaskUpsertOne {
+	return u.Update(func(s *TranscodeTaskUpsert) {
+		s.UpdatePriority()
 	})
 }
 
@@ -941,6 +1005,27 @@ func (u *TranscodeTaskUpsertBulk) AddAttempts(v int) *TranscodeTaskUpsertBulk {
 func (u *TranscodeTaskUpsertBulk) UpdateAttempts() *TranscodeTaskUpsertBulk {
 	return u.Update(func(s *TranscodeTaskUpsert) {
 		s.UpdateAttempts()
+	})
+}
+
+// SetPriority sets the "priority" field.
+func (u *TranscodeTaskUpsertBulk) SetPriority(v int) *TranscodeTaskUpsertBulk {
+	return u.Update(func(s *TranscodeTaskUpsert) {
+		s.SetPriority(v)
+	})
+}
+
+// AddPriority adds v to the "priority" field.
+func (u *TranscodeTaskUpsertBulk) AddPriority(v int) *TranscodeTaskUpsertBulk {
+	return u.Update(func(s *TranscodeTaskUpsert) {
+		s.AddPriority(v)
+	})
+}
+
+// UpdatePriority sets the "priority" field to the value that was provided on create.
+func (u *TranscodeTaskUpsertBulk) UpdatePriority() *TranscodeTaskUpsertBulk {
+	return u.Update(func(s *TranscodeTaskUpsert) {
+		s.UpdatePriority()
 	})
 }
 

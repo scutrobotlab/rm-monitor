@@ -128,6 +128,27 @@ func (_u *RecordTaskUpdate) AddAttempts(v int) *RecordTaskUpdate {
 	return _u
 }
 
+// SetPriority sets the "priority" field.
+func (_u *RecordTaskUpdate) SetPriority(v int) *RecordTaskUpdate {
+	_u.mutation.ResetPriority()
+	_u.mutation.SetPriority(v)
+	return _u
+}
+
+// SetNillablePriority sets the "priority" field if the given value is not nil.
+func (_u *RecordTaskUpdate) SetNillablePriority(v *int) *RecordTaskUpdate {
+	if v != nil {
+		_u.SetPriority(*v)
+	}
+	return _u
+}
+
+// AddPriority adds value to the "priority" field.
+func (_u *RecordTaskUpdate) AddPriority(v int) *RecordTaskUpdate {
+	_u.mutation.AddPriority(v)
+	return _u
+}
+
 // SetFileSize sets the "file_size" field.
 func (_u *RecordTaskUpdate) SetFileSize(v int64) *RecordTaskUpdate {
 	_u.mutation.ResetFileSize()
@@ -409,6 +430,12 @@ func (_u *RecordTaskUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	if value, ok := _u.mutation.AddedAttempts(); ok {
 		_spec.AddField(recordtask.FieldAttempts, field.TypeInt, value)
 	}
+	if value, ok := _u.mutation.Priority(); ok {
+		_spec.SetField(recordtask.FieldPriority, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedPriority(); ok {
+		_spec.AddField(recordtask.FieldPriority, field.TypeInt, value)
+	}
 	if value, ok := _u.mutation.FileSize(); ok {
 		_spec.SetField(recordtask.FieldFileSize, field.TypeInt64, value)
 	}
@@ -662,6 +689,27 @@ func (_u *RecordTaskUpdateOne) SetNillableAttempts(v *int) *RecordTaskUpdateOne 
 // AddAttempts adds value to the "attempts" field.
 func (_u *RecordTaskUpdateOne) AddAttempts(v int) *RecordTaskUpdateOne {
 	_u.mutation.AddAttempts(v)
+	return _u
+}
+
+// SetPriority sets the "priority" field.
+func (_u *RecordTaskUpdateOne) SetPriority(v int) *RecordTaskUpdateOne {
+	_u.mutation.ResetPriority()
+	_u.mutation.SetPriority(v)
+	return _u
+}
+
+// SetNillablePriority sets the "priority" field if the given value is not nil.
+func (_u *RecordTaskUpdateOne) SetNillablePriority(v *int) *RecordTaskUpdateOne {
+	if v != nil {
+		_u.SetPriority(*v)
+	}
+	return _u
+}
+
+// AddPriority adds value to the "priority" field.
+func (_u *RecordTaskUpdateOne) AddPriority(v int) *RecordTaskUpdateOne {
+	_u.mutation.AddPriority(v)
 	return _u
 }
 
@@ -975,6 +1023,12 @@ func (_u *RecordTaskUpdateOne) sqlSave(ctx context.Context) (_node *RecordTask, 
 	}
 	if value, ok := _u.mutation.AddedAttempts(); ok {
 		_spec.AddField(recordtask.FieldAttempts, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.Priority(); ok {
+		_spec.SetField(recordtask.FieldPriority, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedPriority(); ok {
+		_spec.AddField(recordtask.FieldPriority, field.TypeInt, value)
 	}
 	if value, ok := _u.mutation.FileSize(); ok {
 		_spec.SetField(recordtask.FieldFileSize, field.TypeInt64, value)

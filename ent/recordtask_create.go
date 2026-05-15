@@ -85,6 +85,20 @@ func (_c *RecordTaskCreate) SetNillableAttempts(v *int) *RecordTaskCreate {
 	return _c
 }
 
+// SetPriority sets the "priority" field.
+func (_c *RecordTaskCreate) SetPriority(v int) *RecordTaskCreate {
+	_c.mutation.SetPriority(v)
+	return _c
+}
+
+// SetNillablePriority sets the "priority" field if the given value is not nil.
+func (_c *RecordTaskCreate) SetNillablePriority(v *int) *RecordTaskCreate {
+	if v != nil {
+		_c.SetPriority(*v)
+	}
+	return _c
+}
+
 // SetFileSize sets the "file_size" field.
 func (_c *RecordTaskCreate) SetFileSize(v int64) *RecordTaskCreate {
 	_c.mutation.SetFileSize(v)
@@ -271,6 +285,10 @@ func (_c *RecordTaskCreate) defaults() {
 		v := recordtask.DefaultAttempts
 		_c.mutation.SetAttempts(v)
 	}
+	if _, ok := _c.mutation.Priority(); !ok {
+		v := recordtask.DefaultPriority
+		_c.mutation.SetPriority(v)
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		v := recordtask.DefaultCreatedAt()
 		_c.mutation.SetCreatedAt(v)
@@ -302,6 +320,9 @@ func (_c *RecordTaskCreate) check() error {
 	}
 	if _, ok := _c.mutation.Attempts(); !ok {
 		return &ValidationError{Name: "attempts", err: errors.New(`ent: missing required field "RecordTask.attempts"`)}
+	}
+	if _, ok := _c.mutation.Priority(); !ok {
+		return &ValidationError{Name: "priority", err: errors.New(`ent: missing required field "RecordTask.priority"`)}
 	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "RecordTask.created_at"`)}
@@ -362,6 +383,10 @@ func (_c *RecordTaskCreate) createSpec() (*RecordTask, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Attempts(); ok {
 		_spec.SetField(recordtask.FieldAttempts, field.TypeInt, value)
 		_node.Attempts = value
+	}
+	if value, ok := _c.mutation.Priority(); ok {
+		_spec.SetField(recordtask.FieldPriority, field.TypeInt, value)
+		_node.Priority = value
 	}
 	if value, ok := _c.mutation.FileSize(); ok {
 		_spec.SetField(recordtask.FieldFileSize, field.TypeInt64, value)
@@ -573,6 +598,24 @@ func (u *RecordTaskUpsert) UpdateAttempts() *RecordTaskUpsert {
 // AddAttempts adds v to the "attempts" field.
 func (u *RecordTaskUpsert) AddAttempts(v int) *RecordTaskUpsert {
 	u.Add(recordtask.FieldAttempts, v)
+	return u
+}
+
+// SetPriority sets the "priority" field.
+func (u *RecordTaskUpsert) SetPriority(v int) *RecordTaskUpsert {
+	u.Set(recordtask.FieldPriority, v)
+	return u
+}
+
+// UpdatePriority sets the "priority" field to the value that was provided on create.
+func (u *RecordTaskUpsert) UpdatePriority() *RecordTaskUpsert {
+	u.SetExcluded(recordtask.FieldPriority)
+	return u
+}
+
+// AddPriority adds v to the "priority" field.
+func (u *RecordTaskUpsert) AddPriority(v int) *RecordTaskUpsert {
+	u.Add(recordtask.FieldPriority, v)
 	return u
 }
 
@@ -824,6 +867,27 @@ func (u *RecordTaskUpsertOne) AddAttempts(v int) *RecordTaskUpsertOne {
 func (u *RecordTaskUpsertOne) UpdateAttempts() *RecordTaskUpsertOne {
 	return u.Update(func(s *RecordTaskUpsert) {
 		s.UpdateAttempts()
+	})
+}
+
+// SetPriority sets the "priority" field.
+func (u *RecordTaskUpsertOne) SetPriority(v int) *RecordTaskUpsertOne {
+	return u.Update(func(s *RecordTaskUpsert) {
+		s.SetPriority(v)
+	})
+}
+
+// AddPriority adds v to the "priority" field.
+func (u *RecordTaskUpsertOne) AddPriority(v int) *RecordTaskUpsertOne {
+	return u.Update(func(s *RecordTaskUpsert) {
+		s.AddPriority(v)
+	})
+}
+
+// UpdatePriority sets the "priority" field to the value that was provided on create.
+func (u *RecordTaskUpsertOne) UpdatePriority() *RecordTaskUpsertOne {
+	return u.Update(func(s *RecordTaskUpsert) {
+		s.UpdatePriority()
 	})
 }
 
@@ -1259,6 +1323,27 @@ func (u *RecordTaskUpsertBulk) AddAttempts(v int) *RecordTaskUpsertBulk {
 func (u *RecordTaskUpsertBulk) UpdateAttempts() *RecordTaskUpsertBulk {
 	return u.Update(func(s *RecordTaskUpsert) {
 		s.UpdateAttempts()
+	})
+}
+
+// SetPriority sets the "priority" field.
+func (u *RecordTaskUpsertBulk) SetPriority(v int) *RecordTaskUpsertBulk {
+	return u.Update(func(s *RecordTaskUpsert) {
+		s.SetPriority(v)
+	})
+}
+
+// AddPriority adds v to the "priority" field.
+func (u *RecordTaskUpsertBulk) AddPriority(v int) *RecordTaskUpsertBulk {
+	return u.Update(func(s *RecordTaskUpsert) {
+		s.AddPriority(v)
+	})
+}
+
+// UpdatePriority sets the "priority" field to the value that was provided on create.
+func (u *RecordTaskUpsertBulk) UpdatePriority() *RecordTaskUpsertBulk {
+	return u.Update(func(s *RecordTaskUpsert) {
+		s.UpdatePriority()
 	})
 }
 

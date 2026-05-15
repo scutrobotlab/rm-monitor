@@ -84,6 +84,27 @@ func (_u *TranscodeTaskUpdate) AddAttempts(v int) *TranscodeTaskUpdate {
 	return _u
 }
 
+// SetPriority sets the "priority" field.
+func (_u *TranscodeTaskUpdate) SetPriority(v int) *TranscodeTaskUpdate {
+	_u.mutation.ResetPriority()
+	_u.mutation.SetPriority(v)
+	return _u
+}
+
+// SetNillablePriority sets the "priority" field if the given value is not nil.
+func (_u *TranscodeTaskUpdate) SetNillablePriority(v *int) *TranscodeTaskUpdate {
+	if v != nil {
+		_u.SetPriority(*v)
+	}
+	return _u
+}
+
+// AddPriority adds value to the "priority" field.
+func (_u *TranscodeTaskUpdate) AddPriority(v int) *TranscodeTaskUpdate {
+	_u.mutation.AddPriority(v)
+	return _u
+}
+
 // SetErrorMessage sets the "error_message" field.
 func (_u *TranscodeTaskUpdate) SetErrorMessage(v string) *TranscodeTaskUpdate {
 	_u.mutation.SetErrorMessage(v)
@@ -273,6 +294,12 @@ func (_u *TranscodeTaskUpdate) sqlSave(ctx context.Context) (_node int, err erro
 	if value, ok := _u.mutation.AddedAttempts(); ok {
 		_spec.AddField(transcodetask.FieldAttempts, field.TypeInt, value)
 	}
+	if value, ok := _u.mutation.Priority(); ok {
+		_spec.SetField(transcodetask.FieldPriority, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedPriority(); ok {
+		_spec.AddField(transcodetask.FieldPriority, field.TypeInt, value)
+	}
 	if value, ok := _u.mutation.ErrorMessage(); ok {
 		_spec.SetField(transcodetask.FieldErrorMessage, field.TypeString, value)
 	}
@@ -424,6 +451,27 @@ func (_u *TranscodeTaskUpdateOne) SetNillableAttempts(v *int) *TranscodeTaskUpda
 // AddAttempts adds value to the "attempts" field.
 func (_u *TranscodeTaskUpdateOne) AddAttempts(v int) *TranscodeTaskUpdateOne {
 	_u.mutation.AddAttempts(v)
+	return _u
+}
+
+// SetPriority sets the "priority" field.
+func (_u *TranscodeTaskUpdateOne) SetPriority(v int) *TranscodeTaskUpdateOne {
+	_u.mutation.ResetPriority()
+	_u.mutation.SetPriority(v)
+	return _u
+}
+
+// SetNillablePriority sets the "priority" field if the given value is not nil.
+func (_u *TranscodeTaskUpdateOne) SetNillablePriority(v *int) *TranscodeTaskUpdateOne {
+	if v != nil {
+		_u.SetPriority(*v)
+	}
+	return _u
+}
+
+// AddPriority adds value to the "priority" field.
+func (_u *TranscodeTaskUpdateOne) AddPriority(v int) *TranscodeTaskUpdateOne {
+	_u.mutation.AddPriority(v)
 	return _u
 }
 
@@ -645,6 +693,12 @@ func (_u *TranscodeTaskUpdateOne) sqlSave(ctx context.Context) (_node *Transcode
 	}
 	if value, ok := _u.mutation.AddedAttempts(); ok {
 		_spec.AddField(transcodetask.FieldAttempts, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.Priority(); ok {
+		_spec.SetField(transcodetask.FieldPriority, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedPriority(); ok {
+		_spec.AddField(transcodetask.FieldPriority, field.TypeInt, value)
 	}
 	if value, ok := _u.mutation.ErrorMessage(); ok {
 		_spec.SetField(transcodetask.FieldErrorMessage, field.TypeString, value)
