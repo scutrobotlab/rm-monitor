@@ -2,12 +2,12 @@ package logic
 
 import (
 	"context"
-	"crypto/sha256"
 	"fmt"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	larkbitable "github.com/larksuite/oapi-sdk-go/v3/service/bitable/v1"
 	"github.com/pkg/errors"
 	"scutbot.cn/web/rm-monitor/ent"
@@ -472,8 +472,7 @@ func (l *DispatchLogic) createBitableRecord(appToken, tableID string, artifactID
 }
 
 func bitableRecordClientToken(artifactID int) string {
-	sum := sha256.Sum256([]byte(fmt.Sprintf("rm-monitor-upload-task-%d", artifactID)))
-	return fmt.Sprintf("%x-%x-%x-%x-%x", sum[0:4], sum[4:6], sum[6:8], sum[8:10], sum[10:16])
+	return uuid.NewSHA1(uuid.NameSpaceOID, []byte(fmt.Sprintf("rm-monitor-upload-task-%d", artifactID))).String()
 }
 
 func (l *DispatchLogic) recoverDispatching() error {
