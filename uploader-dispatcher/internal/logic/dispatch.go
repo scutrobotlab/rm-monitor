@@ -2,6 +2,7 @@ package logic
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"strconv"
 	"strings"
@@ -448,7 +449,7 @@ func (l *DispatchLogic) createBitableRecord(appToken, tableID string, artifactID
 	resp, err := l.svcCtx.Lark.Bitable.V1.AppTableRecord.Create(l.ctx, larkbitable.NewCreateAppTableRecordReqBuilder().
 		AppToken(appToken).
 		TableId(tableID).
-		ClientToken(fmt.Sprintf("upload-task-%d", artifactID)).
+		ClientToken(bitableRecordClientToken(artifactID)).
 		AppTableRecord(larkbitable.NewAppTableRecordBuilder().
 			Fields(bitableupload.RecordFields(match, roundNo, role)).
 			Build()).
@@ -468,6 +469,11 @@ func (l *DispatchLogic) createBitableRecord(appToken, tableID string, artifactID
 	}
 	url := fmt.Sprintf("https://scutrobotlab.feishu.cn/base/%s?table=%s&record=%s", appToken, tableID, *record.RecordId)
 	return *record.RecordId, &url, nil
+}
+
+func bitableRecordClientToken(artifactID int) string {
+	sum := sha256.Sum256([]byte(fmt.Sprintf("rm-monitor-upload-task-%d", artifactID)))
+	return fmt.Sprintf("%x-%x-%x-%x-%x", sum[0:4], sum[4:6], sum[6:8], sum[8:10], sum[10:16])
 }
 
 func (l *DispatchLogic) recoverDispatching() error {
