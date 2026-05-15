@@ -2,6 +2,7 @@ package logic
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"strconv"
 	"strings"
@@ -472,7 +473,16 @@ func (l *DispatchLogic) createBitableRecord(appToken, tableID string, artifactID
 }
 
 func bitableRecordClientToken(artifactID int) string {
-	return uuid.NewSHA1(uuid.NameSpaceOID, []byte(fmt.Sprintf("rm-monitor-upload-task-%d", artifactID))).String()
+	sum := sha256.Sum256([]byte(fmt.Sprintf("rm-monitor-upload-task-%d", artifactID)))
+	var b [16]byte
+	copy(b[:], sum[:16])
+	b[6] = (b[6] & 0x0f) | 0x40
+	b[8] = (b[8] & 0x3f) | 0x80
+	id, err := uuid.FromBytes(b[:])
+	if err != nil {
+		return uuid.NewString()
+	}
+	return id.String()
 }
 
 func (l *DispatchLogic) recoverDispatching() error {
