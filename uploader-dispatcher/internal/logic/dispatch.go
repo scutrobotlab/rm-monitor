@@ -448,7 +448,7 @@ func (l *DispatchLogic) createBitableRecord(appToken, tableID string, artifactID
 	resp, err := l.svcCtx.Lark.Bitable.V1.AppTableRecord.Create(l.ctx, larkbitable.NewCreateAppTableRecordReqBuilder().
 		AppToken(appToken).
 		TableId(tableID).
-		ClientToken(fmt.Sprintf("upload-task:%d", artifactID)).
+		ClientToken(fmt.Sprintf("upload-task-%d", artifactID)).
 		AppTableRecord(larkbitable.NewAppTableRecordBuilder().
 			Fields(bitableupload.RecordFields(match, roundNo, role)).
 			Build()).
