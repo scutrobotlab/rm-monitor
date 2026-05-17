@@ -21,6 +21,8 @@ data:
       Namespace: rm-monitor
       Image: rm-monitor/record-job:latest
       ConfigMapName: record-job-config
+      StorageNodeSelectorKey: rm-monitor/record
+      StorageNodeSelectorValue: "true"
       RecordsPVC: rm-monitor-records
       RecordsMountPath: /records
       TTLSecondsAfterFinished: 86400
@@ -28,6 +30,8 @@ data:
       Namespace: rm-monitor
       Image: rm-monitor/manifest-job:latest
       ConfigMapName: manifest-job-config
+      StorageNodeSelectorKey: rm-monitor/record
+      StorageNodeSelectorValue: "true"
       RecordsPVC: rm-monitor-records
       RecordsMountPath: /records
       ImagePullPolicy: Always

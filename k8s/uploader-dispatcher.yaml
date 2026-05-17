@@ -21,7 +21,7 @@ data:
       Namespace: rm-monitor
       Image: rm-monitor/uploader-job:latest
       ConfigMapName: uploader-job-config
-      RecordsPVC: rm-monitor-records
+      RecordsPVC: rm-monitor-records-webdav
       RecordsMountPath: /records
       TTLSecondsAfterFinished: 86400
     Priority: []

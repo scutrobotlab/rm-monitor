@@ -3,7 +3,6 @@ PostgresConf:
   AutoMigrate: true
 TranscodeConf:
   BaseDir: /records
-  SuspendWhenRecordingActive: true
   SourceRetentionDays: 7
   MaxConcurrent: 3
   CPURequest: "6000m"

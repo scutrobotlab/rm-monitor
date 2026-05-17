@@ -5,6 +5,7 @@ namespace: rm-monitor
 
 resources:
   - namespace.yaml
+  - priorityclass.yaml
   - rbac.yaml
   - storage.yaml
   - monitor.yaml

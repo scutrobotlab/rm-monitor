@@ -218,13 +218,15 @@ func (l *DispatchLogic) dispatchPendingTasks() error {
 		}
 		if l.svcCtx.K8s != nil {
 			job := kubejob.Build(l.svcCtx.Config.K8sJobConf, kubejob.JobSpec{
-				Name:     jobName,
-				App:      "record-job",
-				Image:    l.svcCtx.Config.K8sJobConf.Image,
-				Args:     []string{"-f", "/etc/rm-monitor/config.yml", "-task", strconv.Itoa(task.ID)},
-				MountPVC: true,
-				CPU:      "500m",
-				Memory:   "512Mi",
+				Name:              jobName,
+				App:               "record-job",
+				Image:             l.svcCtx.Config.K8sJobConf.Image,
+				Args:              []string{"-f", "/etc/rm-monitor/config.yml", "-task", strconv.Itoa(task.ID)},
+				MountPVC:          true,
+				CPU:               "500m",
+				Memory:            "512Mi",
+				MemLimit:          "1Gi",
+				PriorityClassName: "rm-monitor-record-critical",
 			})
 			if err := l.svcCtx.K8s.CreateJob(l.ctx, l.svcCtx.Config.K8sJobConf.WithDefaults().Namespace, job); err != nil {
 				_ = l.svcCtx.DB.RecordTask.UpdateOneID(task.ID).SetStatus(recordtask.StatusFAILED).SetErrorMessage(err.Error()).Exec(l.ctx)

@@ -74,15 +74,14 @@ type K8sJobConf struct {
 }
 
 type TranscodeConf struct {
-	BaseDir                    string `json:",optional"`
-	SuspendWhenRecordingActive bool   `json:",optional"`
-	SourceRetentionDays        int    `json:",optional"`
-	MaxConcurrent              int    `json:",optional"`
-	CPURequest                 string `json:",optional"`
-	CPULimit                   string `json:",optional"`
-	MemoryRequest              string `json:",optional"`
-	MemoryLimit                string `json:",optional"`
-	LocalWorkDir               string `json:",optional"`
+	BaseDir             string `json:",optional"`
+	SourceRetentionDays int    `json:",optional"`
+	MaxConcurrent       int    `json:",optional"`
+	CPURequest          string `json:",optional"`
+	CPULimit            string `json:",optional"`
+	MemoryRequest       string `json:",optional"`
+	MemoryLimit         string `json:",optional"`
+	LocalWorkDir        string `json:",optional"`
 }
 
 func (c *TranscodeConf) WithDefaults() TranscodeConf {

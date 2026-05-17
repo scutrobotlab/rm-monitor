@@ -15,7 +15,7 @@ spec:
     required:
       nodeSelectorTerms:
         - matchExpressions:
-            - key: rm-monitor/storage
+            - key: rm-monitor/record
               operator: In
               values:
                 - "true"

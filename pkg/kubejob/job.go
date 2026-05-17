@@ -87,6 +87,7 @@ type JobSpec struct {
 	Memory                     string
 	CPULimit                   string
 	MemLimit                   string
+	PriorityClassName          string
 	AvoidNodeLabelKey          string
 	DisableStorageNodeSelector bool
 }
@@ -174,6 +175,9 @@ func Build(conf config.K8sJobConf, spec JobSpec) *batchv1.Job {
 		ServiceAccountName: conf.ServiceAccountName,
 		Containers:         []corev1.Container{container},
 		Volumes:            volumes,
+	}
+	if spec.PriorityClassName != "" {
+		podSpec.PriorityClassName = spec.PriorityClassName
 	}
 	if spec.MountPVC && !spec.DisableStorageNodeSelector {
 		podSpec.NodeSelector = map[string]string{

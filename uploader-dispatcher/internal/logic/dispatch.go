@@ -563,13 +563,16 @@ func (l *DispatchLogic) dispatchPending() error {
 		}
 		if l.svcCtx.K8s != nil {
 			job := kubejob.Build(l.svcCtx.Config.K8sJobConf, kubejob.JobSpec{
-				Name:     jobName,
-				App:      "uploader-job",
-				Image:    l.svcCtx.Config.K8sJobConf.Image,
-				Args:     []string{"-f", "/etc/rm-monitor/config.yml", "-task", strconv.Itoa(task.ID)},
-				MountPVC: true,
-				CPU:      "100m",
-				Memory:   "256Mi",
+				Name:                       jobName,
+				App:                        "uploader-job",
+				Image:                      l.svcCtx.Config.K8sJobConf.Image,
+				Args:                       []string{"-f", "/etc/rm-monitor/config.yml", "-task", strconv.Itoa(task.ID)},
+				MountPVC:                   true,
+				RecordsPVC:                 l.svcCtx.Config.K8sJobConf.WithDefaults().RecordsPVC,
+				CPU:                        "100m",
+				Memory:                     "256Mi",
+				MemLimit:                   "1Gi",
+				DisableStorageNodeSelector: true,
 			})
 			if err := l.svcCtx.K8s.CreateJob(l.ctx, l.svcCtx.Config.K8sJobConf.WithDefaults().Namespace, job); err != nil {
 				_ = l.svcCtx.DB.UploadTask.UpdateOneID(task.ID).SetStatus(uploadtask.StatusFAILED).SetErrorMessage(err.Error()).Exec(l.ctx)

@@ -9,7 +9,6 @@ import (
 
 	"entgo.io/ent/dialect/sql"
 	"github.com/pkg/errors"
-	"scutbot.cn/web/rm-monitor/ent/matchround"
 	"scutbot.cn/web/rm-monitor/ent/mediaartifact"
 	"scutbot.cn/web/rm-monitor/ent/recordtask"
 	"scutbot.cn/web/rm-monitor/ent/transcodetask"
@@ -149,15 +148,6 @@ func (l *DispatchLogic) recoverLostRunning() error {
 
 func (l *DispatchLogic) dispatchPending() error {
 	conf := l.svcCtx.Config.TranscodeConf.WithDefaults()
-	if conf.SuspendWhenRecordingActive {
-		active, err := l.recordingActive()
-		if err != nil {
-			return err
-		}
-		if active {
-			return nil
-		}
-	}
 	running, err := l.svcCtx.DB.TranscodeTask.Query().
 		Where(transcodetask.StatusIn(transcodetask.StatusDISPATCHING, transcodetask.StatusRUNNING)).
 		Count(l.ctx)
@@ -203,7 +193,7 @@ func (l *DispatchLogic) dispatchPending() error {
 				Memory:                     conf.MemoryRequest,
 				CPULimit:                   conf.CPULimit,
 				MemLimit:                   conf.MemoryLimit,
-				AvoidNodeLabelKey:          "rm-monitor/record",
+				PriorityClassName:          "rm-monitor-background",
 				DisableStorageNodeSelector: true,
 			})
 			if err := l.svcCtx.K8s.CreateJob(l.ctx, jobConf.Namespace, job); err != nil {
@@ -216,21 +206,6 @@ func (l *DispatchLogic) dispatchPending() error {
 		}
 	}
 	return nil
-}
-
-func (l *DispatchLogic) recordingActive() (bool, error) {
-	rounds, err := l.svcCtx.DB.MatchRound.Query().Where(matchround.StatusEQ(matchround.StatusSTARTED)).Count(l.ctx)
-	if err != nil {
-		return false, errors.Wrap(err, "count active rounds")
-	}
-	if rounds > 0 {
-		return true, nil
-	}
-	records, err := l.svcCtx.DB.RecordTask.Query().Where(recordtask.StatusIn(recordtask.StatusDISPATCHING, recordtask.StatusRUNNING)).Count(l.ctx)
-	if err != nil {
-		return false, errors.Wrap(err, "count active record tasks")
-	}
-	return records > 0, nil
 }
 
 func jobName(prefix string, id int) string {

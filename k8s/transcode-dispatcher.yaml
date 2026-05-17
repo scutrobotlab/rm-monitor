@@ -9,7 +9,6 @@ data:
       AutoMigrate: true
     TranscodeConf:
       BaseDir: /records
-      SuspendWhenRecordingActive: true
       SourceRetentionDays: 7
       MaxConcurrent: 3
       CPURequest: "6000m"
@@ -99,7 +98,7 @@ spec:
           serviceAccountName: rm-monitor-dispatcher
           restartPolicy: Never
           nodeSelector:
-            rm-monitor/storage: "true"
+            rm-monitor/record: "true"
           containers:
             - name: artifact-cleaner
               image: rm-monitor/artifact-cleaner:latest

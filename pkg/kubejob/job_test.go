@@ -3,11 +3,10 @@ package kubejob
 import (
 	"testing"
 
-	corev1 "k8s.io/api/core/v1"
 	"scutbot.cn/web/rm-monitor/pkg/config"
 )
 
-func TestBuildTranscodeWebDAVPVCUsesAvoidAffinityWithoutStorageSelector(t *testing.T) {
+func TestBuildTranscodeWebDAVPVCUsesNoStorageSelector(t *testing.T) {
 	job := Build(config.K8sJobConf{
 		Namespace:                "rm-monitor",
 		Image:                    "example/transcode-job:test",
@@ -22,19 +21,18 @@ func TestBuildTranscodeWebDAVPVCUsesAvoidAffinityWithoutStorageSelector(t *testi
 		Image:                      "example/transcode-job:test",
 		MountPVC:                   true,
 		RecordsPVC:                 "webdav-records",
-		AvoidNodeLabelKey:          "rm-monitor/record",
 		DisableStorageNodeSelector: true,
+		PriorityClassName:          "rm-monitor-background",
 	})
 	pod := job.Spec.Template.Spec
 	if len(pod.NodeSelector) != 0 {
 		t.Fatalf("NodeSelector = %#v, want empty", pod.NodeSelector)
 	}
-	if pod.Affinity == nil || pod.Affinity.NodeAffinity == nil || pod.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution == nil {
-		t.Fatalf("missing required node affinity")
+	if pod.Affinity != nil {
+		t.Fatalf("Affinity = %#v, want nil", pod.Affinity)
 	}
-	req := pod.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms[0].MatchExpressions[0]
-	if req.Key != "rm-monitor/record" || req.Operator != corev1.NodeSelectorOpDoesNotExist {
-		t.Fatalf("affinity requirement = %#v", req)
+	if got := pod.PriorityClassName; got != "rm-monitor-background" {
+		t.Fatalf("priority class = %q, want rm-monitor-background", got)
 	}
 	if len(pod.Volumes) != 2 || pod.Volumes[1].Name != "records" {
 		t.Fatalf("volumes = %#v, want config + records", pod.Volumes)
@@ -54,14 +52,18 @@ func TestBuildWithPVCUsesStorageNodeSelector(t *testing.T) {
 		RecordsPVC:               "records",
 		RecordsMountPath:         "/records",
 	}, JobSpec{
-		Name:     "record-1",
-		App:      "record-job",
-		Image:    "example/record-job:test",
-		MountPVC: true,
+		Name:              "record-1",
+		App:               "record-job",
+		Image:             "example/record-job:test",
+		MountPVC:          true,
+		PriorityClassName: "rm-monitor-record-critical",
 	})
 	pod := job.Spec.Template.Spec
 	if got := pod.NodeSelector["rm-monitor/record"]; got != "true" {
 		t.Fatalf("storage node selector = %q, want true", got)
+	}
+	if got := pod.PriorityClassName; got != "rm-monitor-record-critical" {
+		t.Fatalf("priority class = %q, want rm-monitor-record-critical", got)
 	}
 	if len(pod.Volumes) != 2 {
 		t.Fatalf("volumes = %#v, want config + records", pod.Volumes)
