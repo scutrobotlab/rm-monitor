@@ -278,17 +278,31 @@ func rcloneSize(ctx context.Context, env []string, conf common.TranscodeConf, re
 	if err != nil {
 		return 0, err
 	}
+	payload, err := jsonPayload(out)
+	if err != nil {
+		return 0, err
+	}
 	var data struct {
 		Bytes int64 `json:"bytes"`
 		Count int64 `json:"count"`
 	}
-	if err := json.Unmarshal([]byte(out), &data); err != nil {
+	if err := json.Unmarshal([]byte(payload), &data); err != nil {
 		return 0, errors.Wrap(err, "parse rclone size")
 	}
 	if data.Count != 1 || data.Bytes <= 0 {
 		return 0, errors.Errorf("unexpected remote archive size: count=%d bytes=%d", data.Count, data.Bytes)
 	}
 	return data.Bytes, nil
+}
+
+func jsonPayload(out string) (string, error) {
+	out = strings.TrimSpace(out)
+	start := strings.IndexByte(out, '{')
+	end := strings.LastIndexByte(out, '}')
+	if start < 0 || end < start {
+		return "", errors.New("rclone output did not contain a JSON object")
+	}
+	return out[start : end+1], nil
 }
 
 func rcloneRun(ctx context.Context, env []string, args ...string) error {

@@ -32,3 +32,16 @@ func TestRemoteArtifactPath(t *testing.T) {
 		})
 	}
 }
+
+func TestJSONPayload(t *testing.T) {
+	got, err := jsonPayload("notice\n{\"bytes\":12,\"count\":1}\n/trailing")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != `{"bytes":12,"count":1}` {
+		t.Fatalf("unexpected payload: %q", got)
+	}
+	if _, err := jsonPayload("no json"); err == nil {
+		t.Fatal("expected error")
+	}
+}
