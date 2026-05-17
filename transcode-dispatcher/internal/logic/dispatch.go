@@ -113,11 +113,6 @@ func (l *DispatchLogic) recoverDispatching() error {
 
 func (l *DispatchLogic) dispatchPending() error {
 	conf := l.svcCtx.Config.TranscodeConf.WithDefaults()
-	if ok, err := inAllowedWindow(time.Now(), conf.AllowedWindow); err != nil {
-		return err
-	} else if !ok {
-		return nil
-	}
 	if conf.SuspendWhenRecordingActive {
 		active, err := l.recordingActive()
 		if err != nil {
@@ -210,34 +205,6 @@ func (l *DispatchLogic) recordingActive() (bool, error) {
 		return false, errors.Wrap(err, "count active record tasks")
 	}
 	return records > 0, nil
-}
-
-func inAllowedWindow(now time.Time, window string) (bool, error) {
-	parts := strings.Split(window, "-")
-	if len(parts) != 2 {
-		return false, fmt.Errorf("invalid transcode allowed window %q", window)
-	}
-	start, err := parseClock(parts[0])
-	if err != nil {
-		return false, err
-	}
-	end, err := parseClock(parts[1])
-	if err != nil {
-		return false, err
-	}
-	current := now.Hour()*60 + now.Minute()
-	if start <= end {
-		return current >= start && current < end, nil
-	}
-	return current >= start || current < end, nil
-}
-
-func parseClock(s string) (int, error) {
-	t, err := time.Parse("15:04", strings.TrimSpace(s))
-	if err != nil {
-		return 0, errors.Wrap(err, "parse transcode window")
-	}
-	return t.Hour()*60 + t.Minute(), nil
 }
 
 func jobName(prefix string, id int) string {

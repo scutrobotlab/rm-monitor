@@ -18,7 +18,6 @@ data:
       AutoMigrate: true
     TranscodeConf:
       BaseDir: /records
-      AllowedWindow: "23:00-06:00"
       SuspendWhenRecordingActive: true
       SourceRetentionDays: 7
       WebDAVCredentialSecretName: rm-rec-webdav-credential

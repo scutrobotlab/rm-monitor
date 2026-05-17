@@ -3,10 +3,9 @@ PostgresConf:
   AutoMigrate: true
 TranscodeConf:
   BaseDir: /records
-  AllowedWindow: "23:00-06:00"
   SuspendWhenRecordingActive: true
   SourceRetentionDays: 7
-  MaxConcurrent: 4
+  MaxConcurrent: 3
   WebDAVCredentialSecretName: rm-rec-webdav-credential
   CPURequest: "6000m"
   CPULimit: "8000m"

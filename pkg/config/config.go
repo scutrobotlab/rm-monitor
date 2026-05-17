@@ -75,7 +75,6 @@ type K8sJobConf struct {
 
 type TranscodeConf struct {
 	BaseDir                    string `json:",optional"`
-	AllowedWindow              string `json:",optional"`
 	SuspendWhenRecordingActive bool   `json:",optional"`
 	SourceRetentionDays        int    `json:",optional"`
 	MaxConcurrent              int    `json:",optional"`
@@ -94,14 +93,11 @@ func (c *TranscodeConf) WithDefaults() TranscodeConf {
 	if out.BaseDir == "" {
 		out.BaseDir = "/records"
 	}
-	if out.AllowedWindow == "" {
-		out.AllowedWindow = "23:00-06:00"
-	}
 	if out.SourceRetentionDays <= 0 {
 		out.SourceRetentionDays = 7
 	}
 	if out.MaxConcurrent <= 0 {
-		out.MaxConcurrent = 4
+		out.MaxConcurrent = 3
 	}
 	if out.CPURequest == "" {
 		out.CPURequest = "6000m"
