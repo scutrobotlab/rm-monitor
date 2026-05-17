@@ -101,7 +101,7 @@ func run(ctx context.Context, client *ent.Client, c config.Config, taskID int) e
 		_ = client.TranscodeTask.UpdateOneID(taskID).SetStatus(transcodetask.StatusFAILED).SetErrorMessage(err.Error()).Exec(ctx)
 		return err
 	}
-	if err := client.TranscodeTask.UpdateOneID(taskID).SetStatus(transcodetask.StatusRUNNING).SetStartedAt(time.Now()).Exec(ctx); err != nil {
+	if err := client.TranscodeTask.UpdateOneID(taskID).SetStatus(transcodetask.StatusRUNNING).SetStartedAt(time.Now()).ClearErrorMessage().Exec(ctx); err != nil {
 		return errors.Wrap(err, "mark transcode running")
 	}
 	if err := rcloneRun(ctx, rcloneEnv, "copyto", remoteRef(transcodeConf, sourceRel), sourcePath); err != nil {
@@ -213,6 +213,7 @@ func run(ctx context.Context, client *ent.Client, c config.Config, taskID int) e
 		SetArchiveArtifactID(archive.ID).
 		SetStatus(transcodetask.StatusSUCCEEDED).
 		SetCompletedAt(now).
+		ClearErrorMessage().
 		Exec(ctx); err != nil {
 		return errors.Wrap(err, "mark transcode succeeded")
 	}
