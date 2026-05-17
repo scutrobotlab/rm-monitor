@@ -88,7 +88,6 @@ type JobSpec struct {
 	CPULimit                   string
 	MemLimit                   string
 	PriorityClassName          string
-	AvoidNodeLabelKey          string
 	DisableStorageNodeSelector bool
 }
 
@@ -182,24 +181,6 @@ func Build(conf config.K8sJobConf, spec JobSpec) *batchv1.Job {
 	if spec.MountPVC && !spec.DisableStorageNodeSelector {
 		podSpec.NodeSelector = map[string]string{
 			conf.StorageNodeSelectorKey: conf.StorageNodeSelectorValue,
-		}
-	}
-	if spec.AvoidNodeLabelKey != "" {
-		podSpec.Affinity = &corev1.Affinity{
-			NodeAffinity: &corev1.NodeAffinity{
-				RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
-					NodeSelectorTerms: []corev1.NodeSelectorTerm{
-						{
-							MatchExpressions: []corev1.NodeSelectorRequirement{
-								{
-									Key:      spec.AvoidNodeLabelKey,
-									Operator: corev1.NodeSelectorOpDoesNotExist,
-								},
-							},
-						},
-					},
-				},
-			},
 		}
 	}
 	return &batchv1.Job{

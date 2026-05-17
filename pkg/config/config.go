@@ -157,7 +157,7 @@ func (c *K8sJobConf) WithDefaults() K8sJobConf {
 		out.Namespace = "rm-monitor"
 	}
 	if out.StorageNodeSelectorKey == "" {
-		out.StorageNodeSelectorKey = "rm-monitor/storage"
+		out.StorageNodeSelectorKey = "rm-monitor/record"
 	}
 	if out.StorageNodeSelectorValue == "" {
 		out.StorageNodeSelectorValue = "true"
