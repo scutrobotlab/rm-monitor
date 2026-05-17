@@ -38,6 +38,9 @@ func (l *DispatchLogic) Tick() error {
 	if err := l.recoverDispatching(); err != nil {
 		return err
 	}
+	if err := l.recoverLostRunning(); err != nil {
+		return err
+	}
 	return l.dispatchPending()
 }
 
@@ -105,6 +108,40 @@ func (l *DispatchLogic) recoverDispatching() error {
 		}
 		if err := l.svcCtx.DB.TranscodeTask.UpdateOneID(task.ID).SetStatus(transcodetask.StatusPENDING).Exec(l.ctx); err != nil {
 			return errors.Wrap(err, "requeue stale transcode task")
+		}
+	}
+	return nil
+}
+
+func (l *DispatchLogic) recoverLostRunning() error {
+	if l.svcCtx.K8s == nil {
+		return nil
+	}
+	tasks, err := l.svcCtx.DB.TranscodeTask.Query().
+		Where(transcodetask.StatusEQ(transcodetask.StatusRUNNING), transcodetask.UpdatedAtLTE(time.Now().Add(-dispatchingStaleAfter))).
+		Limit(100).
+		All(l.ctx)
+	if err != nil {
+		return errors.Wrap(err, "query stale running transcode tasks")
+	}
+	namespace := l.svcCtx.Config.K8sJobConf.WithDefaults().Namespace
+	for _, task := range tasks {
+		name := jobName("transcode", task.ID)
+		if task.K8sJobName != nil && *task.K8sJobName != "" {
+			name = *task.K8sJobName
+		}
+		exists, err := l.svcCtx.K8s.JobExists(l.ctx, namespace, name)
+		if err != nil {
+			return err
+		}
+		if exists {
+			continue
+		}
+		if err := l.svcCtx.DB.TranscodeTask.UpdateOneID(task.ID).
+			SetStatus(transcodetask.StatusPENDING).
+			ClearK8sJobName().
+			Exec(l.ctx); err != nil {
+			return errors.Wrap(err, "requeue lost running transcode task")
 		}
 	}
 	return nil
