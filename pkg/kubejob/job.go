@@ -73,18 +73,20 @@ func (c *Client) JobExists(ctx context.Context, namespace, name string) (bool, e
 }
 
 type JobSpec struct {
-	Name     string
-	App      string
-	Image    string
-	Command  []string
-	Args     []string
-	Env      map[string]string
-	MountPVC bool
-	WorkDir  string
-	CPU      string
-	Memory   string
-	CPULimit string
-	MemLimit string
+	Name              string
+	App               string
+	Image             string
+	Command           []string
+	Args              []string
+	Env               map[string]string
+	SecretEnv         map[string]corev1.SecretKeySelector
+	MountPVC          bool
+	WorkDir           string
+	CPU               string
+	Memory            string
+	CPULimit          string
+	MemLimit          string
+	AvoidNodeLabelKey string
 }
 
 func Build(conf config.K8sJobConf, spec JobSpec) *batchv1.Job {
@@ -93,6 +95,15 @@ func Build(conf config.K8sJobConf, spec JobSpec) *batchv1.Job {
 	env := make([]corev1.EnvVar, 0, len(spec.Env))
 	for k, v := range spec.Env {
 		env = append(env, corev1.EnvVar{Name: k, Value: v})
+	}
+	for k, v := range spec.SecretEnv {
+		selector := v
+		env = append(env, corev1.EnvVar{
+			Name: k,
+			ValueFrom: &corev1.EnvVarSource{
+				SecretKeyRef: &selector,
+			},
+		})
 	}
 	container := corev1.Container{
 		Name:            spec.App,
@@ -152,6 +163,35 @@ func Build(conf config.K8sJobConf, spec JobSpec) *batchv1.Job {
 			},
 		})
 	}
+	podSpec := corev1.PodSpec{
+		RestartPolicy:      corev1.RestartPolicyNever,
+		ServiceAccountName: conf.ServiceAccountName,
+		Containers:         []corev1.Container{container},
+		Volumes:            volumes,
+	}
+	if spec.MountPVC {
+		podSpec.NodeSelector = map[string]string{
+			conf.StorageNodeSelectorKey: conf.StorageNodeSelectorValue,
+		}
+	}
+	if spec.AvoidNodeLabelKey != "" {
+		podSpec.Affinity = &corev1.Affinity{
+			NodeAffinity: &corev1.NodeAffinity{
+				RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
+					NodeSelectorTerms: []corev1.NodeSelectorTerm{
+						{
+							MatchExpressions: []corev1.NodeSelectorRequirement{
+								{
+									Key:      spec.AvoidNodeLabelKey,
+									Operator: corev1.NodeSelectorOpDoesNotExist,
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+	}
 	return &batchv1.Job{
 		TypeMeta:   metav1.TypeMeta{APIVersion: "batch/v1", Kind: "Job"},
 		ObjectMeta: metav1.ObjectMeta{Name: spec.Name, Namespace: conf.Namespace, Labels: labels},
@@ -160,15 +200,7 @@ func Build(conf config.K8sJobConf, spec JobSpec) *batchv1.Job {
 			TTLSecondsAfterFinished: &conf.TTLSecondsAfterFinished,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{Labels: labels},
-				Spec: corev1.PodSpec{
-					RestartPolicy:      corev1.RestartPolicyNever,
-					ServiceAccountName: conf.ServiceAccountName,
-					NodeSelector: map[string]string{
-						conf.StorageNodeSelectorKey: conf.StorageNodeSelectorValue,
-					},
-					Containers: []corev1.Container{container},
-					Volumes:    volumes,
-				},
+				Spec:       podSpec,
 			},
 		},
 	}

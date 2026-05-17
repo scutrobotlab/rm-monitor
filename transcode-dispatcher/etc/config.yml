@@ -7,6 +7,7 @@ TranscodeConf:
   SuspendWhenRecordingActive: true
   SourceRetentionDays: 7
   MaxConcurrent: 4
+  WebDAVCredentialSecretName: rm-rec-webdav-credential
   CPURequest: "6000m"
   CPULimit: "8000m"
   MemoryRequest: "2Gi"

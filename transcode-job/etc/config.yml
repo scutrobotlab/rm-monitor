@@ -4,3 +4,6 @@ PostgresConf:
 TranscodeConf:
   BaseDir: /records
   SourceRetentionDays: 7
+  WebDAVURL: http://rm-rec-service.rm-monitor.svc.cluster.local:5244/dav/
+  WebDAVRemoteName: openlist
+  LocalWorkDir: /tmp/rm-monitor-transcode

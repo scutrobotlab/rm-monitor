@@ -5,11 +5,13 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
+	pathpkg "path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -21,9 +23,9 @@ import (
 	"scutbot.cn/web/rm-monitor/ent/recordtask"
 	"scutbot.cn/web/rm-monitor/ent/transcodetask"
 	"scutbot.cn/web/rm-monitor/pkg/app"
+	common "scutbot.cn/web/rm-monitor/pkg/config"
 	"scutbot.cn/web/rm-monitor/pkg/db"
 	"scutbot.cn/web/rm-monitor/pkg/logx"
-	"scutbot.cn/web/rm-monitor/pkg/storagepath"
 	"scutbot.cn/web/rm-monitor/transcode-job/internal/config"
 )
 
@@ -71,14 +73,30 @@ func run(ctx context.Context, client *ent.Client, c config.Config, taskID int) e
 		return errors.New("transcode task missing source artifact or record task")
 	}
 	transcodeConf := c.TranscodeConf.WithDefaults()
-	sourcePath := storagepath.Resolve(transcodeConf.BaseDir, source.Path)
-	archiveRel := strings.TrimSuffix(source.Path, filepath.Ext(source.Path)) + ".mp4"
-	archivePath := storagepath.Resolve(transcodeConf.BaseDir, archiveRel)
-	tmpArchivePath := fmt.Sprintf("%s.tmp-%d", archivePath, taskID)
-	if err := os.MkdirAll(filepath.Dir(archivePath), 0o755); err != nil {
-		return errors.Wrap(err, "create archive dir")
+	sourceRel, err := remoteArtifactPath(transcodeConf.BaseDir, source.Path)
+	if err != nil {
+		_ = client.TranscodeTask.UpdateOneID(taskID).SetStatus(transcodetask.StatusFAILED).SetErrorMessage(err.Error()).Exec(ctx)
+		return err
 	}
-	_ = os.Remove(tmpArchivePath)
+	archiveRel := strings.TrimSuffix(sourceRel, pathpkg.Ext(sourceRel)) + ".mp4"
+	tmpArchiveRel := fmt.Sprintf("%s.tmp-%d", archiveRel, taskID)
+
+	workDir := filepath.Join(transcodeConf.LocalWorkDir, strconv.Itoa(taskID))
+	sourcePath := filepath.Join(workDir, "source.flv")
+	archivePath := filepath.Join(workDir, "archive.mp4")
+	if err := os.RemoveAll(workDir); err != nil {
+		return errors.Wrap(err, "clean transcode work dir")
+	}
+	if err := os.MkdirAll(workDir, 0o755); err != nil {
+		return errors.Wrap(err, "create transcode work dir")
+	}
+	defer os.RemoveAll(workDir)
+
+	rcloneEnv, err := rcloneConfigEnv(ctx, transcodeConf)
+	if err != nil {
+		_ = client.TranscodeTask.UpdateOneID(taskID).SetStatus(transcodetask.StatusFAILED).SetErrorMessage(err.Error()).Exec(ctx)
+		return err
+	}
 	if err := ensureSVTAV1(ctx); err != nil {
 		_ = client.TranscodeTask.UpdateOneID(taskID).SetStatus(transcodetask.StatusFAILED).SetErrorMessage(err.Error()).Exec(ctx)
 		return err
@@ -86,6 +104,11 @@ func run(ctx context.Context, client *ent.Client, c config.Config, taskID int) e
 	if err := client.TranscodeTask.UpdateOneID(taskID).SetStatus(transcodetask.StatusRUNNING).SetStartedAt(time.Now()).Exec(ctx); err != nil {
 		return errors.Wrap(err, "mark transcode running")
 	}
+	if err := rcloneRun(ctx, rcloneEnv, "copyto", remoteRef(transcodeConf, sourceRel), sourcePath); err != nil {
+		_ = client.TranscodeTask.UpdateOneID(taskID).SetStatus(transcodetask.StatusFAILED).SetErrorMessage(err.Error()).Exec(ctx)
+		return errors.Wrap(err, "download source")
+	}
+
 	cmd := exec.CommandContext(ctx,
 		"ffmpeg",
 		"-hide_banner",
@@ -102,7 +125,7 @@ func run(ctx context.Context, client *ent.Client, c config.Config, taskID int) e
 		"-pix_fmt", "yuv420p",
 		"-movflags", "+faststart",
 		"-f", "mp4",
-		"-y", tmpArchivePath,
+		"-y", archivePath,
 	)
 	var stderr bytes.Buffer
 	cmd.Stdout = os.Stdout
@@ -110,30 +133,51 @@ func run(ctx context.Context, client *ent.Client, c config.Config, taskID int) e
 	cmd.WaitDelay = 10 * time.Second
 	if err := cmd.Run(); err != nil {
 		msg := commandError(err, stderr.String())
-		_ = os.Remove(tmpArchivePath)
 		_ = client.TranscodeTask.UpdateOneID(taskID).SetStatus(transcodetask.StatusFAILED).SetErrorMessage(msg).Exec(ctx)
 		return errors.New(msg)
 	}
-	stat, err := os.Stat(tmpArchivePath)
+	stat, err := os.Stat(archivePath)
 	if err != nil {
 		_ = client.TranscodeTask.UpdateOneID(taskID).SetStatus(transcodetask.StatusFAILED).SetErrorMessage(err.Error()).Exec(ctx)
 		return errors.Wrap(err, "stat archive")
 	}
 	if stat.Size() == 0 {
 		err := errors.New("archive output is empty")
-		_ = os.Remove(tmpArchivePath)
 		_ = client.TranscodeTask.UpdateOneID(taskID).SetStatus(transcodetask.StatusFAILED).SetErrorMessage(err.Error()).Exec(ctx)
 		return err
 	}
-	sum, err := checksum(tmpArchivePath)
+	sum, err := checksum(archivePath)
 	if err != nil {
 		_ = client.TranscodeTask.UpdateOneID(taskID).SetStatus(transcodetask.StatusFAILED).SetErrorMessage(err.Error()).Exec(ctx)
 		return err
 	}
-	if err := os.Rename(tmpArchivePath, archivePath); err != nil {
+	if dir := pathpkg.Dir(archiveRel); dir != "." {
+		if err := rcloneRun(ctx, rcloneEnv, "mkdir", remoteRef(transcodeConf, dir)); err != nil {
+			_ = client.TranscodeTask.UpdateOneID(taskID).SetStatus(transcodetask.StatusFAILED).SetErrorMessage(err.Error()).Exec(ctx)
+			return errors.Wrap(err, "create remote archive dir")
+		}
+	}
+	if err := rcloneRun(ctx, rcloneEnv, "copyto", archivePath, remoteRef(transcodeConf, tmpArchiveRel)); err != nil {
+		_ = rcloneRun(ctx, rcloneEnv, "deletefile", remoteRef(transcodeConf, tmpArchiveRel))
+		_ = client.TranscodeTask.UpdateOneID(taskID).SetStatus(transcodetask.StatusFAILED).SetErrorMessage(err.Error()).Exec(ctx)
+		return errors.Wrap(err, "upload archive")
+	}
+	if err := rcloneRun(ctx, rcloneEnv, "moveto", remoteRef(transcodeConf, tmpArchiveRel), remoteRef(transcodeConf, archiveRel)); err != nil {
+		_ = rcloneRun(ctx, rcloneEnv, "deletefile", remoteRef(transcodeConf, tmpArchiveRel))
 		_ = client.TranscodeTask.UpdateOneID(taskID).SetStatus(transcodetask.StatusFAILED).SetErrorMessage(err.Error()).Exec(ctx)
 		return errors.Wrap(err, "publish archive")
 	}
+	remoteBytes, err := rcloneSize(ctx, rcloneEnv, transcodeConf, archiveRel)
+	if err != nil {
+		_ = client.TranscodeTask.UpdateOneID(taskID).SetStatus(transcodetask.StatusFAILED).SetErrorMessage(err.Error()).Exec(ctx)
+		return errors.Wrap(err, "stat remote archive")
+	}
+	if remoteBytes != stat.Size() {
+		err := errors.Errorf("remote archive size mismatch: local=%d remote=%d", stat.Size(), remoteBytes)
+		_ = client.TranscodeTask.UpdateOneID(taskID).SetStatus(transcodetask.StatusFAILED).SetErrorMessage(err.Error()).Exec(ctx)
+		return err
+	}
+
 	if err := client.MediaArtifact.Create().
 		SetRecordTaskID(source.Edges.RecordTask.ID).
 		SetKind(mediaartifact.KindArchive).
@@ -173,6 +217,98 @@ func run(ctx context.Context, client *ent.Client, c config.Config, taskID int) e
 		return errors.Wrap(err, "mark transcode succeeded")
 	}
 	return db.Notify(ctx, c.PostgresConf.DSN, db.TranscodeTaskChangedChannel, strconv.Itoa(taskID))
+}
+
+func remoteArtifactPath(baseDir, artifactPath string) (string, error) {
+	p := pathpkg.Clean(filepath.ToSlash(strings.TrimSpace(artifactPath)))
+	if p == "." || p == "/" {
+		return "", errors.New("artifact path is empty")
+	}
+	if strings.HasPrefix(p, "/") {
+		base := pathpkg.Clean(filepath.ToSlash(baseDir))
+		if base == "." || base == "/" {
+			return "", errors.Errorf("cannot convert absolute artifact path %q with base %q", artifactPath, baseDir)
+		}
+		if p == base {
+			return "", errors.Errorf("artifact path %q points to base dir", artifactPath)
+		}
+		prefix := strings.TrimSuffix(base, "/") + "/"
+		if !strings.HasPrefix(p, prefix) {
+			return "", errors.Errorf("artifact path %q is outside base dir %q", artifactPath, baseDir)
+		}
+		p = strings.TrimPrefix(p, prefix)
+	}
+	if strings.HasPrefix(p, "../") || p == ".." {
+		return "", errors.Errorf("artifact path %q escapes records root", artifactPath)
+	}
+	return p, nil
+}
+
+func remoteRef(conf common.TranscodeConf, rel string) string {
+	return fmt.Sprintf("%s:%s", conf.WebDAVRemoteName, filepath.ToSlash(rel))
+}
+
+func rcloneConfigEnv(ctx context.Context, conf common.TranscodeConf) ([]string, error) {
+	if strings.TrimSpace(conf.WebDAVURL) == "" {
+		return nil, errors.New("TranscodeConf.WebDAVURL is required")
+	}
+	user := strings.TrimSpace(os.Getenv("RCLONE_WEBDAV_USER"))
+	pass := os.Getenv("RCLONE_WEBDAV_PASS")
+	if user == "" || pass == "" {
+		return nil, errors.New("RCLONE_WEBDAV_USER and RCLONE_WEBDAV_PASS are required")
+	}
+	obscured, err := rcloneOutput(ctx, nil, "obscure", pass)
+	if err != nil {
+		return nil, errors.Wrap(err, "obscure webdav password")
+	}
+	prefix := "RCLONE_CONFIG_" + strings.ToUpper(strings.ReplaceAll(conf.WebDAVRemoteName, "-", "_"))
+	env := append([]string{}, os.Environ()...)
+	env = append(env,
+		prefix+"_TYPE=webdav",
+		prefix+"_URL="+conf.WebDAVURL,
+		prefix+"_VENDOR=other",
+		prefix+"_USER="+user,
+		prefix+"_PASS="+strings.TrimSpace(obscured),
+	)
+	return env, nil
+}
+
+func rcloneSize(ctx context.Context, env []string, conf common.TranscodeConf, rel string) (int64, error) {
+	out, err := rcloneOutput(ctx, env, "size", "--json", remoteRef(conf, rel))
+	if err != nil {
+		return 0, err
+	}
+	var data struct {
+		Bytes int64 `json:"bytes"`
+		Count int64 `json:"count"`
+	}
+	if err := json.Unmarshal([]byte(out), &data); err != nil {
+		return 0, errors.Wrap(err, "parse rclone size")
+	}
+	if data.Count != 1 || data.Bytes <= 0 {
+		return 0, errors.Errorf("unexpected remote archive size: count=%d bytes=%d", data.Count, data.Bytes)
+	}
+	return data.Bytes, nil
+}
+
+func rcloneRun(ctx context.Context, env []string, args ...string) error {
+	_, err := rcloneOutput(ctx, env, args...)
+	return err
+}
+
+func rcloneOutput(ctx context.Context, env []string, args ...string) (string, error) {
+	cmd := exec.CommandContext(ctx, "rclone", args...)
+	if env != nil {
+		cmd.Env = env
+	}
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &out
+	cmd.WaitDelay = 10 * time.Second
+	if err := cmd.Run(); err != nil {
+		return "", errors.New(commandError(err, out.String()))
+	}
+	return out.String(), nil
 }
 
 func ensureSVTAV1(ctx context.Context) error {

@@ -9,6 +9,7 @@ import (
 
 	"entgo.io/ent/dialect/sql"
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
 	"scutbot.cn/web/rm-monitor/ent/mediaartifact"
 	"scutbot.cn/web/rm-monitor/ent/recordtask"
@@ -160,16 +161,29 @@ func (l *DispatchLogic) dispatchPending() error {
 			continue
 		}
 		if l.svcCtx.K8s != nil {
+			secretEnv := map[string]corev1.SecretKeySelector{}
+			if conf.WebDAVCredentialSecretName != "" {
+				secretEnv["RCLONE_WEBDAV_USER"] = corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{Name: conf.WebDAVCredentialSecretName},
+					Key:                  "username",
+				}
+				secretEnv["RCLONE_WEBDAV_PASS"] = corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{Name: conf.WebDAVCredentialSecretName},
+					Key:                  "password",
+				}
+			}
 			job := kubejob.Build(l.svcCtx.Config.K8sJobConf, kubejob.JobSpec{
-				Name:     jobName,
-				App:      "transcode-job",
-				Image:    jobConf.Image,
-				Args:     []string{"-f", "/etc/rm-monitor/config.yml", "-task", strconv.Itoa(task.ID)},
-				MountPVC: true,
-				CPU:      conf.CPURequest,
-				Memory:   conf.MemoryRequest,
-				CPULimit: conf.CPULimit,
-				MemLimit: conf.MemoryLimit,
+				Name:              jobName,
+				App:               "transcode-job",
+				Image:             jobConf.Image,
+				Args:              []string{"-f", "/etc/rm-monitor/config.yml", "-task", strconv.Itoa(task.ID)},
+				SecretEnv:         secretEnv,
+				MountPVC:          false,
+				CPU:               conf.CPURequest,
+				Memory:            conf.MemoryRequest,
+				CPULimit:          conf.CPULimit,
+				MemLimit:          conf.MemoryLimit,
+				AvoidNodeLabelKey: "rm-monitor/record",
 			})
 			if err := l.svcCtx.K8s.CreateJob(l.ctx, jobConf.Namespace, job); err != nil {
 				_ = l.svcCtx.DB.TranscodeTask.UpdateOneID(task.ID).SetStatus(transcodetask.StatusFAILED).SetErrorMessage(err.Error()).Exec(l.ctx)
