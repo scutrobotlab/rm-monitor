@@ -2,7 +2,7 @@ package main
 
 import "testing"
 
-func TestRemoteArtifactPath(t *testing.T) {
+func TestArtifactPath(t *testing.T) {
 	tests := []struct {
 		name string
 		base string
@@ -19,29 +19,19 @@ func TestRemoteArtifactPath(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := remoteArtifactPath(tt.base, tt.in)
+			got, full, err := artifactPath(tt.base, tt.in)
 			if tt.ok && err != nil {
-				t.Fatalf("remoteArtifactPath() error = %v", err)
+				t.Fatalf("artifactPath() error = %v", err)
 			}
 			if !tt.ok && err == nil {
-				t.Fatalf("remoteArtifactPath() expected error, got %q", got)
+				t.Fatalf("artifactPath() expected error, got %q", got)
 			}
 			if got != tt.want {
-				t.Fatalf("remoteArtifactPath() = %q, want %q", got, tt.want)
+				t.Fatalf("artifactPath() = %q, want %q", got, tt.want)
+			}
+			if tt.ok && full == "" {
+				t.Fatalf("artifactPath() full path is empty")
 			}
 		})
-	}
-}
-
-func TestJSONPayload(t *testing.T) {
-	got, err := jsonPayload("notice\n{\"bytes\":12,\"count\":1}\n/trailing")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got != `{"bytes":12,"count":1}` {
-		t.Fatalf("unexpected payload: %q", got)
-	}
-	if _, err := jsonPayload("no json"); err == nil {
-		t.Fatal("expected error")
 	}
 }

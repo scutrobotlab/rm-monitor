@@ -82,9 +82,6 @@ type TranscodeConf struct {
 	CPULimit                   string `json:",optional"`
 	MemoryRequest              string `json:",optional"`
 	MemoryLimit                string `json:",optional"`
-	WebDAVURL                  string `json:",optional"`
-	WebDAVRemoteName           string `json:",optional"`
-	WebDAVCredentialSecretName string `json:",optional"`
 	LocalWorkDir               string `json:",optional"`
 }
 
@@ -110,9 +107,6 @@ func (c *TranscodeConf) WithDefaults() TranscodeConf {
 	}
 	if out.MemoryLimit == "" {
 		out.MemoryLimit = "6Gi"
-	}
-	if out.WebDAVRemoteName == "" {
-		out.WebDAVRemoteName = "openlist"
 	}
 	if out.LocalWorkDir == "" {
 		out.LocalWorkDir = "/tmp/rm-monitor-transcode"

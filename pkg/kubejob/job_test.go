@@ -7,22 +7,23 @@ import (
 	"scutbot.cn/web/rm-monitor/pkg/config"
 )
 
-func TestBuildWithoutPVCUsesAvoidAffinity(t *testing.T) {
+func TestBuildTranscodeWebDAVPVCUsesAvoidAffinityWithoutStorageSelector(t *testing.T) {
 	job := Build(config.K8sJobConf{
 		Namespace:                "rm-monitor",
 		Image:                    "example/transcode-job:test",
 		ConfigMapName:            "transcode-job-config",
 		StorageNodeSelectorKey:   "rm-monitor/record",
 		StorageNodeSelectorValue: "true",
+		RecordsPVC:               "local-records",
+		RecordsMountPath:         "/records",
 	}, JobSpec{
-		Name:              "transcode-1",
-		App:               "transcode-job",
-		Image:             "example/transcode-job:test",
-		MountPVC:          false,
-		AvoidNodeLabelKey: "rm-monitor/record",
-		SecretEnv: map[string]corev1.SecretKeySelector{
-			"RCLONE_WEBDAV_USER": {LocalObjectReference: corev1.LocalObjectReference{Name: "secret"}, Key: "username"},
-		},
+		Name:                       "transcode-1",
+		App:                        "transcode-job",
+		Image:                      "example/transcode-job:test",
+		MountPVC:                   true,
+		RecordsPVC:                 "webdav-records",
+		AvoidNodeLabelKey:          "rm-monitor/record",
+		DisableStorageNodeSelector: true,
 	})
 	pod := job.Spec.Template.Spec
 	if len(pod.NodeSelector) != 0 {
@@ -35,12 +36,11 @@ func TestBuildWithoutPVCUsesAvoidAffinity(t *testing.T) {
 	if req.Key != "rm-monitor/record" || req.Operator != corev1.NodeSelectorOpDoesNotExist {
 		t.Fatalf("affinity requirement = %#v", req)
 	}
-	if len(pod.Volumes) != 1 || pod.Volumes[0].Name != "config" {
-		t.Fatalf("volumes = %#v, want only config volume", pod.Volumes)
+	if len(pod.Volumes) != 2 || pod.Volumes[1].Name != "records" {
+		t.Fatalf("volumes = %#v, want config + records", pod.Volumes)
 	}
-	env := pod.Containers[0].Env
-	if len(env) != 1 || env[0].ValueFrom == nil || env[0].ValueFrom.SecretKeyRef == nil {
-		t.Fatalf("secret env not configured: %#v", env)
+	if got := pod.Volumes[1].PersistentVolumeClaim.ClaimName; got != "webdav-records" {
+		t.Fatalf("records pvc = %q, want webdav-records", got)
 	}
 }
 

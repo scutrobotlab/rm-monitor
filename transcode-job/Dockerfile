@@ -15,7 +15,7 @@ FROM debian:bookworm-slim
 ENV TZ=Asia/Shanghai
 WORKDIR /app
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates ffmpeg rclone tzdata \
+    && apt-get install -y --no-install-recommends ca-certificates ffmpeg tzdata \
     && rm -rf /var/lib/apt/lists/* \
     && ffmpeg -hide_banner -encoders 2>/dev/null | grep -q libsvtav1
 

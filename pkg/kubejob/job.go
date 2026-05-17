@@ -73,20 +73,22 @@ func (c *Client) JobExists(ctx context.Context, namespace, name string) (bool, e
 }
 
 type JobSpec struct {
-	Name              string
-	App               string
-	Image             string
-	Command           []string
-	Args              []string
-	Env               map[string]string
-	SecretEnv         map[string]corev1.SecretKeySelector
-	MountPVC          bool
-	WorkDir           string
-	CPU               string
-	Memory            string
-	CPULimit          string
-	MemLimit          string
-	AvoidNodeLabelKey string
+	Name                       string
+	App                        string
+	Image                      string
+	Command                    []string
+	Args                       []string
+	Env                        map[string]string
+	SecretEnv                  map[string]corev1.SecretKeySelector
+	MountPVC                   bool
+	RecordsPVC                 string
+	WorkDir                    string
+	CPU                        string
+	Memory                     string
+	CPULimit                   string
+	MemLimit                   string
+	AvoidNodeLabelKey          string
+	DisableStorageNodeSelector bool
 }
 
 func Build(conf config.K8sJobConf, spec JobSpec) *batchv1.Job {
@@ -152,6 +154,10 @@ func Build(conf config.K8sJobConf, spec JobSpec) *batchv1.Job {
 		})
 	}
 	if spec.MountPVC {
+		recordsPVC := conf.RecordsPVC
+		if spec.RecordsPVC != "" {
+			recordsPVC = spec.RecordsPVC
+		}
 		container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{
 			Name:      "records",
 			MountPath: filepath.ToSlash(conf.RecordsMountPath),
@@ -159,7 +165,7 @@ func Build(conf config.K8sJobConf, spec JobSpec) *batchv1.Job {
 		volumes = append(volumes, corev1.Volume{
 			Name: "records",
 			VolumeSource: corev1.VolumeSource{
-				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: conf.RecordsPVC},
+				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: recordsPVC},
 			},
 		})
 	}
@@ -169,7 +175,7 @@ func Build(conf config.K8sJobConf, spec JobSpec) *batchv1.Job {
 		Containers:         []corev1.Container{container},
 		Volumes:            volumes,
 	}
-	if spec.MountPVC {
+	if spec.MountPVC && !spec.DisableStorageNodeSelector {
 		podSpec.NodeSelector = map[string]string{
 			conf.StorageNodeSelectorKey: conf.StorageNodeSelectorValue,
 		}

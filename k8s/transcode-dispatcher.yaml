@@ -1,13 +1,4 @@
 apiVersion: v1
-kind: Secret
-metadata:
-  name: rm-rec-webdav-credential
-type: Opaque
-stringData:
-  username: rec
-  password: change-me
----
-apiVersion: v1
 kind: ConfigMap
 metadata:
   name: transcode-dispatcher-config
@@ -20,14 +11,16 @@ data:
       BaseDir: /records
       SuspendWhenRecordingActive: true
       SourceRetentionDays: 7
-      WebDAVCredentialSecretName: rm-rec-webdav-credential
-      CPURequest: "500m"
-      MemoryRequest: "512Mi"
-      MemoryLimit: "2Gi"
+      MaxConcurrent: 3
+      CPURequest: "6000m"
+      CPULimit: "8000m"
+      MemoryRequest: "2Gi"
+      MemoryLimit: "6Gi"
     K8sJobConf:
       Namespace: rm-monitor
       Image: rm-monitor/transcode-job:latest
       ConfigMapName: transcode-job-config
+      RecordsPVC: rm-monitor-records-webdav
       TTLSecondsAfterFinished: 86400
     Priority: []
 ---
@@ -43,8 +36,6 @@ data:
     TranscodeConf:
       BaseDir: /records
       SourceRetentionDays: 7
-      WebDAVURL: http://rm-rec-service.rm-monitor.svc.cluster.local:5244/dav/
-      WebDAVRemoteName: openlist
       LocalWorkDir: /tmp/rm-monitor-transcode
 ---
 apiVersion: v1

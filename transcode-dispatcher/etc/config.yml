@@ -6,7 +6,6 @@ TranscodeConf:
   SuspendWhenRecordingActive: true
   SourceRetentionDays: 7
   MaxConcurrent: 3
-  WebDAVCredentialSecretName: rm-rec-webdav-credential
   CPURequest: "6000m"
   CPULimit: "8000m"
   MemoryRequest: "2Gi"
@@ -15,6 +14,6 @@ K8sJobConf:
   Namespace: rm-monitor
   Image: ghcr.io/scutrobotlab/rm-monitor/transcode-job:latest
   ConfigMapName: transcode-job-config
-  RecordsPVC: rm-monitor-records
+  RecordsPVC: rm-monitor-records-webdav
   RecordsMountPath: /records
   TTLSecondsAfterFinished: 86400
