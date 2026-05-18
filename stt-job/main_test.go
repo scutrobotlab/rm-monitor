@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"net/http"
@@ -47,13 +48,14 @@ func TestAppendLineWritesJSONL(t *testing.T) {
 	}
 }
 
-func TestAppendRecognizedLineUsesAbsoluteSegments(t *testing.T) {
+func TestAppendRecognizedLineWritesOneJSONLRowPerSegment(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "stt.jsonl")
 	result := whisperResult{
 		Duration: 30,
 		Text:     "hello",
 		Segments: []whisperSegment{
 			{ID: 1, Start: 2, End: 4, Text: "hello"},
+			{ID: 2, Start: 5, End: 9, Text: "world"},
 		},
 	}
 	if err := appendRecognizedLine(path, 2, 1, 120, result, 1.5); err != nil {
@@ -63,16 +65,34 @@ func TestAppendRecognizedLineUsesAbsoluteSegments(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	rows := splitJSONLLines(raw)
+	if len(rows) != 2 {
+		t.Fatalf("rows = %d, want 2; raw=%s", len(rows), raw)
+	}
 	var line sttLine
-	if err := json.Unmarshal(raw[:len(raw)-1], &line); err != nil {
+	if err := json.Unmarshal(rows[0], &line); err != nil {
 		t.Fatal(err)
 	}
-	if line.Start != 120 || line.End != 150 || line.APISeconds != 1.5 || line.Text != "hello" {
+	if line.Start != 122 || line.End != 124 || line.APISeconds != 1.5 || line.Text != "hello" || line.SegmentID != 1 {
 		t.Fatalf("line = %#v", line)
 	}
-	if len(line.Segments) != 1 || line.Segments[0].Start != 122 || line.Segments[0].End != 124 {
-		t.Fatalf("segments = %#v", line.Segments)
+	if err := json.Unmarshal(rows[1], &line); err != nil {
+		t.Fatal(err)
 	}
+	if line.Start != 125 || line.End != 129 || line.Text != "world" || line.SegmentID != 2 {
+		t.Fatalf("line = %#v", line)
+	}
+}
+
+func splitJSONLLines(raw []byte) [][]byte {
+	raw = raw[:len(raw)-1]
+	out := make([][]byte, 0)
+	for _, row := range bytes.Split(raw, []byte("\n")) {
+		if len(row) > 0 {
+			out = append(out, row)
+		}
+	}
+	return out
 }
 
 func TestRecognizeFilePostsWhisperMultipart(t *testing.T) {

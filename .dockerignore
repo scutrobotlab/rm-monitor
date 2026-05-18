@@ -1,3 +1,12 @@
-config
-.local-bin
-recorder/data
+/.git
+/.github
+/.idea
+/.local
+/.local-bin
+/build
+/config
+/data
+/recorder/data
+*.exe
+*.test
+*.out

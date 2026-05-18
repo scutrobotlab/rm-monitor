@@ -83,7 +83,7 @@ func TestCallReportLLMParsesOpenAICompatibleResponse(t *testing.T) {
 	defer server.Close()
 
 	got, err := callReportLLM(context.Background(), common.ReportConf{
-		BaseURL: server.URL,
+		BaseURL: server.URL + "/v1",
 		APIKey:  "test-key",
 		Model:   "test-model",
 	}, "input")
@@ -92,20 +92,6 @@ func TestCallReportLLMParsesOpenAICompatibleResponse(t *testing.T) {
 	}
 	if got != "## 战报\n\n测试内容" {
 		t.Fatalf("report = %q", got)
-	}
-}
-
-func TestOpenAIBaseURLNormalizesV1(t *testing.T) {
-	tests := map[string]string{
-		"https://ai.scutbot.cn/":         "https://ai.scutbot.cn/v1",
-		"https://ai.scutbot.cn/v1":       "https://ai.scutbot.cn/v1",
-		"https://example.com/openai":     "https://example.com/openai/v1",
-		"https://example.com/openai/v1/": "https://example.com/openai/v1",
-	}
-	for input, want := range tests {
-		if got := openAIBaseURL(input); got != want {
-			t.Fatalf("openAIBaseURL(%q) = %q, want %q", input, got, want)
-		}
 	}
 }
 

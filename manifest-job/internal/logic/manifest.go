@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -260,19 +259,13 @@ func readmeInfoRow(key, value string) tableRow {
 }
 
 type sttLine struct {
-	Index        int          `json:"index"`
-	Start        float64      `json:"start"`
-	End          float64      `json:"end"`
-	Status       string       `json:"status"`
-	Text         string       `json:"text"`
-	Segments     []sttSegment `json:"segments"`
-	ErrorMessage string       `json:"error_message"`
-}
-
-type sttSegment struct {
-	Start float64 `json:"start"`
-	End   float64 `json:"end"`
-	Text  string  `json:"text"`
+	Index        int     `json:"index"`
+	SegmentID    int     `json:"segment_id"`
+	Start        float64 `json:"start"`
+	End          float64 `json:"end"`
+	Status       string  `json:"status"`
+	Text         string  `json:"text"`
+	ErrorMessage string  `json:"error_message"`
 }
 
 func generateMatchReport(ctx context.Context, c common.ReportConf, m *ent.Match, red, blue *ent.Team, matchDir string) (string, error) {
@@ -287,39 +280,57 @@ func generateMatchReport(ctx context.Context, c common.ReportConf, m *ent.Match,
 	return callReportLLM(ctx, c, input)
 }
 
-const reportPromptTemplate = `请基于以下 RoboMaster 比赛数据生成中文 Markdown 战报。比分、胜负、小局状态以结构化数据为准；STT 是解说识别文本，可能有误识别。输出只包含战报正文，不要重复完整数据表。
+const reportPromptTemplate = `【角色】
+你是 RoboMaster 机甲大师赛事战报编辑，熟悉机甲大师比赛表达方式。
 
-比赛：{{ .Title }}
-赛事：{{ .Event }}
-赛区：{{ .Zone }}
-类型：{{ .MatchType }}
-比分：{{ .Score }}
-胜方：{{ .Winner }}
+【指令】
+请根据下面的比赛信息和解说摘录，写一篇面向普通观众的中文 Markdown 简介战报。
+
+【上下文】
+这是一场 RoboMaster 机甲大师比赛。读者希望快速知道谁赢了、比分如何、每局大致发生了什么、比赛有什么看点。
+
+【输入数据】
+- 比赛：{{ .Title }}
+- 赛事：{{ .Event }}
+- 赛区：{{ .Zone }}
+- 类型：{{ .MatchType }}
+- 比分：{{ .Score }}
+- 胜方：{{ .Winner }}
 {{ range .Rounds }}
-### Round {{ .RoundNo }}
-状态：{{ .Status }}
-胜方：{{ .Winner }}
-开始：{{ .StartedAt }}
-结束：{{ .EndedAt }}
-{{- if .STTLines }}
-STT：
-{{- range .STTLines }}
-- {{ . }}
+- Round {{ .RoundNo }}：{{ .Status }}，胜方 {{ .Winner }}，时间 {{ .StartedAt }} - {{ .EndedAt }}
+{{- if .CommentaryLines }}
+  解说摘录：
+{{- range .CommentaryLines }}
+  - {{ . }}
 {{- end }}
 {{ else }}
-STT：缺失或无可用解说文本。
+  解说摘录：无。
 {{ end }}
-{{ end }}`
+{{ end }}
+
+【输出格式】
+- 只输出 Markdown 正文，不要用代码块包裹。
+- 建议结构：
+  1. 一级标题：一句话概括对阵和赛果。
+  2. “比赛概况”：2-3 句话说明赛事、赛区、比分、胜方。
+  3. “小局回顾”：按 Round 简短概括，每局 1 句话。
+  4. “看点”：列出 2-3 条观众关心的比赛看点。
+
+【期望】
+- 简洁、直白、像赛事新闻稿，不要写成技术报告。
+- 不要出现“AI、模型、系统、结构化数据、STT、识别文本、自动生成、数据待完善”等开发或内部实现表述。
+- 不要编造输入中没有的具体机器人动作、击毁、经济、点位或战术细节。
+- 如果解说摘录信息不足，就基于比分、胜方和小局结果写保守概括，不要说明“信息不足”。`
 
 var reportPromptTmpl = template.Must(template.New("report-prompt").Parse(reportPromptTemplate))
 
 type reportRoundData struct {
-	RoundNo   int
-	Status    string
-	Winner    string
-	StartedAt string
-	EndedAt   string
-	STTLines  []string
+	RoundNo         int
+	Status          string
+	Winner          string
+	StartedAt       string
+	EndedAt         string
+	CommentaryLines []string
 }
 
 type reportPromptData struct {
@@ -357,7 +368,7 @@ func buildReportInput(m *ent.Match, red, blue *ent.Team, matchDir string) (strin
 			if line.Status != "SUCCEEDED" || strings.TrimSpace(line.Text) == "" {
 				continue
 			}
-			row.STTLines = append(row.STTLines, fmt.Sprintf("%.0fs-%.0fs：%s", line.Start, line.End, strings.TrimSpace(line.Text)))
+			row.CommentaryLines = append(row.CommentaryLines, fmt.Sprintf("%.0fs-%.0fs：%s", line.Start, line.End, strings.TrimSpace(line.Text)))
 		}
 		data.Rounds = append(data.Rounds, row)
 	}
@@ -394,14 +405,14 @@ func readRoundSTT(matchDir string, roundNo int) ([]sttLine, error) {
 
 func callReportLLM(ctx context.Context, c common.ReportConf, input string) (string, error) {
 	client := openai.NewClient(
-		option.WithBaseURL(openAIBaseURL(c.BaseURL)),
+		option.WithBaseURL(strings.TrimRight(strings.TrimSpace(c.BaseURL), "/")),
 		option.WithAPIKey(c.APIKey),
 		option.WithHTTPClient(&http.Client{Timeout: time.Duration(c.TimeoutSeconds) * time.Second}),
 	)
 	completion, err := client.Chat.Completions.New(ctx, openai.ChatCompletionNewParams{
 		Model: openai.ChatModel(c.Model),
 		Messages: []openai.ChatCompletionMessageParamUnion{
-			openai.SystemMessage("你是 RoboMaster 赛事战报编辑，输出简洁、客观、可发布的中文 Markdown。"),
+			openai.SystemMessage("你是 RoboMaster 机甲大师赛事战报编辑。只输出面向观众的简洁 Markdown 战报，不输出代码块，不提及 AI、模型、系统、STT 或自动生成。"),
 			openai.UserMessage(input),
 		},
 		Temperature: openai.Float(0.2),
@@ -413,22 +424,6 @@ func callReportLLM(ctx context.Context, c common.ReportConf, input string) (stri
 		return "", errors.New("llm returned empty report")
 	}
 	return strings.TrimSpace(completion.Choices[0].Message.Content), nil
-}
-
-func openAIBaseURL(raw string) string {
-	base := strings.TrimRight(strings.TrimSpace(raw), "/")
-	if base == "" {
-		return base
-	}
-	u, err := url.Parse(base)
-	if err != nil {
-		return base
-	}
-	if strings.HasSuffix(strings.TrimRight(u.Path, "/"), "/v1") {
-		return base
-	}
-	u.Path = strings.TrimRight(u.Path, "/") + "/v1"
-	return strings.TrimRight(u.String(), "/")
 }
 
 func matchTitle(m *ent.Match, red, blue *ent.Team) string {

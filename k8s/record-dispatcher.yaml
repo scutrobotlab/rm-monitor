@@ -64,10 +64,6 @@ data:
       PathTemplate: "{{.Event}}/{{.Zone}}/{{.MatchName}}/Round-{{.RoundNo}}/{{.Role}}.flv"
       MatchDirTemplate: "{{.Event}}/{{.Zone}}/{{.MatchName}}"
       MatchNameTemplate: "{{.Order}}. {{.RedSchool}}-{{.RedName}} VS {{.BlueSchool}}-{{.BlueName}}"
-    ReportConf:
-      BaseURL: ""
-      APIKey: ""
-      Model: ""
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -102,6 +98,10 @@ data:
       PathTemplate: "{{.Event}}/{{.Zone}}/{{.MatchName}}/Round-{{.RoundNo}}/{{.Role}}.flv"
       MatchDirTemplate: "{{.Event}}/{{.Zone}}/{{.MatchName}}"
       MatchNameTemplate: "{{.Order}}. {{.RedSchool}}-{{.RedName}} VS {{.BlueSchool}}-{{.BlueName}}"
+    ReportConf:
+      BaseURL: ""
+      APIKey: ""
+      Model: ""
 ---
 apiVersion: apps/v1
 kind: Deployment

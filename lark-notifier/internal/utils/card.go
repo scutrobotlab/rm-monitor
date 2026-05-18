@@ -16,6 +16,10 @@ type MatchScore struct {
 	BlueScore string `json:"blue_score"`
 }
 
+type CardImage struct {
+	ImgKey string `json:"img_key"`
+}
+
 type MatchCardContent struct {
 	Type string `json:"type"`
 	Data struct {
@@ -30,13 +34,13 @@ type MatchCardContent struct {
 			EventTitle    string       `json:"event_title"`
 			RedSchool     string       `json:"red_school"`
 			BlueSchool    string       `json:"blue_school"`
-			RedAvatar     string       `json:"red_avatar,omitempty"`
-			BlueAvatar    string       `json:"blue_avatar,omitempty"`
+			RedAvatar     CardImage    `json:"red_avatar"`
+			BlueAvatar    CardImage    `json:"blue_avatar"`
 			Scores        []MatchScore `json:"scores"`
 			Color         string       `json:"color"`
 			MatchType     string       `json:"match_type"`
 			ZoneTitle     string       `json:"zone_title"`
-			Report        string       `json:"report,omitempty"`
+			Report        string       `json:"report"`
 		} `json:"template_variable"`
 	} `json:"data"`
 }
@@ -55,14 +59,16 @@ func NewMatchCardContent(ctx context.Context, svcCtx *svc.ServiceContext, m *typ
 	content.Data.TemplateVariable.EventTitle = m.EventName
 	content.Data.TemplateVariable.RedSchool = m.RedTeam.SchoolName
 	content.Data.TemplateVariable.BlueSchool = m.BlueTeam.SchoolName
-	content.Data.TemplateVariable.RedAvatar, err = GetImageKey(ctx, svcCtx, m.RedTeam.SchoolLogo)
+	redAvatar, err := GetImageKey(ctx, svcCtx, m.RedTeam.SchoolLogo)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get red avatar")
 	}
-	content.Data.TemplateVariable.BlueAvatar, err = GetImageKey(ctx, svcCtx, m.BlueTeam.SchoolLogo)
+	content.Data.TemplateVariable.RedAvatar = CardImage{ImgKey: redAvatar}
+	blueAvatar, err := GetImageKey(ctx, svcCtx, m.BlueTeam.SchoolLogo)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get blue avatar")
 	}
+	content.Data.TemplateVariable.BlueAvatar = CardImage{ImgKey: blueAvatar}
 	content.Data.TemplateVariable.Scores = []MatchScore{
 		{"0", "0"},
 	}

@@ -9,7 +9,7 @@ LarkConf:
   AppSecret: ""
 UploadConf:
   BaseDir: /records
-  BitableAppToken: E2embrciuaax6sscQKwcTdHdnZf
+  BitableAppToken: ""
   Concurrency: 1
 K8sJobConf:
   Namespace: rm-monitor

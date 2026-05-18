@@ -14,10 +14,7 @@ import (
 	"scutbot.cn/web/rm-monitor/ent"
 	"scutbot.cn/web/rm-monitor/ent/match"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
-	"scutbot.cn/web/rm-monitor/ent/mediaartifact"
 	"scutbot.cn/web/rm-monitor/ent/recordtask"
-	"scutbot.cn/web/rm-monitor/ent/transcodetask"
-	"scutbot.cn/web/rm-monitor/ent/uploadtask"
 	common "scutbot.cn/web/rm-monitor/pkg/config"
 	"scutbot.cn/web/rm-monitor/pkg/db"
 	"scutbot.cn/web/rm-monitor/pkg/kubejob"
@@ -296,13 +293,6 @@ func (l *DispatchLogic) dispatchCompletedManifestJobs() error {
 		if !completedMatch(m) {
 			continue
 		}
-		ready, err := l.downstreamSettledForManifest(m.ID)
-		if err != nil {
-			return err
-		}
-		if !ready {
-			continue
-		}
 		name := manifestJobName(m.ID)
 		job := kubejob.Build(l.svcCtx.Config.ManifestJobConf, kubejob.JobSpec{
 			Name:     name,
@@ -330,73 +320,6 @@ func completedMatch(m *ent.Match) bool {
 		}
 	}
 	return true
-}
-
-func (l *DispatchLogic) downstreamSettledForManifest(matchID string) (bool, error) {
-	roundInMatch := matchround.HasMatchWith(match.IDEQ(matchID))
-	taskInMatch := recordtask.HasMatchRoundWith(roundInMatch)
-	sourceArtifactInMatch := mediaartifact.And(
-		mediaartifact.KindEQ(mediaartifact.KindSource),
-		mediaartifact.StatusEQ(mediaartifact.StatusAVAILABLE),
-		mediaartifact.HasRecordTaskWith(taskInMatch),
-	)
-
-	activeRecords, err := l.svcCtx.DB.RecordTask.Query().
-		Where(
-			taskInMatch,
-			recordtask.StatusIn(recordtask.StatusPENDING, recordtask.StatusDISPATCHING, recordtask.StatusRUNNING),
-		).
-		Count(l.ctx)
-	if err != nil {
-		return false, errors.Wrap(err, "count active record tasks before manifest")
-	}
-	if activeRecords > 0 {
-		return false, nil
-	}
-
-	missingUploads, err := l.svcCtx.DB.MediaArtifact.Query().
-		Where(sourceArtifactInMatch, mediaartifact.Not(mediaartifact.HasUploadTask())).
-		Count(l.ctx)
-	if err != nil {
-		return false, errors.Wrap(err, "count source artifacts without upload tasks before manifest")
-	}
-	if missingUploads > 0 {
-		return false, nil
-	}
-
-	activeUploads, err := l.svcCtx.DB.UploadTask.Query().
-		Where(
-			uploadtask.HasSourceArtifactWith(sourceArtifactInMatch),
-			uploadtask.StatusIn(uploadtask.StatusPENDING, uploadtask.StatusDISPATCHING, uploadtask.StatusRUNNING),
-		).
-		Count(l.ctx)
-	if err != nil {
-		return false, errors.Wrap(err, "count active upload tasks before manifest")
-	}
-	if activeUploads > 0 {
-		return false, nil
-	}
-
-	missingTranscodes, err := l.svcCtx.DB.MediaArtifact.Query().
-		Where(sourceArtifactInMatch, mediaartifact.Not(mediaartifact.HasSourceTranscodeTask())).
-		Count(l.ctx)
-	if err != nil {
-		return false, errors.Wrap(err, "count source artifacts without transcode tasks before manifest")
-	}
-	if missingTranscodes > 0 {
-		return false, nil
-	}
-
-	activeTranscodes, err := l.svcCtx.DB.TranscodeTask.Query().
-		Where(
-			transcodetask.HasSourceArtifactWith(sourceArtifactInMatch),
-			transcodetask.StatusIn(transcodetask.StatusPENDING, transcodetask.StatusDISPATCHING, transcodetask.StatusRUNNING),
-		).
-		Count(l.ctx)
-	if err != nil {
-		return false, errors.Wrap(err, "count active transcode tasks before manifest")
-	}
-	return activeTranscodes == 0, nil
 }
 
 func jobName(prefix string, id int) string {

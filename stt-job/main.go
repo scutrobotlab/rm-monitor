@@ -391,22 +391,15 @@ func stableFile(path string) bool {
 }
 
 type sttLine struct {
-	Index        int          `json:"index"`
-	Part         int          `json:"part,omitempty"`
-	Start        float64      `json:"start"`
-	End          float64      `json:"end"`
-	Status       string       `json:"status"`
-	APISeconds   float64      `json:"api_seconds,omitempty"`
-	Text         string       `json:"text,omitempty"`
-	Segments     []sttSegment `json:"segments,omitempty"`
-	ErrorMessage string       `json:"error_message,omitempty"`
-}
-
-type sttSegment struct {
-	ID    int     `json:"id"`
-	Start float64 `json:"start"`
-	End   float64 `json:"end"`
-	Text  string  `json:"text"`
+	Index        int     `json:"index"`
+	Part         int     `json:"part,omitempty"`
+	SegmentID    int     `json:"segment_id,omitempty"`
+	Start        float64 `json:"start"`
+	End          float64 `json:"end"`
+	Status       string  `json:"status"`
+	APISeconds   float64 `json:"api_seconds,omitempty"`
+	Text         string  `json:"text,omitempty"`
+	ErrorMessage string  `json:"error_message,omitempty"`
 }
 
 func recognizeSegment(ctx context.Context, serverURL, wavPath, sttPath string, index int) error {
@@ -434,33 +427,38 @@ func appendRecognizedLine(path string, index, part int, start float64, result wh
 			duration = float64(segmentSeconds) / 2
 		}
 	}
-	line := sttLine{
-		Index:      index,
-		Part:       part,
-		Start:      start,
-		End:        start + duration,
-		Status:     "SUCCEEDED",
-		APISeconds: seconds,
-		Text:       result.Text,
-		Segments:   absoluteSegments(result.Segments, start),
-	}
-	return appendLine(path, line)
-}
-
-func absoluteSegments(segments []whisperSegment, offset float64) []sttSegment {
-	out := make([]sttSegment, 0, len(segments))
-	for _, segment := range segments {
-		out = append(out, sttSegment{
-			ID:    segment.ID,
-			Start: offset + segment.Start,
-			End:   offset + segment.End,
-			Text:  segment.Text,
+	if len(result.Segments) == 0 {
+		return appendLine(path, sttLine{
+			Index:      index,
+			Part:       part,
+			Start:      start,
+			End:        start + duration,
+			Status:     "SUCCEEDED",
+			APISeconds: seconds,
+			Text:       result.Text,
 		})
 	}
-	return out
+	lines := make([]sttLine, 0, len(result.Segments))
+	for _, segment := range result.Segments {
+		lines = append(lines, sttLine{
+			Index:      index,
+			Part:       part,
+			SegmentID:  segment.ID,
+			Start:      start + segment.Start,
+			End:        start + segment.End,
+			Status:     "SUCCEEDED",
+			APISeconds: seconds,
+			Text:       segment.Text,
+		})
+	}
+	return appendLines(path, lines)
 }
 
 func appendLine(path string, line sttLine) error {
+	return appendLines(path, []sttLine{line})
+}
+
+func appendLines(path string, lines []sttLine) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}
@@ -469,12 +467,14 @@ func appendLine(path string, line sttLine) error {
 		return err
 	}
 	defer f.Close()
-	b, err := json.Marshal(line)
-	if err != nil {
-		return err
-	}
-	if _, err := f.Write(append(b, '\n')); err != nil {
-		return err
+	for _, line := range lines {
+		b, err := json.Marshal(line)
+		if err != nil {
+			return err
+		}
+		if _, err := f.Write(append(b, '\n')); err != nil {
+			return err
+		}
 	}
 	return f.Sync()
 }
