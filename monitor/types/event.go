@@ -24,4 +24,5 @@ type Match struct {
 	MatchSlug        string
 	ZoneName         string
 	EventName        string
+	Report           string
 }

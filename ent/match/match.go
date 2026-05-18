@@ -30,6 +30,8 @@ const (
 	FieldPriority = "priority"
 	// FieldLatestStatus holds the string denoting the latest_status field in the database.
 	FieldLatestStatus = "latest_status"
+	// FieldReport holds the string denoting the report field in the database.
+	FieldReport = "report"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
@@ -85,6 +87,7 @@ var Columns = []string{
 	FieldTotalRounds,
 	FieldPriority,
 	FieldLatestStatus,
+	FieldReport,
 	FieldCreatedAt,
 	FieldUpdatedAt,
 }
@@ -174,6 +177,11 @@ func ByPriority(opts ...sql.OrderTermOption) OrderOption {
 // ByLatestStatus orders the results by the latest_status field.
 func ByLatestStatus(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldLatestStatus, opts...).ToFunc()
+}
+
+// ByReport orders the results by the report field.
+func ByReport(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldReport, opts...).ToFunc()
 }
 
 // ByCreatedAt orders the results by the created_at field.

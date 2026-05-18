@@ -1,4 +1,4 @@
-package artifactcleaner
+package logic
 
 import (
 	"testing"

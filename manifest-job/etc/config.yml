@@ -3,3 +3,7 @@ PostgresConf:
   AutoMigrate: false
 RecordConf:
   BaseDir: /records
+ReportConf:
+  BaseURL: ""
+  APIKey: ""
+  Model: ""

@@ -635,6 +635,7 @@ type MatchMutation struct {
 	priority             *int
 	addpriority          *int
 	latest_status        *string
+	report               *string
 	created_at           *time.Time
 	updated_at           *time.Time
 	clearedFields        map[string]struct{}
@@ -1118,6 +1119,55 @@ func (m *MatchMutation) ResetLatestStatus() {
 	m.latest_status = nil
 }
 
+// SetReport sets the "report" field.
+func (m *MatchMutation) SetReport(s string) {
+	m.report = &s
+}
+
+// Report returns the value of the "report" field in the mutation.
+func (m *MatchMutation) Report() (r string, exists bool) {
+	v := m.report
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldReport returns the old "report" field's value of the Match entity.
+// If the Match object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MatchMutation) OldReport(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldReport is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldReport requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldReport: %w", err)
+	}
+	return oldValue.Report, nil
+}
+
+// ClearReport clears the value of the "report" field.
+func (m *MatchMutation) ClearReport() {
+	m.report = nil
+	m.clearedFields[match.FieldReport] = struct{}{}
+}
+
+// ReportCleared returns if the "report" field was cleared in this mutation.
+func (m *MatchMutation) ReportCleared() bool {
+	_, ok := m.clearedFields[match.FieldReport]
+	return ok
+}
+
+// ResetReport resets all changes to the "report" field.
+func (m *MatchMutation) ResetReport() {
+	m.report = nil
+	delete(m.clearedFields, match.FieldReport)
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (m *MatchMutation) SetCreatedAt(t time.Time) {
 	m.created_at = &t
@@ -1410,7 +1460,7 @@ func (m *MatchMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *MatchMutation) Fields() []string {
-	fields := make([]string, 0, 10)
+	fields := make([]string, 0, 11)
 	if m.event != nil {
 		fields = append(fields, match.FieldEvent)
 	}
@@ -1434,6 +1484,9 @@ func (m *MatchMutation) Fields() []string {
 	}
 	if m.latest_status != nil {
 		fields = append(fields, match.FieldLatestStatus)
+	}
+	if m.report != nil {
+		fields = append(fields, match.FieldReport)
 	}
 	if m.created_at != nil {
 		fields = append(fields, match.FieldCreatedAt)
@@ -1465,6 +1518,8 @@ func (m *MatchMutation) Field(name string) (ent.Value, bool) {
 		return m.Priority()
 	case match.FieldLatestStatus:
 		return m.LatestStatus()
+	case match.FieldReport:
+		return m.Report()
 	case match.FieldCreatedAt:
 		return m.CreatedAt()
 	case match.FieldUpdatedAt:
@@ -1494,6 +1549,8 @@ func (m *MatchMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldPriority(ctx)
 	case match.FieldLatestStatus:
 		return m.OldLatestStatus(ctx)
+	case match.FieldReport:
+		return m.OldReport(ctx)
 	case match.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	case match.FieldUpdatedAt:
@@ -1562,6 +1619,13 @@ func (m *MatchMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetLatestStatus(v)
+		return nil
+	case match.FieldReport:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetReport(v)
 		return nil
 	case match.FieldCreatedAt:
 		v, ok := value.(time.Time)
@@ -1649,6 +1713,9 @@ func (m *MatchMutation) ClearedFields() []string {
 	if m.FieldCleared(match.FieldMatchSlug) {
 		fields = append(fields, match.FieldMatchSlug)
 	}
+	if m.FieldCleared(match.FieldReport) {
+		fields = append(fields, match.FieldReport)
+	}
 	return fields
 }
 
@@ -1665,6 +1732,9 @@ func (m *MatchMutation) ClearField(name string) error {
 	switch name {
 	case match.FieldMatchSlug:
 		m.ClearMatchSlug()
+		return nil
+	case match.FieldReport:
+		m.ClearReport()
 		return nil
 	}
 	return fmt.Errorf("unknown Match nullable field %s", name)
@@ -1697,6 +1767,9 @@ func (m *MatchMutation) ResetField(name string) error {
 		return nil
 	case match.FieldLatestStatus:
 		m.ResetLatestStatus()
+		return nil
+	case match.FieldReport:
+		m.ResetReport()
 		return nil
 	case match.FieldCreatedAt:
 		m.ResetCreatedAt()

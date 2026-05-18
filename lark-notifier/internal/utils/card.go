@@ -36,6 +36,7 @@ type MatchCardContent struct {
 			Color         string       `json:"color"`
 			MatchType     string       `json:"match_type"`
 			ZoneTitle     string       `json:"zone_title"`
+			Report        string       `json:"report,omitempty"`
 		} `json:"template_variable"`
 	} `json:"data"`
 }
@@ -68,6 +69,7 @@ func NewMatchCardContent(ctx context.Context, svcCtx *svc.ServiceContext, m *typ
 	content.Data.TemplateVariable.Color = "blue"
 	content.Data.TemplateVariable.MatchType = m.MatchType
 	content.Data.TemplateVariable.ZoneTitle = m.ZoneName
+	content.Data.TemplateVariable.Report = m.Report
 	if m.MatchSlug != "" {
 		content.Data.TemplateVariable.MatchType = m.MatchSlug
 	}

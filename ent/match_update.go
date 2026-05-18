@@ -170,6 +170,26 @@ func (_u *MatchUpdate) SetNillableLatestStatus(v *string) *MatchUpdate {
 	return _u
 }
 
+// SetReport sets the "report" field.
+func (_u *MatchUpdate) SetReport(v string) *MatchUpdate {
+	_u.mutation.SetReport(v)
+	return _u
+}
+
+// SetNillableReport sets the "report" field if the given value is not nil.
+func (_u *MatchUpdate) SetNillableReport(v *string) *MatchUpdate {
+	if v != nil {
+		_u.SetReport(*v)
+	}
+	return _u
+}
+
+// ClearReport clears the value of the "report" field.
+func (_u *MatchUpdate) ClearReport() *MatchUpdate {
+	_u.mutation.ClearReport()
+	return _u
+}
+
 // SetUpdatedAt sets the "updated_at" field.
 func (_u *MatchUpdate) SetUpdatedAt(v time.Time) *MatchUpdate {
 	_u.mutation.SetUpdatedAt(v)
@@ -381,6 +401,12 @@ func (_u *MatchUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.LatestStatus(); ok {
 		_spec.SetField(match.FieldLatestStatus, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.Report(); ok {
+		_spec.SetField(match.FieldReport, field.TypeString, value)
+	}
+	if _u.mutation.ReportCleared() {
+		_spec.ClearField(match.FieldReport, field.TypeString)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(match.FieldUpdatedAt, field.TypeTime, value)
@@ -692,6 +718,26 @@ func (_u *MatchUpdateOne) SetNillableLatestStatus(v *string) *MatchUpdateOne {
 	return _u
 }
 
+// SetReport sets the "report" field.
+func (_u *MatchUpdateOne) SetReport(v string) *MatchUpdateOne {
+	_u.mutation.SetReport(v)
+	return _u
+}
+
+// SetNillableReport sets the "report" field if the given value is not nil.
+func (_u *MatchUpdateOne) SetNillableReport(v *string) *MatchUpdateOne {
+	if v != nil {
+		_u.SetReport(*v)
+	}
+	return _u
+}
+
+// ClearReport clears the value of the "report" field.
+func (_u *MatchUpdateOne) ClearReport() *MatchUpdateOne {
+	_u.mutation.ClearReport()
+	return _u
+}
+
 // SetUpdatedAt sets the "updated_at" field.
 func (_u *MatchUpdateOne) SetUpdatedAt(v time.Time) *MatchUpdateOne {
 	_u.mutation.SetUpdatedAt(v)
@@ -933,6 +979,12 @@ func (_u *MatchUpdateOne) sqlSave(ctx context.Context) (_node *Match, err error)
 	}
 	if value, ok := _u.mutation.LatestStatus(); ok {
 		_spec.SetField(match.FieldLatestStatus, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.Report(); ok {
+		_spec.SetField(match.FieldReport, field.TypeString, value)
+	}
+	if _u.mutation.ReportCleared() {
+		_spec.ClearField(match.FieldReport, field.TypeString)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(match.FieldUpdatedAt, field.TypeTime, value)

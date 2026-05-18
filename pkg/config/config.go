@@ -38,6 +38,21 @@ type RecordConf struct {
 	WhisperServerUrl  string   `json:",optional"`
 }
 
+type ReportConf struct {
+	BaseURL        string `json:",optional"`
+	APIKey         string `json:",optional"`
+	Model          string `json:",optional"`
+	TimeoutSeconds int    `json:",optional"`
+}
+
+func (c *ReportConf) WithDefaults() ReportConf {
+	out := *c
+	if out.TimeoutSeconds <= 0 {
+		out.TimeoutSeconds = 120
+	}
+	return out
+}
+
 func (c *RecordConf) WithDefaults() RecordConf {
 	out := *c
 	if out.Res == "" {

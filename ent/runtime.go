@@ -51,11 +51,11 @@ func init() {
 	// match.DefaultLatestStatus holds the default value on creation for the latest_status field.
 	match.DefaultLatestStatus = matchDescLatestStatus.Default.(string)
 	// matchDescCreatedAt is the schema descriptor for created_at field.
-	matchDescCreatedAt := matchFields[9].Descriptor()
+	matchDescCreatedAt := matchFields[10].Descriptor()
 	// match.DefaultCreatedAt holds the default value on creation for the created_at field.
 	match.DefaultCreatedAt = matchDescCreatedAt.Default.(func() time.Time)
 	// matchDescUpdatedAt is the schema descriptor for updated_at field.
-	matchDescUpdatedAt := matchFields[10].Descriptor()
+	matchDescUpdatedAt := matchFields[11].Descriptor()
 	// match.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	match.DefaultUpdatedAt = matchDescUpdatedAt.Default.(func() time.Time)
 	// match.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.

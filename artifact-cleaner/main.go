@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"scutbot.cn/web/rm-monitor/artifact-cleaner/internal/config"
+	"scutbot.cn/web/rm-monitor/artifact-cleaner/internal/logic"
 	"scutbot.cn/web/rm-monitor/pkg/app"
-	"scutbot.cn/web/rm-monitor/pkg/artifactcleaner"
 	"scutbot.cn/web/rm-monitor/pkg/db"
 	"scutbot.cn/web/rm-monitor/pkg/logx"
 )
@@ -30,7 +30,7 @@ func main() {
 	}
 	defer client.Close()
 	transcodeConf := c.TranscodeConf.WithDefaults()
-	result, err := artifactcleaner.CleanExpiredSources(context.Background(), client, transcodeConf.BaseDir, time.Now(), 500)
+	result, err := logic.CleanExpiredSources(context.Background(), client, transcodeConf.BaseDir, time.Now(), 500)
 	if err != nil {
 		logx.Error(err)
 		os.Exit(1)

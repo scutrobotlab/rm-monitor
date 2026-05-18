@@ -114,6 +114,20 @@ func (_c *MatchCreate) SetNillableLatestStatus(v *string) *MatchCreate {
 	return _c
 }
 
+// SetReport sets the "report" field.
+func (_c *MatchCreate) SetReport(v string) *MatchCreate {
+	_c.mutation.SetReport(v)
+	return _c
+}
+
+// SetNillableReport sets the "report" field if the given value is not nil.
+func (_c *MatchCreate) SetNillableReport(v *string) *MatchCreate {
+	if v != nil {
+		_c.SetReport(*v)
+	}
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *MatchCreate) SetCreatedAt(v time.Time) *MatchCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -364,6 +378,10 @@ func (_c *MatchCreate) createSpec() (*Match, *sqlgraph.CreateSpec) {
 		_spec.SetField(match.FieldLatestStatus, field.TypeString, value)
 		_node.LatestStatus = value
 	}
+	if value, ok := _c.mutation.Report(); ok {
+		_spec.SetField(match.FieldReport, field.TypeString, value)
+		_node.Report = &value
+	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(match.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
@@ -610,6 +628,24 @@ func (u *MatchUpsert) UpdateLatestStatus() *MatchUpsert {
 	return u
 }
 
+// SetReport sets the "report" field.
+func (u *MatchUpsert) SetReport(v string) *MatchUpsert {
+	u.Set(match.FieldReport, v)
+	return u
+}
+
+// UpdateReport sets the "report" field to the value that was provided on create.
+func (u *MatchUpsert) UpdateReport() *MatchUpsert {
+	u.SetExcluded(match.FieldReport)
+	return u
+}
+
+// ClearReport clears the value of the "report" field.
+func (u *MatchUpsert) ClearReport() *MatchUpsert {
+	u.SetNull(match.FieldReport)
+	return u
+}
+
 // SetUpdatedAt sets the "updated_at" field.
 func (u *MatchUpsert) SetUpdatedAt(v time.Time) *MatchUpsert {
 	u.Set(match.FieldUpdatedAt, v)
@@ -810,6 +846,27 @@ func (u *MatchUpsertOne) SetLatestStatus(v string) *MatchUpsertOne {
 func (u *MatchUpsertOne) UpdateLatestStatus() *MatchUpsertOne {
 	return u.Update(func(s *MatchUpsert) {
 		s.UpdateLatestStatus()
+	})
+}
+
+// SetReport sets the "report" field.
+func (u *MatchUpsertOne) SetReport(v string) *MatchUpsertOne {
+	return u.Update(func(s *MatchUpsert) {
+		s.SetReport(v)
+	})
+}
+
+// UpdateReport sets the "report" field to the value that was provided on create.
+func (u *MatchUpsertOne) UpdateReport() *MatchUpsertOne {
+	return u.Update(func(s *MatchUpsert) {
+		s.UpdateReport()
+	})
+}
+
+// ClearReport clears the value of the "report" field.
+func (u *MatchUpsertOne) ClearReport() *MatchUpsertOne {
+	return u.Update(func(s *MatchUpsert) {
+		s.ClearReport()
 	})
 }
 
@@ -1182,6 +1239,27 @@ func (u *MatchUpsertBulk) SetLatestStatus(v string) *MatchUpsertBulk {
 func (u *MatchUpsertBulk) UpdateLatestStatus() *MatchUpsertBulk {
 	return u.Update(func(s *MatchUpsert) {
 		s.UpdateLatestStatus()
+	})
+}
+
+// SetReport sets the "report" field.
+func (u *MatchUpsertBulk) SetReport(v string) *MatchUpsertBulk {
+	return u.Update(func(s *MatchUpsert) {
+		s.SetReport(v)
+	})
+}
+
+// UpdateReport sets the "report" field to the value that was provided on create.
+func (u *MatchUpsertBulk) UpdateReport() *MatchUpsertBulk {
+	return u.Update(func(s *MatchUpsert) {
+		s.UpdateReport()
+	})
+}
+
+// ClearReport clears the value of the "report" field.
+func (u *MatchUpsertBulk) ClearReport() *MatchUpsertBulk {
+	return u.Update(func(s *MatchUpsert) {
+		s.ClearReport()
 	})
 }
 

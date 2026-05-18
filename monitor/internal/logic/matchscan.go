@@ -19,11 +19,11 @@ import (
 	"scutbot.cn/web/rm-monitor/ent/team"
 	"scutbot.cn/web/rm-monitor/ent/transcodetask"
 	"scutbot.cn/web/rm-monitor/ent/uploadtask"
+	"scutbot.cn/web/rm-monitor/monitor/internal/priority"
 	"scutbot.cn/web/rm-monitor/monitor/internal/svc"
 	"scutbot.cn/web/rm-monitor/monitor/types"
 	"scutbot.cn/web/rm-monitor/pkg/db"
 	"scutbot.cn/web/rm-monitor/pkg/logx"
-	"scutbot.cn/web/rm-monitor/pkg/priority"
 )
 
 type MatchScanLogic struct {

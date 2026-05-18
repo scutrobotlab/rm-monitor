@@ -28,8 +28,6 @@ type NotifyLogic struct {
 	logx.Logger
 }
 
-const completedMatchRoundLookback = 30 * time.Minute
-
 func NewNotifyLogic(ctx context.Context, svcCtx *svc.ServiceContext) *NotifyLogic {
 	return &NotifyLogic{ctx: ctx, svcCtx: svcCtx, Logger: logx.WithContext(ctx)}
 }
@@ -41,21 +39,24 @@ func (l *NotifyLogic) Sync(since time.Time) error {
 	if err := l.patchChangedCardsSince(since); err != nil {
 		return err
 	}
-	if err := l.patchRecentlyCompletedMatches(); err != nil {
-		return err
-	}
 	return l.replyCompletedUploads()
 }
 
 func (l *NotifyLogic) SyncEvent(channel, payload string) error {
-	id, err := strconv.Atoi(payload)
-	if err != nil {
-		return errors.Wrapf(err, "parse notify payload %q", payload)
-	}
 	switch channel {
 	case "match_round_changed":
+		id, err := strconv.Atoi(payload)
+		if err != nil {
+			return errors.Wrapf(err, "parse notify payload %q", payload)
+		}
 		return l.syncMatchRound(id)
+	case "match_changed":
+		return l.patchMatchCardsByID(payload)
 	case "upload_task_changed":
+		id, err := strconv.Atoi(payload)
+		if err != nil {
+			return errors.Wrapf(err, "parse notify payload %q", payload)
+		}
 		return l.syncUploadTask(id)
 	default:
 		return nil
@@ -88,12 +89,8 @@ func (l *NotifyLogic) syncMatchRound(id int) error {
 		if err := l.createMatchMessages(m); err != nil {
 			return err
 		}
-		m, err = l.matchForPatch(m.ID)
-		if err != nil {
-			return err
-		}
 	}
-	return l.patchMatchCards(m)
+	return l.patchMatchCardsByID(m.ID)
 }
 
 func (l *NotifyLogic) syncUploadTask(id int) error {
@@ -186,61 +183,49 @@ func (l *NotifyLogic) createMatchMessages(m *ent.Match) error {
 }
 
 func (l *NotifyLogic) patchChangedCardsSince(since time.Time) error {
+	seen := map[string]struct{}{}
 	rounds, err := l.svcCtx.DB.MatchRound.Query().
 		Where(matchround.UpdatedAtGTE(since)).
-		WithMatch(func(q *ent.MatchQuery) {
-			q.WithRedTeam().
-				WithBlueTeam().
-				WithLarkMessages().
-				WithRounds(func(q *ent.MatchRoundQuery) {
-					q.Order(matchround.ByRoundNo())
-				})
-		}).
+		WithMatch().
 		Limit(100).
 		All(l.ctx)
 	if err != nil {
 		return errors.Wrap(err, "query recently changed rounds")
 	}
-	seen := make(map[string]struct{}, len(rounds))
 	for _, r := range rounds {
 		m := r.Edges.Match
 		if m == nil {
 			continue
 		}
-		if _, ok := seen[m.ID]; ok {
-			continue
-		}
 		seen[m.ID] = struct{}{}
-		if err := l.patchMatchCards(m); err != nil {
+	}
+	matches, err := l.svcCtx.DB.Match.Query().
+		Where(match.UpdatedAtGTE(since)).
+		Limit(100).
+		All(l.ctx)
+	if err != nil {
+		return errors.Wrap(err, "query recently changed matches")
+	}
+	for _, m := range matches {
+		seen[m.ID] = struct{}{}
+	}
+	for id := range seen {
+		if err := l.patchMatchCardsByID(id); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (l *NotifyLogic) patchRecentlyCompletedMatches() error {
-	matches, err := l.svcCtx.DB.Match.Query().
-		Where(
-			match.LatestStatusEQ("DONE"),
-			match.HasRoundsWith(matchround.UpdatedAtGTE(time.Now().Add(-completedMatchRoundLookback))),
-		).
-		WithRedTeam().
-		WithBlueTeam().
-		WithLarkMessages().
-		WithRounds(func(q *ent.MatchRoundQuery) {
-			q.Order(matchround.ByRoundNo())
-		}).
-		Limit(100).
-		All(l.ctx)
+func (l *NotifyLogic) patchMatchCardsByID(matchID string) error {
+	m, err := l.matchForPatch(matchID)
 	if err != nil {
-		return errors.Wrap(err, "query recently completed matches")
-	}
-	for _, m := range matches {
-		if err := l.patchMatchCards(m); err != nil {
-			return err
+		if ent.IsNotFound(err) {
+			return nil
 		}
+		return err
 	}
-	return nil
+	return l.patchMatchCards(m)
 }
 
 func (l *NotifyLogic) matchForPatch(matchID string) (*ent.Match, error) {
@@ -469,6 +454,9 @@ func (l *NotifyLogic) cardContent(m *ent.Match) (*utils.MatchCardContent, error)
 	}
 	if m.MatchSlug != nil {
 		msg.MatchSlug = *m.MatchSlug
+	}
+	if m.Report != nil {
+		msg.Report = *m.Report
 	}
 	content, err := utils.NewMatchCardContent(l.ctx, l.svcCtx, msg)
 	if err != nil {

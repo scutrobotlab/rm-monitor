@@ -9,6 +9,7 @@ import (
 
 const (
 	MatchRoundChangedChannel    = "match_round_changed"
+	MatchChangedChannel         = "match_changed"
 	RecordTaskChangedChannel    = "record_task_changed"
 	UploadTaskChangedChannel    = "upload_task_changed"
 	TranscodeTaskChangedChannel = "transcode_task_changed"

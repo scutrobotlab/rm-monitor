@@ -105,6 +105,11 @@ func LatestStatus(v string) predicate.Match {
 	return predicate.Match(sql.FieldEQ(FieldLatestStatus, v))
 }
 
+// Report applies equality check predicate on the "report" field. It's identical to ReportEQ.
+func Report(v string) predicate.Match {
+	return predicate.Match(sql.FieldEQ(FieldReport, v))
+}
+
 // CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
 func CreatedAt(v time.Time) predicate.Match {
 	return predicate.Match(sql.FieldEQ(FieldCreatedAt, v))
@@ -568,6 +573,81 @@ func LatestStatusEqualFold(v string) predicate.Match {
 // LatestStatusContainsFold applies the ContainsFold predicate on the "latest_status" field.
 func LatestStatusContainsFold(v string) predicate.Match {
 	return predicate.Match(sql.FieldContainsFold(FieldLatestStatus, v))
+}
+
+// ReportEQ applies the EQ predicate on the "report" field.
+func ReportEQ(v string) predicate.Match {
+	return predicate.Match(sql.FieldEQ(FieldReport, v))
+}
+
+// ReportNEQ applies the NEQ predicate on the "report" field.
+func ReportNEQ(v string) predicate.Match {
+	return predicate.Match(sql.FieldNEQ(FieldReport, v))
+}
+
+// ReportIn applies the In predicate on the "report" field.
+func ReportIn(vs ...string) predicate.Match {
+	return predicate.Match(sql.FieldIn(FieldReport, vs...))
+}
+
+// ReportNotIn applies the NotIn predicate on the "report" field.
+func ReportNotIn(vs ...string) predicate.Match {
+	return predicate.Match(sql.FieldNotIn(FieldReport, vs...))
+}
+
+// ReportGT applies the GT predicate on the "report" field.
+func ReportGT(v string) predicate.Match {
+	return predicate.Match(sql.FieldGT(FieldReport, v))
+}
+
+// ReportGTE applies the GTE predicate on the "report" field.
+func ReportGTE(v string) predicate.Match {
+	return predicate.Match(sql.FieldGTE(FieldReport, v))
+}
+
+// ReportLT applies the LT predicate on the "report" field.
+func ReportLT(v string) predicate.Match {
+	return predicate.Match(sql.FieldLT(FieldReport, v))
+}
+
+// ReportLTE applies the LTE predicate on the "report" field.
+func ReportLTE(v string) predicate.Match {
+	return predicate.Match(sql.FieldLTE(FieldReport, v))
+}
+
+// ReportContains applies the Contains predicate on the "report" field.
+func ReportContains(v string) predicate.Match {
+	return predicate.Match(sql.FieldContains(FieldReport, v))
+}
+
+// ReportHasPrefix applies the HasPrefix predicate on the "report" field.
+func ReportHasPrefix(v string) predicate.Match {
+	return predicate.Match(sql.FieldHasPrefix(FieldReport, v))
+}
+
+// ReportHasSuffix applies the HasSuffix predicate on the "report" field.
+func ReportHasSuffix(v string) predicate.Match {
+	return predicate.Match(sql.FieldHasSuffix(FieldReport, v))
+}
+
+// ReportIsNil applies the IsNil predicate on the "report" field.
+func ReportIsNil() predicate.Match {
+	return predicate.Match(sql.FieldIsNull(FieldReport))
+}
+
+// ReportNotNil applies the NotNil predicate on the "report" field.
+func ReportNotNil() predicate.Match {
+	return predicate.Match(sql.FieldNotNull(FieldReport))
+}
+
+// ReportEqualFold applies the EqualFold predicate on the "report" field.
+func ReportEqualFold(v string) predicate.Match {
+	return predicate.Match(sql.FieldEqualFold(FieldReport, v))
+}
+
+// ReportContainsFold applies the ContainsFold predicate on the "report" field.
+func ReportContainsFold(v string) predicate.Match {
+	return predicate.Match(sql.FieldContainsFold(FieldReport, v))
 }
 
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.

@@ -6,10 +6,10 @@ import (
 	"os"
 
 	"scutbot.cn/web/rm-monitor/manifest-job/internal/config"
+	"scutbot.cn/web/rm-monitor/manifest-job/internal/logic"
 	"scutbot.cn/web/rm-monitor/pkg/app"
 	"scutbot.cn/web/rm-monitor/pkg/db"
 	"scutbot.cn/web/rm-monitor/pkg/logx"
-	"scutbot.cn/web/rm-monitor/pkg/manifest"
 )
 
 var (
@@ -35,7 +35,7 @@ func main() {
 		os.Exit(1)
 	}
 	defer client.Close()
-	if err := manifest.WriteMatchReadme(context.Background(), client, c.RecordConf, *matchID); err != nil {
+	if err := logic.WriteMatchReadme(context.Background(), client, c.RecordConf, c.ReportConf, c.PostgresConf.DSN, *matchID); err != nil {
 		logx.Error(err)
 		os.Exit(1)
 	}

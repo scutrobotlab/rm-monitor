@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"github.com/pkg/errors"
 	"scutbot.cn/web/rm-monitor/ent"
+	"scutbot.cn/web/rm-monitor/ent/match"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
 	"scutbot.cn/web/rm-monitor/ent/recordtask"
 	common "scutbot.cn/web/rm-monitor/pkg/config"
@@ -30,7 +31,6 @@ type DispatchLogic struct {
 }
 
 const dispatchingStaleAfter = 5 * time.Minute
-const manifestLookback = 30 * time.Second
 
 func NewDispatchLogic(ctx context.Context, svcCtx *svc.ServiceContext) *DispatchLogic {
 	return &DispatchLogic{ctx: ctx, svcCtx: svcCtx, Logger: logx.WithContext(ctx)}
@@ -49,7 +49,7 @@ func (l *DispatchLogic) Tick() error {
 	if err := l.dispatchPendingTasks(); err != nil {
 		return err
 	}
-	return l.dispatchRecentManifestJobs()
+	return l.dispatchCompletedManifestJobs()
 }
 
 func (l *DispatchLogic) cancelEndedRounds() error {
@@ -276,36 +276,24 @@ func (l *DispatchLogic) dispatchPendingTasks() error {
 	return nil
 }
 
-func (l *DispatchLogic) dispatchRecentManifestJobs() error {
+func (l *DispatchLogic) dispatchCompletedManifestJobs() error {
 	if l.svcCtx.K8s == nil || strings.TrimSpace(l.svcCtx.Config.ManifestJobConf.Image) == "" {
 		return nil
 	}
-	since := time.Now().Add(-manifestLookback)
-	type manifestCandidate struct {
-		match     *ent.Match
-		updatedAt time.Time
-	}
-	matchesByID := map[string]manifestCandidate{}
-	rounds, err := l.svcCtx.DB.MatchRound.Query().
-		Where(matchround.UpdatedAtGTE(since)).
-		WithMatch().
-		Limit(200).
+	matches, err := l.svcCtx.DB.Match.Query().
+		Where(match.LatestStatusEQ("DONE"), match.ReportIsNil()).
+		WithRounds().
+		Limit(100).
 		All(l.ctx)
 	if err != nil {
-		return errors.Wrap(err, "query recently changed rounds for manifest")
-	}
-	for _, r := range rounds {
-		if r.Edges.Match != nil {
-			cur := matchesByID[r.Edges.Match.ID]
-			if cur.match == nil || r.UpdatedAt.After(cur.updatedAt) {
-				matchesByID[r.Edges.Match.ID] = manifestCandidate{match: r.Edges.Match, updatedAt: r.UpdatedAt}
-			}
-		}
+		return errors.Wrap(err, "query completed matches for manifest")
 	}
 	conf := l.svcCtx.Config.ManifestJobConf.WithDefaults()
-	for _, item := range matchesByID {
-		m := item.match
-		name := manifestJobName(m.ID, item.updatedAt)
+	for _, m := range matches {
+		if !completedMatch(m) {
+			continue
+		}
+		name := manifestJobName(m.ID)
 		job := kubejob.Build(l.svcCtx.Config.ManifestJobConf, kubejob.JobSpec{
 			Name:     name,
 			App:      "manifest-job",
@@ -322,11 +310,23 @@ func (l *DispatchLogic) dispatchRecentManifestJobs() error {
 	return nil
 }
 
+func completedMatch(m *ent.Match) bool {
+	if m == nil || len(m.Edges.Rounds) == 0 {
+		return false
+	}
+	for _, r := range m.Edges.Rounds {
+		if r.Status != matchround.StatusENDED {
+			return false
+		}
+	}
+	return true
+}
+
 func jobName(prefix string, id int) string {
 	return strings.ToLower(fmt.Sprintf("%s-%d", prefix, id))
 }
 
-func manifestJobName(matchID string, updatedAt time.Time) string {
-	h := sha1.Sum([]byte(fmt.Sprintf("%s:%d", matchID, updatedAt.UnixNano())))
+func manifestJobName(matchID string) string {
+	h := sha1.Sum([]byte(matchID))
 	return "manifest-" + hex.EncodeToString(h[:])[:16]
 }
