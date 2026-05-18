@@ -280,16 +280,29 @@ func (l *DispatchLogic) dispatchCompletedManifestJobs() error {
 	if l.svcCtx.K8s == nil || strings.TrimSpace(l.svcCtx.Config.ManifestJobConf.Image) == "" {
 		return nil
 	}
+	const maxManifestJobs = 2
+	conf := l.svcCtx.Config.ManifestJobConf.WithDefaults()
+	active, err := l.svcCtx.K8s.CountUnfinishedJobs(l.ctx, conf.Namespace, "rm-monitor/job=manifest-job")
+	if err != nil {
+		return err
+	}
+	available := maxManifestJobs - active
+	if available <= 0 {
+		return nil
+	}
 	matches, err := l.svcCtx.DB.Match.Query().
 		Where(match.LatestStatusEQ("DONE"), match.ReportIsNil()).
 		WithRounds().
-		Limit(100).
+		Limit(50).
 		All(l.ctx)
 	if err != nil {
 		return errors.Wrap(err, "query completed matches for manifest")
 	}
-	conf := l.svcCtx.Config.ManifestJobConf.WithDefaults()
+	created := 0
 	for _, m := range matches {
+		if created >= available {
+			break
+		}
 		if !completedMatch(m) {
 			continue
 		}
@@ -306,6 +319,7 @@ func (l *DispatchLogic) dispatchCompletedManifestJobs() error {
 		if err := l.svcCtx.K8s.CreateJob(l.ctx, conf.Namespace, job); err != nil {
 			return errors.Wrap(err, "create manifest job")
 		}
+		created++
 	}
 	return nil
 }
