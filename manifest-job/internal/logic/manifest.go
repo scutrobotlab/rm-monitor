@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -393,7 +394,7 @@ func readRoundSTT(matchDir string, roundNo int) ([]sttLine, error) {
 
 func callReportLLM(ctx context.Context, c common.ReportConf, input string) (string, error) {
 	client := openai.NewClient(
-		option.WithBaseURL(strings.TrimRight(c.BaseURL, "/")),
+		option.WithBaseURL(openAIBaseURL(c.BaseURL)),
 		option.WithAPIKey(c.APIKey),
 		option.WithHTTPClient(&http.Client{Timeout: time.Duration(c.TimeoutSeconds) * time.Second}),
 	)
@@ -412,6 +413,22 @@ func callReportLLM(ctx context.Context, c common.ReportConf, input string) (stri
 		return "", errors.New("llm returned empty report")
 	}
 	return strings.TrimSpace(completion.Choices[0].Message.Content), nil
+}
+
+func openAIBaseURL(raw string) string {
+	base := strings.TrimRight(strings.TrimSpace(raw), "/")
+	if base == "" {
+		return base
+	}
+	u, err := url.Parse(base)
+	if err != nil {
+		return base
+	}
+	if strings.HasSuffix(strings.TrimRight(u.Path, "/"), "/v1") {
+		return base
+	}
+	u.Path = strings.TrimRight(u.Path, "/") + "/v1"
+	return strings.TrimRight(u.String(), "/")
 }
 
 func matchTitle(m *ent.Match, red, blue *ent.Team) string {

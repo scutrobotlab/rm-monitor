@@ -71,7 +71,7 @@ func TestRenderReadmeIncludesReport(t *testing.T) {
 
 func TestCallReportLLMParsesOpenAICompatibleResponse(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/chat/completions" {
+		if r.URL.Path != "/v1/chat/completions" {
 			t.Fatalf("path = %q", r.URL.Path)
 		}
 		if got := r.Header.Get("Authorization"); got != "Bearer test-key" {
@@ -92,6 +92,20 @@ func TestCallReportLLMParsesOpenAICompatibleResponse(t *testing.T) {
 	}
 	if got != "## 战报\n\n测试内容" {
 		t.Fatalf("report = %q", got)
+	}
+}
+
+func TestOpenAIBaseURLNormalizesV1(t *testing.T) {
+	tests := map[string]string{
+		"https://ai.scutbot.cn/":         "https://ai.scutbot.cn/v1",
+		"https://ai.scutbot.cn/v1":       "https://ai.scutbot.cn/v1",
+		"https://example.com/openai":     "https://example.com/openai/v1",
+		"https://example.com/openai/v1/": "https://example.com/openai/v1",
+	}
+	for input, want := range tests {
+		if got := openAIBaseURL(input); got != want {
+			t.Fatalf("openAIBaseURL(%q) = %q, want %q", input, got, want)
+		}
 	}
 }
 

@@ -181,7 +181,10 @@ func runRecognizer(ctx context.Context, client *ent.Client, c jobconfig.Config, 
 	if err != nil {
 		return err
 	}
-	serverURL := strings.TrimSpace(conf.WhisperServerUrl)
+	serverURL := strings.TrimSpace(c.WhisperServerUrl)
+	if serverURL == "" {
+		serverURL = strings.TrimSpace(conf.WhisperServerUrl)
+	}
 	if serverURL == "" {
 		return errors.New("WhisperServerUrl is empty")
 	}
@@ -423,10 +426,7 @@ func recognizeSegment(ctx context.Context, serverURL, wavPath, sttPath string, i
 	if err == nil {
 		return appendRecognizedLine(sttPath, index, 0, start, result, seconds)
 	}
-	if appendErr := appendLine(sttPath, sttLine{Index: index, Start: start, End: end, Status: "FAILED", ErrorMessage: err.Error()}); appendErr != nil {
-		return appendErr
-	}
-	return err
+	return appendLine(sttPath, sttLine{Index: index, Start: start, End: end, Status: "FAILED", ErrorMessage: err.Error()})
 }
 
 func appendRecognizedLine(path string, index, part int, start float64, result whisperResult, seconds float64) error {

@@ -87,7 +87,7 @@ func run(ctx context.Context, client *ent.Client, redisClient *redisx.Client, la
 		return errors.Wrap(err, "stat upload source")
 	}
 
-	if err := client.UploadTask.UpdateOneID(taskID).SetStatus(uploadtask.StatusRUNNING).SetStartedAt(time.Now()).Exec(ctx); err != nil {
+	if err := client.UploadTask.UpdateOneID(taskID).SetStatus(uploadtask.StatusRUNNING).SetStartedAt(time.Now()).ClearErrorMessage().Exec(ctx); err != nil {
 		return errors.Wrap(err, "mark upload running")
 	}
 	if err := waitUploadSlot(ctx, redisClient, uploadConf); err != nil {
@@ -171,6 +171,7 @@ func run(ctx context.Context, client *ent.Client, redisClient *redisx.Client, la
 		SetStatus(uploadtask.StatusSUCCEEDED).
 		SetCompletedAt(time.Now()).
 		SetAttachmentFileToken(fileToken).
+		ClearErrorMessage().
 		Exec(ctx); err != nil {
 		return errors.Wrap(err, "mark upload succeeded")
 	}

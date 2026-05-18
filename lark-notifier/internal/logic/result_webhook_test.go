@@ -23,7 +23,7 @@ func TestResultWebhookKeyUsesStableHash(t *testing.T) {
 
 func TestResultWebhookPayloadReusesMatchCardContent(t *testing.T) {
 	card := &utils.MatchCardContent{Type: "template"}
-	card.Data.TemplateId = "AAqkpd7LuaV0s"
+	card.Data.TemplateId = "AAqtDaxtZLomZ"
 	payload := resultWebhookPayload{MsgType: "interactive", Card: card}
 	if payload.MsgType != "interactive" {
 		t.Fatalf("MsgType = %q", payload.MsgType)
