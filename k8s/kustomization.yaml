@@ -27,6 +27,9 @@ images:
   - name: rm-monitor/record-dispatcher
     newName: ghcr.io/scutrobotlab/rm-monitor/record-dispatcher
     newTag: latest
+  - name: rm-monitor/stt-job
+    newName: ghcr.io/scutrobotlab/rm-monitor/stt-job
+    newTag: latest
   - name: rm-monitor/manifest-job
     newName: ghcr.io/scutrobotlab/rm-monitor/manifest-job
     newTag: latest

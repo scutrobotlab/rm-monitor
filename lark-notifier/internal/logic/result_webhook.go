@@ -3,12 +3,12 @@ package logic
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/pkg/errors"
+	"resty.dev/v3"
 	"scutbot.cn/web/rm-monitor/lark-notifier/internal/utils"
 )
 
@@ -62,35 +62,29 @@ func (l *NotifyLogic) pushResultWebhooks(matchID string, content *utils.MatchCar
 }
 
 func (l *NotifyLogic) postResultWebhook(webhookURL string, payload resultWebhookPayload) error {
-	var last error
-	for attempt := 0; attempt < 3; attempt++ {
-		resp, err := l.svcCtx.RestyClient.R().
-			SetContext(l.ctx).
-			SetHeader("Content-Type", "application/json").
-			SetBody(payload).
-			Post(webhookURL)
-		if err != nil {
-			last = fmt.Errorf("request failed: %T", err)
-		} else if resp.IsError() {
-			last = fmt.Errorf("webhook returned status %d", resp.StatusCode())
-		} else {
-			var body resultWebhookResponse
-			if err := json.Unmarshal(resp.Bytes(), &body); err == nil && body.Code != 0 {
-				last = fmt.Errorf("webhook returned code %d: %s", body.Code, body.Msg)
-			} else {
-				return nil
-			}
-		}
-		if attempt < 2 {
-			wait := retryDelay(attempt)
-			select {
-			case <-l.ctx.Done():
-				return l.ctx.Err()
-			case <-time.After(wait):
-			}
-		}
+	var body resultWebhookResponse
+	resp, err := l.svcCtx.RestyClient.R().
+		SetContext(l.ctx).
+		SetHeader("Content-Type", "application/json").
+		SetBody(payload).
+		SetResult(&body).
+		SetRetryCount(3).
+		SetRetryWaitTime(time.Second).
+		SetAllowNonIdempotentRetry(true).
+		AddRetryConditions(func(resp *resty.Response, err error) bool {
+			return err != nil || (resp != nil && (resp.StatusCode() == 429 || resp.StatusCode() >= 500))
+		}).
+		Post(webhookURL)
+	if err != nil {
+		return fmt.Errorf("request failed: %T", err)
 	}
-	return last
+	if resp.IsError() {
+		return fmt.Errorf("webhook returned status %d", resp.StatusCode())
+	}
+	if body.Code != 0 {
+		return fmt.Errorf("webhook returned code %d: %s", body.Code, body.Msg)
+	}
+	return nil
 }
 
 func resultWebhookHash(webhookURL string) string {

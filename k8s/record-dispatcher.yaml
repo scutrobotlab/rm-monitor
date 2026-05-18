@@ -9,6 +9,7 @@ data:
       AutoMigrate: true
     RecordConf:
       Res: middle
+      STTRole: "主视角"
       RoleBlackList:
         - "主视角（无解说版）"
         - "蓝方机器人第一视角合集"
@@ -36,6 +37,16 @@ data:
       RecordsMountPath: /records
       ImagePullPolicy: Always
       TTLSecondsAfterFinished: 86400
+    STTJobConf:
+      Namespace: rm-monitor
+      Image: rm-monitor/stt-job:latest
+      ConfigMapName: stt-job-config
+      StorageNodeSelectorKey: rm-monitor/record
+      StorageNodeSelectorValue: "true"
+      RecordsPVC: rm-monitor-records
+      RecordsMountPath: /records
+      ImagePullPolicy: Always
+      TTLSecondsAfterFinished: 86400
     Priority: []
 ---
 apiVersion: v1
@@ -50,6 +61,24 @@ data:
     RecordConf:
       Res: middle
       BaseDir: /records
+      PathTemplate: "{{.Event}}/{{.Zone}}/{{.MatchName}}/Round-{{.RoundNo}}/{{.Role}}.flv"
+      MatchDirTemplate: "{{.Event}}/{{.Zone}}/{{.MatchName}}"
+      MatchNameTemplate: "{{.Order}}. {{.RedSchool}}-{{.RedName}} VS {{.BlueSchool}}-{{.BlueName}}"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: stt-job-config
+data:
+  config.yml: |
+    PostgresConf:
+      DSN: postgres://rm_monitor:rm_monitor@postgres:5432/rm_monitor?sslmode=disable
+      AutoMigrate: false
+    RecordConf:
+      Res: middle
+      BaseDir: /records
+      STTRole: "主视角"
+      WhisperServerUrl: http://172.30.162.40:48088
       PathTemplate: "{{.Event}}/{{.Zone}}/{{.MatchName}}/Round-{{.RoundNo}}/{{.Role}}.flv"
       MatchDirTemplate: "{{.Event}}/{{.Zone}}/{{.MatchName}}"
       MatchNameTemplate: "{{.Order}}. {{.RedSchool}}-{{.RedName}} VS {{.BlueSchool}}-{{.BlueName}}"

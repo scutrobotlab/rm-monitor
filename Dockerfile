@@ -13,7 +13,7 @@ RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache
 FROM alpine:3.20
 
 ENV TZ=Asia/Shanghai
-RUN apk add --no-cache ca-certificates curl tzdata
+RUN apk add --no-cache ca-certificates tzdata
 
 WORKDIR /app
 COPY --from=builder /usr/local/bin/app /usr/local/bin/app

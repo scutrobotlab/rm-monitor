@@ -126,6 +126,9 @@ func (l *DispatchLogic) createTasksForStartedRounds() error {
 			l.Errorf("live urls for match %s: %v", m.ID, err)
 			continue
 		}
+		if err := l.dispatchSTTJob(conf, r, urls); err != nil {
+			l.Errorf("dispatch stt job for round %d: %v", r.ID, err)
+		}
 		urls = filterBlacklistedRoles(urls, conf.RoleBlackList)
 		for role, url := range urls {
 			output, err := l.outputPath(conf, m, r.RoundNo, role)
@@ -151,6 +154,38 @@ func (l *DispatchLogic) createTasksForStartedRounds() error {
 		}
 	}
 	return nil
+}
+
+func (l *DispatchLogic) dispatchSTTJob(conf common.RecordConf, r *ent.MatchRound, urls map[string]string) error {
+	if l.svcCtx.K8s == nil || strings.TrimSpace(conf.STTRole) == "" || strings.TrimSpace(l.svcCtx.Config.STTJobConf.Image) == "" {
+		return nil
+	}
+	if _, ok := urls[conf.STTRole]; !ok {
+		return nil
+	}
+	jobConf := l.svcCtx.Config.STTJobConf.WithDefaults()
+	name := jobName("stt", r.ID)
+	job := kubejob.Build(l.svcCtx.Config.STTJobConf, kubejob.JobSpec{
+		Name:          name,
+		App:           "stt-job",
+		ContainerName: "audio-recorder",
+		Image:         jobConf.Image,
+		MountPVC:      true,
+		CPU:           "100m",
+		Memory:        "128Mi",
+		ExtraContainers: []kubejob.ContainerSpec{
+			{
+				Name:   "recognizer",
+				Image:  jobConf.Image,
+				Args:   []string{"-f", "/etc/rm-monitor/config.yml", "-mode", "recognizer", "-round", strconv.Itoa(r.ID)},
+				CPU:    "100m",
+				Memory: "128Mi",
+			},
+		},
+		Args:              []string{"-f", "/etc/rm-monitor/config.yml", "-mode", "audio-recorder", "-round", strconv.Itoa(r.ID)},
+		PriorityClassName: "rm-monitor-record-critical",
+	})
+	return l.svcCtx.K8s.CreateJob(l.ctx, jobConf.Namespace, job)
 }
 
 func filterBlacklistedRoles(urls map[string]string, blacklist []string) map[string]string {

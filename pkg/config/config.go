@@ -34,6 +34,8 @@ type RecordConf struct {
 	MatchDirTemplate  string   `json:",optional"`
 	MatchNameTemplate string   `json:",optional"`
 	RoleBlackList     []string `json:",optional"`
+	STTRole           string   `json:",optional"`
+	WhisperServerUrl  string   `json:",optional"`
 }
 
 func (c *RecordConf) WithDefaults() RecordConf {
