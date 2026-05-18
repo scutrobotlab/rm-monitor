@@ -10,7 +10,7 @@ data:
     TranscodeConf:
       BaseDir: /records
       SourceRetentionDays: 7
-      MaxConcurrent: 3
+      MaxConcurrent: 6
       CPURequest: "6000m"
       CPULimit: "8000m"
       MemoryRequest: "2Gi"

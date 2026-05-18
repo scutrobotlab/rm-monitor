@@ -195,6 +195,9 @@ func (l *DispatchLogic) dispatchPending() error {
 				MemLimit:                   conf.MemoryLimit,
 				PriorityClassName:          "rm-monitor-background",
 				DisableStorageNodeSelector: true,
+				PreferAvoidNodeLabelKey:    "rm-monitor/record",
+				PreferAvoidNodeLabelValue:  "true",
+				SpreadByHostname:           true,
 			})
 			if err := l.svcCtx.K8s.CreateJob(l.ctx, jobConf.Namespace, job); err != nil {
 				_ = l.svcCtx.DB.TranscodeTask.UpdateOneID(task.ID).SetStatus(transcodetask.StatusFAILED).SetErrorMessage(err.Error()).Exec(l.ctx)

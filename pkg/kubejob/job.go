@@ -75,6 +75,7 @@ func (c *Client) JobExists(ctx context.Context, namespace, name string) (bool, e
 type JobSpec struct {
 	Name                       string
 	App                        string
+	ContainerName              string
 	Image                      string
 	Command                    []string
 	Args                       []string
@@ -89,11 +90,145 @@ type JobSpec struct {
 	MemLimit                   string
 	PriorityClassName          string
 	DisableStorageNodeSelector bool
+	PreferAvoidNodeLabelKey    string
+	PreferAvoidNodeLabelValue  string
+	SpreadByHostname           bool
+	ExtraContainers            []ContainerSpec
+}
+
+type ContainerSpec struct {
+	Name      string
+	Image     string
+	Command   []string
+	Args      []string
+	Env       map[string]string
+	SecretEnv map[string]corev1.SecretKeySelector
+	WorkDir   string
+	CPU       string
+	Memory    string
+	CPULimit  string
+	MemLimit  string
 }
 
 func Build(conf config.K8sJobConf, spec JobSpec) *batchv1.Job {
 	conf = conf.WithDefaults()
 	labels := map[string]string{"app.kubernetes.io/name": spec.App, "rm-monitor/job": spec.App}
+	containerName := spec.App
+	if spec.ContainerName != "" {
+		containerName = spec.ContainerName
+	}
+	volumeMounts := []corev1.VolumeMount{}
+	volumes := []corev1.Volume{}
+	if conf.ConfigMapName != "" {
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      "config",
+			MountPath: "/etc/rm-monitor/config.yml",
+			SubPath:   "config.yml",
+			ReadOnly:  true,
+		})
+		volumes = append(volumes, corev1.Volume{
+			Name: "config",
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{Name: conf.ConfigMapName},
+				},
+			},
+		})
+	}
+	if spec.MountPVC {
+		recordsPVC := conf.RecordsPVC
+		if spec.RecordsPVC != "" {
+			recordsPVC = spec.RecordsPVC
+		}
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      "records",
+			MountPath: filepath.ToSlash(conf.RecordsMountPath),
+		})
+		volumes = append(volumes, corev1.Volume{
+			Name: "records",
+			VolumeSource: corev1.VolumeSource{
+				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: recordsPVC},
+			},
+		})
+	}
+	container := buildContainer(conf, ContainerSpec{
+		Name:      containerName,
+		Image:     spec.Image,
+		Command:   spec.Command,
+		Args:      spec.Args,
+		Env:       spec.Env,
+		SecretEnv: spec.SecretEnv,
+		WorkDir:   spec.WorkDir,
+		CPU:       spec.CPU,
+		Memory:    spec.Memory,
+		CPULimit:  spec.CPULimit,
+		MemLimit:  spec.MemLimit,
+	}, volumeMounts)
+	containers := []corev1.Container{container}
+	for _, extra := range spec.ExtraContainers {
+		containers = append(containers, buildContainer(conf, extra, volumeMounts))
+	}
+	podSpec := corev1.PodSpec{
+		RestartPolicy:      corev1.RestartPolicyNever,
+		ServiceAccountName: conf.ServiceAccountName,
+		Containers:         containers,
+		Volumes:            volumes,
+	}
+	if spec.PriorityClassName != "" {
+		podSpec.PriorityClassName = spec.PriorityClassName
+	}
+	if spec.PreferAvoidNodeLabelKey != "" {
+		podSpec.Affinity = &corev1.Affinity{
+			NodeAffinity: &corev1.NodeAffinity{
+				PreferredDuringSchedulingIgnoredDuringExecution: []corev1.PreferredSchedulingTerm{
+					{
+						Weight: 100,
+						Preference: corev1.NodeSelectorTerm{
+							MatchExpressions: []corev1.NodeSelectorRequirement{
+								{
+									Key:      spec.PreferAvoidNodeLabelKey,
+									Operator: corev1.NodeSelectorOpNotIn,
+									Values:   []string{spec.PreferAvoidNodeLabelValue},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+	}
+	if spec.SpreadByHostname {
+		podSpec.TopologySpreadConstraints = []corev1.TopologySpreadConstraint{
+			{
+				MaxSkew:           1,
+				TopologyKey:       corev1.LabelHostname,
+				WhenUnsatisfiable: corev1.ScheduleAnyway,
+				LabelSelector: &metav1.LabelSelector{
+					MatchLabels: labels,
+				},
+			},
+		}
+	}
+	if spec.MountPVC && !spec.DisableStorageNodeSelector {
+		podSpec.NodeSelector = map[string]string{
+			conf.StorageNodeSelectorKey: conf.StorageNodeSelectorValue,
+		}
+	}
+	return &batchv1.Job{
+		TypeMeta:   metav1.TypeMeta{APIVersion: "batch/v1", Kind: "Job"},
+		ObjectMeta: metav1.ObjectMeta{Name: spec.Name, Namespace: conf.Namespace, Labels: labels},
+		Spec: batchv1.JobSpec{
+			BackoffLimit:            &conf.BackoffLimit,
+			TTLSecondsAfterFinished: &conf.TTLSecondsAfterFinished,
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{Labels: labels},
+				Spec:       podSpec,
+			},
+		},
+	}
+}
+
+func buildContainer(conf config.K8sJobConf, spec ContainerSpec, volumeMounts []corev1.VolumeMount) corev1.Container {
 	env := make([]corev1.EnvVar, 0, len(spec.Env))
 	for k, v := range spec.Env {
 		env = append(env, corev1.EnvVar{Name: k, Value: v})
@@ -108,12 +243,13 @@ func Build(conf config.K8sJobConf, spec JobSpec) *batchv1.Job {
 		})
 	}
 	container := corev1.Container{
-		Name:            spec.App,
+		Name:            spec.Name,
 		Image:           spec.Image,
 		Command:         spec.Command,
 		Args:            spec.Args,
 		Env:             env,
 		ImagePullPolicy: corev1.PullPolicy(conf.ImagePullPolicy),
+		VolumeMounts:    append([]corev1.VolumeMount(nil), volumeMounts...),
 	}
 	if spec.WorkDir != "" {
 		container.WorkingDir = spec.WorkDir
@@ -136,63 +272,5 @@ func Build(conf config.K8sJobConf, spec JobSpec) *batchv1.Job {
 			container.Resources.Limits[corev1.ResourceMemory] = resource.MustParse(spec.MemLimit)
 		}
 	}
-	volumes := []corev1.Volume{}
-	if conf.ConfigMapName != "" {
-		container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{
-			Name:      "config",
-			MountPath: "/etc/rm-monitor/config.yml",
-			SubPath:   "config.yml",
-			ReadOnly:  true,
-		})
-		volumes = append(volumes, corev1.Volume{
-			Name: "config",
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{Name: conf.ConfigMapName},
-				},
-			},
-		})
-	}
-	if spec.MountPVC {
-		recordsPVC := conf.RecordsPVC
-		if spec.RecordsPVC != "" {
-			recordsPVC = spec.RecordsPVC
-		}
-		container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{
-			Name:      "records",
-			MountPath: filepath.ToSlash(conf.RecordsMountPath),
-		})
-		volumes = append(volumes, corev1.Volume{
-			Name: "records",
-			VolumeSource: corev1.VolumeSource{
-				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: recordsPVC},
-			},
-		})
-	}
-	podSpec := corev1.PodSpec{
-		RestartPolicy:      corev1.RestartPolicyNever,
-		ServiceAccountName: conf.ServiceAccountName,
-		Containers:         []corev1.Container{container},
-		Volumes:            volumes,
-	}
-	if spec.PriorityClassName != "" {
-		podSpec.PriorityClassName = spec.PriorityClassName
-	}
-	if spec.MountPVC && !spec.DisableStorageNodeSelector {
-		podSpec.NodeSelector = map[string]string{
-			conf.StorageNodeSelectorKey: conf.StorageNodeSelectorValue,
-		}
-	}
-	return &batchv1.Job{
-		TypeMeta:   metav1.TypeMeta{APIVersion: "batch/v1", Kind: "Job"},
-		ObjectMeta: metav1.ObjectMeta{Name: spec.Name, Namespace: conf.Namespace, Labels: labels},
-		Spec: batchv1.JobSpec{
-			BackoffLimit:            &conf.BackoffLimit,
-			TTLSecondsAfterFinished: &conf.TTLSecondsAfterFinished,
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{Labels: labels},
-				Spec:       podSpec,
-			},
-		},
-	}
+	return container
 }
