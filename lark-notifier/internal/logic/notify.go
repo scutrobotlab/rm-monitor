@@ -254,10 +254,12 @@ func (l *NotifyLogic) patchMatchCards(m *ent.Match) error {
 		return errors.Wrap(err, "marshal card content")
 	}
 	contentData := string(contentBytes)
+	shouldPushResultWebhook := false
 	for _, message := range m.Edges.LarkMessages {
 		if sameJSON(message.CardPayload, contentMap) {
 			continue
 		}
+		wasCompleted := cardPayloadCompleted(message.CardPayload)
 		req := larkim.NewPatchMessageReqBuilder().MessageId(message.MessageID).
 			Body(larkim.NewPatchMessageReqBodyBuilder().Content(contentData).Build()).
 			Build()
@@ -279,12 +281,29 @@ func (l *NotifyLogic) patchMatchCards(m *ent.Match) error {
 		}
 		if err := l.svcCtx.DB.LarkMessage.UpdateOneID(message.ID).SetCardPayload(contentMap).Exec(l.ctx); err != nil {
 			l.Error(errors.Wrap(err, "update lark card payload"))
+			continue
+		}
+		if matchCardCompleted(m) && !wasCompleted {
+			shouldPushResultWebhook = true
 		}
 	}
-	if matchCardCompleted(m) {
+	if shouldPushResultWebhook {
 		l.pushResultWebhooks(m.ID, content)
 	}
 	return nil
+}
+
+func cardPayloadCompleted(payload map[string]any) bool {
+	data, ok := payload["data"].(map[string]any)
+	if !ok {
+		return false
+	}
+	templateVars, ok := data["template_variable"].(map[string]any)
+	if !ok {
+		return false
+	}
+	progress, _ := templateVars["match_progress"].(string)
+	return progress == "结束"
 }
 
 func (l *NotifyLogic) replyCompletedUploads() error {

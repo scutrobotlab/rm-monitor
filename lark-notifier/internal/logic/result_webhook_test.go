@@ -63,3 +63,27 @@ func TestMatchCardCompletedRequiresDoneStatus(t *testing.T) {
 		t.Fatal("non-DONE match should not be completed")
 	}
 }
+
+func TestCardPayloadCompleted(t *testing.T) {
+	if cardPayloadCompleted(nil) {
+		t.Fatal("nil payload should not be completed")
+	}
+	if cardPayloadCompleted(map[string]any{
+		"data": map[string]any{
+			"template_variable": map[string]any{
+				"match_progress": "进行中",
+			},
+		},
+	}) {
+		t.Fatal("running payload should not be completed")
+	}
+	if !cardPayloadCompleted(map[string]any{
+		"data": map[string]any{
+			"template_variable": map[string]any{
+				"match_progress": "结束",
+			},
+		},
+	}) {
+		t.Fatal("ended payload should be completed")
+	}
+}
