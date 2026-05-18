@@ -35,7 +35,6 @@ type RecordConf struct {
 	MatchNameTemplate string   `json:",optional"`
 	RoleBlackList     []string `json:",optional"`
 	STTRole           string   `json:",optional"`
-	WhisperServerUrl  string   `json:",optional"`
 }
 
 type ReportConf struct {

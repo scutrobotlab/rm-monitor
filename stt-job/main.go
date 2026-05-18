@@ -183,9 +183,6 @@ func runRecognizer(ctx context.Context, client *ent.Client, c jobconfig.Config, 
 	}
 	serverURL := strings.TrimSpace(c.WhisperServerUrl)
 	if serverURL == "" {
-		serverURL = strings.TrimSpace(conf.WhisperServerUrl)
-	}
-	if serverURL == "" {
 		return errors.New("WhisperServerUrl is empty")
 	}
 	if err := waitForDir(ctx, info.AudioDir); err != nil {
