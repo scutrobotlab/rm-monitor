@@ -97,7 +97,6 @@ func run(ctx context.Context, client *ent.Client, c config.Config, taskID int) e
 			"-reconnect_streamed", "1",
 			"-reconnect_on_network_error", "1",
 			"-reconnect_on_http_error", "429,500,502,503,504",
-			"-respect_retry_after", "1",
 			"-reconnect_delay_max", "5",
 		)
 	}

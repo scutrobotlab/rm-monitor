@@ -186,7 +186,7 @@ func (l *DispatchLogic) prepareUploadTask(appToken string, task *ent.UploadTask)
 	if err != nil {
 		return err
 	}
-	recordID, recordURL, err := l.createBitableRecord(appToken, tableID, task.Edges.SourceArtifact.ID, match, recordTask.Edges.MatchRound.RoundNo, recordTask.Role)
+	recordID, recordURL, err := l.createBitableRecord(appToken, tableID, task.Edges.SourceArtifact, match, recordTask.Edges.MatchRound.RoundNo, recordTask.Role)
 	if err != nil {
 		return err
 	}
@@ -451,11 +451,11 @@ func (l *DispatchLogic) updateFieldType(appToken, tableID, fieldID, fieldName st
 	return nil
 }
 
-func (l *DispatchLogic) createBitableRecord(appToken, tableID string, artifactID int, match *ent.Match, roundNo int, role string) (string, *string, error) {
+func (l *DispatchLogic) createBitableRecord(appToken, tableID string, artifact *ent.MediaArtifact, match *ent.Match, roundNo int, role string) (string, *string, error) {
 	resp, err := l.svcCtx.Lark.Bitable.V1.AppTableRecord.Create(l.ctx, larkbitable.NewCreateAppTableRecordReqBuilder().
 		AppToken(appToken).
 		TableId(tableID).
-		ClientToken(bitableRecordClientToken(artifactID)).
+		ClientToken(bitableRecordClientToken(artifact)).
 		AppTableRecord(larkbitable.NewAppTableRecordBuilder().
 			Fields(bitableupload.RecordFields(match, roundNo, role)).
 			Build()).
@@ -477,8 +477,8 @@ func (l *DispatchLogic) createBitableRecord(appToken, tableID string, artifactID
 	return *record.RecordId, &url, nil
 }
 
-func bitableRecordClientToken(artifactID int) string {
-	sum := sha256.Sum256([]byte(fmt.Sprintf("rm-monitor-upload-task-%d", artifactID)))
+func bitableRecordClientToken(artifact *ent.MediaArtifact) string {
+	sum := sha256.Sum256([]byte(fmt.Sprintf("rm-monitor-upload-task-%d-%d", artifact.ID, artifact.CreatedAt.UnixNano())))
 	var b [16]byte
 	copy(b[:], sum[:16])
 	b[6] = (b[6] & 0x0f) | 0x40
