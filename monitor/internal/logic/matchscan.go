@@ -53,6 +53,9 @@ type scannedMatch struct {
 	MatchType        string
 	MatchSlug        string
 	TotalRounds      int
+	Result           string
+	WinnerPlacehold  string
+	LoserPlacehold   string
 	RedWinGameCount  int
 	BlueWinGameCount int
 	RedTeam          scannedTeam
@@ -117,6 +120,9 @@ func parseMatches(contentBytes []byte) []scannedMatch {
 				MatchType:        item.Get("matchType").String(),
 				MatchSlug:        item.Get("slug").String(),
 				TotalRounds:      int(item.Get("planGameCount").Int()),
+				Result:           normalizeMatchResult(item.Get("result").String()),
+				WinnerPlacehold:  item.Get("winnerPlaceholdName").String(),
+				LoserPlacehold:   item.Get("loserPlaceholdName").String(),
 				RedWinGameCount:  int(item.Get("redSideWinGameCount").Int()),
 				BlueWinGameCount: int(item.Get("blueSideWinGameCount").Int()),
 				RedTeam:          parseTeam(item.Get("redSide.player")),
@@ -167,6 +173,9 @@ func (l *MatchScanLogic) upsertMatch(m scannedMatch) error {
 		SetMatchType(m.MatchType).
 		SetTotalRounds(m.TotalRounds).
 		SetPriority(matchPriority).
+		SetResult(match.Result(m.Result)).
+		SetWinnerPlaceholderName(m.WinnerPlacehold).
+		SetLoserPlaceholderName(m.LoserPlacehold).
 		SetLatestStatus(m.Status).
 		SetRedTeamID(m.RedTeam.ID).
 		SetBlueTeamID(m.BlueTeam.ID)
@@ -204,18 +213,21 @@ func (l *MatchScanLogic) reconcileRounds(prev processedSnapshot, cur scannedMatc
 	curTotal := cur.RedWinGameCount + cur.BlueWinGameCount
 	if prev.Status == types.MatchStatusSTARTED {
 		endTo := curTotal
-		if cur.Status != types.MatchStatusSTARTED && endTo == prevTotal {
-			endTo = prevTotal + 1
-		}
 		if cur.TotalRounds > 0 && endTo > cur.TotalRounds {
 			endTo = cur.TotalRounds
 		}
 		winners := winnersFromDelta(prev, cur, endTo-prevTotal)
-		for roundNo := prevTotal + 1; roundNo <= endTo; roundNo++ {
-			if err := l.ensureEndedRound(cur.ID, roundNo, winners[roundNo-(prevTotal+1)]); err != nil {
+		for i, winner := range winners {
+			if err := l.ensureEndedRound(cur.ID, prevTotal+1+i, winner); err != nil {
 				return err
 			}
 		}
+	}
+	if cur.Status != types.MatchStatusSTARTED {
+		return l.convergeCompletedRounds(cur)
+	}
+	if matchDecided(cur) {
+		return nil
 	}
 	if cur.Status == types.MatchStatusSTARTED {
 		return l.ensureStartedRound(cur, cur.RoundNo())
@@ -314,7 +326,7 @@ func (l *MatchScanLogic) ensureEndedRound(matchID string, roundNo int, winner ma
 		}
 		return db.Notify(l.ctx, l.svcCtx.Config.PostgresConf.DSN, db.MatchRoundChangedChannel, strconv.Itoa(created.ID))
 	}
-	if r.Status == matchround.StatusENDED {
+	if r.Status == matchround.StatusENDED && r.Winner != nil && *r.Winner == winner {
 		return nil
 	}
 	if err := l.svcCtx.DB.MatchRound.UpdateOneID(r.ID).
@@ -376,7 +388,95 @@ func winnersFromDelta(prev processedSnapshot, cur scannedMatch, count int) []mat
 			out = append(out, matchround.WinnerBlue)
 			blueDelta--
 		default:
-			out = append(out, matchround.WinnerDraw)
+			return out
+		}
+	}
+	return out
+}
+
+func normalizeMatchResult(value string) string {
+	switch value {
+	case "RED", "BLUE", "DRAW":
+		return value
+	default:
+		return "UNKNOWN"
+	}
+}
+
+func matchDecided(m scannedMatch) bool {
+	required := winsRequired(m.TotalRounds)
+	return required > 0 && (m.RedWinGameCount >= required || m.BlueWinGameCount >= required)
+}
+
+func winsRequired(totalRounds int) int {
+	if totalRounds <= 0 {
+		return 0
+	}
+	return totalRounds/2 + 1
+}
+
+func (l *MatchScanLogic) convergeCompletedRounds(cur scannedMatch) error {
+	expected := cur.RedWinGameCount + cur.BlueWinGameCount
+	if expected <= 0 {
+		return nil
+	}
+	if cur.TotalRounds > 0 && expected > cur.TotalRounds {
+		expected = cur.TotalRounds
+	}
+	rounds, err := l.svcCtx.DB.MatchRound.Query().
+		Where(matchround.HasMatchWith(match.ID(cur.ID)), matchround.RoundNoLTE(expected)).
+		Order(matchround.ByRoundNo()).
+		All(l.ctx)
+	if err != nil {
+		return errors.Wrap(err, "query completed rounds")
+	}
+	winners := authoritativeWinners(rounds, cur.RedWinGameCount, cur.BlueWinGameCount)
+	for i, winner := range winners {
+		if err := l.ensureEndedRound(cur.ID, i+1, winner); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func authoritativeWinners(rounds []*ent.MatchRound, redWins, blueWins int) []matchround.Winner {
+	total := redWins + blueWins
+	out := make([]matchround.Winner, total)
+	used := make([]bool, total)
+	redUsed, blueUsed := 0, 0
+	for _, r := range rounds {
+		idx := r.RoundNo - 1
+		if idx < 0 || idx >= total || r.Winner == nil {
+			continue
+		}
+		switch *r.Winner {
+		case matchround.WinnerRed:
+			if redUsed < redWins {
+				out[idx] = matchround.WinnerRed
+				used[idx] = true
+				redUsed++
+			}
+		case matchround.WinnerBlue:
+			if blueUsed < blueWins {
+				out[idx] = matchround.WinnerBlue
+				used[idx] = true
+				blueUsed++
+			}
+		}
+	}
+	for i := total - 1; i >= 0; i-- {
+		if used[i] {
+			continue
+		}
+		switch {
+		case blueUsed < blueWins:
+			out[i] = matchround.WinnerBlue
+			blueUsed++
+		case redUsed < redWins:
+			out[i] = matchround.WinnerRed
+			redUsed++
+		default:
+			out[i] = matchround.WinnerDraw
 		}
 	}
 	return out

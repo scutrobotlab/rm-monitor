@@ -100,6 +100,16 @@ func Priority(v int) predicate.Match {
 	return predicate.Match(sql.FieldEQ(FieldPriority, v))
 }
 
+// WinnerPlaceholderName applies equality check predicate on the "winner_placeholder_name" field. It's identical to WinnerPlaceholderNameEQ.
+func WinnerPlaceholderName(v string) predicate.Match {
+	return predicate.Match(sql.FieldEQ(FieldWinnerPlaceholderName, v))
+}
+
+// LoserPlaceholderName applies equality check predicate on the "loser_placeholder_name" field. It's identical to LoserPlaceholderNameEQ.
+func LoserPlaceholderName(v string) predicate.Match {
+	return predicate.Match(sql.FieldEQ(FieldLoserPlaceholderName, v))
+}
+
 // LatestStatus applies equality check predicate on the "latest_status" field. It's identical to LatestStatusEQ.
 func LatestStatus(v string) predicate.Match {
 	return predicate.Match(sql.FieldEQ(FieldLatestStatus, v))
@@ -508,6 +518,176 @@ func PriorityLT(v int) predicate.Match {
 // PriorityLTE applies the LTE predicate on the "priority" field.
 func PriorityLTE(v int) predicate.Match {
 	return predicate.Match(sql.FieldLTE(FieldPriority, v))
+}
+
+// ResultEQ applies the EQ predicate on the "result" field.
+func ResultEQ(v Result) predicate.Match {
+	return predicate.Match(sql.FieldEQ(FieldResult, v))
+}
+
+// ResultNEQ applies the NEQ predicate on the "result" field.
+func ResultNEQ(v Result) predicate.Match {
+	return predicate.Match(sql.FieldNEQ(FieldResult, v))
+}
+
+// ResultIn applies the In predicate on the "result" field.
+func ResultIn(vs ...Result) predicate.Match {
+	return predicate.Match(sql.FieldIn(FieldResult, vs...))
+}
+
+// ResultNotIn applies the NotIn predicate on the "result" field.
+func ResultNotIn(vs ...Result) predicate.Match {
+	return predicate.Match(sql.FieldNotIn(FieldResult, vs...))
+}
+
+// WinnerPlaceholderNameEQ applies the EQ predicate on the "winner_placeholder_name" field.
+func WinnerPlaceholderNameEQ(v string) predicate.Match {
+	return predicate.Match(sql.FieldEQ(FieldWinnerPlaceholderName, v))
+}
+
+// WinnerPlaceholderNameNEQ applies the NEQ predicate on the "winner_placeholder_name" field.
+func WinnerPlaceholderNameNEQ(v string) predicate.Match {
+	return predicate.Match(sql.FieldNEQ(FieldWinnerPlaceholderName, v))
+}
+
+// WinnerPlaceholderNameIn applies the In predicate on the "winner_placeholder_name" field.
+func WinnerPlaceholderNameIn(vs ...string) predicate.Match {
+	return predicate.Match(sql.FieldIn(FieldWinnerPlaceholderName, vs...))
+}
+
+// WinnerPlaceholderNameNotIn applies the NotIn predicate on the "winner_placeholder_name" field.
+func WinnerPlaceholderNameNotIn(vs ...string) predicate.Match {
+	return predicate.Match(sql.FieldNotIn(FieldWinnerPlaceholderName, vs...))
+}
+
+// WinnerPlaceholderNameGT applies the GT predicate on the "winner_placeholder_name" field.
+func WinnerPlaceholderNameGT(v string) predicate.Match {
+	return predicate.Match(sql.FieldGT(FieldWinnerPlaceholderName, v))
+}
+
+// WinnerPlaceholderNameGTE applies the GTE predicate on the "winner_placeholder_name" field.
+func WinnerPlaceholderNameGTE(v string) predicate.Match {
+	return predicate.Match(sql.FieldGTE(FieldWinnerPlaceholderName, v))
+}
+
+// WinnerPlaceholderNameLT applies the LT predicate on the "winner_placeholder_name" field.
+func WinnerPlaceholderNameLT(v string) predicate.Match {
+	return predicate.Match(sql.FieldLT(FieldWinnerPlaceholderName, v))
+}
+
+// WinnerPlaceholderNameLTE applies the LTE predicate on the "winner_placeholder_name" field.
+func WinnerPlaceholderNameLTE(v string) predicate.Match {
+	return predicate.Match(sql.FieldLTE(FieldWinnerPlaceholderName, v))
+}
+
+// WinnerPlaceholderNameContains applies the Contains predicate on the "winner_placeholder_name" field.
+func WinnerPlaceholderNameContains(v string) predicate.Match {
+	return predicate.Match(sql.FieldContains(FieldWinnerPlaceholderName, v))
+}
+
+// WinnerPlaceholderNameHasPrefix applies the HasPrefix predicate on the "winner_placeholder_name" field.
+func WinnerPlaceholderNameHasPrefix(v string) predicate.Match {
+	return predicate.Match(sql.FieldHasPrefix(FieldWinnerPlaceholderName, v))
+}
+
+// WinnerPlaceholderNameHasSuffix applies the HasSuffix predicate on the "winner_placeholder_name" field.
+func WinnerPlaceholderNameHasSuffix(v string) predicate.Match {
+	return predicate.Match(sql.FieldHasSuffix(FieldWinnerPlaceholderName, v))
+}
+
+// WinnerPlaceholderNameIsNil applies the IsNil predicate on the "winner_placeholder_name" field.
+func WinnerPlaceholderNameIsNil() predicate.Match {
+	return predicate.Match(sql.FieldIsNull(FieldWinnerPlaceholderName))
+}
+
+// WinnerPlaceholderNameNotNil applies the NotNil predicate on the "winner_placeholder_name" field.
+func WinnerPlaceholderNameNotNil() predicate.Match {
+	return predicate.Match(sql.FieldNotNull(FieldWinnerPlaceholderName))
+}
+
+// WinnerPlaceholderNameEqualFold applies the EqualFold predicate on the "winner_placeholder_name" field.
+func WinnerPlaceholderNameEqualFold(v string) predicate.Match {
+	return predicate.Match(sql.FieldEqualFold(FieldWinnerPlaceholderName, v))
+}
+
+// WinnerPlaceholderNameContainsFold applies the ContainsFold predicate on the "winner_placeholder_name" field.
+func WinnerPlaceholderNameContainsFold(v string) predicate.Match {
+	return predicate.Match(sql.FieldContainsFold(FieldWinnerPlaceholderName, v))
+}
+
+// LoserPlaceholderNameEQ applies the EQ predicate on the "loser_placeholder_name" field.
+func LoserPlaceholderNameEQ(v string) predicate.Match {
+	return predicate.Match(sql.FieldEQ(FieldLoserPlaceholderName, v))
+}
+
+// LoserPlaceholderNameNEQ applies the NEQ predicate on the "loser_placeholder_name" field.
+func LoserPlaceholderNameNEQ(v string) predicate.Match {
+	return predicate.Match(sql.FieldNEQ(FieldLoserPlaceholderName, v))
+}
+
+// LoserPlaceholderNameIn applies the In predicate on the "loser_placeholder_name" field.
+func LoserPlaceholderNameIn(vs ...string) predicate.Match {
+	return predicate.Match(sql.FieldIn(FieldLoserPlaceholderName, vs...))
+}
+
+// LoserPlaceholderNameNotIn applies the NotIn predicate on the "loser_placeholder_name" field.
+func LoserPlaceholderNameNotIn(vs ...string) predicate.Match {
+	return predicate.Match(sql.FieldNotIn(FieldLoserPlaceholderName, vs...))
+}
+
+// LoserPlaceholderNameGT applies the GT predicate on the "loser_placeholder_name" field.
+func LoserPlaceholderNameGT(v string) predicate.Match {
+	return predicate.Match(sql.FieldGT(FieldLoserPlaceholderName, v))
+}
+
+// LoserPlaceholderNameGTE applies the GTE predicate on the "loser_placeholder_name" field.
+func LoserPlaceholderNameGTE(v string) predicate.Match {
+	return predicate.Match(sql.FieldGTE(FieldLoserPlaceholderName, v))
+}
+
+// LoserPlaceholderNameLT applies the LT predicate on the "loser_placeholder_name" field.
+func LoserPlaceholderNameLT(v string) predicate.Match {
+	return predicate.Match(sql.FieldLT(FieldLoserPlaceholderName, v))
+}
+
+// LoserPlaceholderNameLTE applies the LTE predicate on the "loser_placeholder_name" field.
+func LoserPlaceholderNameLTE(v string) predicate.Match {
+	return predicate.Match(sql.FieldLTE(FieldLoserPlaceholderName, v))
+}
+
+// LoserPlaceholderNameContains applies the Contains predicate on the "loser_placeholder_name" field.
+func LoserPlaceholderNameContains(v string) predicate.Match {
+	return predicate.Match(sql.FieldContains(FieldLoserPlaceholderName, v))
+}
+
+// LoserPlaceholderNameHasPrefix applies the HasPrefix predicate on the "loser_placeholder_name" field.
+func LoserPlaceholderNameHasPrefix(v string) predicate.Match {
+	return predicate.Match(sql.FieldHasPrefix(FieldLoserPlaceholderName, v))
+}
+
+// LoserPlaceholderNameHasSuffix applies the HasSuffix predicate on the "loser_placeholder_name" field.
+func LoserPlaceholderNameHasSuffix(v string) predicate.Match {
+	return predicate.Match(sql.FieldHasSuffix(FieldLoserPlaceholderName, v))
+}
+
+// LoserPlaceholderNameIsNil applies the IsNil predicate on the "loser_placeholder_name" field.
+func LoserPlaceholderNameIsNil() predicate.Match {
+	return predicate.Match(sql.FieldIsNull(FieldLoserPlaceholderName))
+}
+
+// LoserPlaceholderNameNotNil applies the NotNil predicate on the "loser_placeholder_name" field.
+func LoserPlaceholderNameNotNil() predicate.Match {
+	return predicate.Match(sql.FieldNotNull(FieldLoserPlaceholderName))
+}
+
+// LoserPlaceholderNameEqualFold applies the EqualFold predicate on the "loser_placeholder_name" field.
+func LoserPlaceholderNameEqualFold(v string) predicate.Match {
+	return predicate.Match(sql.FieldEqualFold(FieldLoserPlaceholderName, v))
+}
+
+// LoserPlaceholderNameContainsFold applies the ContainsFold predicate on the "loser_placeholder_name" field.
+func LoserPlaceholderNameContainsFold(v string) predicate.Match {
+	return predicate.Match(sql.FieldContainsFold(FieldLoserPlaceholderName, v))
 }
 
 // LatestStatusEQ applies the EQ predicate on the "latest_status" field.

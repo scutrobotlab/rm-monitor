@@ -3,6 +3,7 @@
 package match
 
 import (
+	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
@@ -28,6 +29,12 @@ const (
 	FieldTotalRounds = "total_rounds"
 	// FieldPriority holds the string denoting the priority field in the database.
 	FieldPriority = "priority"
+	// FieldResult holds the string denoting the result field in the database.
+	FieldResult = "result"
+	// FieldWinnerPlaceholderName holds the string denoting the winner_placeholder_name field in the database.
+	FieldWinnerPlaceholderName = "winner_placeholder_name"
+	// FieldLoserPlaceholderName holds the string denoting the loser_placeholder_name field in the database.
+	FieldLoserPlaceholderName = "loser_placeholder_name"
 	// FieldLatestStatus holds the string denoting the latest_status field in the database.
 	FieldLatestStatus = "latest_status"
 	// FieldReport holds the string denoting the report field in the database.
@@ -86,6 +93,9 @@ var Columns = []string{
 	FieldMatchSlug,
 	FieldTotalRounds,
 	FieldPriority,
+	FieldResult,
+	FieldWinnerPlaceholderName,
+	FieldLoserPlaceholderName,
 	FieldLatestStatus,
 	FieldReport,
 	FieldCreatedAt,
@@ -131,6 +141,34 @@ var (
 	UpdateDefaultUpdatedAt func() time.Time
 )
 
+// Result defines the type for the "result" enum field.
+type Result string
+
+// ResultUNKNOWN is the default value of the Result enum.
+const DefaultResult = ResultUNKNOWN
+
+// Result values.
+const (
+	ResultRED     Result = "RED"
+	ResultBLUE    Result = "BLUE"
+	ResultDRAW    Result = "DRAW"
+	ResultUNKNOWN Result = "UNKNOWN"
+)
+
+func (r Result) String() string {
+	return string(r)
+}
+
+// ResultValidator is a validator for the "result" field enum values. It is called by the builders before save.
+func ResultValidator(r Result) error {
+	switch r {
+	case ResultRED, ResultBLUE, ResultDRAW, ResultUNKNOWN:
+		return nil
+	default:
+		return fmt.Errorf("match: invalid enum value for result field: %q", r)
+	}
+}
+
 // OrderOption defines the ordering options for the Match queries.
 type OrderOption func(*sql.Selector)
 
@@ -172,6 +210,21 @@ func ByTotalRounds(opts ...sql.OrderTermOption) OrderOption {
 // ByPriority orders the results by the priority field.
 func ByPriority(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldPriority, opts...).ToFunc()
+}
+
+// ByResult orders the results by the result field.
+func ByResult(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldResult, opts...).ToFunc()
+}
+
+// ByWinnerPlaceholderName orders the results by the winner_placeholder_name field.
+func ByWinnerPlaceholderName(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldWinnerPlaceholderName, opts...).ToFunc()
+}
+
+// ByLoserPlaceholderName orders the results by the loser_placeholder_name field.
+func ByLoserPlaceholderName(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldLoserPlaceholderName, opts...).ToFunc()
 }
 
 // ByLatestStatus orders the results by the latest_status field.

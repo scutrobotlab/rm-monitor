@@ -156,6 +156,60 @@ func (_u *MatchUpdate) AddPriority(v int) *MatchUpdate {
 	return _u
 }
 
+// SetResult sets the "result" field.
+func (_u *MatchUpdate) SetResult(v match.Result) *MatchUpdate {
+	_u.mutation.SetResult(v)
+	return _u
+}
+
+// SetNillableResult sets the "result" field if the given value is not nil.
+func (_u *MatchUpdate) SetNillableResult(v *match.Result) *MatchUpdate {
+	if v != nil {
+		_u.SetResult(*v)
+	}
+	return _u
+}
+
+// SetWinnerPlaceholderName sets the "winner_placeholder_name" field.
+func (_u *MatchUpdate) SetWinnerPlaceholderName(v string) *MatchUpdate {
+	_u.mutation.SetWinnerPlaceholderName(v)
+	return _u
+}
+
+// SetNillableWinnerPlaceholderName sets the "winner_placeholder_name" field if the given value is not nil.
+func (_u *MatchUpdate) SetNillableWinnerPlaceholderName(v *string) *MatchUpdate {
+	if v != nil {
+		_u.SetWinnerPlaceholderName(*v)
+	}
+	return _u
+}
+
+// ClearWinnerPlaceholderName clears the value of the "winner_placeholder_name" field.
+func (_u *MatchUpdate) ClearWinnerPlaceholderName() *MatchUpdate {
+	_u.mutation.ClearWinnerPlaceholderName()
+	return _u
+}
+
+// SetLoserPlaceholderName sets the "loser_placeholder_name" field.
+func (_u *MatchUpdate) SetLoserPlaceholderName(v string) *MatchUpdate {
+	_u.mutation.SetLoserPlaceholderName(v)
+	return _u
+}
+
+// SetNillableLoserPlaceholderName sets the "loser_placeholder_name" field if the given value is not nil.
+func (_u *MatchUpdate) SetNillableLoserPlaceholderName(v *string) *MatchUpdate {
+	if v != nil {
+		_u.SetLoserPlaceholderName(*v)
+	}
+	return _u
+}
+
+// ClearLoserPlaceholderName clears the value of the "loser_placeholder_name" field.
+func (_u *MatchUpdate) ClearLoserPlaceholderName() *MatchUpdate {
+	_u.mutation.ClearLoserPlaceholderName()
+	return _u
+}
+
 // SetLatestStatus sets the "latest_status" field.
 func (_u *MatchUpdate) SetLatestStatus(v string) *MatchUpdate {
 	_u.mutation.SetLatestStatus(v)
@@ -345,6 +399,11 @@ func (_u *MatchUpdate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *MatchUpdate) check() error {
+	if v, ok := _u.mutation.Result(); ok {
+		if err := match.ResultValidator(v); err != nil {
+			return &ValidationError{Name: "result", err: fmt.Errorf(`ent: validator failed for field "Match.result": %w`, err)}
+		}
+	}
 	if _u.mutation.RedTeamCleared() && len(_u.mutation.RedTeamIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "Match.red_team"`)
 	}
@@ -398,6 +457,21 @@ func (_u *MatchUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.AddedPriority(); ok {
 		_spec.AddField(match.FieldPriority, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.Result(); ok {
+		_spec.SetField(match.FieldResult, field.TypeEnum, value)
+	}
+	if value, ok := _u.mutation.WinnerPlaceholderName(); ok {
+		_spec.SetField(match.FieldWinnerPlaceholderName, field.TypeString, value)
+	}
+	if _u.mutation.WinnerPlaceholderNameCleared() {
+		_spec.ClearField(match.FieldWinnerPlaceholderName, field.TypeString)
+	}
+	if value, ok := _u.mutation.LoserPlaceholderName(); ok {
+		_spec.SetField(match.FieldLoserPlaceholderName, field.TypeString, value)
+	}
+	if _u.mutation.LoserPlaceholderNameCleared() {
+		_spec.ClearField(match.FieldLoserPlaceholderName, field.TypeString)
 	}
 	if value, ok := _u.mutation.LatestStatus(); ok {
 		_spec.SetField(match.FieldLatestStatus, field.TypeString, value)
@@ -704,6 +778,60 @@ func (_u *MatchUpdateOne) AddPriority(v int) *MatchUpdateOne {
 	return _u
 }
 
+// SetResult sets the "result" field.
+func (_u *MatchUpdateOne) SetResult(v match.Result) *MatchUpdateOne {
+	_u.mutation.SetResult(v)
+	return _u
+}
+
+// SetNillableResult sets the "result" field if the given value is not nil.
+func (_u *MatchUpdateOne) SetNillableResult(v *match.Result) *MatchUpdateOne {
+	if v != nil {
+		_u.SetResult(*v)
+	}
+	return _u
+}
+
+// SetWinnerPlaceholderName sets the "winner_placeholder_name" field.
+func (_u *MatchUpdateOne) SetWinnerPlaceholderName(v string) *MatchUpdateOne {
+	_u.mutation.SetWinnerPlaceholderName(v)
+	return _u
+}
+
+// SetNillableWinnerPlaceholderName sets the "winner_placeholder_name" field if the given value is not nil.
+func (_u *MatchUpdateOne) SetNillableWinnerPlaceholderName(v *string) *MatchUpdateOne {
+	if v != nil {
+		_u.SetWinnerPlaceholderName(*v)
+	}
+	return _u
+}
+
+// ClearWinnerPlaceholderName clears the value of the "winner_placeholder_name" field.
+func (_u *MatchUpdateOne) ClearWinnerPlaceholderName() *MatchUpdateOne {
+	_u.mutation.ClearWinnerPlaceholderName()
+	return _u
+}
+
+// SetLoserPlaceholderName sets the "loser_placeholder_name" field.
+func (_u *MatchUpdateOne) SetLoserPlaceholderName(v string) *MatchUpdateOne {
+	_u.mutation.SetLoserPlaceholderName(v)
+	return _u
+}
+
+// SetNillableLoserPlaceholderName sets the "loser_placeholder_name" field if the given value is not nil.
+func (_u *MatchUpdateOne) SetNillableLoserPlaceholderName(v *string) *MatchUpdateOne {
+	if v != nil {
+		_u.SetLoserPlaceholderName(*v)
+	}
+	return _u
+}
+
+// ClearLoserPlaceholderName clears the value of the "loser_placeholder_name" field.
+func (_u *MatchUpdateOne) ClearLoserPlaceholderName() *MatchUpdateOne {
+	_u.mutation.ClearLoserPlaceholderName()
+	return _u
+}
+
 // SetLatestStatus sets the "latest_status" field.
 func (_u *MatchUpdateOne) SetLatestStatus(v string) *MatchUpdateOne {
 	_u.mutation.SetLatestStatus(v)
@@ -906,6 +1034,11 @@ func (_u *MatchUpdateOne) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *MatchUpdateOne) check() error {
+	if v, ok := _u.mutation.Result(); ok {
+		if err := match.ResultValidator(v); err != nil {
+			return &ValidationError{Name: "result", err: fmt.Errorf(`ent: validator failed for field "Match.result": %w`, err)}
+		}
+	}
 	if _u.mutation.RedTeamCleared() && len(_u.mutation.RedTeamIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "Match.red_team"`)
 	}
@@ -976,6 +1109,21 @@ func (_u *MatchUpdateOne) sqlSave(ctx context.Context) (_node *Match, err error)
 	}
 	if value, ok := _u.mutation.AddedPriority(); ok {
 		_spec.AddField(match.FieldPriority, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.Result(); ok {
+		_spec.SetField(match.FieldResult, field.TypeEnum, value)
+	}
+	if value, ok := _u.mutation.WinnerPlaceholderName(); ok {
+		_spec.SetField(match.FieldWinnerPlaceholderName, field.TypeString, value)
+	}
+	if _u.mutation.WinnerPlaceholderNameCleared() {
+		_spec.ClearField(match.FieldWinnerPlaceholderName, field.TypeString)
+	}
+	if value, ok := _u.mutation.LoserPlaceholderName(); ok {
+		_spec.SetField(match.FieldLoserPlaceholderName, field.TypeString, value)
+	}
+	if _u.mutation.LoserPlaceholderNameCleared() {
+		_spec.ClearField(match.FieldLoserPlaceholderName, field.TypeString)
 	}
 	if value, ok := _u.mutation.LatestStatus(); ok {
 		_spec.SetField(match.FieldLatestStatus, field.TypeString, value)

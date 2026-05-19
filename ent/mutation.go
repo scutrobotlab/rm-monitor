@@ -621,37 +621,40 @@ func (m *LarkMessageMutation) ResetEdge(name string) error {
 // MatchMutation represents an operation that mutates the Match nodes in the graph.
 type MatchMutation struct {
 	config
-	op                   Op
-	typ                  string
-	id                   *string
-	event                *string
-	zone                 *string
-	_order               *int
-	add_order            *int
-	match_type           *string
-	match_slug           *string
-	total_rounds         *int
-	addtotal_rounds      *int
-	priority             *int
-	addpriority          *int
-	latest_status        *string
-	report               *string
-	created_at           *time.Time
-	updated_at           *time.Time
-	clearedFields        map[string]struct{}
-	red_team             *string
-	clearedred_team      bool
-	blue_team            *string
-	clearedblue_team     bool
-	rounds               map[int]struct{}
-	removedrounds        map[int]struct{}
-	clearedrounds        bool
-	lark_messages        map[int]struct{}
-	removedlark_messages map[int]struct{}
-	clearedlark_messages bool
-	done                 bool
-	oldValue             func(context.Context) (*Match, error)
-	predicates           []predicate.Match
+	op                      Op
+	typ                     string
+	id                      *string
+	event                   *string
+	zone                    *string
+	_order                  *int
+	add_order               *int
+	match_type              *string
+	match_slug              *string
+	total_rounds            *int
+	addtotal_rounds         *int
+	priority                *int
+	addpriority             *int
+	result                  *match.Result
+	winner_placeholder_name *string
+	loser_placeholder_name  *string
+	latest_status           *string
+	report                  *string
+	created_at              *time.Time
+	updated_at              *time.Time
+	clearedFields           map[string]struct{}
+	red_team                *string
+	clearedred_team         bool
+	blue_team               *string
+	clearedblue_team        bool
+	rounds                  map[int]struct{}
+	removedrounds           map[int]struct{}
+	clearedrounds           bool
+	lark_messages           map[int]struct{}
+	removedlark_messages    map[int]struct{}
+	clearedlark_messages    bool
+	done                    bool
+	oldValue                func(context.Context) (*Match, error)
+	predicates              []predicate.Match
 }
 
 var _ ent.Mutation = (*MatchMutation)(nil)
@@ -1083,6 +1086,140 @@ func (m *MatchMutation) ResetPriority() {
 	m.addpriority = nil
 }
 
+// SetResult sets the "result" field.
+func (m *MatchMutation) SetResult(value match.Result) {
+	m.result = &value
+}
+
+// Result returns the value of the "result" field in the mutation.
+func (m *MatchMutation) Result() (r match.Result, exists bool) {
+	v := m.result
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldResult returns the old "result" field's value of the Match entity.
+// If the Match object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MatchMutation) OldResult(ctx context.Context) (v match.Result, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldResult is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldResult requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldResult: %w", err)
+	}
+	return oldValue.Result, nil
+}
+
+// ResetResult resets all changes to the "result" field.
+func (m *MatchMutation) ResetResult() {
+	m.result = nil
+}
+
+// SetWinnerPlaceholderName sets the "winner_placeholder_name" field.
+func (m *MatchMutation) SetWinnerPlaceholderName(s string) {
+	m.winner_placeholder_name = &s
+}
+
+// WinnerPlaceholderName returns the value of the "winner_placeholder_name" field in the mutation.
+func (m *MatchMutation) WinnerPlaceholderName() (r string, exists bool) {
+	v := m.winner_placeholder_name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldWinnerPlaceholderName returns the old "winner_placeholder_name" field's value of the Match entity.
+// If the Match object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MatchMutation) OldWinnerPlaceholderName(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldWinnerPlaceholderName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldWinnerPlaceholderName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldWinnerPlaceholderName: %w", err)
+	}
+	return oldValue.WinnerPlaceholderName, nil
+}
+
+// ClearWinnerPlaceholderName clears the value of the "winner_placeholder_name" field.
+func (m *MatchMutation) ClearWinnerPlaceholderName() {
+	m.winner_placeholder_name = nil
+	m.clearedFields[match.FieldWinnerPlaceholderName] = struct{}{}
+}
+
+// WinnerPlaceholderNameCleared returns if the "winner_placeholder_name" field was cleared in this mutation.
+func (m *MatchMutation) WinnerPlaceholderNameCleared() bool {
+	_, ok := m.clearedFields[match.FieldWinnerPlaceholderName]
+	return ok
+}
+
+// ResetWinnerPlaceholderName resets all changes to the "winner_placeholder_name" field.
+func (m *MatchMutation) ResetWinnerPlaceholderName() {
+	m.winner_placeholder_name = nil
+	delete(m.clearedFields, match.FieldWinnerPlaceholderName)
+}
+
+// SetLoserPlaceholderName sets the "loser_placeholder_name" field.
+func (m *MatchMutation) SetLoserPlaceholderName(s string) {
+	m.loser_placeholder_name = &s
+}
+
+// LoserPlaceholderName returns the value of the "loser_placeholder_name" field in the mutation.
+func (m *MatchMutation) LoserPlaceholderName() (r string, exists bool) {
+	v := m.loser_placeholder_name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLoserPlaceholderName returns the old "loser_placeholder_name" field's value of the Match entity.
+// If the Match object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MatchMutation) OldLoserPlaceholderName(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLoserPlaceholderName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLoserPlaceholderName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLoserPlaceholderName: %w", err)
+	}
+	return oldValue.LoserPlaceholderName, nil
+}
+
+// ClearLoserPlaceholderName clears the value of the "loser_placeholder_name" field.
+func (m *MatchMutation) ClearLoserPlaceholderName() {
+	m.loser_placeholder_name = nil
+	m.clearedFields[match.FieldLoserPlaceholderName] = struct{}{}
+}
+
+// LoserPlaceholderNameCleared returns if the "loser_placeholder_name" field was cleared in this mutation.
+func (m *MatchMutation) LoserPlaceholderNameCleared() bool {
+	_, ok := m.clearedFields[match.FieldLoserPlaceholderName]
+	return ok
+}
+
+// ResetLoserPlaceholderName resets all changes to the "loser_placeholder_name" field.
+func (m *MatchMutation) ResetLoserPlaceholderName() {
+	m.loser_placeholder_name = nil
+	delete(m.clearedFields, match.FieldLoserPlaceholderName)
+}
+
 // SetLatestStatus sets the "latest_status" field.
 func (m *MatchMutation) SetLatestStatus(s string) {
 	m.latest_status = &s
@@ -1460,7 +1597,7 @@ func (m *MatchMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *MatchMutation) Fields() []string {
-	fields := make([]string, 0, 11)
+	fields := make([]string, 0, 14)
 	if m.event != nil {
 		fields = append(fields, match.FieldEvent)
 	}
@@ -1481,6 +1618,15 @@ func (m *MatchMutation) Fields() []string {
 	}
 	if m.priority != nil {
 		fields = append(fields, match.FieldPriority)
+	}
+	if m.result != nil {
+		fields = append(fields, match.FieldResult)
+	}
+	if m.winner_placeholder_name != nil {
+		fields = append(fields, match.FieldWinnerPlaceholderName)
+	}
+	if m.loser_placeholder_name != nil {
+		fields = append(fields, match.FieldLoserPlaceholderName)
 	}
 	if m.latest_status != nil {
 		fields = append(fields, match.FieldLatestStatus)
@@ -1516,6 +1662,12 @@ func (m *MatchMutation) Field(name string) (ent.Value, bool) {
 		return m.TotalRounds()
 	case match.FieldPriority:
 		return m.Priority()
+	case match.FieldResult:
+		return m.Result()
+	case match.FieldWinnerPlaceholderName:
+		return m.WinnerPlaceholderName()
+	case match.FieldLoserPlaceholderName:
+		return m.LoserPlaceholderName()
 	case match.FieldLatestStatus:
 		return m.LatestStatus()
 	case match.FieldReport:
@@ -1547,6 +1699,12 @@ func (m *MatchMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldTotalRounds(ctx)
 	case match.FieldPriority:
 		return m.OldPriority(ctx)
+	case match.FieldResult:
+		return m.OldResult(ctx)
+	case match.FieldWinnerPlaceholderName:
+		return m.OldWinnerPlaceholderName(ctx)
+	case match.FieldLoserPlaceholderName:
+		return m.OldLoserPlaceholderName(ctx)
 	case match.FieldLatestStatus:
 		return m.OldLatestStatus(ctx)
 	case match.FieldReport:
@@ -1612,6 +1770,27 @@ func (m *MatchMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetPriority(v)
+		return nil
+	case match.FieldResult:
+		v, ok := value.(match.Result)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetResult(v)
+		return nil
+	case match.FieldWinnerPlaceholderName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetWinnerPlaceholderName(v)
+		return nil
+	case match.FieldLoserPlaceholderName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLoserPlaceholderName(v)
 		return nil
 	case match.FieldLatestStatus:
 		v, ok := value.(string)
@@ -1713,6 +1892,12 @@ func (m *MatchMutation) ClearedFields() []string {
 	if m.FieldCleared(match.FieldMatchSlug) {
 		fields = append(fields, match.FieldMatchSlug)
 	}
+	if m.FieldCleared(match.FieldWinnerPlaceholderName) {
+		fields = append(fields, match.FieldWinnerPlaceholderName)
+	}
+	if m.FieldCleared(match.FieldLoserPlaceholderName) {
+		fields = append(fields, match.FieldLoserPlaceholderName)
+	}
 	if m.FieldCleared(match.FieldReport) {
 		fields = append(fields, match.FieldReport)
 	}
@@ -1732,6 +1917,12 @@ func (m *MatchMutation) ClearField(name string) error {
 	switch name {
 	case match.FieldMatchSlug:
 		m.ClearMatchSlug()
+		return nil
+	case match.FieldWinnerPlaceholderName:
+		m.ClearWinnerPlaceholderName()
+		return nil
+	case match.FieldLoserPlaceholderName:
+		m.ClearLoserPlaceholderName()
 		return nil
 	case match.FieldReport:
 		m.ClearReport()
@@ -1764,6 +1955,15 @@ func (m *MatchMutation) ResetField(name string) error {
 		return nil
 	case match.FieldPriority:
 		m.ResetPriority()
+		return nil
+	case match.FieldResult:
+		m.ResetResult()
+		return nil
+	case match.FieldWinnerPlaceholderName:
+		m.ResetWinnerPlaceholderName()
+		return nil
+	case match.FieldLoserPlaceholderName:
+		m.ResetLoserPlaceholderName()
 		return nil
 	case match.FieldLatestStatus:
 		m.ResetLatestStatus()

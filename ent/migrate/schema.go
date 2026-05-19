@@ -41,6 +41,9 @@ var (
 		{Name: "match_slug", Type: field.TypeString, Nullable: true},
 		{Name: "total_rounds", Type: field.TypeInt, Default: 0},
 		{Name: "priority", Type: field.TypeInt, Default: 0},
+		{Name: "result", Type: field.TypeEnum, Enums: []string{"RED", "BLUE", "DRAW", "UNKNOWN"}, Default: "UNKNOWN"},
+		{Name: "winner_placeholder_name", Type: field.TypeString, Nullable: true},
+		{Name: "loser_placeholder_name", Type: field.TypeString, Nullable: true},
 		{Name: "latest_status", Type: field.TypeString, Default: ""},
 		{Name: "report", Type: field.TypeString, Nullable: true, Size: 2147483647},
 		{Name: "created_at", Type: field.TypeTime},
@@ -56,13 +59,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "matches_teams_red_matches",
-				Columns:    []*schema.Column{MatchesColumns[12]},
+				Columns:    []*schema.Column{MatchesColumns[15]},
 				RefColumns: []*schema.Column{TeamsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "matches_teams_blue_matches",
-				Columns:    []*schema.Column{MatchesColumns[13]},
+				Columns:    []*schema.Column{MatchesColumns[16]},
 				RefColumns: []*schema.Column{TeamsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},

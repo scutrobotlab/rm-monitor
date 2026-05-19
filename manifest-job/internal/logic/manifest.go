@@ -145,13 +145,6 @@ const readmeTemplate = `# {{ .Title }}
 | --- | --- | --- | --- | --- |
 {{ range .Rounds }}| {{ .RoundNo }} | {{ .Status }} | {{ .Winner }} | {{ .StartedAt }} | {{ .EndedAt }} |
 {{ end }}
-
-## 录像文件
-
-| 小局 | 视角 | 源文件 | 归档文件 | 上传记录 |
-| --- | --- | --- | --- | --- |
-{{ range .Records }}| {{ .RoundNo }} | {{ .Role }} | {{ .SourcePath }} | {{ .ArchivePath }} | {{ .UploadURL }} |
-{{ end }}
 {{ if .Report }}
 
 ## 战报
@@ -187,7 +180,6 @@ type readmeData struct {
 	Title    string
 	InfoRows []tableRow
 	Rounds   []readmeRoundRow
-	Records  []readmeRecordRow
 	Report   string
 }
 
@@ -203,7 +195,9 @@ func renderReadme(m *ent.Match, red, blue *ent.Team) (string, error) {
 			readmeInfoRow("蓝方", teamName(blue)),
 			readmeInfoRow("状态", displayStatus(m)),
 			readmeInfoRow("比分", scoreText(m.Edges.Rounds)),
-			readmeInfoRow("胜方", matchWinnerText(m.Edges.Rounds, red, blue)),
+			readmeInfoRow("胜方", matchWinnerText(m, red, blue)),
+			readmeInfoRow("胜者去向", placeholderText(m.WinnerPlaceholderName)),
+			readmeInfoRow("败者去向", placeholderText(m.LoserPlaceholderName)),
 			readmeInfoRow("开始时间", formatDisplayTime(firstStartedAt(m.Edges.Rounds))),
 			readmeInfoRow("结束时间", formatOptionalDisplayTime(lastEndedAt(m.Edges.Rounds))),
 			readmeInfoRow("Match ID", m.ID),
@@ -220,28 +214,6 @@ func renderReadme(m *ent.Match, red, blue *ent.Team) (string, error) {
 			StartedAt: markdownCell(formatDisplayTime(r.StartedAt)),
 			EndedAt:   markdownCell(formatOptionalDisplayTime(r.EndedAt)),
 		})
-		for _, task := range r.Edges.RecordTasks {
-			sourcePath, archivePath := "", ""
-			for _, artifact := range task.Edges.MediaArtifacts {
-				switch string(artifact.Kind) {
-				case "source":
-					sourcePath = artifact.Path
-				case "archive":
-					archivePath = artifact.Path
-				}
-			}
-			uploadURL := ""
-			if task.Edges.UploadTask != nil && task.Edges.UploadTask.BitableRecordURL != nil {
-				uploadURL = *task.Edges.UploadTask.BitableRecordURL
-			}
-			data.Records = append(data.Records, readmeRecordRow{
-				RoundNo:     r.RoundNo,
-				Role:        markdownCell(task.Role),
-				SourcePath:  markdownCell(sourcePath),
-				ArchivePath: markdownCell(archivePath),
-				UploadURL:   markdownCell(uploadURL),
-			})
-		}
 	}
 	if m.Report != nil {
 		data.Report = strings.TrimSpace(*m.Report)
@@ -296,6 +268,8 @@ const reportPromptTemplate = `【角色】
 - 类型：{{ .MatchType }}
 - 比分：{{ .Score }}
 - 胜方：{{ .Winner }}
+- 胜者去向：{{ .WinnerPlaceholder }}
+- 败者去向：{{ .LoserPlaceholder }}
 {{ range .Rounds }}
 - Round {{ .RoundNo }}：{{ .Status }}，胜方 {{ .Winner }}，时间 {{ .StartedAt }} - {{ .EndedAt }}
 {{- if .CommentaryLines }}
@@ -320,6 +294,7 @@ const reportPromptTemplate = `【角色】
 - 简洁、直白、像赛事新闻稿，不要写成技术报告。
 - 不要出现“AI、模型、系统、结构化数据、STT、识别文本、自动生成、数据待完善”等开发或内部实现表述。
 - 不要编造输入中没有的具体机器人动作、击毁、经济、点位或战术细节。
+- 胜者去向和败者去向来自赛程占位字段，可能为空，也可能只是“胜者1”这类内部占位；只有当它明确表达后续赛程、轮次或对阵安排时才纳入战报，不要强行解读。
 - 如果解说摘录信息不足，就基于比分、胜方和小局结果写保守概括，不要说明“信息不足”。`
 
 var reportPromptTmpl = template.Must(template.New("report-prompt").Parse(reportPromptTemplate))
@@ -334,23 +309,27 @@ type reportRoundData struct {
 }
 
 type reportPromptData struct {
-	Title     string
-	Event     string
-	Zone      string
-	MatchType string
-	Score     string
-	Winner    string
-	Rounds    []reportRoundData
+	Title             string
+	Event             string
+	Zone              string
+	MatchType         string
+	Score             string
+	Winner            string
+	WinnerPlaceholder string
+	LoserPlaceholder  string
+	Rounds            []reportRoundData
 }
 
 func buildReportInput(m *ent.Match, red, blue *ent.Team, matchDir string) (string, error) {
 	data := reportPromptData{
-		Title:     matchTitle(m, red, blue),
-		Event:     m.Event,
-		Zone:      m.Zone,
-		MatchType: m.MatchType,
-		Score:     scoreText(m.Edges.Rounds),
-		Winner:    matchWinnerText(m.Edges.Rounds, red, blue),
+		Title:             matchTitle(m, red, blue),
+		Event:             m.Event,
+		Zone:              m.Zone,
+		MatchType:         m.MatchType,
+		Score:             scoreText(m.Edges.Rounds),
+		Winner:            matchWinnerText(m, red, blue),
+		WinnerPlaceholder: placeholderText(m.WinnerPlaceholderName),
+		LoserPlaceholder:  placeholderText(m.LoserPlaceholderName),
 	}
 	for _, r := range m.Edges.Rounds {
 		row := reportRoundData{
@@ -444,33 +423,24 @@ func teamName(t *ent.Team) string {
 	}
 }
 
-func matchWinner(rounds []*ent.MatchRound) string {
-	redWins, blueWins := 0, 0
-	for _, r := range rounds {
-		if r.Winner == nil {
-			continue
-		}
-		switch *r.Winner {
-		case matchround.WinnerRed:
-			redWins++
-		case matchround.WinnerBlue:
-			blueWins++
-		}
-	}
-	switch {
-	case redWins > blueWins:
-		return "red"
-	case blueWins > redWins:
-		return "blue"
-	case redWins == 0 && blueWins == 0:
+func matchWinner(m *ent.Match) string {
+	if m == nil {
 		return ""
-	default:
+	}
+	switch m.Result {
+	case match.ResultRED:
+		return "red"
+	case match.ResultBLUE:
+		return "blue"
+	case match.ResultDRAW:
 		return "draw"
+	default:
+		return ""
 	}
 }
 
-func matchWinnerText(rounds []*ent.MatchRound, red, blue *ent.Team) string {
-	switch matchWinner(rounds) {
+func matchWinnerText(m *ent.Match, red, blue *ent.Team) string {
+	switch matchWinner(m) {
 	case "red":
 		return "红方（" + teamName(red) + "）"
 	case "blue":
@@ -480,6 +450,13 @@ func matchWinnerText(rounds []*ent.MatchRound, red, blue *ent.Team) string {
 	default:
 		return ""
 	}
+}
+
+func placeholderText(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return strings.TrimSpace(*s)
 }
 
 func scoreText(rounds []*ent.MatchRound) string {

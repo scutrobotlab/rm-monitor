@@ -32,6 +32,12 @@ type Match struct {
 	TotalRounds int `json:"total_rounds,omitempty"`
 	// Priority holds the value of the "priority" field.
 	Priority int `json:"priority,omitempty"`
+	// Result holds the value of the "result" field.
+	Result match.Result `json:"result,omitempty"`
+	// WinnerPlaceholderName holds the value of the "winner_placeholder_name" field.
+	WinnerPlaceholderName *string `json:"winner_placeholder_name,omitempty"`
+	// LoserPlaceholderName holds the value of the "loser_placeholder_name" field.
+	LoserPlaceholderName *string `json:"loser_placeholder_name,omitempty"`
 	// LatestStatus holds the value of the "latest_status" field.
 	LatestStatus string `json:"latest_status,omitempty"`
 	// Report holds the value of the "report" field.
@@ -110,7 +116,7 @@ func (*Match) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case match.FieldOrder, match.FieldTotalRounds, match.FieldPriority:
 			values[i] = new(sql.NullInt64)
-		case match.FieldID, match.FieldEvent, match.FieldZone, match.FieldMatchType, match.FieldMatchSlug, match.FieldLatestStatus, match.FieldReport:
+		case match.FieldID, match.FieldEvent, match.FieldZone, match.FieldMatchType, match.FieldMatchSlug, match.FieldResult, match.FieldWinnerPlaceholderName, match.FieldLoserPlaceholderName, match.FieldLatestStatus, match.FieldReport:
 			values[i] = new(sql.NullString)
 		case match.FieldCreatedAt, match.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -181,6 +187,26 @@ func (_m *Match) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field priority", values[i])
 			} else if value.Valid {
 				_m.Priority = int(value.Int64)
+			}
+		case match.FieldResult:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field result", values[i])
+			} else if value.Valid {
+				_m.Result = match.Result(value.String)
+			}
+		case match.FieldWinnerPlaceholderName:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field winner_placeholder_name", values[i])
+			} else if value.Valid {
+				_m.WinnerPlaceholderName = new(string)
+				*_m.WinnerPlaceholderName = value.String
+			}
+		case match.FieldLoserPlaceholderName:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field loser_placeholder_name", values[i])
+			} else if value.Valid {
+				_m.LoserPlaceholderName = new(string)
+				*_m.LoserPlaceholderName = value.String
 			}
 		case match.FieldLatestStatus:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -299,6 +325,19 @@ func (_m *Match) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("priority=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Priority))
+	builder.WriteString(", ")
+	builder.WriteString("result=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Result))
+	builder.WriteString(", ")
+	if v := _m.WinnerPlaceholderName; v != nil {
+		builder.WriteString("winner_placeholder_name=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	if v := _m.LoserPlaceholderName; v != nil {
+		builder.WriteString("loser_placeholder_name=")
+		builder.WriteString(*v)
+	}
 	builder.WriteString(", ")
 	builder.WriteString("latest_status=")
 	builder.WriteString(_m.LatestStatus)

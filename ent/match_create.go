@@ -100,6 +100,48 @@ func (_c *MatchCreate) SetNillablePriority(v *int) *MatchCreate {
 	return _c
 }
 
+// SetResult sets the "result" field.
+func (_c *MatchCreate) SetResult(v match.Result) *MatchCreate {
+	_c.mutation.SetResult(v)
+	return _c
+}
+
+// SetNillableResult sets the "result" field if the given value is not nil.
+func (_c *MatchCreate) SetNillableResult(v *match.Result) *MatchCreate {
+	if v != nil {
+		_c.SetResult(*v)
+	}
+	return _c
+}
+
+// SetWinnerPlaceholderName sets the "winner_placeholder_name" field.
+func (_c *MatchCreate) SetWinnerPlaceholderName(v string) *MatchCreate {
+	_c.mutation.SetWinnerPlaceholderName(v)
+	return _c
+}
+
+// SetNillableWinnerPlaceholderName sets the "winner_placeholder_name" field if the given value is not nil.
+func (_c *MatchCreate) SetNillableWinnerPlaceholderName(v *string) *MatchCreate {
+	if v != nil {
+		_c.SetWinnerPlaceholderName(*v)
+	}
+	return _c
+}
+
+// SetLoserPlaceholderName sets the "loser_placeholder_name" field.
+func (_c *MatchCreate) SetLoserPlaceholderName(v string) *MatchCreate {
+	_c.mutation.SetLoserPlaceholderName(v)
+	return _c
+}
+
+// SetNillableLoserPlaceholderName sets the "loser_placeholder_name" field if the given value is not nil.
+func (_c *MatchCreate) SetNillableLoserPlaceholderName(v *string) *MatchCreate {
+	if v != nil {
+		_c.SetLoserPlaceholderName(*v)
+	}
+	return _c
+}
+
 // SetLatestStatus sets the "latest_status" field.
 func (_c *MatchCreate) SetLatestStatus(v string) *MatchCreate {
 	_c.mutation.SetLatestStatus(v)
@@ -261,6 +303,10 @@ func (_c *MatchCreate) defaults() {
 		v := match.DefaultPriority
 		_c.mutation.SetPriority(v)
 	}
+	if _, ok := _c.mutation.Result(); !ok {
+		v := match.DefaultResult
+		_c.mutation.SetResult(v)
+	}
 	if _, ok := _c.mutation.LatestStatus(); !ok {
 		v := match.DefaultLatestStatus
 		_c.mutation.SetLatestStatus(v)
@@ -294,6 +340,14 @@ func (_c *MatchCreate) check() error {
 	}
 	if _, ok := _c.mutation.Priority(); !ok {
 		return &ValidationError{Name: "priority", err: errors.New(`ent: missing required field "Match.priority"`)}
+	}
+	if _, ok := _c.mutation.Result(); !ok {
+		return &ValidationError{Name: "result", err: errors.New(`ent: missing required field "Match.result"`)}
+	}
+	if v, ok := _c.mutation.Result(); ok {
+		if err := match.ResultValidator(v); err != nil {
+			return &ValidationError{Name: "result", err: fmt.Errorf(`ent: validator failed for field "Match.result": %w`, err)}
+		}
 	}
 	if _, ok := _c.mutation.LatestStatus(); !ok {
 		return &ValidationError{Name: "latest_status", err: errors.New(`ent: missing required field "Match.latest_status"`)}
@@ -373,6 +427,18 @@ func (_c *MatchCreate) createSpec() (*Match, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Priority(); ok {
 		_spec.SetField(match.FieldPriority, field.TypeInt, value)
 		_node.Priority = value
+	}
+	if value, ok := _c.mutation.Result(); ok {
+		_spec.SetField(match.FieldResult, field.TypeEnum, value)
+		_node.Result = value
+	}
+	if value, ok := _c.mutation.WinnerPlaceholderName(); ok {
+		_spec.SetField(match.FieldWinnerPlaceholderName, field.TypeString, value)
+		_node.WinnerPlaceholderName = &value
+	}
+	if value, ok := _c.mutation.LoserPlaceholderName(); ok {
+		_spec.SetField(match.FieldLoserPlaceholderName, field.TypeString, value)
+		_node.LoserPlaceholderName = &value
 	}
 	if value, ok := _c.mutation.LatestStatus(); ok {
 		_spec.SetField(match.FieldLatestStatus, field.TypeString, value)
@@ -616,6 +682,54 @@ func (u *MatchUpsert) AddPriority(v int) *MatchUpsert {
 	return u
 }
 
+// SetResult sets the "result" field.
+func (u *MatchUpsert) SetResult(v match.Result) *MatchUpsert {
+	u.Set(match.FieldResult, v)
+	return u
+}
+
+// UpdateResult sets the "result" field to the value that was provided on create.
+func (u *MatchUpsert) UpdateResult() *MatchUpsert {
+	u.SetExcluded(match.FieldResult)
+	return u
+}
+
+// SetWinnerPlaceholderName sets the "winner_placeholder_name" field.
+func (u *MatchUpsert) SetWinnerPlaceholderName(v string) *MatchUpsert {
+	u.Set(match.FieldWinnerPlaceholderName, v)
+	return u
+}
+
+// UpdateWinnerPlaceholderName sets the "winner_placeholder_name" field to the value that was provided on create.
+func (u *MatchUpsert) UpdateWinnerPlaceholderName() *MatchUpsert {
+	u.SetExcluded(match.FieldWinnerPlaceholderName)
+	return u
+}
+
+// ClearWinnerPlaceholderName clears the value of the "winner_placeholder_name" field.
+func (u *MatchUpsert) ClearWinnerPlaceholderName() *MatchUpsert {
+	u.SetNull(match.FieldWinnerPlaceholderName)
+	return u
+}
+
+// SetLoserPlaceholderName sets the "loser_placeholder_name" field.
+func (u *MatchUpsert) SetLoserPlaceholderName(v string) *MatchUpsert {
+	u.Set(match.FieldLoserPlaceholderName, v)
+	return u
+}
+
+// UpdateLoserPlaceholderName sets the "loser_placeholder_name" field to the value that was provided on create.
+func (u *MatchUpsert) UpdateLoserPlaceholderName() *MatchUpsert {
+	u.SetExcluded(match.FieldLoserPlaceholderName)
+	return u
+}
+
+// ClearLoserPlaceholderName clears the value of the "loser_placeholder_name" field.
+func (u *MatchUpsert) ClearLoserPlaceholderName() *MatchUpsert {
+	u.SetNull(match.FieldLoserPlaceholderName)
+	return u
+}
+
 // SetLatestStatus sets the "latest_status" field.
 func (u *MatchUpsert) SetLatestStatus(v string) *MatchUpsert {
 	u.Set(match.FieldLatestStatus, v)
@@ -832,6 +946,62 @@ func (u *MatchUpsertOne) AddPriority(v int) *MatchUpsertOne {
 func (u *MatchUpsertOne) UpdatePriority() *MatchUpsertOne {
 	return u.Update(func(s *MatchUpsert) {
 		s.UpdatePriority()
+	})
+}
+
+// SetResult sets the "result" field.
+func (u *MatchUpsertOne) SetResult(v match.Result) *MatchUpsertOne {
+	return u.Update(func(s *MatchUpsert) {
+		s.SetResult(v)
+	})
+}
+
+// UpdateResult sets the "result" field to the value that was provided on create.
+func (u *MatchUpsertOne) UpdateResult() *MatchUpsertOne {
+	return u.Update(func(s *MatchUpsert) {
+		s.UpdateResult()
+	})
+}
+
+// SetWinnerPlaceholderName sets the "winner_placeholder_name" field.
+func (u *MatchUpsertOne) SetWinnerPlaceholderName(v string) *MatchUpsertOne {
+	return u.Update(func(s *MatchUpsert) {
+		s.SetWinnerPlaceholderName(v)
+	})
+}
+
+// UpdateWinnerPlaceholderName sets the "winner_placeholder_name" field to the value that was provided on create.
+func (u *MatchUpsertOne) UpdateWinnerPlaceholderName() *MatchUpsertOne {
+	return u.Update(func(s *MatchUpsert) {
+		s.UpdateWinnerPlaceholderName()
+	})
+}
+
+// ClearWinnerPlaceholderName clears the value of the "winner_placeholder_name" field.
+func (u *MatchUpsertOne) ClearWinnerPlaceholderName() *MatchUpsertOne {
+	return u.Update(func(s *MatchUpsert) {
+		s.ClearWinnerPlaceholderName()
+	})
+}
+
+// SetLoserPlaceholderName sets the "loser_placeholder_name" field.
+func (u *MatchUpsertOne) SetLoserPlaceholderName(v string) *MatchUpsertOne {
+	return u.Update(func(s *MatchUpsert) {
+		s.SetLoserPlaceholderName(v)
+	})
+}
+
+// UpdateLoserPlaceholderName sets the "loser_placeholder_name" field to the value that was provided on create.
+func (u *MatchUpsertOne) UpdateLoserPlaceholderName() *MatchUpsertOne {
+	return u.Update(func(s *MatchUpsert) {
+		s.UpdateLoserPlaceholderName()
+	})
+}
+
+// ClearLoserPlaceholderName clears the value of the "loser_placeholder_name" field.
+func (u *MatchUpsertOne) ClearLoserPlaceholderName() *MatchUpsertOne {
+	return u.Update(func(s *MatchUpsert) {
+		s.ClearLoserPlaceholderName()
 	})
 }
 
@@ -1225,6 +1395,62 @@ func (u *MatchUpsertBulk) AddPriority(v int) *MatchUpsertBulk {
 func (u *MatchUpsertBulk) UpdatePriority() *MatchUpsertBulk {
 	return u.Update(func(s *MatchUpsert) {
 		s.UpdatePriority()
+	})
+}
+
+// SetResult sets the "result" field.
+func (u *MatchUpsertBulk) SetResult(v match.Result) *MatchUpsertBulk {
+	return u.Update(func(s *MatchUpsert) {
+		s.SetResult(v)
+	})
+}
+
+// UpdateResult sets the "result" field to the value that was provided on create.
+func (u *MatchUpsertBulk) UpdateResult() *MatchUpsertBulk {
+	return u.Update(func(s *MatchUpsert) {
+		s.UpdateResult()
+	})
+}
+
+// SetWinnerPlaceholderName sets the "winner_placeholder_name" field.
+func (u *MatchUpsertBulk) SetWinnerPlaceholderName(v string) *MatchUpsertBulk {
+	return u.Update(func(s *MatchUpsert) {
+		s.SetWinnerPlaceholderName(v)
+	})
+}
+
+// UpdateWinnerPlaceholderName sets the "winner_placeholder_name" field to the value that was provided on create.
+func (u *MatchUpsertBulk) UpdateWinnerPlaceholderName() *MatchUpsertBulk {
+	return u.Update(func(s *MatchUpsert) {
+		s.UpdateWinnerPlaceholderName()
+	})
+}
+
+// ClearWinnerPlaceholderName clears the value of the "winner_placeholder_name" field.
+func (u *MatchUpsertBulk) ClearWinnerPlaceholderName() *MatchUpsertBulk {
+	return u.Update(func(s *MatchUpsert) {
+		s.ClearWinnerPlaceholderName()
+	})
+}
+
+// SetLoserPlaceholderName sets the "loser_placeholder_name" field.
+func (u *MatchUpsertBulk) SetLoserPlaceholderName(v string) *MatchUpsertBulk {
+	return u.Update(func(s *MatchUpsert) {
+		s.SetLoserPlaceholderName(v)
+	})
+}
+
+// UpdateLoserPlaceholderName sets the "loser_placeholder_name" field to the value that was provided on create.
+func (u *MatchUpsertBulk) UpdateLoserPlaceholderName() *MatchUpsertBulk {
+	return u.Update(func(s *MatchUpsert) {
+		s.UpdateLoserPlaceholderName()
+	})
+}
+
+// ClearLoserPlaceholderName clears the value of the "loser_placeholder_name" field.
+func (u *MatchUpsertBulk) ClearLoserPlaceholderName() *MatchUpsertBulk {
+	return u.Update(func(s *MatchUpsert) {
+		s.ClearLoserPlaceholderName()
 	})
 }
 

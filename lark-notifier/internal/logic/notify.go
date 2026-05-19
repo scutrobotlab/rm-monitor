@@ -460,6 +460,8 @@ func (l *NotifyLogic) cardContent(m *ent.Match) (*utils.MatchCardContent, error)
 		MatchType:   m.MatchType,
 		ZoneName:    m.Zone,
 		EventName:   m.Event,
+		Result:      string(m.Result),
+		WinnerText:  cardWinnerText(m, red, blue),
 		RedTeam: types.Team{
 			Name:       red.Name,
 			SchoolName: red.SchoolName,
@@ -476,6 +478,12 @@ func (l *NotifyLogic) cardContent(m *ent.Match) (*utils.MatchCardContent, error)
 	}
 	if m.Report != nil {
 		msg.Report = *m.Report
+	}
+	if m.WinnerPlaceholderName != nil {
+		msg.WinnerPlacehold = *m.WinnerPlaceholderName
+	}
+	if m.LoserPlaceholderName != nil {
+		msg.LoserPlacehold = *m.LoserPlaceholderName
 	}
 	content, err := utils.NewMatchCardContent(l.ctx, l.svcCtx, msg)
 	if err != nil {
@@ -503,6 +511,36 @@ func (l *NotifyLogic) cardContent(m *ent.Match) (*utils.MatchCardContent, error)
 	}
 	content.Data.TemplateVariable.Scores = lo.Uniq(content.Data.TemplateVariable.Scores)
 	return content, nil
+}
+
+func cardWinnerText(m *ent.Match, red, blue *ent.Team) string {
+	if m == nil {
+		return ""
+	}
+	switch m.Result {
+	case match.ResultRED:
+		return "红方（" + displayTeamName(red) + "）"
+	case match.ResultBLUE:
+		return "蓝方（" + displayTeamName(blue) + "）"
+	case match.ResultDRAW:
+		return "平局"
+	default:
+		return ""
+	}
+}
+
+func displayTeamName(t *ent.Team) string {
+	if t == nil {
+		return ""
+	}
+	switch {
+	case t.SchoolName != "" && t.Name != "":
+		return t.SchoolName + "-" + t.Name
+	case t.SchoolName != "":
+		return t.SchoolName
+	default:
+		return t.Name
+	}
 }
 
 func matchCardCompleted(m *ent.Match) bool {

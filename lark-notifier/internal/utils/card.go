@@ -41,6 +41,10 @@ type MatchCardContent struct {
 			MatchType     string       `json:"match_type"`
 			ZoneTitle     string       `json:"zone_title"`
 			Report        string       `json:"report"`
+			Result        string       `json:"result"`
+			Winner        string       `json:"winner"`
+			WinnerPlace   string       `json:"winner_placeholder_name"`
+			LoserPlace    string       `json:"loser_placeholder_name"`
 		} `json:"template_variable"`
 	} `json:"data"`
 }
@@ -76,6 +80,10 @@ func NewMatchCardContent(ctx context.Context, svcCtx *svc.ServiceContext, m *typ
 	content.Data.TemplateVariable.MatchType = m.MatchType
 	content.Data.TemplateVariable.ZoneTitle = m.ZoneName
 	content.Data.TemplateVariable.Report = m.Report
+	content.Data.TemplateVariable.Result = m.Result
+	content.Data.TemplateVariable.Winner = m.WinnerText
+	content.Data.TemplateVariable.WinnerPlace = m.WinnerPlacehold
+	content.Data.TemplateVariable.LoserPlace = m.LoserPlacehold
 	if m.MatchSlug != "" {
 		content.Data.TemplateVariable.MatchType = m.MatchSlug
 	}

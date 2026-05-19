@@ -25,4 +25,8 @@ type Match struct {
 	ZoneName         string
 	EventName        string
 	Report           string
+	Result           string
+	WinnerText       string
+	WinnerPlacehold  string
+	LoserPlacehold   string
 }

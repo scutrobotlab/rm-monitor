@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"scutbot.cn/web/rm-monitor/ent"
+	"scutbot.cn/web/rm-monitor/ent/match"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
 	common "scutbot.cn/web/rm-monitor/pkg/config"
 )
@@ -23,6 +24,7 @@ func TestRenderReadmeUsesStableMarkdown(t *testing.T) {
 		Zone:         "南部赛区",
 		Order:        55,
 		MatchType:    "GROUP",
+		Result:       match.ResultRED,
 		LatestStatus: "PENDING",
 		Edges: ent.MatchEdges{
 			Rounds: []*ent.MatchRound{{
@@ -49,7 +51,9 @@ func TestRenderReadmeUsesStableMarkdown(t *testing.T) {
 	assertContains(t, readme, "| 红方 | 红方大学-Alpha\\|One |")
 	assertContains(t, readme, "| 状态 | 已结束 |")
 	assertContains(t, readme, "| 比分 | 红 1 - 0 蓝 |")
+	assertContains(t, readme, "| 胜方 | 红方（红方大学-Alpha\\|One） |")
 	assertContains(t, readme, "| 1 | 已结束 | 红方（红方大学-Alpha\\|One） | 2026-05-13 10:01:02 | 2026-05-13 10:13:02 |")
+	assertNotContains(t, readme, "## 录像文件")
 }
 
 func TestRenderReadmeIncludesReport(t *testing.T) {
@@ -67,6 +71,28 @@ func TestRenderReadmeIncludesReport(t *testing.T) {
 
 	assertContains(t, readme, "## 战报")
 	assertContains(t, readme, "红方把握了关键机会。")
+}
+
+func TestBuildReportInputIncludesAuthorityFields(t *testing.T) {
+	winnerPlace := "晋级八强"
+	loserPlace := "进入败者组"
+	input, err := buildReportInput(&ent.Match{
+		ID:                    "match-1",
+		Event:                 "RMUC",
+		Zone:                  "南部赛区",
+		Order:                 55,
+		MatchType:             "GROUP",
+		Result:                match.ResultBLUE,
+		WinnerPlaceholderName: &winnerPlace,
+		LoserPlaceholderName:  &loserPlace,
+	}, &ent.Team{SchoolName: "红方大学", Name: "Alpha"}, &ent.Team{SchoolName: "蓝方大学", Name: "Beta"}, t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertContains(t, input, "- 胜方：蓝方（蓝方大学-Beta）")
+	assertContains(t, input, "- 胜者去向：晋级八强")
+	assertContains(t, input, "- 败者去向：进入败者组")
+	assertContains(t, input, "只有当它明确表达后续赛程、轮次或对阵安排时才纳入战报")
 }
 
 func TestCallReportLLMParsesOpenAICompatibleResponse(t *testing.T) {
@@ -99,5 +125,12 @@ func assertContains(t *testing.T, got, want string) {
 	t.Helper()
 	if !strings.Contains(got, want) {
 		t.Fatalf("rendered README does not contain %q\n%s", want, got)
+	}
+}
+
+func assertNotContains(t *testing.T, got, want string) {
+	t.Helper()
+	if strings.Contains(got, want) {
+		t.Fatalf("rendered README unexpectedly contains %q\n%s", want, got)
 	}
 }
