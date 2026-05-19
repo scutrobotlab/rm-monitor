@@ -11,6 +11,41 @@ permissions:
   packages: write
 
 jobs:
+  helm:
+    name: validate helm chart
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: azure/setup-helm@v4
+
+      - name: Helm lint
+        run: helm lint charts/rm-monitor
+
+      - name: Helm template
+        run: helm template rm-monitor charts/rm-monitor --namespace rm-monitor --values charts/rm-monitor/values.yaml
+
+      - name: Login to GHCR for Helm
+        if: github.event_name == 'push'
+        shell: bash
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io --username "${{ github.actor }}" --password-stdin
+
+      - name: Package Helm chart
+        if: github.event_name == 'push'
+        shell: bash
+        run: |
+          helm package charts/rm-monitor \
+            --version "0.1.${{ github.run_number }}" \
+            --app-version "${{ github.sha }}" \
+            --destination .helm-package
+
+      - name: Push Helm chart to GHCR
+        if: github.event_name == 'push'
+        shell: bash
+        run: |
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          helm push .helm-package/rm-monitor-*.tgz "oci://ghcr.io/${owner}/charts"
+
   docker:
     name: build ${{ matrix.app }}
     runs-on: ubuntu-latest

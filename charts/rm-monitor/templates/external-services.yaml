@@ -1,0 +1,21 @@
+{{- if .Values.externalServices.postgres.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.externalServices.postgres.name }}
+  namespace: {{ include "rm-monitor.namespace" . }}
+spec:
+  type: ExternalName
+  externalName: {{ .Values.externalServices.postgres.externalName }}
+---
+{{- end }}
+{{- if .Values.externalServices.redis.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.externalServices.redis.name }}
+  namespace: {{ include "rm-monitor.namespace" . }}
+spec:
+  type: ExternalName
+  externalName: {{ .Values.externalServices.redis.externalName }}
+{{- end }}

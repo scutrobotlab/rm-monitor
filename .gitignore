@@ -30,3 +30,4 @@ build
 .local-bin/
 recorder/data
 data/
+bin

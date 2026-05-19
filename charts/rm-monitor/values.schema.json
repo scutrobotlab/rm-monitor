@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["image", "postgres", "redis", "record", "stt", "storage", "jobs", "components"],
+  "properties": {
+    "image": {
+      "type": "object",
+      "required": ["registry", "repository", "tag", "pullPolicy"],
+      "properties": {
+        "registry": { "type": "string", "minLength": 1 },
+        "repository": { "type": "string", "minLength": 1 },
+        "tag": { "type": "string", "minLength": 1 },
+        "pullPolicy": { "type": "string", "enum": ["Always", "IfNotPresent", "Never"] },
+        "jobPullPolicy": { "type": "string", "enum": ["Always", "IfNotPresent", "Never"] }
+      }
+    },
+    "postgres": {
+      "type": "object",
+      "required": ["dsn"],
+      "properties": {
+        "dsn": { "type": "string", "minLength": 1 }
+      }
+    },
+    "redis": {
+      "type": "object",
+      "required": ["host"],
+      "properties": {
+        "host": { "type": "string", "minLength": 1 },
+        "pass": { "type": "string" },
+        "type": { "type": "string" }
+      }
+    },
+    "record": {
+      "type": "object",
+      "required": ["baseDir", "pathTemplate", "matchDirTemplate", "matchNameTemplate"],
+      "properties": {
+        "baseDir": { "type": "string", "minLength": 1 },
+        "res": { "type": "string" },
+        "roleBlackList": { "type": "array", "items": { "type": "string" } },
+        "pathTemplate": { "type": "string", "minLength": 1 },
+        "matchDirTemplate": { "type": "string", "minLength": 1 },
+        "matchNameTemplate": { "type": "string", "minLength": 1 }
+      }
+    },
+    "stt": {
+      "type": "object",
+      "required": ["enabled"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "role": { "type": "string" },
+        "whisperServerUrl": { "type": "string" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "enabled": { "const": true } },
+            "required": ["enabled"]
+          },
+          "then": {
+            "required": ["role", "whisperServerUrl"],
+            "properties": {
+              "role": { "minLength": 1 },
+              "whisperServerUrl": { "minLength": 1 }
+            }
+          }
+        }
+      ]
+    },
+    "report": {
+      "type": "object",
+      "properties": {
+        "baseURL": { "type": "string" },
+        "apiKey": { "type": "string" },
+        "model": { "type": "string" },
+        "timeoutSeconds": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "storage": {
+      "type": "object",
+      "required": ["record", "shared"],
+      "properties": {
+        "record": {
+          "$ref": "#/definitions/boundPVC"
+        },
+        "shared": {
+          "$ref": "#/definitions/boundPVC"
+        }
+      }
+    }
+  },
+  "definitions": {
+    "boundPVC": {
+      "type": "object",
+      "required": ["volumeName", "pvcName", "storageClassName", "size"],
+      "properties": {
+        "volumeName": { "type": "string", "minLength": 1 },
+        "pvcName": { "type": "string", "minLength": 1 },
+        "storageClassName": { "type": "string", "minLength": 1 },
+        "size": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

@@ -13,6 +13,6 @@ K8sJobConf:
   Namespace: rm-monitor
   Image: ghcr.io/scutrobotlab/rm-monitor/transcode-job:latest
   ConfigMapName: transcode-job-config
-  RecordsPVC: rm-monitor-records-webdav
+  RecordsPVC: records-shared
   RecordsMountPath: /records
   TTLSecondsAfterFinished: 86400

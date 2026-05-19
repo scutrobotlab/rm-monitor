@@ -1,0 +1,156 @@
+image:
+  registry: ghcr.io
+  repository: scutrobotlab/rm-monitor
+  tag: dev
+  pullPolicy: Always
+  jobPullPolicy: IfNotPresent
+
+serviceAccount:
+  name: dispatcher
+
+priorityClasses:
+  recordCritical:
+    name: record-critical
+    value: 100000
+  background:
+    name: background
+    value: 1000
+
+externalServices:
+  postgres:
+    enabled: false
+    name: postgres
+    externalName: postgres.example.local
+  redis:
+    enabled: false
+    name: redis
+    externalName: redis.example.local
+
+postgres:
+  dsn: postgres://rm_monitor:rm_monitor@postgres:5432/rm_monitor?sslmode=disable
+
+redis:
+  host: redis:6379
+  pass: ""
+  type: node
+
+lark:
+  appId: ""
+  appSecret: ""
+  resultWebhookURLs: []
+
+upload:
+  bitableAppToken: ""
+  concurrency: 1
+  partRetries: 3
+  retryBackoff: 2
+  rateLimitPerMinute: 30
+
+record:
+  res: middle
+  roleBlackList:
+    - "主视角（无解说版）"
+    - "蓝方机器人第一视角合集"
+    - "红方机器人第一视角合集"
+  baseDir: /records
+  pathTemplate: "{{.Event}}/{{.Zone}}/{{.MatchName}}/Round-{{.RoundNo}}/{{.Role}}.flv"
+  matchDirTemplate: "{{.Event}}/{{.Zone}}/{{.MatchName}}"
+  matchNameTemplate: "{{.Order}}. {{.RedSchool}}-{{.RedName}} VS {{.BlueSchool}}-{{.BlueName}}"
+
+report:
+  baseURL: ""
+  apiKey: ""
+  model: ""
+  timeoutSeconds: 120
+
+stt:
+  enabled: false
+  role: ""
+  whisperServerUrl: ""
+
+transcode:
+  sourceRetentionDays: 7
+  maxConcurrent: 6
+  cpuRequest: "6000m"
+  cpuLimit: "8000m"
+  memoryRequest: "2Gi"
+  memoryLimit: "6Gi"
+
+priority: []
+
+storage:
+  record:
+    volumeName: records
+    pvcName: records
+    storageClassName: records
+    size: 500Gi
+  shared:
+    volumeName: records-shared
+    pvcName: records-shared
+    storageClassName: records-shared
+    size: 500Gi
+
+jobs:
+  ttlSecondsAfterFinished: 86400
+  backoffLimit: 1
+  recordsMountPath: /records
+  artifactCleaner:
+    schedule: "0 0 * * *"
+    successfulJobsHistoryLimit: 3
+    failedJobsHistoryLimit: 3
+
+components:
+  monitor:
+    replicas: 1
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi
+  larkNotifier:
+    replicas: 2
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: "1"
+        memory: 512Mi
+  recordDispatcher:
+    replicas: 1
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi
+  uploaderDispatcher:
+    replicas: 1
+    resources:
+      requests:
+        cpu: 50m
+        memory: 96Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi
+  transcodeDispatcher:
+    replicas: 1
+    annotations: {}
+    resources:
+      requests:
+        cpu: 50m
+        memory: 96Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi
+  artifactCleaner:
+    resources:
+      requests:
+        cpu: 20m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi

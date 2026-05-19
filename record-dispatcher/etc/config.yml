@@ -13,13 +13,13 @@ K8sJobConf:
   Namespace: rm-monitor
   Image: ghcr.io/scutrobotlab/rm-monitor/record-job:latest
   ConfigMapName: record-job-config
-  RecordsPVC: rm-monitor-records
+  RecordsPVC: records
   RecordsMountPath: /records
   TTLSecondsAfterFinished: 86400
 ManifestJobConf:
   Namespace: rm-monitor
   Image: ghcr.io/scutrobotlab/rm-monitor/manifest-job:latest
   ConfigMapName: manifest-job-config
-  RecordsPVC: rm-monitor-records-webdav
+  RecordsPVC: records-shared
   RecordsMountPath: /records
   TTLSecondsAfterFinished: 86400

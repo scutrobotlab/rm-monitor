@@ -6,12 +6,12 @@ import (
 	"scutbot.cn/web/rm-monitor/pkg/config"
 )
 
-func TestBuildWebDAVPVCUsesNoNodeSelector(t *testing.T) {
+func TestBuildSharedPVCUsesNoNodeSelector(t *testing.T) {
 	job := Build(config.K8sJobConf{
 		Namespace:        "rm-monitor",
 		Image:            "example/transcode-job:test",
 		ConfigMapName:    "transcode-job-config",
-		RecordsPVC:       "webdav-records",
+		RecordsPVC:       "shared-records",
 		RecordsMountPath: "/records",
 	}, JobSpec{
 		Name:              "transcode-1",
@@ -40,8 +40,8 @@ func TestBuildWebDAVPVCUsesNoNodeSelector(t *testing.T) {
 	if len(pod.Volumes) != 2 || pod.Volumes[1].Name != "records" {
 		t.Fatalf("volumes = %#v, want config + records", pod.Volumes)
 	}
-	if got := pod.Volumes[1].PersistentVolumeClaim.ClaimName; got != "webdav-records" {
-		t.Fatalf("records pvc = %q, want webdav-records", got)
+	if got := pod.Volumes[1].PersistentVolumeClaim.ClaimName; got != "shared-records" {
+		t.Fatalf("records pvc = %q, want shared-records", got)
 	}
 }
 

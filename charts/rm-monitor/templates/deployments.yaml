@@ -1,0 +1,51 @@
+{{- $components := dict
+  "monitor" (dict "name" "monitor" "values" .Values.components.monitor "serviceAccount" "" "configMap" "monitor-config")
+  "lark-notifier" (dict "name" "lark-notifier" "values" .Values.components.larkNotifier "serviceAccount" "" "configMap" "lark-notifier-config")
+  "record-dispatcher" (dict "name" "record-dispatcher" "values" .Values.components.recordDispatcher "serviceAccount" .Values.serviceAccount.name "configMap" "record-dispatcher-config")
+  "uploader-dispatcher" (dict "name" "uploader-dispatcher" "values" .Values.components.uploaderDispatcher "serviceAccount" .Values.serviceAccount.name "configMap" "uploader-dispatcher-config")
+  "transcode-dispatcher" (dict "name" "transcode-dispatcher" "values" .Values.components.transcodeDispatcher "serviceAccount" .Values.serviceAccount.name "configMap" "transcode-dispatcher-config")
+-}}
+{{- range $component, $cfg := $components }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $cfg.name }}
+  namespace: {{ include "rm-monitor.namespace" $ }}
+  labels:
+{{ include "rm-monitor.commonLabels" $ | indent 4 }}
+{{ include "rm-monitor.selectorLabels" (dict "name" $cfg.name) | indent 4 }}
+spec:
+  replicas: {{ $cfg.values.replicas }}
+  selector:
+    matchLabels:
+{{ include "rm-monitor.selectorLabels" (dict "name" $cfg.name) | indent 6 }}
+  template:
+    metadata:
+      labels:
+{{ include "rm-monitor.selectorLabels" (dict "name" $cfg.name) | indent 8 }}
+      {{- with $cfg.values.annotations }}
+      annotations:
+{{ toYaml . | indent 8 }}
+      {{- end }}
+    spec:
+      {{- if $cfg.serviceAccount }}
+      serviceAccountName: {{ $cfg.serviceAccount }}
+      {{- end }}
+      containers:
+        - name: {{ $cfg.name }}
+          image: {{ include "rm-monitor.image" (dict "Values" $.Values "component" $component) }}
+          imagePullPolicy: {{ $.Values.image.pullPolicy }}
+          args: ["-f", "{{ include "rm-monitor.configPath" $ }}"]
+          resources:
+{{ toYaml $cfg.values.resources | indent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: {{ include "rm-monitor.configPath" $ }}
+              subPath: config.yml
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: {{ $cfg.configMap }}
+---
+{{- end }}

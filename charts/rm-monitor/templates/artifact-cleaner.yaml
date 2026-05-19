@@ -1,0 +1,39 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: artifact-cleaner
+  namespace: {{ include "rm-monitor.namespace" . }}
+spec:
+  schedule: {{ .Values.jobs.artifactCleaner.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: {{ .Values.jobs.artifactCleaner.successfulJobsHistoryLimit }}
+  failedJobsHistoryLimit: {{ .Values.jobs.artifactCleaner.failedJobsHistoryLimit }}
+  jobTemplate:
+    spec:
+      ttlSecondsAfterFinished: {{ .Values.jobs.ttlSecondsAfterFinished }}
+      backoffLimit: {{ .Values.jobs.backoffLimit }}
+      template:
+        spec:
+          serviceAccountName: {{ .Values.serviceAccount.name }}
+          restartPolicy: Never
+          containers:
+            - name: artifact-cleaner
+              image: {{ include "rm-monitor.image" (dict "Values" .Values "component" "artifact-cleaner") }}
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              args: ["-f", "{{ include "rm-monitor.configPath" . }}"]
+              resources:
+{{ toYaml .Values.components.artifactCleaner.resources | indent 16 }}
+              volumeMounts:
+                - name: config
+                  mountPath: {{ include "rm-monitor.configPath" . }}
+                  subPath: config.yml
+                  readOnly: true
+                - name: records
+                  mountPath: {{ .Values.jobs.recordsMountPath }}
+          volumes:
+            - name: config
+              configMap:
+                name: artifact-cleaner-config
+            - name: records
+              persistentVolumeClaim:
+                claimName: {{ .Values.storage.shared.pvcName }}
