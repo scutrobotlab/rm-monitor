@@ -3,7 +3,15 @@
 {{- end -}}
 
 {{- define "rm-monitor.image" -}}
-{{- printf "%s/%s/%s:%s" .Values.image.registry .Values.image.repository .component .Values.image.tag -}}
+{{- printf "ghcr.io/scutrobotlab/rm-monitor/%s:%s" .component (.root.Chart.AppVersion | default "dev") -}}
+{{- end -}}
+
+{{- define "rm-monitor.imagePullPolicy" -}}
+Always
+{{- end -}}
+
+{{- define "rm-monitor.jobImagePullPolicy" -}}
+IfNotPresent
 {{- end -}}
 
 {{- define "rm-monitor.configPath" -}}
@@ -51,12 +59,12 @@ Priority:
 
 {{- define "rm-monitor.jobConf" -}}
 Namespace: {{ include "rm-monitor.namespace" .root }}
-Image: {{ include "rm-monitor.image" (dict "Values" .root.Values "component" .component) }}
+Image: {{ include "rm-monitor.image" (dict "root" .root "component" .component) }}
 ConfigMapName: {{ .configMapName }}
 ServiceAccountName: {{ .root.Values.serviceAccount.name }}
 RecordsPVC: {{ .recordsPVC }}
 RecordsMountPath: {{ .root.Values.jobs.recordsMountPath }}
-ImagePullPolicy: {{ default .root.Values.image.jobPullPolicy .pullPolicy }}
+ImagePullPolicy: {{ include "rm-monitor.jobImagePullPolicy" .root }}
 BackoffLimit: {{ .root.Values.jobs.backoffLimit }}
 TTLSecondsAfterFinished: {{ .root.Values.jobs.ttlSecondsAfterFinished }}
 {{- end -}}

@@ -18,8 +18,8 @@ spec:
           restartPolicy: Never
           containers:
             - name: health-checker
-              image: {{ include "rm-monitor.image" (dict "Values" .Values "component" "health-checker") }}
-              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              image: {{ include "rm-monitor.image" (dict "root" . "component" "health-checker") }}
+              imagePullPolicy: {{ include "rm-monitor.imagePullPolicy" . }}
               args: ["-f", "{{ include "rm-monitor.configPath" . }}"]
               resources:
 {{ toYaml .Values.components.healthChecker.resources | indent 16 }}

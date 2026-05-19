@@ -42,6 +42,11 @@ Deployers create storage first, then set the PV names under
 `storage.record.volumeName` and `storage.shared.volumeName`; the chart creates
 PVCs bound to those names.
 
+Images are intentionally not values. The chart renders
+`ghcr.io/scutrobotlab/rm-monitor/<component>:<chart appVersion>` for every
+component, so deployments are pinned by chart package metadata rather than a
+second image tag field in production values.
+
 The expected production storage topology is:
 
 - `storage.record`: local RWO PV on the record node, used by `record-job`.

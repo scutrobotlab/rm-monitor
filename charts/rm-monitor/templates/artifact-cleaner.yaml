@@ -18,8 +18,8 @@ spec:
           restartPolicy: Never
           containers:
             - name: artifact-cleaner
-              image: {{ include "rm-monitor.image" (dict "Values" .Values "component" "artifact-cleaner") }}
-              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              image: {{ include "rm-monitor.image" (dict "root" . "component" "artifact-cleaner") }}
+              imagePullPolicy: {{ include "rm-monitor.imagePullPolicy" . }}
               args: ["-f", "{{ include "rm-monitor.configPath" . }}"]
               resources:
 {{ toYaml .Values.components.artifactCleaner.resources | indent 16 }}

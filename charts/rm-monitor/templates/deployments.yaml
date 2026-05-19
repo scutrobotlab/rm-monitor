@@ -33,8 +33,8 @@ spec:
       {{- end }}
       containers:
         - name: {{ $cfg.name }}
-          image: {{ include "rm-monitor.image" (dict "Values" $.Values "component" $component) }}
-          imagePullPolicy: {{ $.Values.image.pullPolicy }}
+          image: {{ include "rm-monitor.image" (dict "root" $ "component" $component) }}
+          imagePullPolicy: {{ include "rm-monitor.imagePullPolicy" $ }}
           args: ["-f", "{{ include "rm-monitor.configPath" $ }}"]
           resources:
 {{ toYaml $cfg.values.resources | indent 12 }}

@@ -42,12 +42,12 @@ data:
       RoleBlackList:
 {{ toYaml .Values.record.roleBlackList | indent 8 }}
     K8sJobConf:
-{{ include "rm-monitor.jobConf" (dict "root" . "component" "record-job" "configMapName" "record-job-config" "recordsPVC" .Values.storage.record.pvcName "pullPolicy" .Values.image.jobPullPolicy) | indent 6 }}
+{{ include "rm-monitor.jobConf" (dict "root" . "component" "record-job" "configMapName" "record-job-config" "recordsPVC" .Values.storage.record.pvcName) | indent 6 }}
     ManifestJobConf:
-{{ include "rm-monitor.jobConf" (dict "root" . "component" "manifest-job" "configMapName" "manifest-job-config" "recordsPVC" .Values.storage.shared.pvcName "pullPolicy" .Values.image.pullPolicy) | indent 6 }}
+{{ include "rm-monitor.jobConf" (dict "root" . "component" "manifest-job" "configMapName" "manifest-job-config" "recordsPVC" .Values.storage.shared.pvcName) | indent 6 }}
     STTJobConf:
 {{- if .Values.stt.enabled }}
-{{ include "rm-monitor.jobConf" (dict "root" . "component" "stt-job" "configMapName" "stt-job-config" "recordsPVC" .Values.storage.shared.pvcName "pullPolicy" .Values.image.jobPullPolicy) | indent 6 }}
+{{ include "rm-monitor.jobConf" (dict "root" . "component" "stt-job" "configMapName" "stt-job-config" "recordsPVC" .Values.storage.shared.pvcName) | indent 6 }}
 {{- else }}
       Namespace: {{ include "rm-monitor.namespace" . }}
       Image: ""
@@ -55,7 +55,7 @@ data:
       ServiceAccountName: {{ .Values.serviceAccount.name }}
       RecordsPVC: {{ .Values.storage.shared.pvcName }}
       RecordsMountPath: {{ .Values.jobs.recordsMountPath }}
-      ImagePullPolicy: {{ .Values.image.jobPullPolicy }}
+      ImagePullPolicy: {{ include "rm-monitor.jobImagePullPolicy" . }}
       BackoffLimit: {{ .Values.jobs.backoffLimit }}
       TTLSecondsAfterFinished: {{ .Values.jobs.ttlSecondsAfterFinished }}
 {{- end }}
@@ -119,7 +119,7 @@ data:
       BitableAppToken: {{ .Values.upload.bitableAppToken }}
       Concurrency: {{ .Values.upload.concurrency }}
     K8sJobConf:
-{{ include "rm-monitor.jobConf" (dict "root" . "component" "uploader-job" "configMapName" "uploader-job-config" "recordsPVC" .Values.storage.shared.pvcName "pullPolicy" .Values.image.jobPullPolicy) | indent 6 }}
+{{ include "rm-monitor.jobConf" (dict "root" . "component" "uploader-job" "configMapName" "uploader-job-config" "recordsPVC" .Values.storage.shared.pvcName) | indent 6 }}
 {{ include "rm-monitor.priority" . | indent 4 }}
 ---
 apiVersion: v1
@@ -157,7 +157,7 @@ data:
       MemoryRequest: {{ .Values.transcode.memoryRequest | quote }}
       MemoryLimit: {{ .Values.transcode.memoryLimit | quote }}
     K8sJobConf:
-{{ include "rm-monitor.jobConf" (dict "root" . "component" "transcode-job" "configMapName" "transcode-job-config" "recordsPVC" .Values.storage.shared.pvcName "pullPolicy" .Values.image.pullPolicy) | indent 6 }}
+{{ include "rm-monitor.jobConf" (dict "root" . "component" "transcode-job" "configMapName" "transcode-job-config" "recordsPVC" .Values.storage.shared.pvcName) | indent 6 }}
 {{ include "rm-monitor.priority" . | indent 4 }}
 ---
 apiVersion: v1
@@ -184,11 +184,11 @@ data:
 {{ include "rm-monitor.redisConf" . | indent 4 }}
     K8sJobConf:
       Namespace: {{ include "rm-monitor.namespace" . }}
-      Image: {{ include "rm-monitor.image" (dict "Values" .Values "component" "health-checker") }}
+      Image: {{ include "rm-monitor.image" (dict "root" . "component" "health-checker") }}
       ServiceAccountName: {{ .Values.serviceAccount.name }}
       RecordsPVC: {{ .Values.storage.shared.pvcName }}
       RecordsMountPath: {{ .Values.jobs.recordsMountPath }}
-      ImagePullPolicy: {{ .Values.image.pullPolicy }}
+      ImagePullPolicy: {{ include "rm-monitor.imagePullPolicy" . }}
 ---
 apiVersion: v1
 kind: ConfigMap

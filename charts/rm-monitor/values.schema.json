@@ -1,19 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft-07/schema#",
   "type": "object",
-  "required": ["image", "postgres", "redis", "record", "stt", "storage", "jobs", "components"],
+  "required": ["postgres", "redis", "record", "stt", "storage", "jobs", "components"],
   "properties": {
-    "image": {
-      "type": "object",
-      "required": ["registry", "repository", "tag", "pullPolicy"],
-      "properties": {
-        "registry": { "type": "string", "minLength": 1 },
-        "repository": { "type": "string", "minLength": 1 },
-        "tag": { "type": "string", "minLength": 1 },
-        "pullPolicy": { "type": "string", "enum": ["Always", "IfNotPresent", "Never"] },
-        "jobPullPolicy": { "type": "string", "enum": ["Always", "IfNotPresent", "Never"] }
-      }
-    },
     "postgres": {
       "type": "object",
       "required": ["dsn"],
