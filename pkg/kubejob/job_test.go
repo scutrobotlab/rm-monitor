@@ -17,7 +17,7 @@ func TestBuildSharedPVCUsesNoNodeSelector(t *testing.T) {
 		Name:              "transcode-1",
 		App:               "transcode-job",
 		Image:             "example/transcode-job:test",
-		PriorityClassName: "rm-monitor-background",
+		PriorityClassName: PriorityClassBackground,
 		SpreadByHostname:  true,
 	})
 	pod := job.Spec.Template.Spec
@@ -27,8 +27,8 @@ func TestBuildSharedPVCUsesNoNodeSelector(t *testing.T) {
 	if pod.Affinity != nil {
 		t.Fatalf("Affinity = %#v, want nil", pod.Affinity)
 	}
-	if got := pod.PriorityClassName; got != "rm-monitor-background" {
-		t.Fatalf("priority class = %q, want rm-monitor-background", got)
+	if got := pod.PriorityClassName; got != PriorityClassBackground {
+		t.Fatalf("priority class = %q, want %s", got, PriorityClassBackground)
 	}
 	if len(pod.TopologySpreadConstraints) != 1 {
 		t.Fatalf("topology spread = %#v, want 1 constraint", pod.TopologySpreadConstraints)
@@ -56,14 +56,14 @@ func TestBuildWithPVCDoesNotInferNodeSelector(t *testing.T) {
 		Name:              "record-1",
 		App:               "record-job",
 		Image:             "example/record-job:test",
-		PriorityClassName: "rm-monitor-record-critical",
+		PriorityClassName: PriorityClassRecordCritical,
 	})
 	pod := job.Spec.Template.Spec
 	if len(pod.NodeSelector) != 0 {
 		t.Fatalf("node selector = %#v, want empty", pod.NodeSelector)
 	}
-	if got := pod.PriorityClassName; got != "rm-monitor-record-critical" {
-		t.Fatalf("priority class = %q, want rm-monitor-record-critical", got)
+	if got := pod.PriorityClassName; got != PriorityClassRecordCritical {
+		t.Fatalf("priority class = %q, want %s", got, PriorityClassRecordCritical)
 	}
 	if len(pod.Volumes) != 2 {
 		t.Fatalf("volumes = %#v, want config + records", pod.Volumes)

@@ -186,7 +186,7 @@ func (l *DispatchLogic) dispatchSTTJob(conf common.RecordConf, r *ent.MatchRound
 			},
 		},
 		Args:              []string{"-f", "/etc/rm-monitor/config.yml", "-mode", "audio-recorder", "-round", strconv.Itoa(r.ID)},
-		PriorityClassName: "rm-monitor-record-critical",
+		PriorityClassName: kubejob.PriorityClassRecordCritical,
 	})
 	if err := l.svcCtx.K8s.CreateJob(l.ctx, jobConf.Namespace, job); err != nil {
 		return err
@@ -266,7 +266,7 @@ func (l *DispatchLogic) dispatchPendingTasks() error {
 				CPU:               "500m",
 				Memory:            "512Mi",
 				MemLimit:          "1Gi",
-				PriorityClassName: "rm-monitor-record-critical",
+				PriorityClassName: kubejob.PriorityClassRecordCritical,
 			})
 			if err := l.svcCtx.K8s.CreateJob(l.ctx, l.svcCtx.Config.K8sJobConf.WithDefaults().Namespace, job); err != nil {
 				_ = l.svcCtx.DB.RecordTask.UpdateOneID(task.ID).SetStatus(recordtask.StatusFAILED).SetErrorMessage(err.Error()).Exec(l.ctx)

@@ -35,13 +35,9 @@ RedisConf:
 {{- define "rm-monitor.recordConf" -}}
 RecordConf:
   Res: {{ .Values.record.res }}
-  BaseDir: {{ .Values.record.baseDir }}
   {{- if .Values.stt.enabled }}
   STTRole: {{ .Values.stt.role | quote }}
   {{- end }}
-  PathTemplate: {{ .Values.record.pathTemplate | quote }}
-  MatchDirTemplate: {{ .Values.record.matchDirTemplate | quote }}
-  MatchNameTemplate: {{ .Values.record.matchNameTemplate | quote }}
 {{- end -}}
 
 {{- define "rm-monitor.priority" -}}

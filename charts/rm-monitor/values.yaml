@@ -52,10 +52,6 @@ record:
     - "主视角（无解说版）"
     - "蓝方机器人第一视角合集"
     - "红方机器人第一视角合集"
-  baseDir: /records
-  pathTemplate: "{{.Event}}/{{.Zone}}/{{.MatchName}}/Round-{{.RoundNo}}/{{.Role}}.flv"
-  matchDirTemplate: "{{.Event}}/{{.Zone}}/{{.MatchName}}"
-  matchNameTemplate: "{{.Order}}. {{.RedSchool}}-{{.RedName}} VS {{.BlueSchool}}-{{.BlueName}}"
 
 report:
   baseURL: ""

@@ -191,7 +191,7 @@ func (l *DispatchLogic) dispatchPending() error {
 				Memory:            conf.MemoryRequest,
 				CPULimit:          conf.CPULimit,
 				MemLimit:          conf.MemoryLimit,
-				PriorityClassName: "rm-monitor-background",
+				PriorityClassName: kubejob.PriorityClassBackground,
 				SpreadByHostname:  true,
 			})
 			if err := l.svcCtx.K8s.CreateJob(l.ctx, jobConf.Namespace, job); err != nil {

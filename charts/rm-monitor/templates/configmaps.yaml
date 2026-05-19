@@ -29,8 +29,6 @@ data:
 {{ include "rm-monitor.redisConf" . | indent 4 }}
 {{ include "rm-monitor.postgresConf" . | indent 4 }}
       AutoMigrate: true
-    RecordConf:
-      BaseDir: {{ .Values.record.baseDir }}
     UploadConf:
       Concurrency: {{ .Values.upload.concurrency }}
       PartRetries: {{ .Values.upload.partRetries }}
@@ -124,7 +122,6 @@ data:
       AppId: {{ .Values.lark.appId }}
       AppSecret: {{ .Values.lark.appSecret }}
     UploadConf:
-      BaseDir: {{ .Values.record.baseDir }}
       BitableAppToken: {{ .Values.upload.bitableAppToken }}
       Concurrency: {{ .Values.upload.concurrency }}
     K8sJobConf:
@@ -145,7 +142,6 @@ data:
       AppSecret: {{ .Values.lark.appSecret }}
 {{ include "rm-monitor.redisConf" . | indent 4 }}
     UploadConf:
-      BaseDir: {{ .Values.record.baseDir }}
       PartRetries: {{ .Values.upload.partRetries }}
       RetryBackoff: {{ .Values.upload.retryBackoff }}
       RateLimitPerMinute: {{ .Values.upload.rateLimitPerMinute }}
@@ -160,7 +156,6 @@ data:
 {{ include "rm-monitor.postgresConf" . | indent 4 }}
       AutoMigrate: true
     TranscodeConf:
-      BaseDir: {{ .Values.record.baseDir }}
       SourceRetentionDays: {{ .Values.transcode.sourceRetentionDays }}
       MaxConcurrent: {{ .Values.transcode.maxConcurrent }}
       CPURequest: {{ .Values.transcode.cpuRequest | quote }}
@@ -181,7 +176,6 @@ data:
 {{ include "rm-monitor.postgresConf" . | indent 4 }}
       AutoMigrate: false
     TranscodeConf:
-      BaseDir: {{ .Values.record.baseDir }}
       SourceRetentionDays: {{ .Values.transcode.sourceRetentionDays }}
 ---
 apiVersion: v1
@@ -194,5 +188,4 @@ data:
 {{ include "rm-monitor.postgresConf" . | indent 4 }}
       AutoMigrate: false
     TranscodeConf:
-      BaseDir: {{ .Values.record.baseDir }}
       SourceRetentionDays: {{ .Values.transcode.sourceRetentionDays }}

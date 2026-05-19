@@ -18,6 +18,11 @@ import (
 	"scutbot.cn/web/rm-monitor/pkg/config"
 )
 
+const (
+	PriorityClassRecordCritical = "record-critical"
+	PriorityClassBackground     = "background"
+)
+
 type Client struct {
 	rest *rest.RESTClient
 }

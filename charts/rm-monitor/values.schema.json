@@ -32,14 +32,9 @@
     },
     "record": {
       "type": "object",
-      "required": ["baseDir", "pathTemplate", "matchDirTemplate", "matchNameTemplate"],
       "properties": {
-        "baseDir": { "type": "string", "minLength": 1 },
         "res": { "type": "string" },
-        "roleBlackList": { "type": "array", "items": { "type": "string" } },
-        "pathTemplate": { "type": "string", "minLength": 1 },
-        "matchDirTemplate": { "type": "string", "minLength": 1 },
-        "matchNameTemplate": { "type": "string", "minLength": 1 }
+        "roleBlackList": { "type": "array", "items": { "type": "string" } }
       }
     },
     "stt": {
