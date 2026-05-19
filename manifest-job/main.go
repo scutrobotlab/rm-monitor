@@ -10,6 +10,7 @@ import (
 	"scutbot.cn/web/rm-monitor/pkg/app"
 	"scutbot.cn/web/rm-monitor/pkg/db"
 	"scutbot.cn/web/rm-monitor/pkg/logx"
+	"scutbot.cn/web/rm-monitor/pkg/redisx"
 )
 
 var (
@@ -35,7 +36,9 @@ func main() {
 		os.Exit(1)
 	}
 	defer client.Close()
-	if err := logic.WriteMatchReadme(context.Background(), client, c.RecordConf, c.ReportConf, c.PostgresConf.DSN, *matchID); err != nil {
+	redisClient := redisx.MustNew(c.RedisConf.WithDefaults())
+	defer redisClient.Close()
+	if err := logic.WriteMatchReadme(context.Background(), client, redisClient, c.RecordConf, c.ReportConf, c.PostgresConf.DSN, *matchID); err != nil {
 		logx.Error(err)
 		os.Exit(1)
 	}

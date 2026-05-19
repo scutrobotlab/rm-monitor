@@ -81,17 +81,6 @@ func run(ctx context.Context, client *ent.Client, c config.Config, taskID int) e
 	archiveMountedPath := filepath.Join(transcodeConf.BaseDir, filepath.FromSlash(archiveRel))
 	tmpArchiveMountedPath := filepath.Join(transcodeConf.BaseDir, filepath.FromSlash(tmpArchiveRel))
 
-	workDir := filepath.Join(transcodeConf.LocalWorkDir, strconv.Itoa(taskID))
-	sourcePath := filepath.Join(workDir, "source.flv")
-	archivePath := filepath.Join(workDir, "archive.mp4")
-	if err := os.RemoveAll(workDir); err != nil {
-		return errors.Wrap(err, "clean transcode work dir")
-	}
-	if err := os.MkdirAll(workDir, 0o755); err != nil {
-		return errors.Wrap(err, "create transcode work dir")
-	}
-	defer os.RemoveAll(workDir)
-
 	if err := ensureSVTAV1(ctx); err != nil {
 		_ = client.TranscodeTask.UpdateOneID(taskID).SetStatus(transcodetask.StatusFAILED).SetErrorMessage(err.Error()).Exec(ctx)
 		return err
@@ -99,16 +88,17 @@ func run(ctx context.Context, client *ent.Client, c config.Config, taskID int) e
 	if err := client.TranscodeTask.UpdateOneID(taskID).SetStatus(transcodetask.StatusRUNNING).SetStartedAt(time.Now()).ClearErrorMessage().Exec(ctx); err != nil {
 		return errors.Wrap(err, "mark transcode running")
 	}
-	if err := copyFile(sourceMountedPath, sourcePath); err != nil {
+	if err := os.MkdirAll(filepath.Dir(archiveMountedPath), 0o755); err != nil {
 		_ = client.TranscodeTask.UpdateOneID(taskID).SetStatus(transcodetask.StatusFAILED).SetErrorMessage(err.Error()).Exec(ctx)
-		return errors.Wrap(err, "copy source to local work dir")
+		return errors.Wrap(err, "create archive dir")
 	}
+	_ = os.Remove(tmpArchiveMountedPath)
 
 	cmd := exec.CommandContext(ctx,
 		"ffmpeg",
 		"-hide_banner",
 		"-loglevel", "info",
-		"-i", sourcePath,
+		"-i", sourceMountedPath,
 		"-map", "0:v:0",
 		"-an",
 		"-sn",
@@ -120,40 +110,34 @@ func run(ctx context.Context, client *ent.Client, c config.Config, taskID int) e
 		"-pix_fmt", "yuv420p",
 		"-movflags", "+faststart",
 		"-f", "mp4",
-		"-y", archivePath,
+		"-y", tmpArchiveMountedPath,
 	)
 	var stderr bytes.Buffer
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = io.MultiWriter(os.Stderr, &stderr)
 	cmd.WaitDelay = 10 * time.Second
 	if err := cmd.Run(); err != nil {
+		_ = os.Remove(tmpArchiveMountedPath)
 		msg := commandError(err, stderr.String())
 		_ = client.TranscodeTask.UpdateOneID(taskID).SetStatus(transcodetask.StatusFAILED).SetErrorMessage(msg).Exec(ctx)
 		return errors.New(msg)
 	}
-	stat, err := os.Stat(archivePath)
+	stat, err := os.Stat(tmpArchiveMountedPath)
 	if err != nil {
 		_ = client.TranscodeTask.UpdateOneID(taskID).SetStatus(transcodetask.StatusFAILED).SetErrorMessage(err.Error()).Exec(ctx)
 		return errors.Wrap(err, "stat archive")
 	}
 	if stat.Size() == 0 {
 		err := errors.New("archive output is empty")
-		_ = client.TranscodeTask.UpdateOneID(taskID).SetStatus(transcodetask.StatusFAILED).SetErrorMessage(err.Error()).Exec(ctx)
-		return err
-	}
-	sum, err := checksum(archivePath)
-	if err != nil {
-		_ = client.TranscodeTask.UpdateOneID(taskID).SetStatus(transcodetask.StatusFAILED).SetErrorMessage(err.Error()).Exec(ctx)
-		return err
-	}
-	if err := os.MkdirAll(filepath.Dir(archiveMountedPath), 0o755); err != nil {
-		_ = client.TranscodeTask.UpdateOneID(taskID).SetStatus(transcodetask.StatusFAILED).SetErrorMessage(err.Error()).Exec(ctx)
-		return errors.Wrap(err, "create archive dir")
-	}
-	if err := copyFile(archivePath, tmpArchiveMountedPath); err != nil {
 		_ = os.Remove(tmpArchiveMountedPath)
 		_ = client.TranscodeTask.UpdateOneID(taskID).SetStatus(transcodetask.StatusFAILED).SetErrorMessage(err.Error()).Exec(ctx)
-		return errors.Wrap(err, "write archive")
+		return err
+	}
+	sum, err := checksum(tmpArchiveMountedPath)
+	if err != nil {
+		_ = os.Remove(tmpArchiveMountedPath)
+		_ = client.TranscodeTask.UpdateOneID(taskID).SetStatus(transcodetask.StatusFAILED).SetErrorMessage(err.Error()).Exec(ctx)
+		return err
 	}
 	if err := os.Rename(tmpArchiveMountedPath, archiveMountedPath); err != nil {
 		_ = os.Remove(tmpArchiveMountedPath)
@@ -261,27 +245,6 @@ func checksum(file string) (string, error) {
 		return "", err
 	}
 	return hex.EncodeToString(h.Sum(nil)), nil
-}
-
-func copyFile(src, dst string) error {
-	in, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer in.Close()
-	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
-		return err
-	}
-	out, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	_, copyErr := io.Copy(out, in)
-	closeErr := out.Close()
-	if copyErr != nil {
-		return copyErr
-	}
-	return closeErr
 }
 
 func commandError(err error, stderr string) string {

@@ -35,7 +35,6 @@ data:
     TranscodeConf:
       BaseDir: /records
       SourceRetentionDays: 7
-      LocalWorkDir: /tmp/rm-monitor-transcode
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -97,8 +96,6 @@ spec:
         spec:
           serviceAccountName: rm-monitor-dispatcher
           restartPolicy: Never
-          nodeSelector:
-            rm-monitor/record: "true"
           containers:
             - name: artifact-cleaner
               image: rm-monitor/artifact-cleaner:latest
@@ -117,4 +114,4 @@ spec:
                 name: artifact-cleaner-config
             - name: records
               persistentVolumeClaim:
-                claimName: rm-monitor-records
+                claimName: rm-monitor-records-webdav

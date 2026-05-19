@@ -26,7 +26,9 @@ import (
 	"scutbot.cn/web/rm-monitor/pkg/logx"
 	"scutbot.cn/web/rm-monitor/pkg/pathfmt"
 	"scutbot.cn/web/rm-monitor/pkg/recording"
+	"scutbot.cn/web/rm-monitor/pkg/redisx"
 	"scutbot.cn/web/rm-monitor/pkg/storagepath"
+	"scutbot.cn/web/rm-monitor/pkg/sttcoord"
 	jobconfig "scutbot.cn/web/rm-monitor/stt-job/internal/config"
 )
 
@@ -70,10 +72,40 @@ func main() {
 	default:
 		runErr = errors.Errorf("unknown mode %q", *modeFlag)
 	}
+	if *modeFlag == modeRecognizer {
+		status := sttcoord.StatusDone
+		if runErr != nil {
+			status = sttcoord.StatusFailed
+		}
+		if err := updateSTTStatus(context.Background(), client, c, *roundFlag, status); err != nil {
+			if runErr == nil {
+				runErr = err
+			} else {
+				logx.Errorf("update stt status failed: %v", err)
+			}
+		}
+	}
 	if runErr != nil {
 		logx.Error(runErr)
 		os.Exit(1)
 	}
+}
+
+func updateSTTStatus(ctx context.Context, client *ent.Client, c jobconfig.Config, roundID int, status string) error {
+	round, err := client.MatchRound.Query().
+		Where(matchround.ID(roundID)).
+		WithMatch().
+		Only(ctx)
+	if err != nil {
+		return errors.Wrap(err, "load round for stt status")
+	}
+	m, err := round.Edges.MatchOrErr()
+	if err != nil {
+		return err
+	}
+	redisClient := redisx.MustNew(c.RedisConf.WithDefaults())
+	defer redisClient.Close()
+	return sttcoord.Set(ctx, redisClient, m.ID, round.RoundNo, status)
 }
 
 func runAudioRecorder(ctx context.Context, client *ent.Client, c jobconfig.Config, roundID int) error {

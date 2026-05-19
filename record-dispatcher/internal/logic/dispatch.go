@@ -21,6 +21,7 @@ import (
 	"scutbot.cn/web/rm-monitor/pkg/logx"
 	"scutbot.cn/web/rm-monitor/pkg/pathfmt"
 	"scutbot.cn/web/rm-monitor/pkg/recording"
+	"scutbot.cn/web/rm-monitor/pkg/sttcoord"
 	"scutbot.cn/web/rm-monitor/record-dispatcher/internal/svc"
 )
 
@@ -163,6 +164,9 @@ func (l *DispatchLogic) dispatchSTTJob(conf common.RecordConf, r *ent.MatchRound
 	if _, ok := urls[conf.STTRole]; !ok {
 		return nil
 	}
+	if r.Edges.Match == nil {
+		return errors.New("stt round has no match edge")
+	}
 	jobConf := l.svcCtx.Config.STTJobConf.WithDefaults()
 	name := jobName("stt", r.ID)
 	job := kubejob.Build(l.svcCtx.Config.STTJobConf, kubejob.JobSpec{
@@ -170,7 +174,6 @@ func (l *DispatchLogic) dispatchSTTJob(conf common.RecordConf, r *ent.MatchRound
 		App:           "stt-job",
 		ContainerName: "audio-recorder",
 		Image:         jobConf.Image,
-		MountPVC:      true,
 		CPU:           "100m",
 		Memory:        "128Mi",
 		ExtraContainers: []kubejob.ContainerSpec{
@@ -185,7 +188,10 @@ func (l *DispatchLogic) dispatchSTTJob(conf common.RecordConf, r *ent.MatchRound
 		Args:              []string{"-f", "/etc/rm-monitor/config.yml", "-mode", "audio-recorder", "-round", strconv.Itoa(r.ID)},
 		PriorityClassName: "rm-monitor-record-critical",
 	})
-	return l.svcCtx.K8s.CreateJob(l.ctx, jobConf.Namespace, job)
+	if err := l.svcCtx.K8s.CreateJob(l.ctx, jobConf.Namespace, job); err != nil {
+		return err
+	}
+	return sttcoord.SetPending(l.ctx, l.svcCtx.Redis, r.Edges.Match.ID, r.RoundNo)
 }
 
 func filterBlacklistedRoles(urls map[string]string, blacklist []string) map[string]string {
@@ -257,7 +263,6 @@ func (l *DispatchLogic) dispatchPendingTasks() error {
 				App:               "record-job",
 				Image:             l.svcCtx.Config.K8sJobConf.Image,
 				Args:              []string{"-f", "/etc/rm-monitor/config.yml", "-task", strconv.Itoa(task.ID)},
-				MountPVC:          true,
 				CPU:               "500m",
 				Memory:            "512Mi",
 				MemLimit:          "1Gi",
@@ -308,13 +313,12 @@ func (l *DispatchLogic) dispatchCompletedManifestJobs() error {
 		}
 		name := manifestJobName(m.ID)
 		job := kubejob.Build(l.svcCtx.Config.ManifestJobConf, kubejob.JobSpec{
-			Name:     name,
-			App:      "manifest-job",
-			Image:    conf.Image,
-			Args:     []string{"-f", "/etc/rm-monitor/config.yml", "-match", m.ID},
-			MountPVC: true,
-			CPU:      "50m",
-			Memory:   "128Mi",
+			Name:   name,
+			App:    "manifest-job",
+			Image:  conf.Image,
+			Args:   []string{"-f", "/etc/rm-monitor/config.yml", "-match", m.ID},
+			CPU:    "50m",
+			Memory: "128Mi",
 		})
 		if err := l.svcCtx.K8s.CreateJob(l.ctx, conf.Namespace, job); err != nil {
 			return errors.Wrap(err, "create manifest job")

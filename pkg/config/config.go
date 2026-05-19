@@ -76,17 +76,15 @@ func (c *RecordConf) WithDefaults() RecordConf {
 }
 
 type K8sJobConf struct {
-	Namespace                string `json:",optional"`
-	Image                    string
-	ConfigMapName            string `json:",optional"`
-	ServiceAccountName       string `json:",optional"`
-	StorageNodeSelectorKey   string `json:",optional"`
-	StorageNodeSelectorValue string `json:",optional"`
-	RecordsPVC               string `json:",optional"`
-	RecordsMountPath         string `json:",optional"`
-	ImagePullPolicy          string `json:",optional"`
-	BackoffLimit             int32  `json:",optional"`
-	TTLSecondsAfterFinished  int32  `json:",optional"`
+	Namespace               string `json:",optional"`
+	Image                   string
+	ConfigMapName           string `json:",optional"`
+	ServiceAccountName      string `json:",optional"`
+	RecordsPVC              string `json:",optional"`
+	RecordsMountPath        string `json:",optional"`
+	ImagePullPolicy         string `json:",optional"`
+	BackoffLimit            int32  `json:",optional"`
+	TTLSecondsAfterFinished int32  `json:",optional"`
 }
 
 type TranscodeConf struct {
@@ -97,7 +95,6 @@ type TranscodeConf struct {
 	CPULimit            string `json:",optional"`
 	MemoryRequest       string `json:",optional"`
 	MemoryLimit         string `json:",optional"`
-	LocalWorkDir        string `json:",optional"`
 }
 
 func (c *TranscodeConf) WithDefaults() TranscodeConf {
@@ -122,9 +119,6 @@ func (c *TranscodeConf) WithDefaults() TranscodeConf {
 	}
 	if out.MemoryLimit == "" {
 		out.MemoryLimit = "6Gi"
-	}
-	if out.LocalWorkDir == "" {
-		out.LocalWorkDir = "/tmp/rm-monitor-transcode"
 	}
 	return out
 }
@@ -171,15 +165,6 @@ func (c *K8sJobConf) WithDefaults() K8sJobConf {
 	out := *c
 	if out.Namespace == "" {
 		out.Namespace = "rm-monitor"
-	}
-	if out.StorageNodeSelectorKey == "" {
-		out.StorageNodeSelectorKey = "rm-monitor/record"
-	}
-	if out.StorageNodeSelectorValue == "" {
-		out.StorageNodeSelectorValue = "true"
-	}
-	if out.RecordsPVC == "" {
-		out.RecordsPVC = "rm-monitor-records"
 	}
 	if out.RecordsMountPath == "" {
 		out.RecordsMountPath = "/records"

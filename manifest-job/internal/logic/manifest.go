@@ -21,10 +21,12 @@ import (
 	"scutbot.cn/web/rm-monitor/pkg/db"
 	"scutbot.cn/web/rm-monitor/pkg/logx"
 	"scutbot.cn/web/rm-monitor/pkg/pathfmt"
+	"scutbot.cn/web/rm-monitor/pkg/redisx"
+	"scutbot.cn/web/rm-monitor/pkg/sttcoord"
 )
 
 // WriteMatchReadme writes the match manifest into the match directory.
-func WriteMatchReadme(ctx context.Context, client *ent.Client, conf common.RecordConf, reportConf common.ReportConf, postgresDSN, matchID string) error {
+func WriteMatchReadme(ctx context.Context, client *ent.Client, redisClient *redisx.Client, conf common.RecordConf, reportConf common.ReportConf, postgresDSN, matchID string) error {
 	conf = conf.WithDefaults()
 	m, err := client.Match.Query().
 		Where(match.ID(matchID)).
@@ -65,7 +67,8 @@ func WriteMatchReadme(ctx context.Context, client *ent.Client, conf common.Recor
 		return err
 	}
 	if matchComplete(m) && (m.Report == nil || strings.TrimSpace(*m.Report) == "") {
-		if report, err := generateMatchReport(ctx, reportConf, m, red, blue, fullDir); err != nil {
+		sttStatuses := waitForSTTStatuses(ctx, redisClient, m)
+		if report, err := generateMatchReport(ctx, reportConf, m, red, blue, fullDir, sttStatuses); err != nil {
 			logx.Errorf("generate match report %s failed: %v", m.ID, err)
 		} else if strings.TrimSpace(report) != "" {
 			if err := client.Match.UpdateOneID(m.ID).SetReport(report).Exec(ctx); err != nil {
@@ -108,6 +111,48 @@ func matchComplete(m *ent.Match) bool {
 		}
 	}
 	return true
+}
+
+const (
+	sttWaitTimeout  = 30 * time.Minute
+	sttPollInterval = 5 * time.Second
+)
+
+func waitForSTTStatuses(ctx context.Context, redisClient *redisx.Client, m *ent.Match) map[string]string {
+	deadline := time.Now().Add(sttWaitTimeout)
+	for {
+		statuses, err := sttcoord.GetMatch(ctx, redisClient, m.ID)
+		if err != nil {
+			logx.Errorf("read stt status for match %s failed: %v", m.ID, err)
+			return nil
+		}
+		if len(statuses) == 0 || len(pendingSTTRounds(m, statuses)) == 0 {
+			return statuses
+		}
+		if time.Now().After(deadline) {
+			logx.Errorf("wait stt status for match %s timed out, pending rounds: %v", m.ID, pendingSTTRounds(m, statuses))
+			return statuses
+		}
+		select {
+		case <-ctx.Done():
+			logx.Errorf("wait stt status for match %s canceled: %v", m.ID, ctx.Err())
+			return statuses
+		case <-time.After(sttPollInterval):
+		}
+	}
+}
+
+func pendingSTTRounds(m *ent.Match, statuses map[string]string) []int {
+	if m == nil || len(statuses) == 0 {
+		return nil
+	}
+	pending := make([]int, 0)
+	for _, r := range m.Edges.Rounds {
+		if statuses[sttcoord.Field(r.RoundNo)] == sttcoord.StatusPending {
+			pending = append(pending, r.RoundNo)
+		}
+	}
+	return pending
 }
 
 func lockDir(ctx context.Context, dir string) (func(), error) {
@@ -240,12 +285,12 @@ type sttLine struct {
 	ErrorMessage string  `json:"error_message"`
 }
 
-func generateMatchReport(ctx context.Context, c common.ReportConf, m *ent.Match, red, blue *ent.Team, matchDir string) (string, error) {
+func generateMatchReport(ctx context.Context, c common.ReportConf, m *ent.Match, red, blue *ent.Team, matchDir string, sttStatuses map[string]string) (string, error) {
 	c = c.WithDefaults()
 	if strings.TrimSpace(c.BaseURL) == "" || strings.TrimSpace(c.APIKey) == "" || strings.TrimSpace(c.Model) == "" {
 		return "", errors.New("report llm config is incomplete")
 	}
-	input, err := buildReportInput(m, red, blue, matchDir)
+	input, err := buildReportInput(m, red, blue, matchDir, sttStatuses)
 	if err != nil {
 		return "", err
 	}
@@ -320,7 +365,7 @@ type reportPromptData struct {
 	Rounds            []reportRoundData
 }
 
-func buildReportInput(m *ent.Match, red, blue *ent.Team, matchDir string) (string, error) {
+func buildReportInput(m *ent.Match, red, blue *ent.Team, matchDir string, sttStatuses map[string]string) (string, error) {
 	data := reportPromptData{
 		Title:             matchTitle(m, red, blue),
 		Event:             m.Event,
@@ -338,6 +383,10 @@ func buildReportInput(m *ent.Match, red, blue *ent.Team, matchDir string) (strin
 			Winner:    roundWinnerText(r, red, blue),
 			StartedAt: formatDisplayTime(r.StartedAt),
 			EndedAt:   formatOptionalDisplayTime(r.EndedAt),
+		}
+		if sttStatuses[sttcoord.Field(r.RoundNo)] == sttcoord.StatusFailed {
+			data.Rounds = append(data.Rounds, row)
+			continue
 		}
 		lines, err := readRoundSTT(matchDir, r.RoundNo)
 		if err != nil {

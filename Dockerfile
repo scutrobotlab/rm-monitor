@@ -17,7 +17,7 @@ ENV TZ=Asia/Shanghai
 RUN apk add --no-cache ca-certificates tzdata \
     && case "$APP" in \
         record-job|stt-job) apk add --no-cache ffmpeg ;; \
-        transcode-job) apk add --no-cache ffmpeg rclone ;; \
+        transcode-job) apk add --no-cache ffmpeg ;; \
         *) true ;; \
     esac
 

@@ -4,4 +4,3 @@ PostgresConf:
 TranscodeConf:
   BaseDir: /records
   SourceRetentionDays: 7
-  LocalWorkDir: /tmp/rm-monitor-transcode

@@ -7,6 +7,8 @@ data:
     PostgresConf:
       DSN: postgres://rm_monitor:rm_monitor@postgres:5432/rm_monitor?sslmode=disable
       AutoMigrate: true
+    RedisConf:
+      Host: redis:6379
     RecordConf:
       Res: middle
       STTRole: "主视角"
@@ -22,8 +24,6 @@ data:
       Namespace: rm-monitor
       Image: rm-monitor/record-job:latest
       ConfigMapName: record-job-config
-      StorageNodeSelectorKey: rm-monitor/record
-      StorageNodeSelectorValue: "true"
       RecordsPVC: rm-monitor-records
       RecordsMountPath: /records
       TTLSecondsAfterFinished: 86400
@@ -31,9 +31,7 @@ data:
       Namespace: rm-monitor
       Image: rm-monitor/manifest-job:latest
       ConfigMapName: manifest-job-config
-      StorageNodeSelectorKey: rm-monitor/record
-      StorageNodeSelectorValue: "true"
-      RecordsPVC: rm-monitor-records
+      RecordsPVC: rm-monitor-records-webdav
       RecordsMountPath: /records
       ImagePullPolicy: Always
       TTLSecondsAfterFinished: 86400
@@ -41,9 +39,7 @@ data:
       Namespace: rm-monitor
       Image: rm-monitor/stt-job:latest
       ConfigMapName: stt-job-config
-      StorageNodeSelectorKey: rm-monitor/record
-      StorageNodeSelectorValue: "true"
-      RecordsPVC: rm-monitor-records
+      RecordsPVC: rm-monitor-records-webdav
       RecordsMountPath: /records
       ImagePullPolicy: Always
       TTLSecondsAfterFinished: 86400
@@ -74,11 +70,13 @@ data:
     PostgresConf:
       DSN: postgres://rm_monitor:rm_monitor@postgres:5432/rm_monitor?sslmode=disable
       AutoMigrate: false
+    RedisConf:
+      Host: redis:6379
+    WhisperServerUrl: http://172.30.162.40:48088
     RecordConf:
       Res: middle
       BaseDir: /records
       STTRole: "主视角"
-      WhisperServerUrl: http://172.30.162.40:48088
       PathTemplate: "{{.Event}}/{{.Zone}}/{{.MatchName}}/Round-{{.RoundNo}}/{{.Role}}.flv"
       MatchDirTemplate: "{{.Event}}/{{.Zone}}/{{.MatchName}}"
       MatchNameTemplate: "{{.Order}}. {{.RedSchool}}-{{.RedName}} VS {{.BlueSchool}}-{{.BlueName}}"
@@ -92,6 +90,8 @@ data:
     PostgresConf:
       DSN: postgres://rm_monitor:rm_monitor@postgres:5432/rm_monitor?sslmode=disable
       AutoMigrate: false
+    RedisConf:
+      Host: redis:6379
     RecordConf:
       Res: middle
       BaseDir: /records

@@ -1,6 +1,8 @@
 PostgresConf:
   DSN: postgres://rm_monitor:rm_monitor@127.0.0.1:5432/rm_monitor?sslmode=disable
   AutoMigrate: true
+RedisConf:
+  Host: 127.0.0.1:6379
 RecordConf:
   Res: middle
   BaseDir: /records
@@ -18,6 +20,6 @@ ManifestJobConf:
   Namespace: rm-monitor
   Image: ghcr.io/scutrobotlab/rm-monitor/manifest-job:latest
   ConfigMapName: manifest-job-config
-  RecordsPVC: rm-monitor-records
+  RecordsPVC: rm-monitor-records-webdav
   RecordsMountPath: /records
   TTLSecondsAfterFinished: 86400

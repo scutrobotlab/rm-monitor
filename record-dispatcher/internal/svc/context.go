@@ -10,12 +10,14 @@ import (
 	"scutbot.cn/web/rm-monitor/pkg/db"
 	"scutbot.cn/web/rm-monitor/pkg/kubejob"
 	"scutbot.cn/web/rm-monitor/pkg/logx"
+	"scutbot.cn/web/rm-monitor/pkg/redisx"
 	"scutbot.cn/web/rm-monitor/record-dispatcher/internal/config"
 )
 
 type ServiceContext struct {
 	Config      config.Config
 	DB          *ent.Client
+	Redis       *redisx.Client
 	RestyClient *resty.Client
 	K8s         *kubejob.Client
 }
@@ -33,6 +35,7 @@ func NewServiceContext(c config.Config) *ServiceContext {
 	return &ServiceContext{
 		Config:      c,
 		DB:          client,
+		Redis:       redisx.MustNew(c.RedisConf.WithDefaults()),
 		RestyClient: resty.New().SetRetryCount(3).SetRetryWaitTime(time.Second).SetTimeout(10 * time.Second),
 		K8s:         k8s,
 	}

@@ -51,6 +51,18 @@ func (c *Client) SetNXCtx(ctx context.Context, key, value string, seconds int) (
 	return c.c.SetNX(ctx, key, value, time.Duration(seconds)*time.Second).Result()
 }
 
+func (c *Client) HSetCtx(ctx context.Context, key, field, value string) error {
+	return c.c.HSet(ctx, key, field, value).Err()
+}
+
+func (c *Client) HSetNXCtx(ctx context.Context, key, field, value string) (bool, error) {
+	return c.c.HSetNX(ctx, key, field, value).Result()
+}
+
+func (c *Client) HGetAllCtx(ctx context.Context, key string) (map[string]string, error) {
+	return c.c.HGetAll(ctx, key).Result()
+}
+
 func (c *Client) IncrCtx(ctx context.Context, key string) (int64, error) {
 	return c.c.Incr(ctx, key).Result()
 }

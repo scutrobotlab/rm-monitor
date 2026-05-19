@@ -106,27 +106,22 @@ func jobFinished(job batchv1.Job) bool {
 }
 
 type JobSpec struct {
-	Name                       string
-	App                        string
-	ContainerName              string
-	Image                      string
-	Command                    []string
-	Args                       []string
-	Env                        map[string]string
-	SecretEnv                  map[string]corev1.SecretKeySelector
-	MountPVC                   bool
-	RecordsPVC                 string
-	WorkDir                    string
-	CPU                        string
-	Memory                     string
-	CPULimit                   string
-	MemLimit                   string
-	PriorityClassName          string
-	DisableStorageNodeSelector bool
-	PreferAvoidNodeLabelKey    string
-	PreferAvoidNodeLabelValue  string
-	SpreadByHostname           bool
-	ExtraContainers            []ContainerSpec
+	Name              string
+	App               string
+	ContainerName     string
+	Image             string
+	Command           []string
+	Args              []string
+	Env               map[string]string
+	SecretEnv         map[string]corev1.SecretKeySelector
+	WorkDir           string
+	CPU               string
+	Memory            string
+	CPULimit          string
+	MemLimit          string
+	PriorityClassName string
+	SpreadByHostname  bool
+	ExtraContainers   []ContainerSpec
 }
 
 type ContainerSpec struct {
@@ -168,11 +163,7 @@ func Build(conf config.K8sJobConf, spec JobSpec) *batchv1.Job {
 			},
 		})
 	}
-	if spec.MountPVC {
-		recordsPVC := conf.RecordsPVC
-		if spec.RecordsPVC != "" {
-			recordsPVC = spec.RecordsPVC
-		}
+	if conf.RecordsPVC != "" {
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
 			Name:      "records",
 			MountPath: filepath.ToSlash(conf.RecordsMountPath),
@@ -180,7 +171,7 @@ func Build(conf config.K8sJobConf, spec JobSpec) *batchv1.Job {
 		volumes = append(volumes, corev1.Volume{
 			Name: "records",
 			VolumeSource: corev1.VolumeSource{
-				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: recordsPVC},
+				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: conf.RecordsPVC},
 			},
 		})
 	}
@@ -210,26 +201,6 @@ func Build(conf config.K8sJobConf, spec JobSpec) *batchv1.Job {
 	if spec.PriorityClassName != "" {
 		podSpec.PriorityClassName = spec.PriorityClassName
 	}
-	if spec.PreferAvoidNodeLabelKey != "" {
-		podSpec.Affinity = &corev1.Affinity{
-			NodeAffinity: &corev1.NodeAffinity{
-				PreferredDuringSchedulingIgnoredDuringExecution: []corev1.PreferredSchedulingTerm{
-					{
-						Weight: 100,
-						Preference: corev1.NodeSelectorTerm{
-							MatchExpressions: []corev1.NodeSelectorRequirement{
-								{
-									Key:      spec.PreferAvoidNodeLabelKey,
-									Operator: corev1.NodeSelectorOpNotIn,
-									Values:   []string{spec.PreferAvoidNodeLabelValue},
-								},
-							},
-						},
-					},
-				},
-			},
-		}
-	}
 	if spec.SpreadByHostname {
 		podSpec.TopologySpreadConstraints = []corev1.TopologySpreadConstraint{
 			{
@@ -240,11 +211,6 @@ func Build(conf config.K8sJobConf, spec JobSpec) *batchv1.Job {
 					MatchLabels: labels,
 				},
 			},
-		}
-	}
-	if spec.MountPVC && !spec.DisableStorageNodeSelector {
-		podSpec.NodeSelector = map[string]string{
-			conf.StorageNodeSelectorKey: conf.StorageNodeSelectorValue,
 		}
 	}
 	return &batchv1.Job{
