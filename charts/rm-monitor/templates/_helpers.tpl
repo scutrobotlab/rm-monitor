@@ -3,7 +3,16 @@
 {{- end -}}
 
 {{- define "rm-monitor.image" -}}
-{{- printf "ghcr.io/scutrobotlab/rm-monitor/%s:%s" .component (.root.Chart.AppVersion | default "dev") -}}
+{{- $appVersion := .root.Chart.AppVersion | default "dev" -}}
+{{- $tag := "dev" -}}
+{{- if eq $appVersion "dev" -}}
+{{- $tag = "dev" -}}
+{{- else if hasPrefix "sha-" $appVersion -}}
+{{- $tag = $appVersion -}}
+{{- else -}}
+{{- $tag = printf "sha-%s" ($appVersion | trunc 7) -}}
+{{- end -}}
+{{- printf "ghcr.io/scutrobotlab/rm-monitor/%s:%s" .component $tag -}}
 {{- end -}}
 
 {{- define "rm-monitor.imagePullPolicy" -}}
