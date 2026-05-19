@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -42,7 +43,7 @@ func TestRenderReadmeUsesStableMarkdown(t *testing.T) {
 	}, &ent.Team{
 		SchoolName: "蓝方大学",
 		Name:       "Beta",
-	})
+	}, t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,13 +66,43 @@ func TestRenderReadmeIncludesReport(t *testing.T) {
 		Zone:   "南部赛区",
 		Order:  55,
 		Report: &report,
-	}, &ent.Team{Name: "Alpha"}, &ent.Team{Name: "Beta"})
+	}, &ent.Team{Name: "Alpha"}, &ent.Team{Name: "Beta"}, t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	assertContains(t, readme, "## 战报")
 	assertContains(t, readme, "红方把握了关键机会。")
+}
+
+func TestRenderReadmeIncludesOnlyExistingDanmuCharts(t *testing.T) {
+	matchDir := t.TempDir()
+	statsDir := matchDir + "/Round-1/stats"
+	if err := os.MkdirAll(statsDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(statsDir+"/danmu-count.png", []byte("png"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	readme, err := renderReadme(&ent.Match{
+		ID:    "match-1",
+		Event: "RMUC",
+		Zone:  "南部赛区",
+		Order: 55,
+		Edges: ent.MatchEdges{Rounds: []*ent.MatchRound{
+			{RoundNo: 1, Status: matchround.StatusENDED},
+			{RoundNo: 2, Status: matchround.StatusENDED},
+		}},
+	}, &ent.Team{Name: "Alpha"}, &ent.Team{Name: "Beta"}, matchDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assertContains(t, readme, "## 弹幕统计")
+	assertContains(t, readme, "![Round 1 弹幕数量](Round-1/stats/danmu-count.png)")
+	assertNotContains(t, readme, "online-count.png")
+	assertNotContains(t, readme, "Round 2")
+	assertNotContains(t, readme, ".json")
 }
 
 func TestBuildReportInputIncludesAuthorityFields(t *testing.T) {

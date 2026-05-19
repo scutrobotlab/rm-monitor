@@ -59,6 +59,21 @@ data:
       BackoffLimit: {{ .Values.jobs.backoffLimit }}
       TTLSecondsAfterFinished: {{ .Values.jobs.ttlSecondsAfterFinished }}
 {{- end }}
+    DanmuJobConf:
+{{- if .Values.danmu.enabled }}
+{{ include "rm-monitor.jobConf" (dict "root" . "component" "danmu-job" "configMapName" "danmu-job-config" "recordsPVC" .Values.storage.record.pvcName) | indent 6 }}
+{{- else }}
+      Namespace: {{ include "rm-monitor.namespace" . }}
+      Image: ""
+      ConfigMapName: danmu-job-config
+      ServiceAccountName: {{ .Values.serviceAccount.name }}
+      RecordsPVC: {{ .Values.storage.record.pvcName }}
+      RecordsMountPath: {{ .Values.jobs.recordsMountPath }}
+      ImagePullPolicy: {{ include "rm-monitor.jobImagePullPolicy" . }}
+      BackoffLimit: {{ .Values.jobs.backoffLimit }}
+      TTLSecondsAfterFinished: {{ .Values.jobs.ttlSecondsAfterFinished }}
+{{- end }}
+{{ include "rm-monitor.danmuConf" . | indent 4 }}
 {{ include "rm-monitor.priority" . | indent 4 }}
 ---
 apiVersion: v1
@@ -84,6 +99,18 @@ data:
 {{ include "rm-monitor.redisConf" . | indent 4 }}
     WhisperServerUrl: {{ .Values.stt.whisperServerUrl }}
 {{ include "rm-monitor.recordConf" . | indent 4 }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: danmu-job-config
+  namespace: {{ include "rm-monitor.namespace" . }}
+data:
+  config.yml: |
+{{ include "rm-monitor.postgresConf" . | indent 4 }}
+      AutoMigrate: false
+{{ include "rm-monitor.recordConf" . | indent 4 }}
+{{ include "rm-monitor.danmuConf" . | indent 4 }}
 ---
 apiVersion: v1
 kind: ConfigMap

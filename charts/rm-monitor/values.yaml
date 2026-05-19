@@ -46,6 +46,11 @@ stt:
   role: ""
   whisperServerUrl: ""
 
+danmu:
+  enabled: false
+  appId: ""
+  appKey: ""
+
 transcode:
   sourceRetentionDays: 7
   maxConcurrent: 6

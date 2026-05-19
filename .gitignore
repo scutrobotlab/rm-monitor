@@ -28,6 +28,9 @@ go.work.sum
 .idea
 build
 .local-bin/
+.local/
 recorder/data
 data/
 bin
+node_modules/
+danmu-job/dist/

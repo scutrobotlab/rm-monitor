@@ -63,6 +63,8 @@ jobs:
             dockerfile: record-dispatcher/Dockerfile
           - app: stt-job
             dockerfile: stt-job/Dockerfile
+          - app: danmu-job
+            dockerfile: danmu-job/Dockerfile
           - app: manifest-job
             dockerfile: manifest-job/Dockerfile
           - app: artifact-cleaner

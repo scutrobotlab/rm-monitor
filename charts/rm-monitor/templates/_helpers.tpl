@@ -57,6 +57,13 @@ RecordConf:
   {{- end }}
 {{- end -}}
 
+{{- define "rm-monitor.danmuConf" -}}
+DanmuConf:
+  Enabled: {{ .Values.danmu.enabled }}
+  AppID: {{ .Values.danmu.appId | quote }}
+  AppKey: {{ .Values.danmu.appKey | quote }}
+{{- end -}}
+
 {{- define "rm-monitor.priority" -}}
 Priority:
 {{- if .Values.priority }}

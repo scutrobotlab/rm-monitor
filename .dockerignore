@@ -6,6 +6,8 @@
 /build
 /config
 /data
+/danmu-job/dist
+/danmu-job/node_modules
 /recorder/data
 *.exe
 *.test

@@ -25,7 +25,6 @@ import (
 	"scutbot.cn/web/rm-monitor/pkg/db"
 	"scutbot.cn/web/rm-monitor/pkg/logx"
 	"scutbot.cn/web/rm-monitor/pkg/pathfmt"
-	"scutbot.cn/web/rm-monitor/pkg/recording"
 	"scutbot.cn/web/rm-monitor/pkg/redisx"
 	"scutbot.cn/web/rm-monitor/pkg/storagepath"
 	"scutbot.cn/web/rm-monitor/pkg/sttcoord"
@@ -123,8 +122,9 @@ func runAudioRecorder(ctx context.Context, client *ent.Client, c jobconfig.Confi
 	if err := os.MkdirAll(info.AudioDir, 0o755); err != nil {
 		return errors.Wrap(err, "create audio dir")
 	}
-	sourceURL, err := sttSourceURL(ctx, conf, info.Match.Zone)
-	if err != nil {
+	sourceURL := strings.TrimSpace(os.Getenv("STT_SOURCE_URL"))
+	if sourceURL == "" {
+		err := errors.New("STT_SOURCE_URL is empty")
 		writeMarker(info.AudioDir, ".ffmpeg.failed", err.Error())
 		return err
 	}
@@ -303,22 +303,6 @@ func loadRoundInfo(ctx context.Context, client *ent.Client, conf common.RecordCo
 		AudioDir: filepath.Join(roundDir, "audio"),
 		STTPath:  filepath.Join(roundDir, "stt.jsonl"),
 	}, nil
-}
-
-func sttSourceURL(ctx context.Context, conf common.RecordConf, zone string) (string, error) {
-	if strings.TrimSpace(conf.STTRole) == "" {
-		return "", errors.New("STTRole is empty")
-	}
-	client := resty.New().SetRetryCount(3).SetRetryWaitTime(time.Second).SetTimeout(10 * time.Second)
-	urls, err := recording.LiveURLs(ctx, client, conf.LiveInfoURL, zone, conf.Res)
-	if err != nil {
-		return "", err
-	}
-	url, ok := urls[conf.STTRole]
-	if !ok || strings.TrimSpace(url) == "" {
-		return "", errors.Errorf("stt role %q live url not found", conf.STTRole)
-	}
-	return url, nil
 }
 
 func loadRound(ctx context.Context, client *ent.Client, roundID int) (*ent.MatchRound, error) {

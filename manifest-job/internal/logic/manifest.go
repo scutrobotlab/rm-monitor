@@ -88,7 +88,7 @@ func WriteMatchReadme(ctx context.Context, client *ent.Client, redisClient *redi
 
 	tmp := filepath.Join(fullDir, ".README.md.tmp")
 	dst := filepath.Join(fullDir, "README.md")
-	readme, err := renderReadme(m, red, blue)
+	readme, err := renderReadme(m, red, blue, fullDir)
 	if err != nil {
 		return err
 	}
@@ -190,6 +190,15 @@ const readmeTemplate = `# {{ .Title }}
 | --- | --- | --- | --- | --- |
 {{ range .Rounds }}| {{ .RoundNo }} | {{ .Status }} | {{ .Winner }} | {{ .StartedAt }} | {{ .EndedAt }} |
 {{ end }}
+{{ if .DanmuCharts }}
+
+## 弹幕统计
+
+{{ range .DanmuCharts }}### Round {{ .RoundNo }}
+{{ if .DanmuCountImage }}![Round {{ .RoundNo }} 弹幕数量]({{ .DanmuCountImage }})
+{{ end }}{{ if .OnlineCountImage }}![Round {{ .RoundNo }} 在线人数]({{ .OnlineCountImage }})
+{{ end }}
+{{ end }}{{ end }}
 {{ if .Report }}
 
 ## 战报
@@ -221,14 +230,21 @@ type readmeRecordRow struct {
 	UploadURL   string
 }
 
-type readmeData struct {
-	Title    string
-	InfoRows []tableRow
-	Rounds   []readmeRoundRow
-	Report   string
+type readmeDanmuChartRow struct {
+	RoundNo          int
+	DanmuCountImage  string
+	OnlineCountImage string
 }
 
-func renderReadme(m *ent.Match, red, blue *ent.Team) (string, error) {
+type readmeData struct {
+	Title       string
+	InfoRows    []tableRow
+	Rounds      []readmeRoundRow
+	DanmuCharts []readmeDanmuChartRow
+	Report      string
+}
+
+func renderReadme(m *ent.Match, red, blue *ent.Team, matchDir string) (string, error) {
 	data := readmeData{
 		Title: markdownText(matchTitle(m, red, blue)),
 		InfoRows: []tableRow{
@@ -259,6 +275,9 @@ func renderReadme(m *ent.Match, red, blue *ent.Team) (string, error) {
 			StartedAt: markdownCell(formatDisplayTime(r.StartedAt)),
 			EndedAt:   markdownCell(formatOptionalDisplayTime(r.EndedAt)),
 		})
+		if chart := danmuChartRow(matchDir, r.RoundNo); chart.DanmuCountImage != "" || chart.OnlineCountImage != "" {
+			data.DanmuCharts = append(data.DanmuCharts, chart)
+		}
 	}
 	if m.Report != nil {
 		data.Report = strings.TrimSpace(*m.Report)
@@ -269,6 +288,23 @@ func renderReadme(m *ent.Match, red, blue *ent.Team) (string, error) {
 		return "", errors.Wrap(err, "render readme")
 	}
 	return out.String(), nil
+}
+
+func danmuChartRow(matchDir string, roundNo int) readmeDanmuChartRow {
+	row := readmeDanmuChartRow{RoundNo: roundNo}
+	roundDir := filepath.Join(matchDir, fmt.Sprintf("Round-%d", roundNo))
+	if fileExists(filepath.Join(roundDir, "stats", "danmu-count.png")) {
+		row.DanmuCountImage = filepath.ToSlash(filepath.Join(fmt.Sprintf("Round-%d", roundNo), "stats", "danmu-count.png"))
+	}
+	if fileExists(filepath.Join(roundDir, "stats", "online-count.png")) {
+		row.OnlineCountImage = filepath.ToSlash(filepath.Join(fmt.Sprintf("Round-%d", roundNo), "stats", "online-count.png"))
+	}
+	return row
+}
+
+func fileExists(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && !info.IsDir()
 }
 
 func readmeInfoRow(key, value string) tableRow {

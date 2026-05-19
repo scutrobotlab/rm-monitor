@@ -70,6 +70,30 @@
         }
       ]
     },
+    "danmu": {
+      "type": "object",
+      "required": ["enabled"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "appId": { "type": "string" },
+        "appKey": { "type": "string" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "enabled": { "const": true } },
+            "required": ["enabled"]
+          },
+          "then": {
+            "required": ["appId", "appKey"],
+            "properties": {
+              "appId": { "minLength": 1 },
+              "appKey": { "minLength": 1 }
+            }
+          }
+        }
+      ]
+    },
     "report": {
       "type": "object",
       "properties": {

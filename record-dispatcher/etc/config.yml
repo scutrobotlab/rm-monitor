@@ -9,6 +9,10 @@ RecordConf:
   PathTemplate: "{{.Event}}/{{.Zone}}/{{.MatchName}}/Round-{{.RoundNo}}/{{.Role}}.flv"
   MatchDirTemplate: "{{.Event}}/{{.Zone}}/{{.MatchName}}"
   MatchNameTemplate: "{{.Order}}. {{.RedSchool}}-{{.RedName}} VS {{.BlueSchool}}-{{.BlueName}}"
+DanmuConf:
+  Enabled: false
+  AppID: ""
+  AppKey: ""
 K8sJobConf:
   Namespace: rm-monitor
   Image: ghcr.io/scutrobotlab/rm-monitor/record-job:latest
@@ -21,5 +25,12 @@ ManifestJobConf:
   Image: ghcr.io/scutrobotlab/rm-monitor/manifest-job:latest
   ConfigMapName: manifest-job-config
   RecordsPVC: records-shared
+  RecordsMountPath: /records
+  TTLSecondsAfterFinished: 86400
+DanmuJobConf:
+  Namespace: rm-monitor
+  Image: ""
+  ConfigMapName: danmu-job-config
+  RecordsPVC: records
   RecordsMountPath: /records
   TTLSecondsAfterFinished: 86400

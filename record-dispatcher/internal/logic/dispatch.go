@@ -122,10 +122,14 @@ func (l *DispatchLogic) createTasksForStartedRounds() error {
 		if m == nil {
 			continue
 		}
-		urls, err := recording.LiveURLs(l.ctx, l.svcCtx.RestyClient, conf.LiveInfoURL, m.Zone, conf.Res)
+		liveCtx, err := recording.LiveContextForZone(l.ctx, l.svcCtx.RestyClient, conf.LiveInfoURL, m.Zone, conf.Res)
 		if err != nil {
 			l.Errorf("live urls for match %s: %v", m.ID, err)
 			continue
+		}
+		urls := liveCtx.URLs
+		if err := l.dispatchDanmuJob(r, liveCtx.ChatRoomID); err != nil {
+			l.Errorf("dispatch danmu job for round %d: %v", r.ID, err)
 		}
 		if err := l.dispatchSTTJob(conf, r, urls); err != nil {
 			l.Errorf("dispatch stt job for round %d: %v", r.ID, err)
@@ -157,11 +161,35 @@ func (l *DispatchLogic) createTasksForStartedRounds() error {
 	return nil
 }
 
+func (l *DispatchLogic) dispatchDanmuJob(r *ent.MatchRound, chatRoomID string) error {
+	danmuConf := l.svcCtx.Config.DanmuConf.WithDefaults()
+	jobConf := l.svcCtx.Config.DanmuJobConf.WithDefaults()
+	if l.svcCtx.K8s == nil || !danmuConf.Enabled || strings.TrimSpace(jobConf.Image) == "" {
+		return nil
+	}
+	if strings.TrimSpace(chatRoomID) == "" {
+		l.Errorf("skip danmu job for round %d: chatRoomId not found", r.ID)
+		return nil
+	}
+	name := jobName("danmu", r.ID)
+	job := kubejob.Build(l.svcCtx.Config.DanmuJobConf, kubejob.JobSpec{
+		Name:              name,
+		App:               "danmu-job",
+		Image:             jobConf.Image,
+		Args:              []string{"-f", "/etc/rm-monitor/config.yml", "-round", strconv.Itoa(r.ID), "-chat-room", chatRoomID},
+		CPU:               "50m",
+		Memory:            "128Mi",
+		PriorityClassName: kubejob.PriorityClassRecordCritical,
+	})
+	return l.svcCtx.K8s.CreateJob(l.ctx, jobConf.Namespace, job)
+}
+
 func (l *DispatchLogic) dispatchSTTJob(conf common.RecordConf, r *ent.MatchRound, urls map[string]string) error {
 	if l.svcCtx.K8s == nil || strings.TrimSpace(conf.STTRole) == "" || strings.TrimSpace(l.svcCtx.Config.STTJobConf.Image) == "" {
 		return nil
 	}
-	if _, ok := urls[conf.STTRole]; !ok {
+	sourceURL, ok := urls[conf.STTRole]
+	if !ok || strings.TrimSpace(sourceURL) == "" {
 		return nil
 	}
 	if r.Edges.Match == nil {
@@ -176,6 +204,7 @@ func (l *DispatchLogic) dispatchSTTJob(conf common.RecordConf, r *ent.MatchRound
 		Image:         jobConf.Image,
 		CPU:           "100m",
 		Memory:        "128Mi",
+		Env:           map[string]string{"STT_SOURCE_URL": sourceURL},
 		ExtraContainers: []kubejob.ContainerSpec{
 			{
 				Name:   "recognizer",

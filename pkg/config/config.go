@@ -37,6 +37,16 @@ type RecordConf struct {
 	STTRole           string   `json:",optional"`
 }
 
+type DanmuConf struct {
+	Enabled bool   `json:",optional"`
+	AppID   string `json:",optional"`
+	AppKey  string `json:",optional"`
+}
+
+func (c *DanmuConf) WithDefaults() DanmuConf {
+	return *c
+}
+
 type ReportConf struct {
 	BaseURL        string `json:",optional"`
 	APIKey         string `json:",optional"`
