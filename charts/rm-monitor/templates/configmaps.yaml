@@ -20,12 +20,6 @@ data:
     LarkConf:
       AppId: {{ .Values.lark.appId }}
       AppSecret: {{ .Values.lark.appSecret }}
-    ResultWebhookURLs:
-{{- if .Values.lark.resultWebhookURLs }}
-{{ toYaml .Values.lark.resultWebhookURLs | indent 6 }}
-{{- else }}
-      []
-{{- end }}
 {{ include "rm-monitor.redisConf" . | indent 4 }}
 {{ include "rm-monitor.postgresConf" . | indent 4 }}
       AutoMigrate: true
@@ -177,6 +171,24 @@ data:
       AutoMigrate: false
     TranscodeConf:
       SourceRetentionDays: {{ .Values.transcode.sourceRetentionDays }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: health-checker-config
+  namespace: {{ include "rm-monitor.namespace" . }}
+data:
+  config.yml: |
+{{ include "rm-monitor.postgresConf" . | indent 4 }}
+      AutoMigrate: false
+{{ include "rm-monitor.redisConf" . | indent 4 }}
+    K8sJobConf:
+      Namespace: {{ include "rm-monitor.namespace" . }}
+      Image: {{ include "rm-monitor.image" (dict "Values" .Values "component" "health-checker") }}
+      ServiceAccountName: {{ .Values.serviceAccount.name }}
+      RecordsPVC: {{ .Values.storage.shared.pvcName }}
+      RecordsMountPath: {{ .Values.jobs.recordsMountPath }}
+      ImagePullPolicy: {{ .Values.image.pullPolicy }}
 ---
 apiVersion: v1
 kind: ConfigMap

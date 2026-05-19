@@ -98,12 +98,41 @@ func (c *Client) CountUnfinishedJobs(ctx context.Context, namespace, labelSelect
 	return count, nil
 }
 
+func (c *Client) CountFailedJobs(ctx context.Context, namespace, labelSelector string) (int, error) {
+	var jobs batchv1.JobList
+	err := c.rest.Get().
+		Namespace(namespace).
+		Resource("jobs").
+		Param("labelSelector", labelSelector).
+		Do(ctx).
+		Into(&jobs)
+	if err != nil {
+		return 0, errors.Wrap(err, "list k8s jobs")
+	}
+	count := 0
+	for _, job := range jobs.Items {
+		if jobFailed(job) {
+			count++
+		}
+	}
+	return count, nil
+}
+
 func jobFinished(job batchv1.Job) bool {
 	for _, cond := range job.Status.Conditions {
 		if cond.Status != corev1.ConditionTrue {
 			continue
 		}
 		if cond.Type == batchv1.JobComplete || cond.Type == batchv1.JobFailed {
+			return true
+		}
+	}
+	return false
+}
+
+func jobFailed(job batchv1.Job) bool {
+	for _, cond := range job.Status.Conditions {
+		if cond.Status == corev1.ConditionTrue && cond.Type == batchv1.JobFailed {
 			return true
 		}
 	}

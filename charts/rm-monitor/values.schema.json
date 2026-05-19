@@ -30,6 +30,26 @@
         "type": { "type": "string" }
       }
     },
+    "lark": {
+      "type": "object",
+      "required": ["appId", "appSecret"],
+      "additionalProperties": false,
+      "properties": {
+        "appId": { "type": "string" },
+        "appSecret": { "type": "string" }
+      }
+    },
+    "upload": {
+      "type": "object",
+      "required": ["bitableAppToken", "concurrency", "partRetries", "retryBackoff", "rateLimitPerMinute"],
+      "properties": {
+        "bitableAppToken": { "type": "string" },
+        "concurrency": { "type": "integer", "minimum": 1 },
+        "partRetries": { "type": "integer", "minimum": 1 },
+        "retryBackoff": { "type": "integer", "minimum": 1 },
+        "rateLimitPerMinute": { "type": "integer", "minimum": 1 }
+      }
+    },
     "record": {
       "type": "object",
       "properties": {
@@ -68,6 +88,40 @@
         "apiKey": { "type": "string" },
         "model": { "type": "string" },
         "timeoutSeconds": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "jobs": {
+      "type": "object",
+      "required": ["ttlSecondsAfterFinished", "backoffLimit", "recordsMountPath", "artifactCleaner"],
+      "properties": {
+        "ttlSecondsAfterFinished": { "type": "integer", "minimum": 1 },
+        "backoffLimit": { "type": "integer", "minimum": 0 },
+        "recordsMountPath": { "type": "string", "minLength": 1 },
+        "artifactCleaner": {
+          "type": "object",
+          "required": ["schedule", "successfulJobsHistoryLimit", "failedJobsHistoryLimit"],
+          "properties": {
+            "schedule": { "type": "string", "minLength": 1 },
+            "successfulJobsHistoryLimit": { "type": "integer", "minimum": 0 },
+            "failedJobsHistoryLimit": { "type": "integer", "minimum": 0 }
+          }
+        }
+      }
+    },
+    "components": {
+      "type": "object",
+      "required": ["monitor", "larkNotifier", "recordDispatcher", "uploaderDispatcher", "transcodeDispatcher", "artifactCleaner", "healthChecker"],
+      "properties": {
+        "healthChecker": {
+          "type": "object",
+          "required": ["schedule", "successfulJobsHistoryLimit", "failedJobsHistoryLimit", "resources"],
+          "properties": {
+            "schedule": { "type": "string", "minLength": 1 },
+            "successfulJobsHistoryLimit": { "type": "integer", "minimum": 0 },
+            "failedJobsHistoryLimit": { "type": "integer", "minimum": 0 },
+            "resources": { "type": "object" }
+          }
+        }
       }
     },
     "storage": {

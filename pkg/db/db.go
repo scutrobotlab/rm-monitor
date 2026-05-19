@@ -30,7 +30,7 @@ func Open(ctx context.Context, c config.PostgresConf) (*ent.Client, error) {
 	}
 	drv := entsql.OpenDB(dialect.Postgres, sqlDB)
 
-	client := ent.NewClient(ent.Driver(drv), ent.Debug())
+	client := ent.NewClient(ent.Driver(drv))
 	if c.AutoMigrate {
 		if err := client.Schema.Create(ctx, migrate.WithDropColumn(true)); err != nil {
 			_ = client.Close()

@@ -51,6 +51,11 @@ The expected production storage topology is:
 OpenList, when deployed, is a separate optional read-only browser over the
 record PVC. It is not part of the write path.
 
+The chart includes a lightweight `health-checker` CronJob. It does not send
+messages or mutate business state; it only writes structured logs and fails the
+CronJob when PG, Redis, monitor heartbeat, task status, failed runtime Jobs, or
+the shared records PVC are unhealthy.
+
 For a first migration from legacy `kubectl apply` resources, either remove the
 old non-data resources and reinstall with Helm, or do a one-off manual adoption.
 Do not keep ownership-adoption flags in the regular deployment command.

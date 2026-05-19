@@ -67,6 +67,8 @@ jobs:
             dockerfile: manifest-job/Dockerfile
           - app: artifact-cleaner
             dockerfile: artifact-cleaner/Dockerfile
+          - app: health-checker
+            dockerfile: health-checker/Dockerfile
           - app: uploader-dispatcher
             dockerfile: uploader-dispatcher/Dockerfile
           - app: uploader-job

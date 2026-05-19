@@ -19,7 +19,7 @@ type Logger struct {
 
 func MustSetup(conf LogConf) {
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
-		Level: slog.LevelDebug,
+		Level: slog.LevelInfo,
 	})).With("service", conf.ServiceName))
 }
 

@@ -254,12 +254,10 @@ func (l *NotifyLogic) patchMatchCards(m *ent.Match) error {
 		return errors.Wrap(err, "marshal card content")
 	}
 	contentData := string(contentBytes)
-	shouldPushResultWebhook := false
 	for _, message := range m.Edges.LarkMessages {
 		if sameJSON(message.CardPayload, contentMap) {
 			continue
 		}
-		wasCompleted := cardPayloadCompleted(message.CardPayload)
 		req := larkim.NewPatchMessageReqBuilder().MessageId(message.MessageID).
 			Body(larkim.NewPatchMessageReqBodyBuilder().Content(contentData).Build()).
 			Build()
@@ -283,12 +281,6 @@ func (l *NotifyLogic) patchMatchCards(m *ent.Match) error {
 			l.Error(errors.Wrap(err, "update lark card payload"))
 			continue
 		}
-		if matchCardCompleted(m) && !wasCompleted {
-			shouldPushResultWebhook = true
-		}
-	}
-	if shouldPushResultWebhook {
-		l.pushResultWebhooks(m.ID, content)
 	}
 	return nil
 }

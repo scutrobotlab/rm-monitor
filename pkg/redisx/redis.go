@@ -39,6 +39,10 @@ func (c *Client) GetCtx(ctx context.Context, key string) (string, error) {
 	return val, err
 }
 
+func (c *Client) PingCtx(ctx context.Context) error {
+	return c.c.Ping(ctx).Err()
+}
+
 func (c *Client) SetCtx(ctx context.Context, key, value string) error {
 	return c.c.Set(ctx, key, value, 0).Err()
 }

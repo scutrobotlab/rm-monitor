@@ -5,33 +5,7 @@ import (
 
 	"scutbot.cn/web/rm-monitor/ent"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
-	"scutbot.cn/web/rm-monitor/lark-notifier/internal/utils"
 )
-
-func TestResultWebhookKeyUsesStableHash(t *testing.T) {
-	hash := resultWebhookHash("https://open.feishu.cn/open-apis/bot/v2/hook/secret")
-	if hash != resultWebhookHash("https://open.feishu.cn/open-apis/bot/v2/hook/secret") {
-		t.Fatal("hash should be stable")
-	}
-	if hash == resultWebhookHash("https://open.feishu.cn/open-apis/bot/v2/hook/other") {
-		t.Fatal("hash should include webhook url")
-	}
-	if got := resultWebhookKey("match-1", hash); got != "rm-monitor:lark-result-webhook:match-1:"+hash {
-		t.Fatalf("resultWebhookKey() = %q", got)
-	}
-}
-
-func TestResultWebhookPayloadReusesMatchCardContent(t *testing.T) {
-	card := &utils.MatchCardContent{Type: "template"}
-	card.Data.TemplateId = "AAqtDaxtZLomZ"
-	payload := resultWebhookPayload{MsgType: "interactive", Card: card}
-	if payload.MsgType != "interactive" {
-		t.Fatalf("MsgType = %q", payload.MsgType)
-	}
-	if payload.Card != card {
-		t.Fatal("payload should reuse the rendered match card content")
-	}
-}
 
 func TestMatchCardCompleted(t *testing.T) {
 	if matchCardCompleted(&ent.Match{}) {

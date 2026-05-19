@@ -41,7 +41,10 @@ func NewMatchScanLogic(ctx context.Context, svcCtx *svc.ServiceContext) *MatchSc
 }
 
 const (
-	simulateUA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
+	simulateUA                   = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
+	monitorHealthKey             = "rm-monitor:health:monitor:last_success"
+	monitorHealthTTLSeconds      = 5 * 60
+	monitorHealthTimestampLayout = time.RFC3339
 )
 
 type scannedMatch struct {
@@ -101,6 +104,9 @@ func (l *MatchScanLogic) MatchScan() error {
 	})...)
 	if err != nil {
 		return errors.Wrap(err, "failed to upsert matches")
+	}
+	if err := l.svcCtx.RedisClient.SetexCtx(l.ctx, monitorHealthKey, time.Now().Format(monitorHealthTimestampLayout), monitorHealthTTLSeconds); err != nil {
+		return errors.Wrap(err, "update monitor health heartbeat")
 	}
 	return nil
 }

@@ -1,0 +1,39 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: health-checker
+  namespace: {{ include "rm-monitor.namespace" . }}
+spec:
+  schedule: {{ .Values.components.healthChecker.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: {{ .Values.components.healthChecker.successfulJobsHistoryLimit }}
+  failedJobsHistoryLimit: {{ .Values.components.healthChecker.failedJobsHistoryLimit }}
+  jobTemplate:
+    spec:
+      ttlSecondsAfterFinished: {{ .Values.jobs.ttlSecondsAfterFinished }}
+      backoffLimit: 0
+      template:
+        spec:
+          serviceAccountName: {{ .Values.serviceAccount.name }}
+          restartPolicy: Never
+          containers:
+            - name: health-checker
+              image: {{ include "rm-monitor.image" (dict "Values" .Values "component" "health-checker") }}
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              args: ["-f", "{{ include "rm-monitor.configPath" . }}"]
+              resources:
+{{ toYaml .Values.components.healthChecker.resources | indent 16 }}
+              volumeMounts:
+                - name: config
+                  mountPath: {{ include "rm-monitor.configPath" . }}
+                  subPath: config.yml
+                  readOnly: true
+                - name: records
+                  mountPath: {{ .Values.jobs.recordsMountPath }}
+          volumes:
+            - name: config
+              configMap:
+                name: health-checker-config
+            - name: records
+              persistentVolumeClaim:
+                claimName: {{ .Values.storage.shared.pvcName }}
