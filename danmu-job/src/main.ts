@@ -215,6 +215,7 @@ function writeMessageIfValid(message: LeanMessage, round: RoundInfo, seen: Set<s
     text,
     username: String(attrs.username ?? ""),
     nickname: String(attrs.nickname ?? ""),
+    attributes: attrs,
     mode: attrs.mode,
     color: attrs.color,
   };

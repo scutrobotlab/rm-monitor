@@ -2,6 +2,7 @@ import fs from "node:fs";
 import { open, type FileHandle } from "node:fs/promises";
 import path from "node:path";
 import { createHash } from "node:crypto";
+import { create } from "xmlbuilder2";
 
 export type DanmuMessage = {
   id: string;
@@ -10,6 +11,7 @@ export type DanmuMessage = {
   text: string;
   username?: string;
   nickname?: string;
+  attributes?: Record<string, unknown>;
   mode?: unknown;
   color?: unknown;
 };
@@ -43,7 +45,17 @@ export class BilibiliXMLWriter {
     const unix = Math.max(0, Math.floor(message.timestamp / 1000));
     const userHash = stableID(message.username || message.nickname || "anonymous").slice(0, 12);
     const rowID = stableID(message.id).slice(0, 16);
-    this.write(`  <d p="${seconds},${mode},25,${color},${unix},0,${userHash},${rowID}">${escapeXML(message.text)}</d>\n`);
+    const attrs = {
+      p: `${seconds},${mode},25,${color},${unix},0,${userHash},${rowID}`,
+      ...renderCustomAttributes(message.attributes),
+    };
+    const node = create({
+      d: {
+        ...Object.fromEntries(Object.entries(attrs).map(([key, value]) => [`@${key}`, value])),
+        "#": message.text,
+      },
+    }).end({ headless: true });
+    this.write(`  ${node}\n`);
   }
 
   async close() {
@@ -87,6 +99,19 @@ export function escapeXML(value: string): string {
   return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
 }
 
+export function renderCustomAttributes(attributes: Record<string, unknown> | undefined): Record<string, string> {
+  if (!attributes || Object.keys(attributes).length === 0) {
+    return {};
+  }
+  const rendered: Record<string, string> = {};
+  const used = new Set<string>();
+  for (const [key, value] of Object.entries(attributes)) {
+    const attrName = uniqueAttributeName(`lc_${sanitizeAttributeName(key)}`, used);
+    rendered[attrName] = attributeValue(value);
+  }
+  return rendered;
+}
+
 export function toBilibiliMode(value: unknown): number {
   const n = typeof value === "number" ? value : typeof value === "string" && value.trim() ? Number(value) : 0;
   if (n === 1) {
@@ -112,4 +137,56 @@ export function toBilibiliColor(value: unknown): number {
 
 function stableID(value: string): string {
   return createHash("sha1").update(value).digest("hex");
+}
+
+function sanitizeAttributeName(value: string): string {
+  const text = value.trim().replace(/[^A-Za-z0-9_.-]+/g, "_").replace(/^[^A-Za-z_]+/, "");
+  return text || "attr";
+}
+
+function uniqueAttributeName(base: string, used: Set<string>): string {
+  let name = base;
+  let index = 2;
+  while (used.has(name)) {
+    name = `${base}_${index}`;
+    index += 1;
+  }
+  used.add(name);
+  return name;
+}
+
+function attributeValue(value: unknown): string {
+  if (value === undefined || value === null) {
+    return "";
+  }
+  if (typeof value === "string") {
+    return value;
+  }
+  if (typeof value === "number" || typeof value === "boolean" || typeof value === "bigint") {
+    return String(value);
+  }
+  return JSON.stringify(toJSONSafe(value));
+}
+
+function toJSONSafe(value: unknown): unknown {
+  if (value === undefined) {
+    return null;
+  }
+  if (value === null || typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+    return value;
+  }
+  if (typeof value === "bigint") {
+    return value.toString();
+  }
+  if (Array.isArray(value)) {
+    return value.map(toJSONSafe);
+  }
+  if (typeof value === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [key, item] of Object.entries(value as Record<string, unknown>)) {
+      out[key] = toJSONSafe(item);
+    }
+    return out;
+  }
+  return String(value);
 }
