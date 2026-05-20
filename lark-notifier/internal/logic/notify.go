@@ -42,7 +42,16 @@ func (l *NotifyLogic) Sync(since time.Time) error {
 		}
 		return err
 	}
-	return l.replyCompletedUploads()
+	if l.ctx.Err() != nil {
+		return nil
+	}
+	if err := l.replyCompletedUploads(); err != nil {
+		if isContextDone(err) {
+			return nil
+		}
+		return err
+	}
+	return nil
 }
 
 func (l *NotifyLogic) SyncEvent(channel, payload string) error {
