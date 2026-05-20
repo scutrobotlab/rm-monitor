@@ -36,15 +36,6 @@ func (l *NotifyLogic) Sync(since time.Time) error {
 	if err := l.ensureStartedMessages(); err != nil {
 		return err
 	}
-	if err := l.patchChangedCardsSince(since); err != nil {
-		if isContextDone(err) {
-			return nil
-		}
-		return err
-	}
-	if l.ctx.Err() != nil {
-		return nil
-	}
 	if err := l.replyCompletedUploads(); err != nil {
 		if isContextDone(err) {
 			return nil
