@@ -6,5 +6,5 @@ type Config struct {
 	PostgresConf common.PostgresConf
 	RedisConf    common.RedisConf
 	RecordConf   common.RecordConf
-	ReportConf   common.ReportConf `json:",optional"`
+	LLMConf      common.LLMConf `json:",optional"`
 }

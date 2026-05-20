@@ -8,6 +8,70 @@ import (
 )
 
 var (
+	// HighlightClipsColumns holds the columns for the "highlight_clips" table.
+	HighlightClipsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "highlight_index", Type: field.TypeInt},
+		{Name: "role", Type: field.TypeString},
+		{Name: "algorithm_version", Type: field.TypeString},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"PENDING", "DISPATCHING", "RUNNING", "SUCCEEDED", "FAILED"}, Default: "PENDING"},
+		{Name: "priority", Type: field.TypeInt, Default: 0},
+		{Name: "k8s_job_name", Type: field.TypeString, Nullable: true},
+		{Name: "attempts", Type: field.TypeInt, Default: 0},
+		{Name: "start_seconds", Type: field.TypeFloat64},
+		{Name: "end_seconds", Type: field.TypeFloat64},
+		{Name: "peak_seconds", Type: field.TypeFloat64},
+		{Name: "output_dir", Type: field.TypeString},
+		{Name: "title", Type: field.TypeString, Nullable: true},
+		{Name: "description", Type: field.TypeString, Nullable: true, Size: 2147483647},
+		{Name: "tags", Type: field.TypeJSON, Nullable: true},
+		{Name: "score", Type: field.TypeFloat64, Default: 0},
+		{Name: "model_payload", Type: field.TypeString, Nullable: true, Size: 2147483647},
+		{Name: "error_message", Type: field.TypeString, Nullable: true},
+		{Name: "started_at", Type: field.TypeTime, Nullable: true},
+		{Name: "completed_at", Type: field.TypeTime, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "match_round_highlight_clips", Type: field.TypeInt},
+		{Name: "media_artifact_highlight_clips", Type: field.TypeInt},
+	}
+	// HighlightClipsTable holds the schema information for the "highlight_clips" table.
+	HighlightClipsTable = &schema.Table{
+		Name:       "highlight_clips",
+		Columns:    HighlightClipsColumns,
+		PrimaryKey: []*schema.Column{HighlightClipsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "highlight_clips_match_rounds_highlight_clips",
+				Columns:    []*schema.Column{HighlightClipsColumns[22]},
+				RefColumns: []*schema.Column{MatchRoundsColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+			{
+				Symbol:     "highlight_clips_media_artifacts_highlight_clips",
+				Columns:    []*schema.Column{HighlightClipsColumns[23]},
+				RefColumns: []*schema.Column{MediaArtifactsColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "highlightclip_role_algorithm_version_highlight_index_match_round_highlight_clips",
+				Unique:  true,
+				Columns: []*schema.Column{HighlightClipsColumns[2], HighlightClipsColumns[3], HighlightClipsColumns[1], HighlightClipsColumns[22]},
+			},
+			{
+				Name:    "highlightclip_status",
+				Unique:  false,
+				Columns: []*schema.Column{HighlightClipsColumns[4]},
+			},
+			{
+				Name:    "highlightclip_status_priority_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{HighlightClipsColumns[4], HighlightClipsColumns[5], HighlightClipsColumns[20]},
+			},
+		},
+	}
 	// LarkMessagesColumns holds the columns for the "lark_messages" table.
 	LarkMessagesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -339,6 +403,7 @@ var (
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
+		HighlightClipsTable,
 		LarkMessagesTable,
 		MatchesTable,
 		MatchRoundsTable,
@@ -351,6 +416,8 @@ var (
 )
 
 func init() {
+	HighlightClipsTable.ForeignKeys[0].RefTable = MatchRoundsTable
+	HighlightClipsTable.ForeignKeys[1].RefTable = MediaArtifactsTable
 	LarkMessagesTable.ForeignKeys[0].RefTable = MatchesTable
 	MatchesTable.ForeignKeys[0].RefTable = TeamsTable
 	MatchesTable.ForeignKeys[1].RefTable = TeamsTable

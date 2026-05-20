@@ -34,6 +34,7 @@ type RecordConf struct {
 	MatchDirTemplate  string   `json:",optional"`
 	MatchNameTemplate string   `json:",optional"`
 	RoleBlackList     []string `json:",optional"`
+	AudioRoles        []string `json:",optional"`
 	STTRole           string   `json:",optional"`
 }
 
@@ -47,17 +48,61 @@ func (c *DanmuConf) WithDefaults() DanmuConf {
 	return *c
 }
 
-type ReportConf struct {
+type LLMConf struct {
 	BaseURL        string `json:",optional"`
 	APIKey         string `json:",optional"`
 	Model          string `json:",optional"`
 	TimeoutSeconds int    `json:",optional"`
 }
 
-func (c *ReportConf) WithDefaults() ReportConf {
+type ReportConf = LLMConf
+
+func (c *LLMConf) WithDefaults() LLMConf {
 	out := *c
 	if out.TimeoutSeconds <= 0 {
 		out.TimeoutSeconds = 120
+	}
+	return out
+}
+
+type HighlightConf struct {
+	Enabled               bool                   `json:",optional"`
+	Role                  string                 `json:",optional"`
+	AlgorithmVersion      string                 `json:",optional"`
+	MaxHighlightsPerRound int                    `json:",optional"`
+	MinClipSeconds        int                    `json:",optional"`
+	MaxClipSeconds        int                    `json:",optional"`
+	PreSeconds            int                    `json:",optional"`
+	PostSeconds           int                    `json:",optional"`
+	MergeGapSeconds       int                    `json:",optional"`
+	Publish               map[string]interface{} `json:",optional"`
+}
+
+func (c *HighlightConf) WithDefaults() HighlightConf {
+	out := *c
+	if out.Role == "" {
+		out.Role = "主视角"
+	}
+	if out.AlgorithmVersion == "" {
+		out.AlgorithmVersion = "danmu-zscore-v1"
+	}
+	if out.MaxHighlightsPerRound <= 0 {
+		out.MaxHighlightsPerRound = 5
+	}
+	if out.MinClipSeconds <= 0 {
+		out.MinClipSeconds = 20
+	}
+	if out.MaxClipSeconds <= 0 {
+		out.MaxClipSeconds = 90
+	}
+	if out.PreSeconds <= 0 {
+		out.PreSeconds = 15
+	}
+	if out.PostSeconds <= 0 {
+		out.PostSeconds = 25
+	}
+	if out.MergeGapSeconds <= 0 {
+		out.MergeGapSeconds = 20
 	}
 	return out
 }
@@ -81,6 +126,9 @@ func (c *RecordConf) WithDefaults() RecordConf {
 	}
 	if out.MatchNameTemplate == "" {
 		out.MatchNameTemplate = "{{.Order}}. {{.RedSchool}}-{{.RedName}} VS {{.BlueSchool}}-{{.BlueName}}"
+	}
+	if len(out.AudioRoles) == 0 {
+		out.AudioRoles = []string{"主视角"}
 	}
 	return out
 }

@@ -45,6 +45,8 @@ const (
 	EdgeSourceTranscodeTask = "source_transcode_task"
 	// EdgeArchiveTranscodeTask holds the string denoting the archive_transcode_task edge name in mutations.
 	EdgeArchiveTranscodeTask = "archive_transcode_task"
+	// EdgeHighlightClips holds the string denoting the highlight_clips edge name in mutations.
+	EdgeHighlightClips = "highlight_clips"
 	// Table holds the table name of the mediaartifact in the database.
 	Table = "media_artifacts"
 	// RecordTaskTable is the table that holds the record_task relation/edge.
@@ -75,6 +77,13 @@ const (
 	ArchiveTranscodeTaskInverseTable = "transcode_tasks"
 	// ArchiveTranscodeTaskColumn is the table column denoting the archive_transcode_task relation/edge.
 	ArchiveTranscodeTaskColumn = "media_artifact_archive_transcode_task"
+	// HighlightClipsTable is the table that holds the highlight_clips relation/edge.
+	HighlightClipsTable = "highlight_clips"
+	// HighlightClipsInverseTable is the table name for the HighlightClip entity.
+	// It exists in this package in order to avoid circular dependency with the "highlightclip" package.
+	HighlightClipsInverseTable = "highlight_clips"
+	// HighlightClipsColumn is the table column denoting the highlight_clips relation/edge.
+	HighlightClipsColumn = "media_artifact_highlight_clips"
 )
 
 // Columns holds all SQL columns for mediaartifact fields.
@@ -308,6 +317,20 @@ func ByArchiveTranscodeTaskField(field string, opts ...sql.OrderTermOption) Orde
 		sqlgraph.OrderByNeighborTerms(s, newArchiveTranscodeTaskStep(), sql.OrderByField(field, opts...))
 	}
 }
+
+// ByHighlightClipsCount orders the results by highlight_clips count.
+func ByHighlightClipsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newHighlightClipsStep(), opts...)
+	}
+}
+
+// ByHighlightClips orders the results by highlight_clips terms.
+func ByHighlightClips(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newHighlightClipsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newRecordTaskStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -334,5 +357,12 @@ func newArchiveTranscodeTaskStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(ArchiveTranscodeTaskInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2O, false, ArchiveTranscodeTaskTable, ArchiveTranscodeTaskColumn),
+	)
+}
+func newHighlightClipsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(HighlightClipsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, HighlightClipsTable, HighlightClipsColumn),
 	)
 }

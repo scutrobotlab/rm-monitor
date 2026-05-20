@@ -15,6 +15,7 @@ import (
 	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"scutbot.cn/web/rm-monitor/ent/highlightclip"
 	"scutbot.cn/web/rm-monitor/ent/larkmessage"
 	"scutbot.cn/web/rm-monitor/ent/match"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
@@ -30,6 +31,8 @@ type Client struct {
 	config
 	// Schema is the client for creating, migrating and dropping schema.
 	Schema *migrate.Schema
+	// HighlightClip is the client for interacting with the HighlightClip builders.
+	HighlightClip *HighlightClipClient
 	// LarkMessage is the client for interacting with the LarkMessage builders.
 	LarkMessage *LarkMessageClient
 	// Match is the client for interacting with the Match builders.
@@ -57,6 +60,7 @@ func NewClient(opts ...Option) *Client {
 
 func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
+	c.HighlightClip = NewHighlightClipClient(c.config)
 	c.LarkMessage = NewLarkMessageClient(c.config)
 	c.Match = NewMatchClient(c.config)
 	c.MatchRound = NewMatchRoundClient(c.config)
@@ -157,6 +161,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	return &Tx{
 		ctx:           ctx,
 		config:        cfg,
+		HighlightClip: NewHighlightClipClient(cfg),
 		LarkMessage:   NewLarkMessageClient(cfg),
 		Match:         NewMatchClient(cfg),
 		MatchRound:    NewMatchRoundClient(cfg),
@@ -184,6 +189,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	return &Tx{
 		ctx:           ctx,
 		config:        cfg,
+		HighlightClip: NewHighlightClipClient(cfg),
 		LarkMessage:   NewLarkMessageClient(cfg),
 		Match:         NewMatchClient(cfg),
 		MatchRound:    NewMatchRoundClient(cfg),
@@ -198,7 +204,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 // Debug returns a new debug-client. It's used to get verbose logging on specific operations.
 //
 //	client.Debug().
-//		LarkMessage.
+//		HighlightClip.
 //		Query().
 //		Count(ctx)
 func (c *Client) Debug() *Client {
@@ -221,8 +227,8 @@ func (c *Client) Close() error {
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
-		c.LarkMessage, c.Match, c.MatchRound, c.MediaArtifact, c.RecordTask, c.Team,
-		c.TranscodeTask, c.UploadTask,
+		c.HighlightClip, c.LarkMessage, c.Match, c.MatchRound, c.MediaArtifact,
+		c.RecordTask, c.Team, c.TranscodeTask, c.UploadTask,
 	} {
 		n.Use(hooks...)
 	}
@@ -232,8 +238,8 @@ func (c *Client) Use(hooks ...Hook) {
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
-		c.LarkMessage, c.Match, c.MatchRound, c.MediaArtifact, c.RecordTask, c.Team,
-		c.TranscodeTask, c.UploadTask,
+		c.HighlightClip, c.LarkMessage, c.Match, c.MatchRound, c.MediaArtifact,
+		c.RecordTask, c.Team, c.TranscodeTask, c.UploadTask,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -242,6 +248,8 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 // Mutate implements the ent.Mutator interface.
 func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 	switch m := m.(type) {
+	case *HighlightClipMutation:
+		return c.HighlightClip.mutate(ctx, m)
 	case *LarkMessageMutation:
 		return c.LarkMessage.mutate(ctx, m)
 	case *MatchMutation:
@@ -260,6 +268,171 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.UploadTask.mutate(ctx, m)
 	default:
 		return nil, fmt.Errorf("ent: unknown mutation type %T", m)
+	}
+}
+
+// HighlightClipClient is a client for the HighlightClip schema.
+type HighlightClipClient struct {
+	config
+}
+
+// NewHighlightClipClient returns a client for the HighlightClip from the given config.
+func NewHighlightClipClient(c config) *HighlightClipClient {
+	return &HighlightClipClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `highlightclip.Hooks(f(g(h())))`.
+func (c *HighlightClipClient) Use(hooks ...Hook) {
+	c.hooks.HighlightClip = append(c.hooks.HighlightClip, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `highlightclip.Intercept(f(g(h())))`.
+func (c *HighlightClipClient) Intercept(interceptors ...Interceptor) {
+	c.inters.HighlightClip = append(c.inters.HighlightClip, interceptors...)
+}
+
+// Create returns a builder for creating a HighlightClip entity.
+func (c *HighlightClipClient) Create() *HighlightClipCreate {
+	mutation := newHighlightClipMutation(c.config, OpCreate)
+	return &HighlightClipCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of HighlightClip entities.
+func (c *HighlightClipClient) CreateBulk(builders ...*HighlightClipCreate) *HighlightClipCreateBulk {
+	return &HighlightClipCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *HighlightClipClient) MapCreateBulk(slice any, setFunc func(*HighlightClipCreate, int)) *HighlightClipCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &HighlightClipCreateBulk{err: fmt.Errorf("calling to HighlightClipClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*HighlightClipCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &HighlightClipCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for HighlightClip.
+func (c *HighlightClipClient) Update() *HighlightClipUpdate {
+	mutation := newHighlightClipMutation(c.config, OpUpdate)
+	return &HighlightClipUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *HighlightClipClient) UpdateOne(_m *HighlightClip) *HighlightClipUpdateOne {
+	mutation := newHighlightClipMutation(c.config, OpUpdateOne, withHighlightClip(_m))
+	return &HighlightClipUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *HighlightClipClient) UpdateOneID(id int) *HighlightClipUpdateOne {
+	mutation := newHighlightClipMutation(c.config, OpUpdateOne, withHighlightClipID(id))
+	return &HighlightClipUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for HighlightClip.
+func (c *HighlightClipClient) Delete() *HighlightClipDelete {
+	mutation := newHighlightClipMutation(c.config, OpDelete)
+	return &HighlightClipDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *HighlightClipClient) DeleteOne(_m *HighlightClip) *HighlightClipDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *HighlightClipClient) DeleteOneID(id int) *HighlightClipDeleteOne {
+	builder := c.Delete().Where(highlightclip.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &HighlightClipDeleteOne{builder}
+}
+
+// Query returns a query builder for HighlightClip.
+func (c *HighlightClipClient) Query() *HighlightClipQuery {
+	return &HighlightClipQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeHighlightClip},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a HighlightClip entity by its id.
+func (c *HighlightClipClient) Get(ctx context.Context, id int) (*HighlightClip, error) {
+	return c.Query().Where(highlightclip.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *HighlightClipClient) GetX(ctx context.Context, id int) *HighlightClip {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryMatchRound queries the match_round edge of a HighlightClip.
+func (c *HighlightClipClient) QueryMatchRound(_m *HighlightClip) *MatchRoundQuery {
+	query := (&MatchRoundClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(highlightclip.Table, highlightclip.FieldID, id),
+			sqlgraph.To(matchround.Table, matchround.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, highlightclip.MatchRoundTable, highlightclip.MatchRoundColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QuerySourceArtifact queries the source_artifact edge of a HighlightClip.
+func (c *HighlightClipClient) QuerySourceArtifact(_m *HighlightClip) *MediaArtifactQuery {
+	query := (&MediaArtifactClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(highlightclip.Table, highlightclip.FieldID, id),
+			sqlgraph.To(mediaartifact.Table, mediaartifact.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, highlightclip.SourceArtifactTable, highlightclip.SourceArtifactColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *HighlightClipClient) Hooks() []Hook {
+	return c.hooks.HighlightClip
+}
+
+// Interceptors returns the client interceptors.
+func (c *HighlightClipClient) Interceptors() []Interceptor {
+	return c.inters.HighlightClip
+}
+
+func (c *HighlightClipClient) mutate(ctx context.Context, m *HighlightClipMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&HighlightClipCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&HighlightClipUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&HighlightClipUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&HighlightClipDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown HighlightClip mutation op: %q", m.Op())
 	}
 }
 
@@ -749,6 +922,22 @@ func (c *MatchRoundClient) QueryRecordTasks(_m *MatchRound) *RecordTaskQuery {
 	return query
 }
 
+// QueryHighlightClips queries the highlight_clips edge of a MatchRound.
+func (c *MatchRoundClient) QueryHighlightClips(_m *MatchRound) *HighlightClipQuery {
+	query := (&HighlightClipClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(matchround.Table, matchround.FieldID, id),
+			sqlgraph.To(highlightclip.Table, highlightclip.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, matchround.HighlightClipsTable, matchround.HighlightClipsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *MatchRoundClient) Hooks() []Hook {
 	return c.hooks.MatchRound
@@ -939,6 +1128,22 @@ func (c *MediaArtifactClient) QueryArchiveTranscodeTask(_m *MediaArtifact) *Tran
 			sqlgraph.From(mediaartifact.Table, mediaartifact.FieldID, id),
 			sqlgraph.To(transcodetask.Table, transcodetask.FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, false, mediaartifact.ArchiveTranscodeTaskTable, mediaartifact.ArchiveTranscodeTaskColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryHighlightClips queries the highlight_clips edge of a MediaArtifact.
+func (c *MediaArtifactClient) QueryHighlightClips(_m *MediaArtifact) *HighlightClipQuery {
+	query := (&HighlightClipClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(mediaartifact.Table, mediaartifact.FieldID, id),
+			sqlgraph.To(highlightclip.Table, highlightclip.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, mediaartifact.HighlightClipsTable, mediaartifact.HighlightClipsColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -1650,11 +1855,11 @@ func (c *UploadTaskClient) mutate(ctx context.Context, m *UploadTaskMutation) (V
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		LarkMessage, Match, MatchRound, MediaArtifact, RecordTask, Team, TranscodeTask,
-		UploadTask []ent.Hook
+		HighlightClip, LarkMessage, Match, MatchRound, MediaArtifact, RecordTask, Team,
+		TranscodeTask, UploadTask []ent.Hook
 	}
 	inters struct {
-		LarkMessage, Match, MatchRound, MediaArtifact, RecordTask, Team, TranscodeTask,
-		UploadTask []ent.Interceptor
+		HighlightClip, LarkMessage, Match, MatchRound, MediaArtifact, RecordTask, Team,
+		TranscodeTask, UploadTask []ent.Interceptor
 	}
 )

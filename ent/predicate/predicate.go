@@ -6,6 +6,9 @@ import (
 	"entgo.io/ent/dialect/sql"
 )
 
+// HighlightClip is the predicate function for highlightclip builders.
+type HighlightClip func(*sql.Selector)
+
 // LarkMessage is the predicate function for larkmessage builders.
 type LarkMessage func(*sql.Selector)
 

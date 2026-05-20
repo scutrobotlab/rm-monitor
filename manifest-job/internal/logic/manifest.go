@@ -26,7 +26,7 @@ import (
 )
 
 // WriteMatchReadme writes the match manifest into the match directory.
-func WriteMatchReadme(ctx context.Context, client *ent.Client, redisClient *redisx.Client, conf common.RecordConf, reportConf common.ReportConf, postgresDSN, matchID string) error {
+func WriteMatchReadme(ctx context.Context, client *ent.Client, redisClient *redisx.Client, conf common.RecordConf, llmConf common.LLMConf, postgresDSN, matchID string) error {
 	conf = conf.WithDefaults()
 	m, err := client.Match.Query().
 		Where(match.ID(matchID)).
@@ -68,7 +68,7 @@ func WriteMatchReadme(ctx context.Context, client *ent.Client, redisClient *redi
 	}
 	if matchComplete(m) && (m.Report == nil || strings.TrimSpace(*m.Report) == "") {
 		sttStatuses := waitForSTTStatuses(ctx, redisClient, m)
-		if report, err := generateMatchReport(ctx, reportConf, m, red, blue, fullDir, sttStatuses); err != nil {
+		if report, err := generateMatchReport(ctx, llmConf, m, red, blue, fullDir, sttStatuses); err != nil {
 			logx.Errorf("generate match report %s failed: %v", m.ID, err)
 		} else if strings.TrimSpace(report) != "" {
 			if err := client.Match.UpdateOneID(m.ID).SetReport(report).Exec(ctx); err != nil {
@@ -321,7 +321,7 @@ type sttLine struct {
 	ErrorMessage string  `json:"error_message"`
 }
 
-func generateMatchReport(ctx context.Context, c common.ReportConf, m *ent.Match, red, blue *ent.Team, matchDir string, sttStatuses map[string]string) (string, error) {
+func generateMatchReport(ctx context.Context, c common.LLMConf, m *ent.Match, red, blue *ent.Team, matchDir string, sttStatuses map[string]string) (string, error) {
 	c = c.WithDefaults()
 	if strings.TrimSpace(c.BaseURL) == "" || strings.TrimSpace(c.APIKey) == "" || strings.TrimSpace(c.Model) == "" {
 		return "", errors.New("report llm config is incomplete")
@@ -468,7 +468,7 @@ func readRoundSTT(matchDir string, roundNo int) ([]sttLine, error) {
 	return out, nil
 }
 
-func callReportLLM(ctx context.Context, c common.ReportConf, input string) (string, error) {
+func callReportLLM(ctx context.Context, c common.LLMConf, input string) (string, error) {
 	client := openai.NewClient(
 		option.WithBaseURL(strings.TrimRight(strings.TrimSpace(c.BaseURL), "/")),
 		option.WithAPIKey(c.APIKey),

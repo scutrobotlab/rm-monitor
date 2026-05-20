@@ -155,7 +155,7 @@ func TestCallReportLLMParsesOpenAICompatibleResponse(t *testing.T) {
 	}))
 	defer server.Close()
 
-	got, err := callReportLLM(context.Background(), common.ReportConf{
+	got, err := callReportLLM(context.Background(), common.LLMConf{
 		BaseURL: server.URL + "/v1",
 		APIKey:  "test-key",
 		Model:   "test-model",

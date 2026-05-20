@@ -5,6 +5,7 @@ package ent
 import (
 	"time"
 
+	"scutbot.cn/web/rm-monitor/ent/highlightclip"
 	"scutbot.cn/web/rm-monitor/ent/larkmessage"
 	"scutbot.cn/web/rm-monitor/ent/match"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
@@ -20,6 +21,30 @@ import (
 // (default values, validators, hooks and policies) and stitches it
 // to their package variables.
 func init() {
+	highlightclipFields := schema.HighlightClip{}.Fields()
+	_ = highlightclipFields
+	// highlightclipDescPriority is the schema descriptor for priority field.
+	highlightclipDescPriority := highlightclipFields[4].Descriptor()
+	// highlightclip.DefaultPriority holds the default value on creation for the priority field.
+	highlightclip.DefaultPriority = highlightclipDescPriority.Default.(int)
+	// highlightclipDescAttempts is the schema descriptor for attempts field.
+	highlightclipDescAttempts := highlightclipFields[6].Descriptor()
+	// highlightclip.DefaultAttempts holds the default value on creation for the attempts field.
+	highlightclip.DefaultAttempts = highlightclipDescAttempts.Default.(int)
+	// highlightclipDescScore is the schema descriptor for score field.
+	highlightclipDescScore := highlightclipFields[14].Descriptor()
+	// highlightclip.DefaultScore holds the default value on creation for the score field.
+	highlightclip.DefaultScore = highlightclipDescScore.Default.(float64)
+	// highlightclipDescCreatedAt is the schema descriptor for created_at field.
+	highlightclipDescCreatedAt := highlightclipFields[19].Descriptor()
+	// highlightclip.DefaultCreatedAt holds the default value on creation for the created_at field.
+	highlightclip.DefaultCreatedAt = highlightclipDescCreatedAt.Default.(func() time.Time)
+	// highlightclipDescUpdatedAt is the schema descriptor for updated_at field.
+	highlightclipDescUpdatedAt := highlightclipFields[20].Descriptor()
+	// highlightclip.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	highlightclip.DefaultUpdatedAt = highlightclipDescUpdatedAt.Default.(func() time.Time)
+	// highlightclip.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	highlightclip.UpdateDefaultUpdatedAt = highlightclipDescUpdatedAt.UpdateDefault.(func() time.Time)
 	larkmessageFields := schema.LarkMessage{}.Fields()
 	_ = larkmessageFields
 	// larkmessageDescCreatedAt is the schema descriptor for created_at field.

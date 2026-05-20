@@ -4,6 +4,7 @@
 /.local
 /.local-bin
 /build
+/bin
 /config
 /data
 /danmu-job/dist

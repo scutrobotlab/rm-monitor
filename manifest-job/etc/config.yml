@@ -5,7 +5,7 @@ RedisConf:
   Host: 127.0.0.1:6379
 RecordConf:
   BaseDir: /records
-ReportConf:
+LLMConf:
   BaseURL: ""
   APIKey: ""
   Model: ""

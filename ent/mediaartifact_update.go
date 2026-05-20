@@ -11,6 +11,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"scutbot.cn/web/rm-monitor/ent/highlightclip"
 	"scutbot.cn/web/rm-monitor/ent/mediaartifact"
 	"scutbot.cn/web/rm-monitor/ent/predicate"
 	"scutbot.cn/web/rm-monitor/ent/recordtask"
@@ -262,6 +263,21 @@ func (_u *MediaArtifactUpdate) SetArchiveTranscodeTask(v *TranscodeTask) *MediaA
 	return _u.SetArchiveTranscodeTaskID(v.ID)
 }
 
+// AddHighlightClipIDs adds the "highlight_clips" edge to the HighlightClip entity by IDs.
+func (_u *MediaArtifactUpdate) AddHighlightClipIDs(ids ...int) *MediaArtifactUpdate {
+	_u.mutation.AddHighlightClipIDs(ids...)
+	return _u
+}
+
+// AddHighlightClips adds the "highlight_clips" edges to the HighlightClip entity.
+func (_u *MediaArtifactUpdate) AddHighlightClips(v ...*HighlightClip) *MediaArtifactUpdate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddHighlightClipIDs(ids...)
+}
+
 // Mutation returns the MediaArtifactMutation object of the builder.
 func (_u *MediaArtifactUpdate) Mutation() *MediaArtifactMutation {
 	return _u.mutation
@@ -289,6 +305,27 @@ func (_u *MediaArtifactUpdate) ClearSourceTranscodeTask() *MediaArtifactUpdate {
 func (_u *MediaArtifactUpdate) ClearArchiveTranscodeTask() *MediaArtifactUpdate {
 	_u.mutation.ClearArchiveTranscodeTask()
 	return _u
+}
+
+// ClearHighlightClips clears all "highlight_clips" edges to the HighlightClip entity.
+func (_u *MediaArtifactUpdate) ClearHighlightClips() *MediaArtifactUpdate {
+	_u.mutation.ClearHighlightClips()
+	return _u
+}
+
+// RemoveHighlightClipIDs removes the "highlight_clips" edge to HighlightClip entities by IDs.
+func (_u *MediaArtifactUpdate) RemoveHighlightClipIDs(ids ...int) *MediaArtifactUpdate {
+	_u.mutation.RemoveHighlightClipIDs(ids...)
+	return _u
+}
+
+// RemoveHighlightClips removes "highlight_clips" edges to HighlightClip entities.
+func (_u *MediaArtifactUpdate) RemoveHighlightClips(v ...*HighlightClip) *MediaArtifactUpdate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveHighlightClipIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -521,6 +558,51 @@ func (_u *MediaArtifactUpdate) sqlSave(ctx context.Context) (_node int, err erro
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(transcodetask.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.HighlightClipsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   mediaartifact.HighlightClipsTable,
+			Columns: []string{mediaartifact.HighlightClipsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(highlightclip.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedHighlightClipsIDs(); len(nodes) > 0 && !_u.mutation.HighlightClipsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   mediaartifact.HighlightClipsTable,
+			Columns: []string{mediaartifact.HighlightClipsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(highlightclip.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.HighlightClipsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   mediaartifact.HighlightClipsTable,
+			Columns: []string{mediaartifact.HighlightClipsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(highlightclip.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -779,6 +861,21 @@ func (_u *MediaArtifactUpdateOne) SetArchiveTranscodeTask(v *TranscodeTask) *Med
 	return _u.SetArchiveTranscodeTaskID(v.ID)
 }
 
+// AddHighlightClipIDs adds the "highlight_clips" edge to the HighlightClip entity by IDs.
+func (_u *MediaArtifactUpdateOne) AddHighlightClipIDs(ids ...int) *MediaArtifactUpdateOne {
+	_u.mutation.AddHighlightClipIDs(ids...)
+	return _u
+}
+
+// AddHighlightClips adds the "highlight_clips" edges to the HighlightClip entity.
+func (_u *MediaArtifactUpdateOne) AddHighlightClips(v ...*HighlightClip) *MediaArtifactUpdateOne {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddHighlightClipIDs(ids...)
+}
+
 // Mutation returns the MediaArtifactMutation object of the builder.
 func (_u *MediaArtifactUpdateOne) Mutation() *MediaArtifactMutation {
 	return _u.mutation
@@ -806,6 +903,27 @@ func (_u *MediaArtifactUpdateOne) ClearSourceTranscodeTask() *MediaArtifactUpdat
 func (_u *MediaArtifactUpdateOne) ClearArchiveTranscodeTask() *MediaArtifactUpdateOne {
 	_u.mutation.ClearArchiveTranscodeTask()
 	return _u
+}
+
+// ClearHighlightClips clears all "highlight_clips" edges to the HighlightClip entity.
+func (_u *MediaArtifactUpdateOne) ClearHighlightClips() *MediaArtifactUpdateOne {
+	_u.mutation.ClearHighlightClips()
+	return _u
+}
+
+// RemoveHighlightClipIDs removes the "highlight_clips" edge to HighlightClip entities by IDs.
+func (_u *MediaArtifactUpdateOne) RemoveHighlightClipIDs(ids ...int) *MediaArtifactUpdateOne {
+	_u.mutation.RemoveHighlightClipIDs(ids...)
+	return _u
+}
+
+// RemoveHighlightClips removes "highlight_clips" edges to HighlightClip entities.
+func (_u *MediaArtifactUpdateOne) RemoveHighlightClips(v ...*HighlightClip) *MediaArtifactUpdateOne {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveHighlightClipIDs(ids...)
 }
 
 // Where appends a list predicates to the MediaArtifactUpdate builder.
@@ -1068,6 +1186,51 @@ func (_u *MediaArtifactUpdateOne) sqlSave(ctx context.Context) (_node *MediaArti
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(transcodetask.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.HighlightClipsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   mediaartifact.HighlightClipsTable,
+			Columns: []string{mediaartifact.HighlightClipsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(highlightclip.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedHighlightClipsIDs(); len(nodes) > 0 && !_u.mutation.HighlightClipsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   mediaartifact.HighlightClipsTable,
+			Columns: []string{mediaartifact.HighlightClipsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(highlightclip.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.HighlightClipsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   mediaartifact.HighlightClipsTable,
+			Columns: []string{mediaartifact.HighlightClipsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(highlightclip.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

@@ -35,6 +35,7 @@ func (MediaArtifact) Edges() []ent.Edge {
 		edge.To("upload_task", UploadTask.Type).Unique(),
 		edge.To("source_transcode_task", TranscodeTask.Type).Unique(),
 		edge.To("archive_transcode_task", TranscodeTask.Type).Unique(),
+		edge.To("highlight_clips", HighlightClip.Type),
 	}
 }
 

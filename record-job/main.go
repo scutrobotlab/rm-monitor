@@ -83,33 +83,7 @@ func run(ctx context.Context, client *ent.Client, c config.Config, taskID int) e
 		return errors.Wrap(err, "mark running")
 	}
 
-	args := []string{
-		"-hide_banner",
-		"-loglevel", "info",
-		"-nostdin",
-		"-stats_period", "10",
-	}
-	if isNetworkSource(task.SourceURL) {
-		args = append(args,
-			"-user_agent", UA,
-			"-rw_timeout", "15000000",
-			"-reconnect", "1",
-			"-reconnect_streamed", "1",
-			"-reconnect_on_network_error", "1",
-			"-reconnect_on_http_error", "429,500,502,503,504",
-			"-reconnect_delay_max", "5",
-		)
-	}
-	args = append(args,
-		"-i", task.SourceURL,
-		"-map", "0:v:0",
-		"-an",
-		"-sn",
-		"-dn",
-		"-c:v", "copy",
-		"-f", "flv",
-		"-y", partPath,
-	)
+	args := recordFFmpegArgs(task.SourceURL, partPath, roleKeepsAudio(conf.AudioRoles, task.Role))
 	cmd := exec.CommandContext(jobCtx, "ffmpeg", args...)
 	var stderr bytes.Buffer
 	cmd.Stdout = os.Stdout
@@ -184,6 +158,52 @@ func run(ctx context.Context, client *ent.Client, c config.Config, taskID int) e
 func isNetworkSource(source string) bool {
 	lower := strings.ToLower(source)
 	return strings.HasPrefix(lower, "http://") || strings.HasPrefix(lower, "https://")
+}
+
+func roleKeepsAudio(audioRoles []string, role string) bool {
+	for _, item := range audioRoles {
+		if strings.TrimSpace(item) == role {
+			return true
+		}
+	}
+	return false
+}
+
+func recordFFmpegArgs(sourceURL, outputPath string, keepAudio bool) []string {
+	args := []string{
+		"-hide_banner",
+		"-loglevel", "info",
+		"-nostdin",
+		"-stats_period", "10",
+	}
+	if isNetworkSource(sourceURL) {
+		args = append(args,
+			"-user_agent", UA,
+			"-rw_timeout", "15000000",
+			"-reconnect", "1",
+			"-reconnect_streamed", "1",
+			"-reconnect_on_network_error", "1",
+			"-reconnect_on_http_error", "429,500,502,503,504",
+			"-reconnect_delay_max", "5",
+		)
+	}
+	args = append(args,
+		"-i", sourceURL,
+		"-map", "0:v:0",
+	)
+	if keepAudio {
+		args = append(args, "-map", "0:a:0?", "-c:a", "copy")
+	} else {
+		args = append(args, "-an")
+	}
+	args = append(args,
+		"-sn",
+		"-dn",
+		"-c:v", "copy",
+		"-f", "flv",
+		"-y", outputPath,
+	)
+	return args
 }
 
 func upsertSourceArtifact(ctx context.Context, client *ent.Client, taskID int, outputPath string, size int64, sum string) error {

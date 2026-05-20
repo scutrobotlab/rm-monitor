@@ -94,7 +94,7 @@
         }
       ]
     },
-    "report": {
+    "llm": {
       "type": "object",
       "properties": {
         "baseURL": { "type": "string" },

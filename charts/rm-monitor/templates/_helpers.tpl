@@ -52,6 +52,8 @@ RedisConf:
 {{- define "rm-monitor.recordConf" -}}
 RecordConf:
   Res: {{ .Values.record.res }}
+  AudioRoles:
+{{ toYaml .Values.record.audioRoles | indent 4 }}
   {{- if .Values.stt.enabled }}
   STTRole: {{ .Values.stt.role | quote }}
   {{- end }}
@@ -62,6 +64,29 @@ DanmuConf:
   Enabled: {{ .Values.danmu.enabled }}
   AppID: {{ .Values.danmu.appId | quote }}
   AppKey: {{ .Values.danmu.appKey | quote }}
+{{- end -}}
+
+{{- define "rm-monitor.highlightConf" -}}
+HighlightConf:
+  Enabled: {{ .Values.highlight.enabled }}
+  Role: {{ .Values.highlight.role | quote }}
+  AlgorithmVersion: {{ .Values.highlight.algorithmVersion | quote }}
+  MaxHighlightsPerRound: {{ .Values.highlight.maxHighlightsPerRound }}
+  MinClipSeconds: {{ .Values.highlight.minClipSeconds }}
+  MaxClipSeconds: {{ .Values.highlight.maxClipSeconds }}
+  PreSeconds: {{ .Values.highlight.preSeconds }}
+  PostSeconds: {{ .Values.highlight.postSeconds }}
+  MergeGapSeconds: {{ .Values.highlight.mergeGapSeconds }}
+  Publish:
+{{ toYaml .Values.highlight.publish | indent 4 }}
+{{- end -}}
+
+{{- define "rm-monitor.llmConf" -}}
+LLMConf:
+  BaseURL: {{ .Values.llm.baseURL }}
+  APIKey: {{ .Values.llm.apiKey | quote }}
+  Model: {{ .Values.llm.model }}
+  TimeoutSeconds: {{ .Values.llm.timeoutSeconds }}
 {{- end -}}
 
 {{- define "rm-monitor.priority" -}}

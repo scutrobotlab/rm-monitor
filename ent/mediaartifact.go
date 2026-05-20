@@ -59,9 +59,11 @@ type MediaArtifactEdges struct {
 	SourceTranscodeTask *TranscodeTask `json:"source_transcode_task,omitempty"`
 	// ArchiveTranscodeTask holds the value of the archive_transcode_task edge.
 	ArchiveTranscodeTask *TranscodeTask `json:"archive_transcode_task,omitempty"`
+	// HighlightClips holds the value of the highlight_clips edge.
+	HighlightClips []*HighlightClip `json:"highlight_clips,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [4]bool
+	loadedTypes [5]bool
 }
 
 // RecordTaskOrErr returns the RecordTask value or an error if the edge
@@ -106,6 +108,15 @@ func (e MediaArtifactEdges) ArchiveTranscodeTaskOrErr() (*TranscodeTask, error) 
 		return nil, &NotFoundError{label: transcodetask.Label}
 	}
 	return nil, &NotLoadedError{edge: "archive_transcode_task"}
+}
+
+// HighlightClipsOrErr returns the HighlightClips value or an error if the edge
+// was not loaded in eager-loading.
+func (e MediaArtifactEdges) HighlightClipsOrErr() ([]*HighlightClip, error) {
+	if e.loadedTypes[4] {
+		return e.HighlightClips, nil
+	}
+	return nil, &NotLoadedError{edge: "highlight_clips"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -250,6 +261,11 @@ func (_m *MediaArtifact) QuerySourceTranscodeTask() *TranscodeTaskQuery {
 // QueryArchiveTranscodeTask queries the "archive_transcode_task" edge of the MediaArtifact entity.
 func (_m *MediaArtifact) QueryArchiveTranscodeTask() *TranscodeTaskQuery {
 	return NewMediaArtifactClient(_m.config).QueryArchiveTranscodeTask(_m)
+}
+
+// QueryHighlightClips queries the "highlight_clips" edge of the MediaArtifact entity.
+func (_m *MediaArtifact) QueryHighlightClips() *HighlightClipQuery {
+	return NewMediaArtifactClient(_m.config).QueryHighlightClips(_m)
 }
 
 // Update returns a builder for updating this MediaArtifact.

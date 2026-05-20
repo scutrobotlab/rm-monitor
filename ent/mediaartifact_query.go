@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"scutbot.cn/web/rm-monitor/ent/highlightclip"
 	"scutbot.cn/web/rm-monitor/ent/mediaartifact"
 	"scutbot.cn/web/rm-monitor/ent/predicate"
 	"scutbot.cn/web/rm-monitor/ent/recordtask"
@@ -30,6 +31,7 @@ type MediaArtifactQuery struct {
 	withUploadTask           *UploadTaskQuery
 	withSourceTranscodeTask  *TranscodeTaskQuery
 	withArchiveTranscodeTask *TranscodeTaskQuery
+	withHighlightClips       *HighlightClipQuery
 	withFKs                  bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
@@ -148,6 +150,28 @@ func (_q *MediaArtifactQuery) QueryArchiveTranscodeTask() *TranscodeTaskQuery {
 			sqlgraph.From(mediaartifact.Table, mediaartifact.FieldID, selector),
 			sqlgraph.To(transcodetask.Table, transcodetask.FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, false, mediaartifact.ArchiveTranscodeTaskTable, mediaartifact.ArchiveTranscodeTaskColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryHighlightClips chains the current query on the "highlight_clips" edge.
+func (_q *MediaArtifactQuery) QueryHighlightClips() *HighlightClipQuery {
+	query := (&HighlightClipClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(mediaartifact.Table, mediaartifact.FieldID, selector),
+			sqlgraph.To(highlightclip.Table, highlightclip.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, mediaartifact.HighlightClipsTable, mediaartifact.HighlightClipsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -351,6 +375,7 @@ func (_q *MediaArtifactQuery) Clone() *MediaArtifactQuery {
 		withUploadTask:           _q.withUploadTask.Clone(),
 		withSourceTranscodeTask:  _q.withSourceTranscodeTask.Clone(),
 		withArchiveTranscodeTask: _q.withArchiveTranscodeTask.Clone(),
+		withHighlightClips:       _q.withHighlightClips.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
@@ -398,6 +423,17 @@ func (_q *MediaArtifactQuery) WithArchiveTranscodeTask(opts ...func(*TranscodeTa
 		opt(query)
 	}
 	_q.withArchiveTranscodeTask = query
+	return _q
+}
+
+// WithHighlightClips tells the query-builder to eager-load the nodes that are connected to
+// the "highlight_clips" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *MediaArtifactQuery) WithHighlightClips(opts ...func(*HighlightClipQuery)) *MediaArtifactQuery {
+	query := (&HighlightClipClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withHighlightClips = query
 	return _q
 }
 
@@ -480,11 +516,12 @@ func (_q *MediaArtifactQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([
 		nodes       = []*MediaArtifact{}
 		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
-		loadedTypes = [4]bool{
+		loadedTypes = [5]bool{
 			_q.withRecordTask != nil,
 			_q.withUploadTask != nil,
 			_q.withSourceTranscodeTask != nil,
 			_q.withArchiveTranscodeTask != nil,
+			_q.withHighlightClips != nil,
 		}
 	)
 	if _q.withRecordTask != nil {
@@ -532,6 +569,13 @@ func (_q *MediaArtifactQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([
 	if query := _q.withArchiveTranscodeTask; query != nil {
 		if err := _q.loadArchiveTranscodeTask(ctx, query, nodes, nil,
 			func(n *MediaArtifact, e *TranscodeTask) { n.Edges.ArchiveTranscodeTask = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withHighlightClips; query != nil {
+		if err := _q.loadHighlightClips(ctx, query, nodes,
+			func(n *MediaArtifact) { n.Edges.HighlightClips = []*HighlightClip{} },
+			func(n *MediaArtifact, e *HighlightClip) { n.Edges.HighlightClips = append(n.Edges.HighlightClips, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -649,6 +693,37 @@ func (_q *MediaArtifactQuery) loadArchiveTranscodeTask(ctx context.Context, quer
 		node, ok := nodeids[*fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "media_artifact_archive_transcode_task" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *MediaArtifactQuery) loadHighlightClips(ctx context.Context, query *HighlightClipQuery, nodes []*MediaArtifact, init func(*MediaArtifact), assign func(*MediaArtifact, *HighlightClip)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[int]*MediaArtifact)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.HighlightClip(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(mediaartifact.HighlightClipsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.media_artifact_highlight_clips
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "media_artifact_highlight_clips" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "media_artifact_highlight_clips" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

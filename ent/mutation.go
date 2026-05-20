@@ -11,6 +11,7 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
+	"scutbot.cn/web/rm-monitor/ent/highlightclip"
 	"scutbot.cn/web/rm-monitor/ent/larkmessage"
 	"scutbot.cn/web/rm-monitor/ent/match"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
@@ -31,6 +32,7 @@ const (
 	OpUpdateOne = ent.OpUpdateOne
 
 	// Node types.
+	TypeHighlightClip = "HighlightClip"
 	TypeLarkMessage   = "LarkMessage"
 	TypeMatch         = "Match"
 	TypeMatchRound    = "MatchRound"
@@ -40,6 +42,1944 @@ const (
 	TypeTranscodeTask = "TranscodeTask"
 	TypeUploadTask    = "UploadTask"
 )
+
+// HighlightClipMutation represents an operation that mutates the HighlightClip nodes in the graph.
+type HighlightClipMutation struct {
+	config
+	op                     Op
+	typ                    string
+	id                     *int
+	highlight_index        *int
+	addhighlight_index     *int
+	role                   *string
+	algorithm_version      *string
+	status                 *highlightclip.Status
+	priority               *int
+	addpriority            *int
+	k8s_job_name           *string
+	attempts               *int
+	addattempts            *int
+	start_seconds          *float64
+	addstart_seconds       *float64
+	end_seconds            *float64
+	addend_seconds         *float64
+	peak_seconds           *float64
+	addpeak_seconds        *float64
+	output_dir             *string
+	title                  *string
+	description            *string
+	tags                   *[]string
+	appendtags             []string
+	score                  *float64
+	addscore               *float64
+	model_payload          *string
+	error_message          *string
+	started_at             *time.Time
+	completed_at           *time.Time
+	created_at             *time.Time
+	updated_at             *time.Time
+	clearedFields          map[string]struct{}
+	match_round            *int
+	clearedmatch_round     bool
+	source_artifact        *int
+	clearedsource_artifact bool
+	done                   bool
+	oldValue               func(context.Context) (*HighlightClip, error)
+	predicates             []predicate.HighlightClip
+}
+
+var _ ent.Mutation = (*HighlightClipMutation)(nil)
+
+// highlightclipOption allows management of the mutation configuration using functional options.
+type highlightclipOption func(*HighlightClipMutation)
+
+// newHighlightClipMutation creates new mutation for the HighlightClip entity.
+func newHighlightClipMutation(c config, op Op, opts ...highlightclipOption) *HighlightClipMutation {
+	m := &HighlightClipMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeHighlightClip,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withHighlightClipID sets the ID field of the mutation.
+func withHighlightClipID(id int) highlightclipOption {
+	return func(m *HighlightClipMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *HighlightClip
+		)
+		m.oldValue = func(ctx context.Context) (*HighlightClip, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().HighlightClip.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withHighlightClip sets the old HighlightClip of the mutation.
+func withHighlightClip(node *HighlightClip) highlightclipOption {
+	return func(m *HighlightClipMutation) {
+		m.oldValue = func(context.Context) (*HighlightClip, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m HighlightClipMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m HighlightClipMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *HighlightClipMutation) ID() (id int, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *HighlightClipMutation) IDs(ctx context.Context) ([]int, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []int{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().HighlightClip.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetHighlightIndex sets the "highlight_index" field.
+func (m *HighlightClipMutation) SetHighlightIndex(i int) {
+	m.highlight_index = &i
+	m.addhighlight_index = nil
+}
+
+// HighlightIndex returns the value of the "highlight_index" field in the mutation.
+func (m *HighlightClipMutation) HighlightIndex() (r int, exists bool) {
+	v := m.highlight_index
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldHighlightIndex returns the old "highlight_index" field's value of the HighlightClip entity.
+// If the HighlightClip object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *HighlightClipMutation) OldHighlightIndex(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldHighlightIndex is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldHighlightIndex requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldHighlightIndex: %w", err)
+	}
+	return oldValue.HighlightIndex, nil
+}
+
+// AddHighlightIndex adds i to the "highlight_index" field.
+func (m *HighlightClipMutation) AddHighlightIndex(i int) {
+	if m.addhighlight_index != nil {
+		*m.addhighlight_index += i
+	} else {
+		m.addhighlight_index = &i
+	}
+}
+
+// AddedHighlightIndex returns the value that was added to the "highlight_index" field in this mutation.
+func (m *HighlightClipMutation) AddedHighlightIndex() (r int, exists bool) {
+	v := m.addhighlight_index
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetHighlightIndex resets all changes to the "highlight_index" field.
+func (m *HighlightClipMutation) ResetHighlightIndex() {
+	m.highlight_index = nil
+	m.addhighlight_index = nil
+}
+
+// SetRole sets the "role" field.
+func (m *HighlightClipMutation) SetRole(s string) {
+	m.role = &s
+}
+
+// Role returns the value of the "role" field in the mutation.
+func (m *HighlightClipMutation) Role() (r string, exists bool) {
+	v := m.role
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRole returns the old "role" field's value of the HighlightClip entity.
+// If the HighlightClip object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *HighlightClipMutation) OldRole(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRole is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRole requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRole: %w", err)
+	}
+	return oldValue.Role, nil
+}
+
+// ResetRole resets all changes to the "role" field.
+func (m *HighlightClipMutation) ResetRole() {
+	m.role = nil
+}
+
+// SetAlgorithmVersion sets the "algorithm_version" field.
+func (m *HighlightClipMutation) SetAlgorithmVersion(s string) {
+	m.algorithm_version = &s
+}
+
+// AlgorithmVersion returns the value of the "algorithm_version" field in the mutation.
+func (m *HighlightClipMutation) AlgorithmVersion() (r string, exists bool) {
+	v := m.algorithm_version
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAlgorithmVersion returns the old "algorithm_version" field's value of the HighlightClip entity.
+// If the HighlightClip object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *HighlightClipMutation) OldAlgorithmVersion(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAlgorithmVersion is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAlgorithmVersion requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAlgorithmVersion: %w", err)
+	}
+	return oldValue.AlgorithmVersion, nil
+}
+
+// ResetAlgorithmVersion resets all changes to the "algorithm_version" field.
+func (m *HighlightClipMutation) ResetAlgorithmVersion() {
+	m.algorithm_version = nil
+}
+
+// SetStatus sets the "status" field.
+func (m *HighlightClipMutation) SetStatus(h highlightclip.Status) {
+	m.status = &h
+}
+
+// Status returns the value of the "status" field in the mutation.
+func (m *HighlightClipMutation) Status() (r highlightclip.Status, exists bool) {
+	v := m.status
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStatus returns the old "status" field's value of the HighlightClip entity.
+// If the HighlightClip object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *HighlightClipMutation) OldStatus(ctx context.Context) (v highlightclip.Status, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStatus requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStatus: %w", err)
+	}
+	return oldValue.Status, nil
+}
+
+// ResetStatus resets all changes to the "status" field.
+func (m *HighlightClipMutation) ResetStatus() {
+	m.status = nil
+}
+
+// SetPriority sets the "priority" field.
+func (m *HighlightClipMutation) SetPriority(i int) {
+	m.priority = &i
+	m.addpriority = nil
+}
+
+// Priority returns the value of the "priority" field in the mutation.
+func (m *HighlightClipMutation) Priority() (r int, exists bool) {
+	v := m.priority
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPriority returns the old "priority" field's value of the HighlightClip entity.
+// If the HighlightClip object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *HighlightClipMutation) OldPriority(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPriority is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPriority requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPriority: %w", err)
+	}
+	return oldValue.Priority, nil
+}
+
+// AddPriority adds i to the "priority" field.
+func (m *HighlightClipMutation) AddPriority(i int) {
+	if m.addpriority != nil {
+		*m.addpriority += i
+	} else {
+		m.addpriority = &i
+	}
+}
+
+// AddedPriority returns the value that was added to the "priority" field in this mutation.
+func (m *HighlightClipMutation) AddedPriority() (r int, exists bool) {
+	v := m.addpriority
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetPriority resets all changes to the "priority" field.
+func (m *HighlightClipMutation) ResetPriority() {
+	m.priority = nil
+	m.addpriority = nil
+}
+
+// SetK8sJobName sets the "k8s_job_name" field.
+func (m *HighlightClipMutation) SetK8sJobName(s string) {
+	m.k8s_job_name = &s
+}
+
+// K8sJobName returns the value of the "k8s_job_name" field in the mutation.
+func (m *HighlightClipMutation) K8sJobName() (r string, exists bool) {
+	v := m.k8s_job_name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldK8sJobName returns the old "k8s_job_name" field's value of the HighlightClip entity.
+// If the HighlightClip object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *HighlightClipMutation) OldK8sJobName(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldK8sJobName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldK8sJobName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldK8sJobName: %w", err)
+	}
+	return oldValue.K8sJobName, nil
+}
+
+// ClearK8sJobName clears the value of the "k8s_job_name" field.
+func (m *HighlightClipMutation) ClearK8sJobName() {
+	m.k8s_job_name = nil
+	m.clearedFields[highlightclip.FieldK8sJobName] = struct{}{}
+}
+
+// K8sJobNameCleared returns if the "k8s_job_name" field was cleared in this mutation.
+func (m *HighlightClipMutation) K8sJobNameCleared() bool {
+	_, ok := m.clearedFields[highlightclip.FieldK8sJobName]
+	return ok
+}
+
+// ResetK8sJobName resets all changes to the "k8s_job_name" field.
+func (m *HighlightClipMutation) ResetK8sJobName() {
+	m.k8s_job_name = nil
+	delete(m.clearedFields, highlightclip.FieldK8sJobName)
+}
+
+// SetAttempts sets the "attempts" field.
+func (m *HighlightClipMutation) SetAttempts(i int) {
+	m.attempts = &i
+	m.addattempts = nil
+}
+
+// Attempts returns the value of the "attempts" field in the mutation.
+func (m *HighlightClipMutation) Attempts() (r int, exists bool) {
+	v := m.attempts
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAttempts returns the old "attempts" field's value of the HighlightClip entity.
+// If the HighlightClip object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *HighlightClipMutation) OldAttempts(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAttempts is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAttempts requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAttempts: %w", err)
+	}
+	return oldValue.Attempts, nil
+}
+
+// AddAttempts adds i to the "attempts" field.
+func (m *HighlightClipMutation) AddAttempts(i int) {
+	if m.addattempts != nil {
+		*m.addattempts += i
+	} else {
+		m.addattempts = &i
+	}
+}
+
+// AddedAttempts returns the value that was added to the "attempts" field in this mutation.
+func (m *HighlightClipMutation) AddedAttempts() (r int, exists bool) {
+	v := m.addattempts
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetAttempts resets all changes to the "attempts" field.
+func (m *HighlightClipMutation) ResetAttempts() {
+	m.attempts = nil
+	m.addattempts = nil
+}
+
+// SetStartSeconds sets the "start_seconds" field.
+func (m *HighlightClipMutation) SetStartSeconds(f float64) {
+	m.start_seconds = &f
+	m.addstart_seconds = nil
+}
+
+// StartSeconds returns the value of the "start_seconds" field in the mutation.
+func (m *HighlightClipMutation) StartSeconds() (r float64, exists bool) {
+	v := m.start_seconds
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStartSeconds returns the old "start_seconds" field's value of the HighlightClip entity.
+// If the HighlightClip object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *HighlightClipMutation) OldStartSeconds(ctx context.Context) (v float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStartSeconds is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStartSeconds requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStartSeconds: %w", err)
+	}
+	return oldValue.StartSeconds, nil
+}
+
+// AddStartSeconds adds f to the "start_seconds" field.
+func (m *HighlightClipMutation) AddStartSeconds(f float64) {
+	if m.addstart_seconds != nil {
+		*m.addstart_seconds += f
+	} else {
+		m.addstart_seconds = &f
+	}
+}
+
+// AddedStartSeconds returns the value that was added to the "start_seconds" field in this mutation.
+func (m *HighlightClipMutation) AddedStartSeconds() (r float64, exists bool) {
+	v := m.addstart_seconds
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetStartSeconds resets all changes to the "start_seconds" field.
+func (m *HighlightClipMutation) ResetStartSeconds() {
+	m.start_seconds = nil
+	m.addstart_seconds = nil
+}
+
+// SetEndSeconds sets the "end_seconds" field.
+func (m *HighlightClipMutation) SetEndSeconds(f float64) {
+	m.end_seconds = &f
+	m.addend_seconds = nil
+}
+
+// EndSeconds returns the value of the "end_seconds" field in the mutation.
+func (m *HighlightClipMutation) EndSeconds() (r float64, exists bool) {
+	v := m.end_seconds
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEndSeconds returns the old "end_seconds" field's value of the HighlightClip entity.
+// If the HighlightClip object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *HighlightClipMutation) OldEndSeconds(ctx context.Context) (v float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEndSeconds is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEndSeconds requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEndSeconds: %w", err)
+	}
+	return oldValue.EndSeconds, nil
+}
+
+// AddEndSeconds adds f to the "end_seconds" field.
+func (m *HighlightClipMutation) AddEndSeconds(f float64) {
+	if m.addend_seconds != nil {
+		*m.addend_seconds += f
+	} else {
+		m.addend_seconds = &f
+	}
+}
+
+// AddedEndSeconds returns the value that was added to the "end_seconds" field in this mutation.
+func (m *HighlightClipMutation) AddedEndSeconds() (r float64, exists bool) {
+	v := m.addend_seconds
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetEndSeconds resets all changes to the "end_seconds" field.
+func (m *HighlightClipMutation) ResetEndSeconds() {
+	m.end_seconds = nil
+	m.addend_seconds = nil
+}
+
+// SetPeakSeconds sets the "peak_seconds" field.
+func (m *HighlightClipMutation) SetPeakSeconds(f float64) {
+	m.peak_seconds = &f
+	m.addpeak_seconds = nil
+}
+
+// PeakSeconds returns the value of the "peak_seconds" field in the mutation.
+func (m *HighlightClipMutation) PeakSeconds() (r float64, exists bool) {
+	v := m.peak_seconds
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPeakSeconds returns the old "peak_seconds" field's value of the HighlightClip entity.
+// If the HighlightClip object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *HighlightClipMutation) OldPeakSeconds(ctx context.Context) (v float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPeakSeconds is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPeakSeconds requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPeakSeconds: %w", err)
+	}
+	return oldValue.PeakSeconds, nil
+}
+
+// AddPeakSeconds adds f to the "peak_seconds" field.
+func (m *HighlightClipMutation) AddPeakSeconds(f float64) {
+	if m.addpeak_seconds != nil {
+		*m.addpeak_seconds += f
+	} else {
+		m.addpeak_seconds = &f
+	}
+}
+
+// AddedPeakSeconds returns the value that was added to the "peak_seconds" field in this mutation.
+func (m *HighlightClipMutation) AddedPeakSeconds() (r float64, exists bool) {
+	v := m.addpeak_seconds
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetPeakSeconds resets all changes to the "peak_seconds" field.
+func (m *HighlightClipMutation) ResetPeakSeconds() {
+	m.peak_seconds = nil
+	m.addpeak_seconds = nil
+}
+
+// SetOutputDir sets the "output_dir" field.
+func (m *HighlightClipMutation) SetOutputDir(s string) {
+	m.output_dir = &s
+}
+
+// OutputDir returns the value of the "output_dir" field in the mutation.
+func (m *HighlightClipMutation) OutputDir() (r string, exists bool) {
+	v := m.output_dir
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldOutputDir returns the old "output_dir" field's value of the HighlightClip entity.
+// If the HighlightClip object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *HighlightClipMutation) OldOutputDir(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldOutputDir is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldOutputDir requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldOutputDir: %w", err)
+	}
+	return oldValue.OutputDir, nil
+}
+
+// ResetOutputDir resets all changes to the "output_dir" field.
+func (m *HighlightClipMutation) ResetOutputDir() {
+	m.output_dir = nil
+}
+
+// SetTitle sets the "title" field.
+func (m *HighlightClipMutation) SetTitle(s string) {
+	m.title = &s
+}
+
+// Title returns the value of the "title" field in the mutation.
+func (m *HighlightClipMutation) Title() (r string, exists bool) {
+	v := m.title
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTitle returns the old "title" field's value of the HighlightClip entity.
+// If the HighlightClip object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *HighlightClipMutation) OldTitle(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTitle is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTitle requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTitle: %w", err)
+	}
+	return oldValue.Title, nil
+}
+
+// ClearTitle clears the value of the "title" field.
+func (m *HighlightClipMutation) ClearTitle() {
+	m.title = nil
+	m.clearedFields[highlightclip.FieldTitle] = struct{}{}
+}
+
+// TitleCleared returns if the "title" field was cleared in this mutation.
+func (m *HighlightClipMutation) TitleCleared() bool {
+	_, ok := m.clearedFields[highlightclip.FieldTitle]
+	return ok
+}
+
+// ResetTitle resets all changes to the "title" field.
+func (m *HighlightClipMutation) ResetTitle() {
+	m.title = nil
+	delete(m.clearedFields, highlightclip.FieldTitle)
+}
+
+// SetDescription sets the "description" field.
+func (m *HighlightClipMutation) SetDescription(s string) {
+	m.description = &s
+}
+
+// Description returns the value of the "description" field in the mutation.
+func (m *HighlightClipMutation) Description() (r string, exists bool) {
+	v := m.description
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDescription returns the old "description" field's value of the HighlightClip entity.
+// If the HighlightClip object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *HighlightClipMutation) OldDescription(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDescription is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDescription requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDescription: %w", err)
+	}
+	return oldValue.Description, nil
+}
+
+// ClearDescription clears the value of the "description" field.
+func (m *HighlightClipMutation) ClearDescription() {
+	m.description = nil
+	m.clearedFields[highlightclip.FieldDescription] = struct{}{}
+}
+
+// DescriptionCleared returns if the "description" field was cleared in this mutation.
+func (m *HighlightClipMutation) DescriptionCleared() bool {
+	_, ok := m.clearedFields[highlightclip.FieldDescription]
+	return ok
+}
+
+// ResetDescription resets all changes to the "description" field.
+func (m *HighlightClipMutation) ResetDescription() {
+	m.description = nil
+	delete(m.clearedFields, highlightclip.FieldDescription)
+}
+
+// SetTags sets the "tags" field.
+func (m *HighlightClipMutation) SetTags(s []string) {
+	m.tags = &s
+	m.appendtags = nil
+}
+
+// Tags returns the value of the "tags" field in the mutation.
+func (m *HighlightClipMutation) Tags() (r []string, exists bool) {
+	v := m.tags
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTags returns the old "tags" field's value of the HighlightClip entity.
+// If the HighlightClip object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *HighlightClipMutation) OldTags(ctx context.Context) (v []string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTags is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTags requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTags: %w", err)
+	}
+	return oldValue.Tags, nil
+}
+
+// AppendTags adds s to the "tags" field.
+func (m *HighlightClipMutation) AppendTags(s []string) {
+	m.appendtags = append(m.appendtags, s...)
+}
+
+// AppendedTags returns the list of values that were appended to the "tags" field in this mutation.
+func (m *HighlightClipMutation) AppendedTags() ([]string, bool) {
+	if len(m.appendtags) == 0 {
+		return nil, false
+	}
+	return m.appendtags, true
+}
+
+// ClearTags clears the value of the "tags" field.
+func (m *HighlightClipMutation) ClearTags() {
+	m.tags = nil
+	m.appendtags = nil
+	m.clearedFields[highlightclip.FieldTags] = struct{}{}
+}
+
+// TagsCleared returns if the "tags" field was cleared in this mutation.
+func (m *HighlightClipMutation) TagsCleared() bool {
+	_, ok := m.clearedFields[highlightclip.FieldTags]
+	return ok
+}
+
+// ResetTags resets all changes to the "tags" field.
+func (m *HighlightClipMutation) ResetTags() {
+	m.tags = nil
+	m.appendtags = nil
+	delete(m.clearedFields, highlightclip.FieldTags)
+}
+
+// SetScore sets the "score" field.
+func (m *HighlightClipMutation) SetScore(f float64) {
+	m.score = &f
+	m.addscore = nil
+}
+
+// Score returns the value of the "score" field in the mutation.
+func (m *HighlightClipMutation) Score() (r float64, exists bool) {
+	v := m.score
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldScore returns the old "score" field's value of the HighlightClip entity.
+// If the HighlightClip object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *HighlightClipMutation) OldScore(ctx context.Context) (v float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldScore is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldScore requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldScore: %w", err)
+	}
+	return oldValue.Score, nil
+}
+
+// AddScore adds f to the "score" field.
+func (m *HighlightClipMutation) AddScore(f float64) {
+	if m.addscore != nil {
+		*m.addscore += f
+	} else {
+		m.addscore = &f
+	}
+}
+
+// AddedScore returns the value that was added to the "score" field in this mutation.
+func (m *HighlightClipMutation) AddedScore() (r float64, exists bool) {
+	v := m.addscore
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetScore resets all changes to the "score" field.
+func (m *HighlightClipMutation) ResetScore() {
+	m.score = nil
+	m.addscore = nil
+}
+
+// SetModelPayload sets the "model_payload" field.
+func (m *HighlightClipMutation) SetModelPayload(s string) {
+	m.model_payload = &s
+}
+
+// ModelPayload returns the value of the "model_payload" field in the mutation.
+func (m *HighlightClipMutation) ModelPayload() (r string, exists bool) {
+	v := m.model_payload
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldModelPayload returns the old "model_payload" field's value of the HighlightClip entity.
+// If the HighlightClip object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *HighlightClipMutation) OldModelPayload(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldModelPayload is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldModelPayload requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldModelPayload: %w", err)
+	}
+	return oldValue.ModelPayload, nil
+}
+
+// ClearModelPayload clears the value of the "model_payload" field.
+func (m *HighlightClipMutation) ClearModelPayload() {
+	m.model_payload = nil
+	m.clearedFields[highlightclip.FieldModelPayload] = struct{}{}
+}
+
+// ModelPayloadCleared returns if the "model_payload" field was cleared in this mutation.
+func (m *HighlightClipMutation) ModelPayloadCleared() bool {
+	_, ok := m.clearedFields[highlightclip.FieldModelPayload]
+	return ok
+}
+
+// ResetModelPayload resets all changes to the "model_payload" field.
+func (m *HighlightClipMutation) ResetModelPayload() {
+	m.model_payload = nil
+	delete(m.clearedFields, highlightclip.FieldModelPayload)
+}
+
+// SetErrorMessage sets the "error_message" field.
+func (m *HighlightClipMutation) SetErrorMessage(s string) {
+	m.error_message = &s
+}
+
+// ErrorMessage returns the value of the "error_message" field in the mutation.
+func (m *HighlightClipMutation) ErrorMessage() (r string, exists bool) {
+	v := m.error_message
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldErrorMessage returns the old "error_message" field's value of the HighlightClip entity.
+// If the HighlightClip object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *HighlightClipMutation) OldErrorMessage(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldErrorMessage is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldErrorMessage requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldErrorMessage: %w", err)
+	}
+	return oldValue.ErrorMessage, nil
+}
+
+// ClearErrorMessage clears the value of the "error_message" field.
+func (m *HighlightClipMutation) ClearErrorMessage() {
+	m.error_message = nil
+	m.clearedFields[highlightclip.FieldErrorMessage] = struct{}{}
+}
+
+// ErrorMessageCleared returns if the "error_message" field was cleared in this mutation.
+func (m *HighlightClipMutation) ErrorMessageCleared() bool {
+	_, ok := m.clearedFields[highlightclip.FieldErrorMessage]
+	return ok
+}
+
+// ResetErrorMessage resets all changes to the "error_message" field.
+func (m *HighlightClipMutation) ResetErrorMessage() {
+	m.error_message = nil
+	delete(m.clearedFields, highlightclip.FieldErrorMessage)
+}
+
+// SetStartedAt sets the "started_at" field.
+func (m *HighlightClipMutation) SetStartedAt(t time.Time) {
+	m.started_at = &t
+}
+
+// StartedAt returns the value of the "started_at" field in the mutation.
+func (m *HighlightClipMutation) StartedAt() (r time.Time, exists bool) {
+	v := m.started_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStartedAt returns the old "started_at" field's value of the HighlightClip entity.
+// If the HighlightClip object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *HighlightClipMutation) OldStartedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStartedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStartedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStartedAt: %w", err)
+	}
+	return oldValue.StartedAt, nil
+}
+
+// ClearStartedAt clears the value of the "started_at" field.
+func (m *HighlightClipMutation) ClearStartedAt() {
+	m.started_at = nil
+	m.clearedFields[highlightclip.FieldStartedAt] = struct{}{}
+}
+
+// StartedAtCleared returns if the "started_at" field was cleared in this mutation.
+func (m *HighlightClipMutation) StartedAtCleared() bool {
+	_, ok := m.clearedFields[highlightclip.FieldStartedAt]
+	return ok
+}
+
+// ResetStartedAt resets all changes to the "started_at" field.
+func (m *HighlightClipMutation) ResetStartedAt() {
+	m.started_at = nil
+	delete(m.clearedFields, highlightclip.FieldStartedAt)
+}
+
+// SetCompletedAt sets the "completed_at" field.
+func (m *HighlightClipMutation) SetCompletedAt(t time.Time) {
+	m.completed_at = &t
+}
+
+// CompletedAt returns the value of the "completed_at" field in the mutation.
+func (m *HighlightClipMutation) CompletedAt() (r time.Time, exists bool) {
+	v := m.completed_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCompletedAt returns the old "completed_at" field's value of the HighlightClip entity.
+// If the HighlightClip object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *HighlightClipMutation) OldCompletedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCompletedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCompletedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCompletedAt: %w", err)
+	}
+	return oldValue.CompletedAt, nil
+}
+
+// ClearCompletedAt clears the value of the "completed_at" field.
+func (m *HighlightClipMutation) ClearCompletedAt() {
+	m.completed_at = nil
+	m.clearedFields[highlightclip.FieldCompletedAt] = struct{}{}
+}
+
+// CompletedAtCleared returns if the "completed_at" field was cleared in this mutation.
+func (m *HighlightClipMutation) CompletedAtCleared() bool {
+	_, ok := m.clearedFields[highlightclip.FieldCompletedAt]
+	return ok
+}
+
+// ResetCompletedAt resets all changes to the "completed_at" field.
+func (m *HighlightClipMutation) ResetCompletedAt() {
+	m.completed_at = nil
+	delete(m.clearedFields, highlightclip.FieldCompletedAt)
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *HighlightClipMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *HighlightClipMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the HighlightClip entity.
+// If the HighlightClip object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *HighlightClipMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *HighlightClipMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *HighlightClipMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *HighlightClipMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the HighlightClip entity.
+// If the HighlightClip object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *HighlightClipMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *HighlightClipMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetMatchRoundID sets the "match_round" edge to the MatchRound entity by id.
+func (m *HighlightClipMutation) SetMatchRoundID(id int) {
+	m.match_round = &id
+}
+
+// ClearMatchRound clears the "match_round" edge to the MatchRound entity.
+func (m *HighlightClipMutation) ClearMatchRound() {
+	m.clearedmatch_round = true
+}
+
+// MatchRoundCleared reports if the "match_round" edge to the MatchRound entity was cleared.
+func (m *HighlightClipMutation) MatchRoundCleared() bool {
+	return m.clearedmatch_round
+}
+
+// MatchRoundID returns the "match_round" edge ID in the mutation.
+func (m *HighlightClipMutation) MatchRoundID() (id int, exists bool) {
+	if m.match_round != nil {
+		return *m.match_round, true
+	}
+	return
+}
+
+// MatchRoundIDs returns the "match_round" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// MatchRoundID instead. It exists only for internal usage by the builders.
+func (m *HighlightClipMutation) MatchRoundIDs() (ids []int) {
+	if id := m.match_round; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetMatchRound resets all changes to the "match_round" edge.
+func (m *HighlightClipMutation) ResetMatchRound() {
+	m.match_round = nil
+	m.clearedmatch_round = false
+}
+
+// SetSourceArtifactID sets the "source_artifact" edge to the MediaArtifact entity by id.
+func (m *HighlightClipMutation) SetSourceArtifactID(id int) {
+	m.source_artifact = &id
+}
+
+// ClearSourceArtifact clears the "source_artifact" edge to the MediaArtifact entity.
+func (m *HighlightClipMutation) ClearSourceArtifact() {
+	m.clearedsource_artifact = true
+}
+
+// SourceArtifactCleared reports if the "source_artifact" edge to the MediaArtifact entity was cleared.
+func (m *HighlightClipMutation) SourceArtifactCleared() bool {
+	return m.clearedsource_artifact
+}
+
+// SourceArtifactID returns the "source_artifact" edge ID in the mutation.
+func (m *HighlightClipMutation) SourceArtifactID() (id int, exists bool) {
+	if m.source_artifact != nil {
+		return *m.source_artifact, true
+	}
+	return
+}
+
+// SourceArtifactIDs returns the "source_artifact" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// SourceArtifactID instead. It exists only for internal usage by the builders.
+func (m *HighlightClipMutation) SourceArtifactIDs() (ids []int) {
+	if id := m.source_artifact; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetSourceArtifact resets all changes to the "source_artifact" edge.
+func (m *HighlightClipMutation) ResetSourceArtifact() {
+	m.source_artifact = nil
+	m.clearedsource_artifact = false
+}
+
+// Where appends a list predicates to the HighlightClipMutation builder.
+func (m *HighlightClipMutation) Where(ps ...predicate.HighlightClip) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the HighlightClipMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *HighlightClipMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.HighlightClip, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *HighlightClipMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *HighlightClipMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (HighlightClip).
+func (m *HighlightClipMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *HighlightClipMutation) Fields() []string {
+	fields := make([]string, 0, 21)
+	if m.highlight_index != nil {
+		fields = append(fields, highlightclip.FieldHighlightIndex)
+	}
+	if m.role != nil {
+		fields = append(fields, highlightclip.FieldRole)
+	}
+	if m.algorithm_version != nil {
+		fields = append(fields, highlightclip.FieldAlgorithmVersion)
+	}
+	if m.status != nil {
+		fields = append(fields, highlightclip.FieldStatus)
+	}
+	if m.priority != nil {
+		fields = append(fields, highlightclip.FieldPriority)
+	}
+	if m.k8s_job_name != nil {
+		fields = append(fields, highlightclip.FieldK8sJobName)
+	}
+	if m.attempts != nil {
+		fields = append(fields, highlightclip.FieldAttempts)
+	}
+	if m.start_seconds != nil {
+		fields = append(fields, highlightclip.FieldStartSeconds)
+	}
+	if m.end_seconds != nil {
+		fields = append(fields, highlightclip.FieldEndSeconds)
+	}
+	if m.peak_seconds != nil {
+		fields = append(fields, highlightclip.FieldPeakSeconds)
+	}
+	if m.output_dir != nil {
+		fields = append(fields, highlightclip.FieldOutputDir)
+	}
+	if m.title != nil {
+		fields = append(fields, highlightclip.FieldTitle)
+	}
+	if m.description != nil {
+		fields = append(fields, highlightclip.FieldDescription)
+	}
+	if m.tags != nil {
+		fields = append(fields, highlightclip.FieldTags)
+	}
+	if m.score != nil {
+		fields = append(fields, highlightclip.FieldScore)
+	}
+	if m.model_payload != nil {
+		fields = append(fields, highlightclip.FieldModelPayload)
+	}
+	if m.error_message != nil {
+		fields = append(fields, highlightclip.FieldErrorMessage)
+	}
+	if m.started_at != nil {
+		fields = append(fields, highlightclip.FieldStartedAt)
+	}
+	if m.completed_at != nil {
+		fields = append(fields, highlightclip.FieldCompletedAt)
+	}
+	if m.created_at != nil {
+		fields = append(fields, highlightclip.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, highlightclip.FieldUpdatedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *HighlightClipMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case highlightclip.FieldHighlightIndex:
+		return m.HighlightIndex()
+	case highlightclip.FieldRole:
+		return m.Role()
+	case highlightclip.FieldAlgorithmVersion:
+		return m.AlgorithmVersion()
+	case highlightclip.FieldStatus:
+		return m.Status()
+	case highlightclip.FieldPriority:
+		return m.Priority()
+	case highlightclip.FieldK8sJobName:
+		return m.K8sJobName()
+	case highlightclip.FieldAttempts:
+		return m.Attempts()
+	case highlightclip.FieldStartSeconds:
+		return m.StartSeconds()
+	case highlightclip.FieldEndSeconds:
+		return m.EndSeconds()
+	case highlightclip.FieldPeakSeconds:
+		return m.PeakSeconds()
+	case highlightclip.FieldOutputDir:
+		return m.OutputDir()
+	case highlightclip.FieldTitle:
+		return m.Title()
+	case highlightclip.FieldDescription:
+		return m.Description()
+	case highlightclip.FieldTags:
+		return m.Tags()
+	case highlightclip.FieldScore:
+		return m.Score()
+	case highlightclip.FieldModelPayload:
+		return m.ModelPayload()
+	case highlightclip.FieldErrorMessage:
+		return m.ErrorMessage()
+	case highlightclip.FieldStartedAt:
+		return m.StartedAt()
+	case highlightclip.FieldCompletedAt:
+		return m.CompletedAt()
+	case highlightclip.FieldCreatedAt:
+		return m.CreatedAt()
+	case highlightclip.FieldUpdatedAt:
+		return m.UpdatedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *HighlightClipMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case highlightclip.FieldHighlightIndex:
+		return m.OldHighlightIndex(ctx)
+	case highlightclip.FieldRole:
+		return m.OldRole(ctx)
+	case highlightclip.FieldAlgorithmVersion:
+		return m.OldAlgorithmVersion(ctx)
+	case highlightclip.FieldStatus:
+		return m.OldStatus(ctx)
+	case highlightclip.FieldPriority:
+		return m.OldPriority(ctx)
+	case highlightclip.FieldK8sJobName:
+		return m.OldK8sJobName(ctx)
+	case highlightclip.FieldAttempts:
+		return m.OldAttempts(ctx)
+	case highlightclip.FieldStartSeconds:
+		return m.OldStartSeconds(ctx)
+	case highlightclip.FieldEndSeconds:
+		return m.OldEndSeconds(ctx)
+	case highlightclip.FieldPeakSeconds:
+		return m.OldPeakSeconds(ctx)
+	case highlightclip.FieldOutputDir:
+		return m.OldOutputDir(ctx)
+	case highlightclip.FieldTitle:
+		return m.OldTitle(ctx)
+	case highlightclip.FieldDescription:
+		return m.OldDescription(ctx)
+	case highlightclip.FieldTags:
+		return m.OldTags(ctx)
+	case highlightclip.FieldScore:
+		return m.OldScore(ctx)
+	case highlightclip.FieldModelPayload:
+		return m.OldModelPayload(ctx)
+	case highlightclip.FieldErrorMessage:
+		return m.OldErrorMessage(ctx)
+	case highlightclip.FieldStartedAt:
+		return m.OldStartedAt(ctx)
+	case highlightclip.FieldCompletedAt:
+		return m.OldCompletedAt(ctx)
+	case highlightclip.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case highlightclip.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown HighlightClip field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *HighlightClipMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case highlightclip.FieldHighlightIndex:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetHighlightIndex(v)
+		return nil
+	case highlightclip.FieldRole:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRole(v)
+		return nil
+	case highlightclip.FieldAlgorithmVersion:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAlgorithmVersion(v)
+		return nil
+	case highlightclip.FieldStatus:
+		v, ok := value.(highlightclip.Status)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStatus(v)
+		return nil
+	case highlightclip.FieldPriority:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPriority(v)
+		return nil
+	case highlightclip.FieldK8sJobName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetK8sJobName(v)
+		return nil
+	case highlightclip.FieldAttempts:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAttempts(v)
+		return nil
+	case highlightclip.FieldStartSeconds:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStartSeconds(v)
+		return nil
+	case highlightclip.FieldEndSeconds:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEndSeconds(v)
+		return nil
+	case highlightclip.FieldPeakSeconds:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPeakSeconds(v)
+		return nil
+	case highlightclip.FieldOutputDir:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetOutputDir(v)
+		return nil
+	case highlightclip.FieldTitle:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTitle(v)
+		return nil
+	case highlightclip.FieldDescription:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDescription(v)
+		return nil
+	case highlightclip.FieldTags:
+		v, ok := value.([]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTags(v)
+		return nil
+	case highlightclip.FieldScore:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetScore(v)
+		return nil
+	case highlightclip.FieldModelPayload:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetModelPayload(v)
+		return nil
+	case highlightclip.FieldErrorMessage:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetErrorMessage(v)
+		return nil
+	case highlightclip.FieldStartedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStartedAt(v)
+		return nil
+	case highlightclip.FieldCompletedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCompletedAt(v)
+		return nil
+	case highlightclip.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case highlightclip.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown HighlightClip field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *HighlightClipMutation) AddedFields() []string {
+	var fields []string
+	if m.addhighlight_index != nil {
+		fields = append(fields, highlightclip.FieldHighlightIndex)
+	}
+	if m.addpriority != nil {
+		fields = append(fields, highlightclip.FieldPriority)
+	}
+	if m.addattempts != nil {
+		fields = append(fields, highlightclip.FieldAttempts)
+	}
+	if m.addstart_seconds != nil {
+		fields = append(fields, highlightclip.FieldStartSeconds)
+	}
+	if m.addend_seconds != nil {
+		fields = append(fields, highlightclip.FieldEndSeconds)
+	}
+	if m.addpeak_seconds != nil {
+		fields = append(fields, highlightclip.FieldPeakSeconds)
+	}
+	if m.addscore != nil {
+		fields = append(fields, highlightclip.FieldScore)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *HighlightClipMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case highlightclip.FieldHighlightIndex:
+		return m.AddedHighlightIndex()
+	case highlightclip.FieldPriority:
+		return m.AddedPriority()
+	case highlightclip.FieldAttempts:
+		return m.AddedAttempts()
+	case highlightclip.FieldStartSeconds:
+		return m.AddedStartSeconds()
+	case highlightclip.FieldEndSeconds:
+		return m.AddedEndSeconds()
+	case highlightclip.FieldPeakSeconds:
+		return m.AddedPeakSeconds()
+	case highlightclip.FieldScore:
+		return m.AddedScore()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *HighlightClipMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case highlightclip.FieldHighlightIndex:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddHighlightIndex(v)
+		return nil
+	case highlightclip.FieldPriority:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddPriority(v)
+		return nil
+	case highlightclip.FieldAttempts:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddAttempts(v)
+		return nil
+	case highlightclip.FieldStartSeconds:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddStartSeconds(v)
+		return nil
+	case highlightclip.FieldEndSeconds:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddEndSeconds(v)
+		return nil
+	case highlightclip.FieldPeakSeconds:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddPeakSeconds(v)
+		return nil
+	case highlightclip.FieldScore:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddScore(v)
+		return nil
+	}
+	return fmt.Errorf("unknown HighlightClip numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *HighlightClipMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(highlightclip.FieldK8sJobName) {
+		fields = append(fields, highlightclip.FieldK8sJobName)
+	}
+	if m.FieldCleared(highlightclip.FieldTitle) {
+		fields = append(fields, highlightclip.FieldTitle)
+	}
+	if m.FieldCleared(highlightclip.FieldDescription) {
+		fields = append(fields, highlightclip.FieldDescription)
+	}
+	if m.FieldCleared(highlightclip.FieldTags) {
+		fields = append(fields, highlightclip.FieldTags)
+	}
+	if m.FieldCleared(highlightclip.FieldModelPayload) {
+		fields = append(fields, highlightclip.FieldModelPayload)
+	}
+	if m.FieldCleared(highlightclip.FieldErrorMessage) {
+		fields = append(fields, highlightclip.FieldErrorMessage)
+	}
+	if m.FieldCleared(highlightclip.FieldStartedAt) {
+		fields = append(fields, highlightclip.FieldStartedAt)
+	}
+	if m.FieldCleared(highlightclip.FieldCompletedAt) {
+		fields = append(fields, highlightclip.FieldCompletedAt)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *HighlightClipMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *HighlightClipMutation) ClearField(name string) error {
+	switch name {
+	case highlightclip.FieldK8sJobName:
+		m.ClearK8sJobName()
+		return nil
+	case highlightclip.FieldTitle:
+		m.ClearTitle()
+		return nil
+	case highlightclip.FieldDescription:
+		m.ClearDescription()
+		return nil
+	case highlightclip.FieldTags:
+		m.ClearTags()
+		return nil
+	case highlightclip.FieldModelPayload:
+		m.ClearModelPayload()
+		return nil
+	case highlightclip.FieldErrorMessage:
+		m.ClearErrorMessage()
+		return nil
+	case highlightclip.FieldStartedAt:
+		m.ClearStartedAt()
+		return nil
+	case highlightclip.FieldCompletedAt:
+		m.ClearCompletedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown HighlightClip nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *HighlightClipMutation) ResetField(name string) error {
+	switch name {
+	case highlightclip.FieldHighlightIndex:
+		m.ResetHighlightIndex()
+		return nil
+	case highlightclip.FieldRole:
+		m.ResetRole()
+		return nil
+	case highlightclip.FieldAlgorithmVersion:
+		m.ResetAlgorithmVersion()
+		return nil
+	case highlightclip.FieldStatus:
+		m.ResetStatus()
+		return nil
+	case highlightclip.FieldPriority:
+		m.ResetPriority()
+		return nil
+	case highlightclip.FieldK8sJobName:
+		m.ResetK8sJobName()
+		return nil
+	case highlightclip.FieldAttempts:
+		m.ResetAttempts()
+		return nil
+	case highlightclip.FieldStartSeconds:
+		m.ResetStartSeconds()
+		return nil
+	case highlightclip.FieldEndSeconds:
+		m.ResetEndSeconds()
+		return nil
+	case highlightclip.FieldPeakSeconds:
+		m.ResetPeakSeconds()
+		return nil
+	case highlightclip.FieldOutputDir:
+		m.ResetOutputDir()
+		return nil
+	case highlightclip.FieldTitle:
+		m.ResetTitle()
+		return nil
+	case highlightclip.FieldDescription:
+		m.ResetDescription()
+		return nil
+	case highlightclip.FieldTags:
+		m.ResetTags()
+		return nil
+	case highlightclip.FieldScore:
+		m.ResetScore()
+		return nil
+	case highlightclip.FieldModelPayload:
+		m.ResetModelPayload()
+		return nil
+	case highlightclip.FieldErrorMessage:
+		m.ResetErrorMessage()
+		return nil
+	case highlightclip.FieldStartedAt:
+		m.ResetStartedAt()
+		return nil
+	case highlightclip.FieldCompletedAt:
+		m.ResetCompletedAt()
+		return nil
+	case highlightclip.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case highlightclip.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown HighlightClip field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *HighlightClipMutation) AddedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.match_round != nil {
+		edges = append(edges, highlightclip.EdgeMatchRound)
+	}
+	if m.source_artifact != nil {
+		edges = append(edges, highlightclip.EdgeSourceArtifact)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *HighlightClipMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case highlightclip.EdgeMatchRound:
+		if id := m.match_round; id != nil {
+			return []ent.Value{*id}
+		}
+	case highlightclip.EdgeSourceArtifact:
+		if id := m.source_artifact; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *HighlightClipMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 2)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *HighlightClipMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *HighlightClipMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.clearedmatch_round {
+		edges = append(edges, highlightclip.EdgeMatchRound)
+	}
+	if m.clearedsource_artifact {
+		edges = append(edges, highlightclip.EdgeSourceArtifact)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *HighlightClipMutation) EdgeCleared(name string) bool {
+	switch name {
+	case highlightclip.EdgeMatchRound:
+		return m.clearedmatch_round
+	case highlightclip.EdgeSourceArtifact:
+		return m.clearedsource_artifact
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *HighlightClipMutation) ClearEdge(name string) error {
+	switch name {
+	case highlightclip.EdgeMatchRound:
+		m.ClearMatchRound()
+		return nil
+	case highlightclip.EdgeSourceArtifact:
+		m.ClearSourceArtifact()
+		return nil
+	}
+	return fmt.Errorf("unknown HighlightClip unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *HighlightClipMutation) ResetEdge(name string) error {
+	switch name {
+	case highlightclip.EdgeMatchRound:
+		m.ResetMatchRound()
+		return nil
+	case highlightclip.EdgeSourceArtifact:
+		m.ResetSourceArtifact()
+		return nil
+	}
+	return fmt.Errorf("unknown HighlightClip edge %s", name)
+}
 
 // LarkMessageMutation represents an operation that mutates the LarkMessage nodes in the graph.
 type LarkMessageMutation struct {
@@ -2130,26 +4070,29 @@ func (m *MatchMutation) ResetEdge(name string) error {
 // MatchRoundMutation represents an operation that mutates the MatchRound nodes in the graph.
 type MatchRoundMutation struct {
 	config
-	op                  Op
-	typ                 string
-	id                  *int
-	round_no            *int
-	addround_no         *int
-	status              *matchround.Status
-	winner              *matchround.Winner
-	started_at          *time.Time
-	ended_at            *time.Time
-	created_at          *time.Time
-	updated_at          *time.Time
-	clearedFields       map[string]struct{}
-	match               *string
-	clearedmatch        bool
-	record_tasks        map[int]struct{}
-	removedrecord_tasks map[int]struct{}
-	clearedrecord_tasks bool
-	done                bool
-	oldValue            func(context.Context) (*MatchRound, error)
-	predicates          []predicate.MatchRound
+	op                     Op
+	typ                    string
+	id                     *int
+	round_no               *int
+	addround_no            *int
+	status                 *matchround.Status
+	winner                 *matchround.Winner
+	started_at             *time.Time
+	ended_at               *time.Time
+	created_at             *time.Time
+	updated_at             *time.Time
+	clearedFields          map[string]struct{}
+	match                  *string
+	clearedmatch           bool
+	record_tasks           map[int]struct{}
+	removedrecord_tasks    map[int]struct{}
+	clearedrecord_tasks    bool
+	highlight_clips        map[int]struct{}
+	removedhighlight_clips map[int]struct{}
+	clearedhighlight_clips bool
+	done                   bool
+	oldValue               func(context.Context) (*MatchRound, error)
+	predicates             []predicate.MatchRound
 }
 
 var _ ent.Mutation = (*MatchRoundMutation)(nil)
@@ -2641,6 +4584,60 @@ func (m *MatchRoundMutation) ResetRecordTasks() {
 	m.removedrecord_tasks = nil
 }
 
+// AddHighlightClipIDs adds the "highlight_clips" edge to the HighlightClip entity by ids.
+func (m *MatchRoundMutation) AddHighlightClipIDs(ids ...int) {
+	if m.highlight_clips == nil {
+		m.highlight_clips = make(map[int]struct{})
+	}
+	for i := range ids {
+		m.highlight_clips[ids[i]] = struct{}{}
+	}
+}
+
+// ClearHighlightClips clears the "highlight_clips" edge to the HighlightClip entity.
+func (m *MatchRoundMutation) ClearHighlightClips() {
+	m.clearedhighlight_clips = true
+}
+
+// HighlightClipsCleared reports if the "highlight_clips" edge to the HighlightClip entity was cleared.
+func (m *MatchRoundMutation) HighlightClipsCleared() bool {
+	return m.clearedhighlight_clips
+}
+
+// RemoveHighlightClipIDs removes the "highlight_clips" edge to the HighlightClip entity by IDs.
+func (m *MatchRoundMutation) RemoveHighlightClipIDs(ids ...int) {
+	if m.removedhighlight_clips == nil {
+		m.removedhighlight_clips = make(map[int]struct{})
+	}
+	for i := range ids {
+		delete(m.highlight_clips, ids[i])
+		m.removedhighlight_clips[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedHighlightClips returns the removed IDs of the "highlight_clips" edge to the HighlightClip entity.
+func (m *MatchRoundMutation) RemovedHighlightClipsIDs() (ids []int) {
+	for id := range m.removedhighlight_clips {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// HighlightClipsIDs returns the "highlight_clips" edge IDs in the mutation.
+func (m *MatchRoundMutation) HighlightClipsIDs() (ids []int) {
+	for id := range m.highlight_clips {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetHighlightClips resets all changes to the "highlight_clips" edge.
+func (m *MatchRoundMutation) ResetHighlightClips() {
+	m.highlight_clips = nil
+	m.clearedhighlight_clips = false
+	m.removedhighlight_clips = nil
+}
+
 // Where appends a list predicates to the MatchRoundMutation builder.
 func (m *MatchRoundMutation) Where(ps ...predicate.MatchRound) {
 	m.predicates = append(m.predicates, ps...)
@@ -2906,12 +4903,15 @@ func (m *MatchRoundMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *MatchRoundMutation) AddedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.match != nil {
 		edges = append(edges, matchround.EdgeMatch)
 	}
 	if m.record_tasks != nil {
 		edges = append(edges, matchround.EdgeRecordTasks)
+	}
+	if m.highlight_clips != nil {
+		edges = append(edges, matchround.EdgeHighlightClips)
 	}
 	return edges
 }
@@ -2930,15 +4930,24 @@ func (m *MatchRoundMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case matchround.EdgeHighlightClips:
+		ids := make([]ent.Value, 0, len(m.highlight_clips))
+		for id := range m.highlight_clips {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *MatchRoundMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.removedrecord_tasks != nil {
 		edges = append(edges, matchround.EdgeRecordTasks)
+	}
+	if m.removedhighlight_clips != nil {
+		edges = append(edges, matchround.EdgeHighlightClips)
 	}
 	return edges
 }
@@ -2953,18 +4962,27 @@ func (m *MatchRoundMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case matchround.EdgeHighlightClips:
+		ids := make([]ent.Value, 0, len(m.removedhighlight_clips))
+		for id := range m.removedhighlight_clips {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *MatchRoundMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.clearedmatch {
 		edges = append(edges, matchround.EdgeMatch)
 	}
 	if m.clearedrecord_tasks {
 		edges = append(edges, matchround.EdgeRecordTasks)
+	}
+	if m.clearedhighlight_clips {
+		edges = append(edges, matchround.EdgeHighlightClips)
 	}
 	return edges
 }
@@ -2977,6 +4995,8 @@ func (m *MatchRoundMutation) EdgeCleared(name string) bool {
 		return m.clearedmatch
 	case matchround.EdgeRecordTasks:
 		return m.clearedrecord_tasks
+	case matchround.EdgeHighlightClips:
+		return m.clearedhighlight_clips
 	}
 	return false
 }
@@ -3001,6 +5021,9 @@ func (m *MatchRoundMutation) ResetEdge(name string) error {
 		return nil
 	case matchround.EdgeRecordTasks:
 		m.ResetRecordTasks()
+		return nil
+	case matchround.EdgeHighlightClips:
+		m.ResetHighlightClips()
 		return nil
 	}
 	return fmt.Errorf("unknown MatchRound edge %s", name)
@@ -3033,6 +5056,9 @@ type MediaArtifactMutation struct {
 	clearedsource_transcode_task  bool
 	archive_transcode_task        *int
 	clearedarchive_transcode_task bool
+	highlight_clips               map[int]struct{}
+	removedhighlight_clips        map[int]struct{}
+	clearedhighlight_clips        bool
 	done                          bool
 	oldValue                      func(context.Context) (*MediaArtifact, error)
 	predicates                    []predicate.MediaArtifact
@@ -3761,6 +5787,60 @@ func (m *MediaArtifactMutation) ResetArchiveTranscodeTask() {
 	m.clearedarchive_transcode_task = false
 }
 
+// AddHighlightClipIDs adds the "highlight_clips" edge to the HighlightClip entity by ids.
+func (m *MediaArtifactMutation) AddHighlightClipIDs(ids ...int) {
+	if m.highlight_clips == nil {
+		m.highlight_clips = make(map[int]struct{})
+	}
+	for i := range ids {
+		m.highlight_clips[ids[i]] = struct{}{}
+	}
+}
+
+// ClearHighlightClips clears the "highlight_clips" edge to the HighlightClip entity.
+func (m *MediaArtifactMutation) ClearHighlightClips() {
+	m.clearedhighlight_clips = true
+}
+
+// HighlightClipsCleared reports if the "highlight_clips" edge to the HighlightClip entity was cleared.
+func (m *MediaArtifactMutation) HighlightClipsCleared() bool {
+	return m.clearedhighlight_clips
+}
+
+// RemoveHighlightClipIDs removes the "highlight_clips" edge to the HighlightClip entity by IDs.
+func (m *MediaArtifactMutation) RemoveHighlightClipIDs(ids ...int) {
+	if m.removedhighlight_clips == nil {
+		m.removedhighlight_clips = make(map[int]struct{})
+	}
+	for i := range ids {
+		delete(m.highlight_clips, ids[i])
+		m.removedhighlight_clips[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedHighlightClips returns the removed IDs of the "highlight_clips" edge to the HighlightClip entity.
+func (m *MediaArtifactMutation) RemovedHighlightClipsIDs() (ids []int) {
+	for id := range m.removedhighlight_clips {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// HighlightClipsIDs returns the "highlight_clips" edge IDs in the mutation.
+func (m *MediaArtifactMutation) HighlightClipsIDs() (ids []int) {
+	for id := range m.highlight_clips {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetHighlightClips resets all changes to the "highlight_clips" edge.
+func (m *MediaArtifactMutation) ResetHighlightClips() {
+	m.highlight_clips = nil
+	m.clearedhighlight_clips = false
+	m.removedhighlight_clips = nil
+}
+
 // Where appends a list predicates to the MediaArtifactMutation builder.
 func (m *MediaArtifactMutation) Where(ps ...predicate.MediaArtifact) {
 	m.predicates = append(m.predicates, ps...)
@@ -4106,7 +6186,7 @@ func (m *MediaArtifactMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *MediaArtifactMutation) AddedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 5)
 	if m.record_task != nil {
 		edges = append(edges, mediaartifact.EdgeRecordTask)
 	}
@@ -4118,6 +6198,9 @@ func (m *MediaArtifactMutation) AddedEdges() []string {
 	}
 	if m.archive_transcode_task != nil {
 		edges = append(edges, mediaartifact.EdgeArchiveTranscodeTask)
+	}
+	if m.highlight_clips != nil {
+		edges = append(edges, mediaartifact.EdgeHighlightClips)
 	}
 	return edges
 }
@@ -4142,25 +6225,42 @@ func (m *MediaArtifactMutation) AddedIDs(name string) []ent.Value {
 		if id := m.archive_transcode_task; id != nil {
 			return []ent.Value{*id}
 		}
+	case mediaartifact.EdgeHighlightClips:
+		ids := make([]ent.Value, 0, len(m.highlight_clips))
+		for id := range m.highlight_clips {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *MediaArtifactMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 5)
+	if m.removedhighlight_clips != nil {
+		edges = append(edges, mediaartifact.EdgeHighlightClips)
+	}
 	return edges
 }
 
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *MediaArtifactMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case mediaartifact.EdgeHighlightClips:
+		ids := make([]ent.Value, 0, len(m.removedhighlight_clips))
+		for id := range m.removedhighlight_clips {
+			ids = append(ids, id)
+		}
+		return ids
+	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *MediaArtifactMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 5)
 	if m.clearedrecord_task {
 		edges = append(edges, mediaartifact.EdgeRecordTask)
 	}
@@ -4172,6 +6272,9 @@ func (m *MediaArtifactMutation) ClearedEdges() []string {
 	}
 	if m.clearedarchive_transcode_task {
 		edges = append(edges, mediaartifact.EdgeArchiveTranscodeTask)
+	}
+	if m.clearedhighlight_clips {
+		edges = append(edges, mediaartifact.EdgeHighlightClips)
 	}
 	return edges
 }
@@ -4188,6 +6291,8 @@ func (m *MediaArtifactMutation) EdgeCleared(name string) bool {
 		return m.clearedsource_transcode_task
 	case mediaartifact.EdgeArchiveTranscodeTask:
 		return m.clearedarchive_transcode_task
+	case mediaartifact.EdgeHighlightClips:
+		return m.clearedhighlight_clips
 	}
 	return false
 }
@@ -4227,6 +6332,9 @@ func (m *MediaArtifactMutation) ResetEdge(name string) error {
 		return nil
 	case mediaartifact.EdgeArchiveTranscodeTask:
 		m.ResetArchiveTranscodeTask()
+		return nil
+	case mediaartifact.EdgeHighlightClips:
+		m.ResetHighlightClips()
 		return nil
 	}
 	return fmt.Errorf("unknown MediaArtifact edge %s", name)

@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"scutbot.cn/web/rm-monitor/ent/highlightclip"
 	"scutbot.cn/web/rm-monitor/ent/match"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
 	"scutbot.cn/web/rm-monitor/ent/predicate"
@@ -21,13 +22,14 @@ import (
 // MatchRoundQuery is the builder for querying MatchRound entities.
 type MatchRoundQuery struct {
 	config
-	ctx             *QueryContext
-	order           []matchround.OrderOption
-	inters          []Interceptor
-	predicates      []predicate.MatchRound
-	withMatch       *MatchQuery
-	withRecordTasks *RecordTaskQuery
-	withFKs         bool
+	ctx                *QueryContext
+	order              []matchround.OrderOption
+	inters             []Interceptor
+	predicates         []predicate.MatchRound
+	withMatch          *MatchQuery
+	withRecordTasks    *RecordTaskQuery
+	withHighlightClips *HighlightClipQuery
+	withFKs            bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -101,6 +103,28 @@ func (_q *MatchRoundQuery) QueryRecordTasks() *RecordTaskQuery {
 			sqlgraph.From(matchround.Table, matchround.FieldID, selector),
 			sqlgraph.To(recordtask.Table, recordtask.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, matchround.RecordTasksTable, matchround.RecordTasksColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryHighlightClips chains the current query on the "highlight_clips" edge.
+func (_q *MatchRoundQuery) QueryHighlightClips() *HighlightClipQuery {
+	query := (&HighlightClipClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(matchround.Table, matchround.FieldID, selector),
+			sqlgraph.To(highlightclip.Table, highlightclip.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, matchround.HighlightClipsTable, matchround.HighlightClipsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -295,13 +319,14 @@ func (_q *MatchRoundQuery) Clone() *MatchRoundQuery {
 		return nil
 	}
 	return &MatchRoundQuery{
-		config:          _q.config,
-		ctx:             _q.ctx.Clone(),
-		order:           append([]matchround.OrderOption{}, _q.order...),
-		inters:          append([]Interceptor{}, _q.inters...),
-		predicates:      append([]predicate.MatchRound{}, _q.predicates...),
-		withMatch:       _q.withMatch.Clone(),
-		withRecordTasks: _q.withRecordTasks.Clone(),
+		config:             _q.config,
+		ctx:                _q.ctx.Clone(),
+		order:              append([]matchround.OrderOption{}, _q.order...),
+		inters:             append([]Interceptor{}, _q.inters...),
+		predicates:         append([]predicate.MatchRound{}, _q.predicates...),
+		withMatch:          _q.withMatch.Clone(),
+		withRecordTasks:    _q.withRecordTasks.Clone(),
+		withHighlightClips: _q.withHighlightClips.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
@@ -327,6 +352,17 @@ func (_q *MatchRoundQuery) WithRecordTasks(opts ...func(*RecordTaskQuery)) *Matc
 		opt(query)
 	}
 	_q.withRecordTasks = query
+	return _q
+}
+
+// WithHighlightClips tells the query-builder to eager-load the nodes that are connected to
+// the "highlight_clips" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *MatchRoundQuery) WithHighlightClips(opts ...func(*HighlightClipQuery)) *MatchRoundQuery {
+	query := (&HighlightClipClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withHighlightClips = query
 	return _q
 }
 
@@ -409,9 +445,10 @@ func (_q *MatchRoundQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*M
 		nodes       = []*MatchRound{}
 		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
-		loadedTypes = [2]bool{
+		loadedTypes = [3]bool{
 			_q.withMatch != nil,
 			_q.withRecordTasks != nil,
+			_q.withHighlightClips != nil,
 		}
 	)
 	if _q.withMatch != nil {
@@ -448,6 +485,13 @@ func (_q *MatchRoundQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*M
 		if err := _q.loadRecordTasks(ctx, query, nodes,
 			func(n *MatchRound) { n.Edges.RecordTasks = []*RecordTask{} },
 			func(n *MatchRound, e *RecordTask) { n.Edges.RecordTasks = append(n.Edges.RecordTasks, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withHighlightClips; query != nil {
+		if err := _q.loadHighlightClips(ctx, query, nodes,
+			func(n *MatchRound) { n.Edges.HighlightClips = []*HighlightClip{} },
+			func(n *MatchRound, e *HighlightClip) { n.Edges.HighlightClips = append(n.Edges.HighlightClips, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -512,6 +556,37 @@ func (_q *MatchRoundQuery) loadRecordTasks(ctx context.Context, query *RecordTas
 		node, ok := nodeids[*fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "match_round_record_tasks" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *MatchRoundQuery) loadHighlightClips(ctx context.Context, query *HighlightClipQuery, nodes []*MatchRound, init func(*MatchRound), assign func(*MatchRound, *HighlightClip)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[int]*MatchRound)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.HighlightClip(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(matchround.HighlightClipsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.match_round_highlight_clips
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "match_round_highlight_clips" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "match_round_highlight_clips" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

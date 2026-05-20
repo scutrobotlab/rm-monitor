@@ -9,6 +9,18 @@ import (
 	"scutbot.cn/web/rm-monitor/ent"
 )
 
+// The HighlightClipFunc type is an adapter to allow the use of ordinary
+// function as HighlightClip mutator.
+type HighlightClipFunc func(context.Context, *ent.HighlightClipMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f HighlightClipFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.HighlightClipMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.HighlightClipMutation", m)
+}
+
 // The LarkMessageFunc type is an adapter to allow the use of ordinary
 // function as LarkMessage mutator.
 type LarkMessageFunc func(context.Context, *ent.LarkMessageMutation) (ent.Value, error)

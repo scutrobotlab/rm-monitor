@@ -11,6 +11,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"scutbot.cn/web/rm-monitor/ent/highlightclip"
 	"scutbot.cn/web/rm-monitor/ent/mediaartifact"
 	"scutbot.cn/web/rm-monitor/ent/recordtask"
 	"scutbot.cn/web/rm-monitor/ent/transcodetask"
@@ -213,6 +214,21 @@ func (_c *MediaArtifactCreate) SetNillableArchiveTranscodeTaskID(id *int) *Media
 // SetArchiveTranscodeTask sets the "archive_transcode_task" edge to the TranscodeTask entity.
 func (_c *MediaArtifactCreate) SetArchiveTranscodeTask(v *TranscodeTask) *MediaArtifactCreate {
 	return _c.SetArchiveTranscodeTaskID(v.ID)
+}
+
+// AddHighlightClipIDs adds the "highlight_clips" edge to the HighlightClip entity by IDs.
+func (_c *MediaArtifactCreate) AddHighlightClipIDs(ids ...int) *MediaArtifactCreate {
+	_c.mutation.AddHighlightClipIDs(ids...)
+	return _c
+}
+
+// AddHighlightClips adds the "highlight_clips" edges to the HighlightClip entity.
+func (_c *MediaArtifactCreate) AddHighlightClips(v ...*HighlightClip) *MediaArtifactCreate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddHighlightClipIDs(ids...)
 }
 
 // Mutation returns the MediaArtifactMutation object of the builder.
@@ -439,6 +455,22 @@ func (_c *MediaArtifactCreate) createSpec() (*MediaArtifact, *sqlgraph.CreateSpe
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(transcodetask.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.HighlightClipsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   mediaartifact.HighlightClipsTable,
+			Columns: []string{mediaartifact.HighlightClipsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(highlightclip.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

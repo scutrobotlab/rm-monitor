@@ -30,12 +30,14 @@ upload:
 
 record:
   res: middle
+  audioRoles:
+    - "主视角"
   roleBlackList:
     - "主视角（无解说版）"
     - "蓝方机器人第一视角合集"
     - "红方机器人第一视角合集"
 
-report:
+llm:
   baseURL: ""
   apiKey: ""
   model: ""
@@ -50,6 +52,18 @@ danmu:
   enabled: false
   appId: ""
   appKey: ""
+
+highlight:
+  enabled: false
+  role: "主视角"
+  algorithmVersion: "danmu-zscore-v1"
+  maxHighlightsPerRound: 5
+  minClipSeconds: 20
+  maxClipSeconds: 90
+  preSeconds: 15
+  postSeconds: 25
+  mergeGapSeconds: 20
+  publish: {}
 
 transcode:
   sourceRetentionDays: 7
@@ -120,6 +134,16 @@ components:
         cpu: 500m
         memory: 256Mi
   transcodeDispatcher:
+    replicas: 1
+    annotations: {}
+    resources:
+      requests:
+        cpu: 50m
+        memory: 96Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi
+  highlightDispatcher:
     replicas: 1
     annotations: {}
     resources:

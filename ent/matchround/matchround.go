@@ -33,6 +33,8 @@ const (
 	EdgeMatch = "match"
 	// EdgeRecordTasks holds the string denoting the record_tasks edge name in mutations.
 	EdgeRecordTasks = "record_tasks"
+	// EdgeHighlightClips holds the string denoting the highlight_clips edge name in mutations.
+	EdgeHighlightClips = "highlight_clips"
 	// Table holds the table name of the matchround in the database.
 	Table = "match_rounds"
 	// MatchTable is the table that holds the match relation/edge.
@@ -49,6 +51,13 @@ const (
 	RecordTasksInverseTable = "record_tasks"
 	// RecordTasksColumn is the table column denoting the record_tasks relation/edge.
 	RecordTasksColumn = "match_round_record_tasks"
+	// HighlightClipsTable is the table that holds the highlight_clips relation/edge.
+	HighlightClipsTable = "highlight_clips"
+	// HighlightClipsInverseTable is the table name for the HighlightClip entity.
+	// It exists in this package in order to avoid circular dependency with the "highlightclip" package.
+	HighlightClipsInverseTable = "highlight_clips"
+	// HighlightClipsColumn is the table column denoting the highlight_clips relation/edge.
+	HighlightClipsColumn = "match_round_highlight_clips"
 )
 
 // Columns holds all SQL columns for matchround fields.
@@ -205,6 +214,20 @@ func ByRecordTasks(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newRecordTasksStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByHighlightClipsCount orders the results by highlight_clips count.
+func ByHighlightClipsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newHighlightClipsStep(), opts...)
+	}
+}
+
+// ByHighlightClips orders the results by highlight_clips terms.
+func ByHighlightClips(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newHighlightClipsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newMatchStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -217,5 +240,12 @@ func newRecordTasksStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(RecordTasksInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, RecordTasksTable, RecordTasksColumn),
+	)
+}
+func newHighlightClipsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(HighlightClipsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, HighlightClipsTable, HighlightClipsColumn),
 	)
 }
