@@ -254,7 +254,11 @@ func (l *NotifyLogic) patchMatchCards(m *ent.Match) error {
 		return errors.Wrap(err, "marshal card content")
 	}
 	contentData := string(contentBytes)
+	dataUpdatedAt := cardDataUpdatedAt(m)
 	for _, message := range m.Edges.LarkMessages {
+		if !message.UpdatedAt.Before(dataUpdatedAt) {
+			continue
+		}
 		req := larkim.NewPatchMessageReqBuilder().MessageId(message.MessageID).
 			Body(larkim.NewPatchMessageReqBodyBuilder().Content(contentData).Build()).
 			Build()
@@ -280,6 +284,19 @@ func (l *NotifyLogic) patchMatchCards(m *ent.Match) error {
 		}
 	}
 	return nil
+}
+
+func cardDataUpdatedAt(m *ent.Match) time.Time {
+	if m == nil {
+		return time.Time{}
+	}
+	updatedAt := m.UpdatedAt
+	for _, r := range m.Edges.Rounds {
+		if r.UpdatedAt.After(updatedAt) {
+			updatedAt = r.UpdatedAt
+		}
+	}
+	return updatedAt
 }
 
 func (l *NotifyLogic) replyCompletedUploads() error {

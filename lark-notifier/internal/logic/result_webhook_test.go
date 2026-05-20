@@ -2,6 +2,7 @@ package logic
 
 import (
 	"testing"
+	"time"
 
 	"scutbot.cn/web/rm-monitor/ent"
 	"scutbot.cn/web/rm-monitor/ent/match"
@@ -36,6 +37,18 @@ func TestMatchCardCompletedRequiresDoneStatus(t *testing.T) {
 	}}}
 	if matchCardCompleted(m) {
 		t.Fatal("non-DONE match should not be completed")
+	}
+}
+
+func TestCardDataUpdatedAt(t *testing.T) {
+	matchUpdatedAt := time.Date(2026, 5, 20, 1, 0, 0, 0, time.UTC)
+	roundUpdatedAt := matchUpdatedAt.Add(time.Minute)
+	m := &ent.Match{UpdatedAt: matchUpdatedAt, Edges: ent.MatchEdges{Rounds: []*ent.MatchRound{
+		{UpdatedAt: matchUpdatedAt.Add(-time.Minute)},
+		{UpdatedAt: roundUpdatedAt},
+	}}}
+	if got := cardDataUpdatedAt(m); !got.Equal(roundUpdatedAt) {
+		t.Fatalf("cardDataUpdatedAt() = %s, want %s", got, roundUpdatedAt)
 	}
 }
 
