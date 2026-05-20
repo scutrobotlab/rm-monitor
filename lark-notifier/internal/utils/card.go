@@ -76,7 +76,7 @@ func NewMatchCardContent(ctx context.Context, svcCtx *svc.ServiceContext, m *typ
 	content.Data.TemplateVariable.Scores = []MatchScore{
 		{"0", "0"},
 	}
-	content.Data.TemplateVariable.Color = "blue"
+	content.Data.TemplateVariable.Color = "orange"
 	content.Data.TemplateVariable.MatchType = m.MatchType
 	content.Data.TemplateVariable.ZoneTitle = m.ZoneName
 	content.Data.TemplateVariable.Report = m.Report

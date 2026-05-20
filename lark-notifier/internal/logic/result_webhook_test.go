@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"scutbot.cn/web/rm-monitor/ent"
+	"scutbot.cn/web/rm-monitor/ent/match"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
 )
 
@@ -38,26 +39,15 @@ func TestMatchCardCompletedRequiresDoneStatus(t *testing.T) {
 	}
 }
 
-func TestCardPayloadCompleted(t *testing.T) {
-	if cardPayloadCompleted(nil) {
-		t.Fatal("nil payload should not be completed")
+func TestCompletedCardColor(t *testing.T) {
+	cases := map[match.Result]string{
+		match.ResultRED:  "red",
+		match.ResultBLUE: "wathet",
+		match.ResultDRAW: "yellow",
 	}
-	if cardPayloadCompleted(map[string]any{
-		"data": map[string]any{
-			"template_variable": map[string]any{
-				"match_progress": "进行中",
-			},
-		},
-	}) {
-		t.Fatal("running payload should not be completed")
-	}
-	if !cardPayloadCompleted(map[string]any{
-		"data": map[string]any{
-			"template_variable": map[string]any{
-				"match_progress": "结束",
-			},
-		},
-	}) {
-		t.Fatal("ended payload should be completed")
+	for result, want := range cases {
+		if got := completedCardColor(result); got != want {
+			t.Fatalf("completedCardColor(%s) = %s, want %s", result, got, want)
+		}
 	}
 }

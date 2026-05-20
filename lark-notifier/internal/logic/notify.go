@@ -255,9 +255,6 @@ func (l *NotifyLogic) patchMatchCards(m *ent.Match) error {
 	}
 	contentData := string(contentBytes)
 	for _, message := range m.Edges.LarkMessages {
-		if sameJSON(message.CardPayload, contentMap) {
-			continue
-		}
 		req := larkim.NewPatchMessageReqBuilder().MessageId(message.MessageID).
 			Body(larkim.NewPatchMessageReqBodyBuilder().Content(contentData).Build()).
 			Build()
@@ -283,19 +280,6 @@ func (l *NotifyLogic) patchMatchCards(m *ent.Match) error {
 		}
 	}
 	return nil
-}
-
-func cardPayloadCompleted(payload map[string]any) bool {
-	data, ok := payload["data"].(map[string]any)
-	if !ok {
-		return false
-	}
-	templateVars, ok := data["template_variable"].(map[string]any)
-	if !ok {
-		return false
-	}
-	progress, _ := templateVars["match_progress"].(string)
-	return progress == "结束"
 }
 
 func (l *NotifyLogic) replyCompletedUploads() error {
@@ -498,11 +482,24 @@ func (l *NotifyLogic) cardContent(m *ent.Match) (*utils.MatchCardContent, error)
 		})
 	}
 	if matchCardCompleted(m) {
-		content.Data.TemplateVariable.MatchProgress = "结束"
-		content.Data.TemplateVariable.Color = "green"
+		content.Data.TemplateVariable.MatchProgress = ""
+		content.Data.TemplateVariable.Color = completedCardColor(m.Result)
 	}
 	content.Data.TemplateVariable.Scores = lo.Uniq(content.Data.TemplateVariable.Scores)
 	return content, nil
+}
+
+func completedCardColor(result match.Result) string {
+	switch result {
+	case match.ResultRED:
+		return "red"
+	case match.ResultBLUE:
+		return "wathet"
+	case match.ResultDRAW:
+		return "yellow"
+	default:
+		return "yellow"
+	}
 }
 
 func cardWinnerText(m *ent.Match, red, blue *ent.Team) string {
@@ -549,10 +546,4 @@ func toMap(v any) map[string]any {
 	b, _ := json.Marshal(v)
 	_ = json.Unmarshal(b, &out)
 	return out
-}
-
-func sameJSON(a, b map[string]any) bool {
-	aa, _ := json.Marshal(a)
-	bb, _ := json.Marshal(b)
-	return string(aa) == string(bb)
 }
