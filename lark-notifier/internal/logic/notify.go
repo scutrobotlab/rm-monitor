@@ -37,6 +37,9 @@ func (l *NotifyLogic) Sync(since time.Time) error {
 		return err
 	}
 	if err := l.patchChangedCardsSince(since); err != nil {
+		if isContextDone(err) {
+			return nil
+		}
 		return err
 	}
 	return l.replyCompletedUploads()
@@ -210,11 +213,21 @@ func (l *NotifyLogic) patchChangedCardsSince(since time.Time) error {
 		seen[m.ID] = struct{}{}
 	}
 	for id := range seen {
+		if l.ctx.Err() != nil {
+			return nil
+		}
 		if err := l.patchMatchCardsByID(id); err != nil {
+			if isContextDone(err) {
+				return nil
+			}
 			return err
 		}
 	}
 	return nil
+}
+
+func isContextDone(err error) bool {
+	return errors.Cause(err) == context.Canceled || errors.Cause(err) == context.DeadlineExceeded
 }
 
 func (l *NotifyLogic) patchMatchCardsByID(matchID string) error {

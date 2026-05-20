@@ -1,6 +1,7 @@
 package logic
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -37,6 +38,15 @@ func TestMatchCardCompletedRequiresDoneStatus(t *testing.T) {
 	}}}
 	if matchCardCompleted(m) {
 		t.Fatal("non-DONE match should not be completed")
+	}
+}
+
+func TestIsContextDone(t *testing.T) {
+	if !isContextDone(context.DeadlineExceeded) {
+		t.Fatal("deadline exceeded should be context done")
+	}
+	if isContextDone(nil) {
+		t.Fatal("nil should not be context done")
 	}
 }
 
