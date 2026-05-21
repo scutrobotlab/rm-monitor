@@ -52,6 +52,20 @@ cleanup() {
 }
 trap cleanup EXIT
 
+dump_debug() {
+  local exit_code=$?
+  if [[ "$exit_code" == "0" ]]; then
+    return
+  fi
+  log "debug dump after failure"
+  "$KUBECTL" -n "$NS" get pods,pvc,jobs,events --sort-by=.metadata.creationTimestamp || true
+  for name in monitor record-dispatcher; do
+    "$KUBECTL" -n "$NS" describe deploy/"$name" || true
+    "$KUBECTL" -n "$NS" logs deploy/"$name" --tail=120 || true
+  done
+}
+trap dump_debug ERR
+
 if [[ "$USE_KIND" == "1" ]]; then
   if ! "$KIND" get clusters | grep -qx "$CLUSTER"; then
     log "creating kind cluster $CLUSTER"
@@ -260,8 +274,10 @@ log "installing rm-monitor chart"
   --set record.res='1080p' \
   --set storage.record.storageClassName='e2e-records' \
   --set storage.record.volumeName='e2e-records' \
+  --set storage.record.size='1Gi' \
   --set storage.shared.storageClassName='e2e-records-shared' \
   --set storage.shared.volumeName='e2e-records-shared' \
+  --set storage.shared.size='1Gi' \
   --set components.larkNotifier.replicas=0 \
   --set components.uploaderDispatcher.replicas=0 \
   --set components.transcodeDispatcher.replicas=0 \
