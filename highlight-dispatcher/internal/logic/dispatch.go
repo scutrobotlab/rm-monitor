@@ -72,7 +72,7 @@ func (l *DispatchLogic) createHighlightClips(conf common.HighlightConf) error {
 				q.WithMatch()
 			})
 		}).
-		Order(mediaartifact.ByRecordTaskField(recordtask.FieldPriority, sql.OrderDesc()), mediaartifact.ByCreatedAt()).
+		Order(mediaartifact.ByRecordTaskField(recordtask.FieldPriority, sql.OrderDesc()), mediaartifact.ByCreatedAt(sql.OrderDesc())).
 		Limit(100).
 		All(l.ctx)
 	if err != nil {
