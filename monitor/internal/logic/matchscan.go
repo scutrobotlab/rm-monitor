@@ -497,11 +497,16 @@ func (l *MatchScanLogic) convergeMatchLatestStatus(cur scannedMatch) error {
 	if err != nil {
 		return errors.Wrap(err, "query match for status convergence")
 	}
-	if m.LatestStatus == "DONE" {
+	needsStatus := m.LatestStatus != "DONE"
+	needsResult := m.Result == match.ResultUNKNOWN
+	if !needsStatus && !needsResult {
 		return nil
 	}
-	update := l.svcCtx.DB.Match.UpdateOneID(cur.ID).SetLatestStatus("DONE")
-	if cur.Result == "UNKNOWN" {
+	update := l.svcCtx.DB.Match.UpdateOneID(cur.ID)
+	if needsStatus {
+		update.SetLatestStatus("DONE")
+	}
+	if needsResult {
 		switch {
 		case redWins > blueWins:
 			update.SetResult(match.ResultRED)
