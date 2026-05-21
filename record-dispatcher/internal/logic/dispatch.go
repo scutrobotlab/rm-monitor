@@ -327,6 +327,7 @@ func (l *DispatchLogic) dispatchCompletedManifestJobs() error {
 	matches, err := l.svcCtx.DB.Match.Query().
 		Where(match.LatestStatusEQ("DONE"), match.ReportIsNil()).
 		WithRounds().
+		Order(match.ByUpdatedAt(sql.OrderDesc())).
 		Limit(50).
 		All(l.ctx)
 	if err != nil {

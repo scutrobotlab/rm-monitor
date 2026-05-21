@@ -170,6 +170,10 @@ func (l *MatchScanLogic) upsertMatch(m scannedMatch) error {
 		return err
 	}
 
+	latestStatus, err := l.latestStatusForUpsert(m)
+	if err != nil {
+		return err
+	}
 	matchPriority := priority.ForSchools(l.svcCtx.Config.Priority, m.RedTeam.SchoolName, m.BlueTeam.SchoolName)
 	create := l.svcCtx.DB.Match.Create().
 		SetID(m.ID).
@@ -182,7 +186,7 @@ func (l *MatchScanLogic) upsertMatch(m scannedMatch) error {
 		SetResult(match.Result(m.Result)).
 		SetWinnerPlaceholderName(m.WinnerPlacehold).
 		SetLoserPlaceholderName(m.LoserPlacehold).
-		SetLatestStatus(m.Status).
+		SetLatestStatus(latestStatus).
 		SetRedTeamID(m.RedTeam.ID).
 		SetBlueTeamID(m.BlueTeam.ID)
 	if m.MatchSlug != "" {
@@ -200,7 +204,17 @@ func (l *MatchScanLogic) upsertMatch(m scannedMatch) error {
 			return err
 		}
 	}
+	if err := l.convergeMatchLatestStatus(m); err != nil {
+		return err
+	}
 	return l.saveLastProcessed(m)
+}
+
+func (l *MatchScanLogic) latestStatusForUpsert(m scannedMatch) (string, error) {
+	if m.Status != types.MatchStatusSTARTED && matchDecided(m) {
+		return "DONE", nil
+	}
+	return m.Status, nil
 }
 
 func (l *MatchScanLogic) upsertTeam(t scannedTeam) error {
@@ -443,6 +457,64 @@ func (l *MatchScanLogic) convergeCompletedRounds(cur scannedMatch) error {
 		}
 	}
 	return nil
+}
+
+func (l *MatchScanLogic) convergeMatchLatestStatus(cur scannedMatch) error {
+	if cur.Status == types.MatchStatusSTARTED {
+		return nil
+	}
+	rounds, err := l.svcCtx.DB.MatchRound.Query().
+		Where(matchround.HasMatchWith(match.ID(cur.ID))).
+		All(l.ctx)
+	if err != nil {
+		return errors.Wrap(err, "query match rounds for status convergence")
+	}
+	if len(rounds) == 0 {
+		return nil
+	}
+	redWins, blueWins := 0, 0
+	for _, r := range rounds {
+		if r.Status != matchround.StatusENDED {
+			return nil
+		}
+		if r.Winner == nil {
+			continue
+		}
+		switch *r.Winner {
+		case matchround.WinnerRed:
+			redWins++
+		case matchround.WinnerBlue:
+			blueWins++
+		}
+	}
+	required := winsRequired(cur.TotalRounds)
+	completeByScore := required > 0 && (redWins >= required || blueWins >= required)
+	completeByRoundCount := cur.TotalRounds > 0 && len(rounds) >= cur.TotalRounds
+	if !completeByScore && !completeByRoundCount {
+		return nil
+	}
+	m, err := l.svcCtx.DB.Match.Query().Where(match.ID(cur.ID)).Only(l.ctx)
+	if err != nil {
+		return errors.Wrap(err, "query match for status convergence")
+	}
+	if m.LatestStatus == "DONE" {
+		return nil
+	}
+	update := l.svcCtx.DB.Match.UpdateOneID(cur.ID).SetLatestStatus("DONE")
+	if cur.Result == "UNKNOWN" {
+		switch {
+		case redWins > blueWins:
+			update.SetResult(match.ResultRED)
+		case blueWins > redWins:
+			update.SetResult(match.ResultBLUE)
+		default:
+			update.SetResult(match.ResultDRAW)
+		}
+	}
+	if err := update.Exec(l.ctx); err != nil {
+		return errors.Wrap(err, "set converged match status")
+	}
+	return db.Notify(l.ctx, l.svcCtx.Config.PostgresConf.DSN, db.MatchChangedChannel, cur.ID)
 }
 
 func authoritativeWinners(rounds []*ent.MatchRound, redWins, blueWins int) []matchround.Winner {
