@@ -9,6 +9,7 @@ build-all:
 	go build -trimpath -ldflags "-s -w" -o bin/record-job record-job/main.go
 	go build -trimpath -ldflags "-s -w" -o bin/stt-job stt-job/main.go
 	go build -trimpath -ldflags "-s -w" -o bin/stt-recover cmd/stt-recover/main.go
+	go build -trimpath -ldflags "-s -w" -o bin/stt-subtitle cmd/stt-subtitle/main.go
 	go build -trimpath -ldflags "-s -w" -o bin/transcode-dispatcher transcode-dispatcher/main.go
 	go build -trimpath -ldflags "-s -w" -o bin/transcode-job transcode-job/main.go
 	go build -trimpath -ldflags "-s -w" -o bin/uploader-dispatcher uploader-dispatcher/main.go

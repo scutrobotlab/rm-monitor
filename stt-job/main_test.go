@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	common "scutbot.cn/web/rm-monitor/pkg/config"
+	"scutbot.cn/web/rm-monitor/pkg/subtitle"
 )
 
 func TestSegmentCompleteRequiresNextOrDoneAndStable(t *testing.T) {
@@ -154,7 +155,7 @@ func TestRunSubtitleBackfill(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(highlightDir, "highlight.json"), []byte(meta), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := runSubtitleBackfill(common.RecordConf{BaseDir: dir, STTRole: "主视角"}); err != nil {
+	if _, err := subtitle.Backfill(common.RecordConf{BaseDir: dir, STTRole: "主视角"}, subtitle.BackfillOptions{Force: true, Rounds: true, Highlights: true}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(filepath.Join(roundDir, "主视角.srt")); err != nil {
