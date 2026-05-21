@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -28,18 +29,20 @@ import (
 	"scutbot.cn/web/rm-monitor/pkg/redisx"
 	"scutbot.cn/web/rm-monitor/pkg/storagepath"
 	"scutbot.cn/web/rm-monitor/pkg/sttcoord"
+	"scutbot.cn/web/rm-monitor/pkg/subtitle"
 	jobconfig "scutbot.cn/web/rm-monitor/stt-job/internal/config"
 )
 
 var (
 	configFile = flag.String("f", "etc/config.yml", "the config file")
-	modeFlag   = flag.String("mode", "", "audio-recorder or recognizer")
+	modeFlag   = flag.String("mode", "", "audio-recorder, recognizer, or backfill-subtitles")
 	roundFlag  = flag.Int("round", 0, "match round id")
 )
 
 const (
 	modeAudioRecorder = "audio-recorder"
 	modeRecognizer    = "recognizer"
+	modeBackfill      = "backfill-subtitles"
 	segmentSeconds    = 60
 	ua                = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 )
@@ -50,7 +53,7 @@ func init() {
 
 func main() {
 	flag.Parse()
-	if *roundFlag == 0 {
+	if *roundFlag == 0 && *modeFlag != modeBackfill {
 		logx.Error("round id is required")
 		os.Exit(1)
 	}
@@ -68,6 +71,8 @@ func main() {
 		runErr = runAudioRecorder(context.Background(), client, c, *roundFlag)
 	case modeRecognizer:
 		runErr = runRecognizer(context.Background(), client, c, *roundFlag)
+	case modeBackfill:
+		runErr = runSubtitleBackfill(c.RecordConf.WithDefaults())
 	default:
 		runErr = errors.Errorf("unknown mode %q", *modeFlag)
 	}
@@ -239,6 +244,9 @@ func runRecognizer(ctx context.Context, client *ent.Client, c jobconfig.Config, 
 				continue
 			}
 		} else if markerExists(info.AudioDir, ".ffmpeg.done") {
+			if err := writeRoundSubtitle(info); err != nil {
+				return err
+			}
 			return os.RemoveAll(info.AudioDir)
 		} else if markerExists(info.AudioDir, ".ffmpeg.failed") {
 			return errors.New(readMarker(info.AudioDir, ".ffmpeg.failed"))
@@ -251,12 +259,21 @@ func runRecognizer(ctx context.Context, client *ent.Client, c jobconfig.Config, 
 	}
 }
 
+func writeRoundSubtitle(info roundInfo) error {
+	err := subtitle.WriteSRTFromJSONL(info.STTPath, filepath.Join(info.RoundDir, info.SubtitleName), subtitle.Options{})
+	if errors.Is(err, subtitle.ErrNoCues) {
+		return nil
+	}
+	return err
+}
+
 type roundInfo struct {
-	Round    *ent.MatchRound
-	Match    *ent.Match
-	RoundDir string
-	AudioDir string
-	STTPath  string
+	Round        *ent.MatchRound
+	Match        *ent.Match
+	RoundDir     string
+	AudioDir     string
+	STTPath      string
+	SubtitleName string
 }
 
 func loadRoundInfo(ctx context.Context, client *ent.Client, conf common.RecordConf, roundID int) (roundInfo, error) {
@@ -297,11 +314,12 @@ func loadRoundInfo(ctx context.Context, client *ent.Client, conf common.RecordCo
 	}
 	roundDir := storagepath.Resolve(conf.BaseDir, filepath.Join(rel, fmt.Sprintf("Round-%d", round.RoundNo)))
 	return roundInfo{
-		Round:    round,
-		Match:    match,
-		RoundDir: roundDir,
-		AudioDir: filepath.Join(roundDir, "audio"),
-		STTPath:  filepath.Join(roundDir, "stt.jsonl"),
+		Round:        round,
+		Match:        match,
+		RoundDir:     roundDir,
+		AudioDir:     filepath.Join(roundDir, "audio"),
+		STTPath:      filepath.Join(roundDir, "stt.jsonl"),
+		SubtitleName: fmt.Sprintf("%s.srt", conf.STTRole),
 	}, nil
 }
 
@@ -539,4 +557,85 @@ func recognizeFile(ctx context.Context, serverURL, wavPath string) (whisperResul
 		return whisperResult{}, seconds, errors.Errorf("whisper server http %d: %s", resp.StatusCode(), resp.String())
 	}
 	return out, seconds, nil
+}
+
+type highlightMeta struct {
+	StartSeconds float64 `json:"start_seconds"`
+	EndSeconds   float64 `json:"end_seconds"`
+}
+
+func runSubtitleBackfill(conf common.RecordConf) error {
+	baseDir := conf.BaseDir
+	if strings.TrimSpace(baseDir) == "" {
+		return errors.New("RecordConf.BaseDir is empty")
+	}
+	role := strings.TrimSpace(conf.STTRole)
+	if role == "" {
+		return errors.New("RecordConf.STTRole is empty")
+	}
+	roundSubtitles := 0
+	highlightSubtitles := 0
+	err := filepath.WalkDir(baseDir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			return nil
+		}
+		switch filepath.Base(path) {
+		case "stt.jsonl":
+			out := filepath.Join(filepath.Dir(path), fmt.Sprintf("%s.srt", role))
+			err := subtitle.WriteSRTFromJSONL(path, out, subtitle.Options{})
+			if errors.Is(err, subtitle.ErrNoCues) {
+				return nil
+			}
+			if err != nil {
+				return errors.Wrapf(err, "write round subtitle %s", out)
+			}
+			roundSubtitles++
+		case "highlight.json":
+			n, err := backfillHighlightSubtitle(path)
+			if err != nil {
+				return err
+			}
+			highlightSubtitles += n
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	logx.Infof("subtitle backfill completed: round=%d highlight=%d", roundSubtitles, highlightSubtitles)
+	return nil
+}
+
+func backfillHighlightSubtitle(metaPath string) (int, error) {
+	raw, err := os.ReadFile(metaPath)
+	if err != nil {
+		return 0, err
+	}
+	var meta highlightMeta
+	if err := json.Unmarshal(raw, &meta); err != nil {
+		return 0, errors.Wrapf(err, "parse highlight metadata %s", metaPath)
+	}
+	if meta.EndSeconds <= meta.StartSeconds {
+		return 0, nil
+	}
+	outputDir := filepath.Dir(metaPath)
+	roundDir := filepath.Dir(filepath.Dir(outputDir))
+	sttPath := filepath.Join(roundDir, "stt.jsonl")
+	if !fileExists(sttPath) {
+		return 0, nil
+	}
+	err = subtitle.WriteSRTFromJSONL(sttPath, filepath.Join(outputDir, "video.srt"), subtitle.Options{
+		Start: &meta.StartSeconds,
+		End:   &meta.EndSeconds,
+	})
+	if errors.Is(err, subtitle.ErrNoCues) {
+		return 0, nil
+	}
+	if err != nil {
+		return 0, errors.Wrapf(err, "write highlight subtitle %s", outputDir)
+	}
+	return 1, nil
 }

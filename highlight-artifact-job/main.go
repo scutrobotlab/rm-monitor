@@ -30,6 +30,7 @@ import (
 	"scutbot.cn/web/rm-monitor/pkg/db"
 	"scutbot.cn/web/rm-monitor/pkg/logx"
 	"scutbot.cn/web/rm-monitor/pkg/storagepath"
+	"scutbot.cn/web/rm-monitor/pkg/subtitle"
 )
 
 var (
@@ -40,6 +41,7 @@ var (
 const (
 	highlightVideoFile = "video.mp4"
 	highlightDanmuFile = "video.danmuku.xml"
+	highlightSRTFile   = "video.srt"
 )
 
 func init() {
@@ -111,6 +113,12 @@ func run(ctx context.Context, client *ent.Client, c config.Config, clipID int) e
 		return fail(ctx, client, clipID, err.Error())
 	}
 	if err := writeCroppedDanmu(danmuFile, filepath.Join(outputDir, highlightDanmuFile), clip.StartSeconds, clip.EndSeconds); err != nil {
+		return fail(ctx, client, clipID, err.Error())
+	}
+	if err := subtitle.WriteSRTFromJSONL(filepath.Join(roundDir, "stt.jsonl"), filepath.Join(outputDir, highlightSRTFile), subtitle.Options{
+		Start: &clip.StartSeconds,
+		End:   &clip.EndSeconds,
+	}); err != nil {
 		return fail(ctx, client, clipID, err.Error())
 	}
 	payload := buildHighlightJSON(clip, sourceRel, outputRel, llm)
@@ -532,6 +540,7 @@ func buildHighlightJSON(clip *ent.HighlightClip, sourceRel, outputRel string, ll
 		"output_dir":        outputRel,
 		"video":             pathpkg.Join(outputRel, highlightVideoFile),
 		"danmu":             pathpkg.Join(outputRel, highlightDanmuFile),
+		"subtitle":          pathpkg.Join(outputRel, highlightSRTFile),
 		"publish":           map[string]string{"status": "disabled"},
 	}
 }

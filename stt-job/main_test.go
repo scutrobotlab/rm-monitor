@@ -8,7 +8,10 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+
+	common "scutbot.cn/web/rm-monitor/pkg/config"
 )
 
 func TestSegmentCompleteRequiresNextOrDoneAndStable(t *testing.T) {
@@ -130,5 +133,38 @@ func TestRecognizeFilePostsWhisperMultipart(t *testing.T) {
 	}
 	if result.Duration != 1.2 || result.Text != "ok" || len(result.Segments) != 1 {
 		t.Fatalf("result = %#v", result)
+	}
+}
+
+func TestRunSubtitleBackfill(t *testing.T) {
+	dir := t.TempDir()
+	roundDir := filepath.Join(dir, "Event", "Zone", "Match", "Round-1")
+	highlightDir := filepath.Join(roundDir, "highlights", "Highlight-01")
+	if err := os.MkdirAll(highlightDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	stt := strings.Join([]string{
+		`{"start":10,"end":12,"status":"SUCCEEDED","text":"开场"}`,
+		`{"start":20,"end":23,"status":"SUCCEEDED","text":"高光"}`,
+	}, "\n")
+	if err := os.WriteFile(filepath.Join(roundDir, "stt.jsonl"), []byte(stt), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	meta := `{"start_seconds":18,"end_seconds":25}`
+	if err := os.WriteFile(filepath.Join(highlightDir, "highlight.json"), []byte(meta), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := runSubtitleBackfill(common.RecordConf{BaseDir: dir, STTRole: "主视角"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(roundDir, "主视角.srt")); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := os.ReadFile(filepath.Join(highlightDir, "video.srt"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(raw), "00:00:02,000 --> 00:00:05,000") || !strings.Contains(string(raw), "高光") {
+		t.Fatalf("unexpected highlight srt:\n%s", raw)
 	}
 }
