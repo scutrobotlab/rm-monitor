@@ -15,19 +15,6 @@ func TestMatchCardUUID(t *testing.T) {
 	}
 }
 
-func TestUploadReplyUUID(t *testing.T) {
-	got := UploadReplyUUID(123, "om_long_message_id")
-	if got != UploadReplyUUID(123, "om_long_message_id") {
-		t.Fatalf("UploadReplyUUID() is not stable")
-	}
-	if got == UploadReplyUUID(124, "om_long_message_id") {
-		t.Fatalf("UploadReplyUUID() should include upload task id")
-	}
-	if len(got) > 50 {
-		t.Fatalf("UploadReplyUUID() length = %d, want <= 50", len(got))
-	}
-}
-
 func TestMatchCardUpdateUUID(t *testing.T) {
 	got := MatchCardUpdateUUID("match-1", "card-1", 100)
 	if got != MatchCardUpdateUUID("match-1", "card-1", 100) {

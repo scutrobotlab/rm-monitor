@@ -7,7 +7,6 @@ import (
 
 	"scutbot.cn/web/rm-monitor/ent/highlightclip"
 	"scutbot.cn/web/rm-monitor/ent/highlightpublishtask"
-	"scutbot.cn/web/rm-monitor/ent/larkcardmessage"
 	"scutbot.cn/web/rm-monitor/ent/larkmessage"
 	"scutbot.cn/web/rm-monitor/ent/match"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
@@ -67,18 +66,6 @@ func init() {
 	highlightpublishtask.DefaultUpdatedAt = highlightpublishtaskDescUpdatedAt.Default.(func() time.Time)
 	// highlightpublishtask.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	highlightpublishtask.UpdateDefaultUpdatedAt = highlightpublishtaskDescUpdatedAt.UpdateDefault.(func() time.Time)
-	larkcardmessageFields := schema.LarkCardMessage{}.Fields()
-	_ = larkcardmessageFields
-	// larkcardmessageDescCreatedAt is the schema descriptor for created_at field.
-	larkcardmessageDescCreatedAt := larkcardmessageFields[1].Descriptor()
-	// larkcardmessage.DefaultCreatedAt holds the default value on creation for the created_at field.
-	larkcardmessage.DefaultCreatedAt = larkcardmessageDescCreatedAt.Default.(func() time.Time)
-	// larkcardmessageDescUpdatedAt is the schema descriptor for updated_at field.
-	larkcardmessageDescUpdatedAt := larkcardmessageFields[2].Descriptor()
-	// larkcardmessage.DefaultUpdatedAt holds the default value on creation for the updated_at field.
-	larkcardmessage.DefaultUpdatedAt = larkcardmessageDescUpdatedAt.Default.(func() time.Time)
-	// larkcardmessage.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
-	larkcardmessage.UpdateDefaultUpdatedAt = larkcardmessageDescUpdatedAt.UpdateDefault.(func() time.Time)
 	larkmessageFields := schema.LarkMessage{}.Fields()
 	_ = larkmessageFields
 	// larkmessageDescCreatedAt is the schema descriptor for created_at field.
@@ -222,11 +209,11 @@ func init() {
 	// uploadtask.DefaultPriority holds the default value on creation for the priority field.
 	uploadtask.DefaultPriority = uploadtaskDescPriority.Default.(int)
 	// uploadtaskDescCreatedAt is the schema descriptor for created_at field.
-	uploadtaskDescCreatedAt := uploadtaskFields[14].Descriptor()
+	uploadtaskDescCreatedAt := uploadtaskFields[13].Descriptor()
 	// uploadtask.DefaultCreatedAt holds the default value on creation for the created_at field.
 	uploadtask.DefaultCreatedAt = uploadtaskDescCreatedAt.Default.(func() time.Time)
 	// uploadtaskDescUpdatedAt is the schema descriptor for updated_at field.
-	uploadtaskDescUpdatedAt := uploadtaskFields[15].Descriptor()
+	uploadtaskDescUpdatedAt := uploadtaskFields[14].Descriptor()
 	// uploadtask.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	uploadtask.DefaultUpdatedAt = uploadtaskDescUpdatedAt.Default.(func() time.Time)
 	// uploadtask.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.

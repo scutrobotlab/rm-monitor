@@ -25,7 +25,6 @@ func (LarkMessage) Fields() []ent.Field {
 func (LarkMessage) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("match", Match.Type).Ref("lark_messages").Unique().Required(),
-		edge.To("card_messages", LarkCardMessage.Type),
 	}
 }
 

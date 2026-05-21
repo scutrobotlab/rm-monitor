@@ -11,7 +11,6 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
-	"scutbot.cn/web/rm-monitor/ent/larkcardmessage"
 	"scutbot.cn/web/rm-monitor/ent/larkmessage"
 	"scutbot.cn/web/rm-monitor/ent/match"
 	"scutbot.cn/web/rm-monitor/ent/predicate"
@@ -73,21 +72,6 @@ func (_u *LarkMessageUpdate) SetMatch(v *Match) *LarkMessageUpdate {
 	return _u.SetMatchID(v.ID)
 }
 
-// AddCardMessageIDs adds the "card_messages" edge to the LarkCardMessage entity by IDs.
-func (_u *LarkMessageUpdate) AddCardMessageIDs(ids ...int) *LarkMessageUpdate {
-	_u.mutation.AddCardMessageIDs(ids...)
-	return _u
-}
-
-// AddCardMessages adds the "card_messages" edges to the LarkCardMessage entity.
-func (_u *LarkMessageUpdate) AddCardMessages(v ...*LarkCardMessage) *LarkMessageUpdate {
-	ids := make([]int, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.AddCardMessageIDs(ids...)
-}
-
 // Mutation returns the LarkMessageMutation object of the builder.
 func (_u *LarkMessageUpdate) Mutation() *LarkMessageMutation {
 	return _u.mutation
@@ -97,27 +81,6 @@ func (_u *LarkMessageUpdate) Mutation() *LarkMessageMutation {
 func (_u *LarkMessageUpdate) ClearMatch() *LarkMessageUpdate {
 	_u.mutation.ClearMatch()
 	return _u
-}
-
-// ClearCardMessages clears all "card_messages" edges to the LarkCardMessage entity.
-func (_u *LarkMessageUpdate) ClearCardMessages() *LarkMessageUpdate {
-	_u.mutation.ClearCardMessages()
-	return _u
-}
-
-// RemoveCardMessageIDs removes the "card_messages" edge to LarkCardMessage entities by IDs.
-func (_u *LarkMessageUpdate) RemoveCardMessageIDs(ids ...int) *LarkMessageUpdate {
-	_u.mutation.RemoveCardMessageIDs(ids...)
-	return _u
-}
-
-// RemoveCardMessages removes "card_messages" edges to LarkCardMessage entities.
-func (_u *LarkMessageUpdate) RemoveCardMessages(v ...*LarkCardMessage) *LarkMessageUpdate {
-	ids := make([]int, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.RemoveCardMessageIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -217,51 +180,6 @@ func (_u *LarkMessageUpdate) sqlSave(ctx context.Context) (_node int, err error)
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if _u.mutation.CardMessagesCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   larkmessage.CardMessagesTable,
-			Columns: []string{larkmessage.CardMessagesColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(larkcardmessage.FieldID, field.TypeInt),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.RemovedCardMessagesIDs(); len(nodes) > 0 && !_u.mutation.CardMessagesCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   larkmessage.CardMessagesTable,
-			Columns: []string{larkmessage.CardMessagesColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(larkcardmessage.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.CardMessagesIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   larkmessage.CardMessagesTable,
-			Columns: []string{larkmessage.CardMessagesColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(larkcardmessage.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{larkmessage.Label}
@@ -325,21 +243,6 @@ func (_u *LarkMessageUpdateOne) SetMatch(v *Match) *LarkMessageUpdateOne {
 	return _u.SetMatchID(v.ID)
 }
 
-// AddCardMessageIDs adds the "card_messages" edge to the LarkCardMessage entity by IDs.
-func (_u *LarkMessageUpdateOne) AddCardMessageIDs(ids ...int) *LarkMessageUpdateOne {
-	_u.mutation.AddCardMessageIDs(ids...)
-	return _u
-}
-
-// AddCardMessages adds the "card_messages" edges to the LarkCardMessage entity.
-func (_u *LarkMessageUpdateOne) AddCardMessages(v ...*LarkCardMessage) *LarkMessageUpdateOne {
-	ids := make([]int, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.AddCardMessageIDs(ids...)
-}
-
 // Mutation returns the LarkMessageMutation object of the builder.
 func (_u *LarkMessageUpdateOne) Mutation() *LarkMessageMutation {
 	return _u.mutation
@@ -349,27 +252,6 @@ func (_u *LarkMessageUpdateOne) Mutation() *LarkMessageMutation {
 func (_u *LarkMessageUpdateOne) ClearMatch() *LarkMessageUpdateOne {
 	_u.mutation.ClearMatch()
 	return _u
-}
-
-// ClearCardMessages clears all "card_messages" edges to the LarkCardMessage entity.
-func (_u *LarkMessageUpdateOne) ClearCardMessages() *LarkMessageUpdateOne {
-	_u.mutation.ClearCardMessages()
-	return _u
-}
-
-// RemoveCardMessageIDs removes the "card_messages" edge to LarkCardMessage entities by IDs.
-func (_u *LarkMessageUpdateOne) RemoveCardMessageIDs(ids ...int) *LarkMessageUpdateOne {
-	_u.mutation.RemoveCardMessageIDs(ids...)
-	return _u
-}
-
-// RemoveCardMessages removes "card_messages" edges to LarkCardMessage entities.
-func (_u *LarkMessageUpdateOne) RemoveCardMessages(v ...*LarkCardMessage) *LarkMessageUpdateOne {
-	ids := make([]int, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.RemoveCardMessageIDs(ids...)
 }
 
 // Where appends a list predicates to the LarkMessageUpdate builder.
@@ -492,51 +374,6 @@ func (_u *LarkMessageUpdateOne) sqlSave(ctx context.Context) (_node *LarkMessage
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(match.FieldID, field.TypeString),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if _u.mutation.CardMessagesCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   larkmessage.CardMessagesTable,
-			Columns: []string{larkmessage.CardMessagesColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(larkcardmessage.FieldID, field.TypeInt),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.RemovedCardMessagesIDs(); len(nodes) > 0 && !_u.mutation.CardMessagesCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   larkmessage.CardMessagesTable,
-			Columns: []string{larkmessage.CardMessagesColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(larkcardmessage.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.CardMessagesIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   larkmessage.CardMessagesTable,
-			Columns: []string{larkmessage.CardMessagesColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(larkcardmessage.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

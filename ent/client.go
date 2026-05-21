@@ -17,7 +17,6 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"scutbot.cn/web/rm-monitor/ent/highlightclip"
 	"scutbot.cn/web/rm-monitor/ent/highlightpublishtask"
-	"scutbot.cn/web/rm-monitor/ent/larkcardmessage"
 	"scutbot.cn/web/rm-monitor/ent/larkmessage"
 	"scutbot.cn/web/rm-monitor/ent/match"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
@@ -37,8 +36,6 @@ type Client struct {
 	HighlightClip *HighlightClipClient
 	// HighlightPublishTask is the client for interacting with the HighlightPublishTask builders.
 	HighlightPublishTask *HighlightPublishTaskClient
-	// LarkCardMessage is the client for interacting with the LarkCardMessage builders.
-	LarkCardMessage *LarkCardMessageClient
 	// LarkMessage is the client for interacting with the LarkMessage builders.
 	LarkMessage *LarkMessageClient
 	// Match is the client for interacting with the Match builders.
@@ -68,7 +65,6 @@ func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
 	c.HighlightClip = NewHighlightClipClient(c.config)
 	c.HighlightPublishTask = NewHighlightPublishTaskClient(c.config)
-	c.LarkCardMessage = NewLarkCardMessageClient(c.config)
 	c.LarkMessage = NewLarkMessageClient(c.config)
 	c.Match = NewMatchClient(c.config)
 	c.MatchRound = NewMatchRoundClient(c.config)
@@ -171,7 +167,6 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		config:               cfg,
 		HighlightClip:        NewHighlightClipClient(cfg),
 		HighlightPublishTask: NewHighlightPublishTaskClient(cfg),
-		LarkCardMessage:      NewLarkCardMessageClient(cfg),
 		LarkMessage:          NewLarkMessageClient(cfg),
 		Match:                NewMatchClient(cfg),
 		MatchRound:           NewMatchRoundClient(cfg),
@@ -201,7 +196,6 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		config:               cfg,
 		HighlightClip:        NewHighlightClipClient(cfg),
 		HighlightPublishTask: NewHighlightPublishTaskClient(cfg),
-		LarkCardMessage:      NewLarkCardMessageClient(cfg),
 		LarkMessage:          NewLarkMessageClient(cfg),
 		Match:                NewMatchClient(cfg),
 		MatchRound:           NewMatchRoundClient(cfg),
@@ -239,9 +233,8 @@ func (c *Client) Close() error {
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
-		c.HighlightClip, c.HighlightPublishTask, c.LarkCardMessage, c.LarkMessage,
-		c.Match, c.MatchRound, c.MediaArtifact, c.RecordTask, c.Team, c.TranscodeTask,
-		c.UploadTask,
+		c.HighlightClip, c.HighlightPublishTask, c.LarkMessage, c.Match, c.MatchRound,
+		c.MediaArtifact, c.RecordTask, c.Team, c.TranscodeTask, c.UploadTask,
 	} {
 		n.Use(hooks...)
 	}
@@ -251,9 +244,8 @@ func (c *Client) Use(hooks ...Hook) {
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
-		c.HighlightClip, c.HighlightPublishTask, c.LarkCardMessage, c.LarkMessage,
-		c.Match, c.MatchRound, c.MediaArtifact, c.RecordTask, c.Team, c.TranscodeTask,
-		c.UploadTask,
+		c.HighlightClip, c.HighlightPublishTask, c.LarkMessage, c.Match, c.MatchRound,
+		c.MediaArtifact, c.RecordTask, c.Team, c.TranscodeTask, c.UploadTask,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -266,8 +258,6 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.HighlightClip.mutate(ctx, m)
 	case *HighlightPublishTaskMutation:
 		return c.HighlightPublishTask.mutate(ctx, m)
-	case *LarkCardMessageMutation:
-		return c.LarkCardMessage.mutate(ctx, m)
 	case *LarkMessageMutation:
 		return c.LarkMessage.mutate(ctx, m)
 	case *MatchMutation:
@@ -619,155 +609,6 @@ func (c *HighlightPublishTaskClient) mutate(ctx context.Context, m *HighlightPub
 	}
 }
 
-// LarkCardMessageClient is a client for the LarkCardMessage schema.
-type LarkCardMessageClient struct {
-	config
-}
-
-// NewLarkCardMessageClient returns a client for the LarkCardMessage from the given config.
-func NewLarkCardMessageClient(c config) *LarkCardMessageClient {
-	return &LarkCardMessageClient{config: c}
-}
-
-// Use adds a list of mutation hooks to the hooks stack.
-// A call to `Use(f, g, h)` equals to `larkcardmessage.Hooks(f(g(h())))`.
-func (c *LarkCardMessageClient) Use(hooks ...Hook) {
-	c.hooks.LarkCardMessage = append(c.hooks.LarkCardMessage, hooks...)
-}
-
-// Intercept adds a list of query interceptors to the interceptors stack.
-// A call to `Intercept(f, g, h)` equals to `larkcardmessage.Intercept(f(g(h())))`.
-func (c *LarkCardMessageClient) Intercept(interceptors ...Interceptor) {
-	c.inters.LarkCardMessage = append(c.inters.LarkCardMessage, interceptors...)
-}
-
-// Create returns a builder for creating a LarkCardMessage entity.
-func (c *LarkCardMessageClient) Create() *LarkCardMessageCreate {
-	mutation := newLarkCardMessageMutation(c.config, OpCreate)
-	return &LarkCardMessageCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// CreateBulk returns a builder for creating a bulk of LarkCardMessage entities.
-func (c *LarkCardMessageClient) CreateBulk(builders ...*LarkCardMessageCreate) *LarkCardMessageCreateBulk {
-	return &LarkCardMessageCreateBulk{config: c.config, builders: builders}
-}
-
-// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
-// a builder and applies setFunc on it.
-func (c *LarkCardMessageClient) MapCreateBulk(slice any, setFunc func(*LarkCardMessageCreate, int)) *LarkCardMessageCreateBulk {
-	rv := reflect.ValueOf(slice)
-	if rv.Kind() != reflect.Slice {
-		return &LarkCardMessageCreateBulk{err: fmt.Errorf("calling to LarkCardMessageClient.MapCreateBulk with wrong type %T, need slice", slice)}
-	}
-	builders := make([]*LarkCardMessageCreate, rv.Len())
-	for i := 0; i < rv.Len(); i++ {
-		builders[i] = c.Create()
-		setFunc(builders[i], i)
-	}
-	return &LarkCardMessageCreateBulk{config: c.config, builders: builders}
-}
-
-// Update returns an update builder for LarkCardMessage.
-func (c *LarkCardMessageClient) Update() *LarkCardMessageUpdate {
-	mutation := newLarkCardMessageMutation(c.config, OpUpdate)
-	return &LarkCardMessageUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOne returns an update builder for the given entity.
-func (c *LarkCardMessageClient) UpdateOne(_m *LarkCardMessage) *LarkCardMessageUpdateOne {
-	mutation := newLarkCardMessageMutation(c.config, OpUpdateOne, withLarkCardMessage(_m))
-	return &LarkCardMessageUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOneID returns an update builder for the given id.
-func (c *LarkCardMessageClient) UpdateOneID(id int) *LarkCardMessageUpdateOne {
-	mutation := newLarkCardMessageMutation(c.config, OpUpdateOne, withLarkCardMessageID(id))
-	return &LarkCardMessageUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// Delete returns a delete builder for LarkCardMessage.
-func (c *LarkCardMessageClient) Delete() *LarkCardMessageDelete {
-	mutation := newLarkCardMessageMutation(c.config, OpDelete)
-	return &LarkCardMessageDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// DeleteOne returns a builder for deleting the given entity.
-func (c *LarkCardMessageClient) DeleteOne(_m *LarkCardMessage) *LarkCardMessageDeleteOne {
-	return c.DeleteOneID(_m.ID)
-}
-
-// DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *LarkCardMessageClient) DeleteOneID(id int) *LarkCardMessageDeleteOne {
-	builder := c.Delete().Where(larkcardmessage.ID(id))
-	builder.mutation.id = &id
-	builder.mutation.op = OpDeleteOne
-	return &LarkCardMessageDeleteOne{builder}
-}
-
-// Query returns a query builder for LarkCardMessage.
-func (c *LarkCardMessageClient) Query() *LarkCardMessageQuery {
-	return &LarkCardMessageQuery{
-		config: c.config,
-		ctx:    &QueryContext{Type: TypeLarkCardMessage},
-		inters: c.Interceptors(),
-	}
-}
-
-// Get returns a LarkCardMessage entity by its id.
-func (c *LarkCardMessageClient) Get(ctx context.Context, id int) (*LarkCardMessage, error) {
-	return c.Query().Where(larkcardmessage.ID(id)).Only(ctx)
-}
-
-// GetX is like Get, but panics if an error occurs.
-func (c *LarkCardMessageClient) GetX(ctx context.Context, id int) *LarkCardMessage {
-	obj, err := c.Get(ctx, id)
-	if err != nil {
-		panic(err)
-	}
-	return obj
-}
-
-// QueryCard queries the card edge of a LarkCardMessage.
-func (c *LarkCardMessageClient) QueryCard(_m *LarkCardMessage) *LarkMessageQuery {
-	query := (&LarkMessageClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(larkcardmessage.Table, larkcardmessage.FieldID, id),
-			sqlgraph.To(larkmessage.Table, larkmessage.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, larkcardmessage.CardTable, larkcardmessage.CardColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// Hooks returns the client hooks.
-func (c *LarkCardMessageClient) Hooks() []Hook {
-	return c.hooks.LarkCardMessage
-}
-
-// Interceptors returns the client interceptors.
-func (c *LarkCardMessageClient) Interceptors() []Interceptor {
-	return c.inters.LarkCardMessage
-}
-
-func (c *LarkCardMessageClient) mutate(ctx context.Context, m *LarkCardMessageMutation) (Value, error) {
-	switch m.Op() {
-	case OpCreate:
-		return (&LarkCardMessageCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdate:
-		return (&LarkCardMessageUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdateOne:
-		return (&LarkCardMessageUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpDelete, OpDeleteOne:
-		return (&LarkCardMessageDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
-	default:
-		return nil, fmt.Errorf("ent: unknown LarkCardMessage mutation op: %q", m.Op())
-	}
-}
-
 // LarkMessageClient is a client for the LarkMessage schema.
 type LarkMessageClient struct {
 	config
@@ -885,22 +726,6 @@ func (c *LarkMessageClient) QueryMatch(_m *LarkMessage) *MatchQuery {
 			sqlgraph.From(larkmessage.Table, larkmessage.FieldID, id),
 			sqlgraph.To(match.Table, match.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, larkmessage.MatchTable, larkmessage.MatchColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// QueryCardMessages queries the card_messages edge of a LarkMessage.
-func (c *LarkMessageClient) QueryCardMessages(_m *LarkMessage) *LarkCardMessageQuery {
-	query := (&LarkCardMessageClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(larkmessage.Table, larkmessage.FieldID, id),
-			sqlgraph.To(larkcardmessage.Table, larkcardmessage.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, larkmessage.CardMessagesTable, larkmessage.CardMessagesColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -2203,13 +2028,11 @@ func (c *UploadTaskClient) mutate(ctx context.Context, m *UploadTaskMutation) (V
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		HighlightClip, HighlightPublishTask, LarkCardMessage, LarkMessage, Match,
-		MatchRound, MediaArtifact, RecordTask, Team, TranscodeTask,
-		UploadTask []ent.Hook
+		HighlightClip, HighlightPublishTask, LarkMessage, Match, MatchRound,
+		MediaArtifact, RecordTask, Team, TranscodeTask, UploadTask []ent.Hook
 	}
 	inters struct {
-		HighlightClip, HighlightPublishTask, LarkCardMessage, LarkMessage, Match,
-		MatchRound, MediaArtifact, RecordTask, Team, TranscodeTask,
-		UploadTask []ent.Interceptor
+		HighlightClip, HighlightPublishTask, LarkMessage, Match, MatchRound,
+		MediaArtifact, RecordTask, Team, TranscodeTask, UploadTask []ent.Interceptor
 	}
 )

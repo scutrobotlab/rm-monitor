@@ -248,29 +248,6 @@ func HasMatchWith(preds ...predicate.Match) predicate.LarkMessage {
 	})
 }
 
-// HasCardMessages applies the HasEdge predicate on the "card_messages" edge.
-func HasCardMessages() predicate.LarkMessage {
-	return predicate.LarkMessage(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, CardMessagesTable, CardMessagesColumn),
-		)
-		sqlgraph.HasNeighbors(s, step)
-	})
-}
-
-// HasCardMessagesWith applies the HasEdge predicate on the "card_messages" edge with a given conditions (other predicates).
-func HasCardMessagesWith(preds ...predicate.LarkCardMessage) predicate.LarkMessage {
-	return predicate.LarkMessage(func(s *sql.Selector) {
-		step := newCardMessagesStep()
-		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
-			for _, p := range preds {
-				p(s)
-			}
-		})
-	})
-}
-
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.LarkMessage) predicate.LarkMessage {
 	return predicate.LarkMessage(sql.AndPredicates(predicates...))

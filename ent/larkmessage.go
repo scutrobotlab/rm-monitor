@@ -38,11 +38,9 @@ type LarkMessage struct {
 type LarkMessageEdges struct {
 	// Match holds the value of the match edge.
 	Match *Match `json:"match,omitempty"`
-	// CardMessages holds the value of the card_messages edge.
-	CardMessages []*LarkCardMessage `json:"card_messages,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [2]bool
+	loadedTypes [1]bool
 }
 
 // MatchOrErr returns the Match value or an error if the edge
@@ -54,15 +52,6 @@ func (e LarkMessageEdges) MatchOrErr() (*Match, error) {
 		return nil, &NotFoundError{label: match.Label}
 	}
 	return nil, &NotLoadedError{edge: "match"}
-}
-
-// CardMessagesOrErr returns the CardMessages value or an error if the edge
-// was not loaded in eager-loading.
-func (e LarkMessageEdges) CardMessagesOrErr() ([]*LarkCardMessage, error) {
-	if e.loadedTypes[1] {
-		return e.CardMessages, nil
-	}
-	return nil, &NotLoadedError{edge: "card_messages"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -150,11 +139,6 @@ func (_m *LarkMessage) Value(name string) (ent.Value, error) {
 // QueryMatch queries the "match" edge of the LarkMessage entity.
 func (_m *LarkMessage) QueryMatch() *MatchQuery {
 	return NewLarkMessageClient(_m.config).QueryMatch(_m)
-}
-
-// QueryCardMessages queries the "card_messages" edge of the LarkMessage entity.
-func (_m *LarkMessage) QueryCardMessages() *LarkCardMessageQuery {
-	return NewLarkMessageClient(_m.config).QueryCardMessages(_m)
 }
 
 // Update returns a builder for updating this LarkMessage.

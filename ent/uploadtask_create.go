@@ -198,20 +198,6 @@ func (_c *UploadTaskCreate) SetNillableCompletedAt(v *time.Time) *UploadTaskCrea
 	return _c
 }
 
-// SetLarkRepliedAt sets the "lark_replied_at" field.
-func (_c *UploadTaskCreate) SetLarkRepliedAt(v time.Time) *UploadTaskCreate {
-	_c.mutation.SetLarkRepliedAt(v)
-	return _c
-}
-
-// SetNillableLarkRepliedAt sets the "lark_replied_at" field if the given value is not nil.
-func (_c *UploadTaskCreate) SetNillableLarkRepliedAt(v *time.Time) *UploadTaskCreate {
-	if v != nil {
-		_c.SetLarkRepliedAt(*v)
-	}
-	return _c
-}
-
 // SetCreatedAt sets the "created_at" field.
 func (_c *UploadTaskCreate) SetCreatedAt(v time.Time) *UploadTaskCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -433,10 +419,6 @@ func (_c *UploadTaskCreate) createSpec() (*UploadTask, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.CompletedAt(); ok {
 		_spec.SetField(uploadtask.FieldCompletedAt, field.TypeTime, value)
 		_node.CompletedAt = &value
-	}
-	if value, ok := _c.mutation.LarkRepliedAt(); ok {
-		_spec.SetField(uploadtask.FieldLarkRepliedAt, field.TypeTime, value)
-		_node.LarkRepliedAt = &value
 	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(uploadtask.FieldCreatedAt, field.TypeTime, value)
@@ -754,24 +736,6 @@ func (u *UploadTaskUpsert) ClearCompletedAt() *UploadTaskUpsert {
 	return u
 }
 
-// SetLarkRepliedAt sets the "lark_replied_at" field.
-func (u *UploadTaskUpsert) SetLarkRepliedAt(v time.Time) *UploadTaskUpsert {
-	u.Set(uploadtask.FieldLarkRepliedAt, v)
-	return u
-}
-
-// UpdateLarkRepliedAt sets the "lark_replied_at" field to the value that was provided on create.
-func (u *UploadTaskUpsert) UpdateLarkRepliedAt() *UploadTaskUpsert {
-	u.SetExcluded(uploadtask.FieldLarkRepliedAt)
-	return u
-}
-
-// ClearLarkRepliedAt clears the value of the "lark_replied_at" field.
-func (u *UploadTaskUpsert) ClearLarkRepliedAt() *UploadTaskUpsert {
-	u.SetNull(uploadtask.FieldLarkRepliedAt)
-	return u
-}
-
 // SetUpdatedAt sets the "updated_at" field.
 func (u *UploadTaskUpsert) SetUpdatedAt(v time.Time) *UploadTaskUpsert {
 	u.Set(uploadtask.FieldUpdatedAt, v)
@@ -1085,27 +1049,6 @@ func (u *UploadTaskUpsertOne) UpdateCompletedAt() *UploadTaskUpsertOne {
 func (u *UploadTaskUpsertOne) ClearCompletedAt() *UploadTaskUpsertOne {
 	return u.Update(func(s *UploadTaskUpsert) {
 		s.ClearCompletedAt()
-	})
-}
-
-// SetLarkRepliedAt sets the "lark_replied_at" field.
-func (u *UploadTaskUpsertOne) SetLarkRepliedAt(v time.Time) *UploadTaskUpsertOne {
-	return u.Update(func(s *UploadTaskUpsert) {
-		s.SetLarkRepliedAt(v)
-	})
-}
-
-// UpdateLarkRepliedAt sets the "lark_replied_at" field to the value that was provided on create.
-func (u *UploadTaskUpsertOne) UpdateLarkRepliedAt() *UploadTaskUpsertOne {
-	return u.Update(func(s *UploadTaskUpsert) {
-		s.UpdateLarkRepliedAt()
-	})
-}
-
-// ClearLarkRepliedAt clears the value of the "lark_replied_at" field.
-func (u *UploadTaskUpsertOne) ClearLarkRepliedAt() *UploadTaskUpsertOne {
-	return u.Update(func(s *UploadTaskUpsert) {
-		s.ClearLarkRepliedAt()
 	})
 }
 
@@ -1590,27 +1533,6 @@ func (u *UploadTaskUpsertBulk) UpdateCompletedAt() *UploadTaskUpsertBulk {
 func (u *UploadTaskUpsertBulk) ClearCompletedAt() *UploadTaskUpsertBulk {
 	return u.Update(func(s *UploadTaskUpsert) {
 		s.ClearCompletedAt()
-	})
-}
-
-// SetLarkRepliedAt sets the "lark_replied_at" field.
-func (u *UploadTaskUpsertBulk) SetLarkRepliedAt(v time.Time) *UploadTaskUpsertBulk {
-	return u.Update(func(s *UploadTaskUpsert) {
-		s.SetLarkRepliedAt(v)
-	})
-}
-
-// UpdateLarkRepliedAt sets the "lark_replied_at" field to the value that was provided on create.
-func (u *UploadTaskUpsertBulk) UpdateLarkRepliedAt() *UploadTaskUpsertBulk {
-	return u.Update(func(s *UploadTaskUpsert) {
-		s.UpdateLarkRepliedAt()
-	})
-}
-
-// ClearLarkRepliedAt clears the value of the "lark_replied_at" field.
-func (u *UploadTaskUpsertBulk) ClearLarkRepliedAt() *UploadTaskUpsertBulk {
-	return u.Update(func(s *UploadTaskUpsert) {
-		s.ClearLarkRepliedAt()
 	})
 }
 

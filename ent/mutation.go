@@ -13,7 +13,6 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"scutbot.cn/web/rm-monitor/ent/highlightclip"
 	"scutbot.cn/web/rm-monitor/ent/highlightpublishtask"
-	"scutbot.cn/web/rm-monitor/ent/larkcardmessage"
 	"scutbot.cn/web/rm-monitor/ent/larkmessage"
 	"scutbot.cn/web/rm-monitor/ent/match"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
@@ -36,7 +35,6 @@ const (
 	// Node types.
 	TypeHighlightClip        = "HighlightClip"
 	TypeHighlightPublishTask = "HighlightPublishTask"
-	TypeLarkCardMessage      = "LarkCardMessage"
 	TypeLarkMessage          = "LarkMessage"
 	TypeMatch                = "Match"
 	TypeMatchRound           = "MatchRound"
@@ -3243,526 +3241,22 @@ func (m *HighlightPublishTaskMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown HighlightPublishTask edge %s", name)
 }
 
-// LarkCardMessageMutation represents an operation that mutates the LarkCardMessage nodes in the graph.
-type LarkCardMessageMutation struct {
+// LarkMessageMutation represents an operation that mutates the LarkMessage nodes in the graph.
+type LarkMessageMutation struct {
 	config
 	op            Op
 	typ           string
 	id            *int
-	message_id    *string
+	card_id       *string
+	card_payload  *map[string]interface{}
 	created_at    *time.Time
 	updated_at    *time.Time
 	clearedFields map[string]struct{}
-	card          *int
-	clearedcard   bool
+	match         *string
+	clearedmatch  bool
 	done          bool
-	oldValue      func(context.Context) (*LarkCardMessage, error)
-	predicates    []predicate.LarkCardMessage
-}
-
-var _ ent.Mutation = (*LarkCardMessageMutation)(nil)
-
-// larkcardmessageOption allows management of the mutation configuration using functional options.
-type larkcardmessageOption func(*LarkCardMessageMutation)
-
-// newLarkCardMessageMutation creates new mutation for the LarkCardMessage entity.
-func newLarkCardMessageMutation(c config, op Op, opts ...larkcardmessageOption) *LarkCardMessageMutation {
-	m := &LarkCardMessageMutation{
-		config:        c,
-		op:            op,
-		typ:           TypeLarkCardMessage,
-		clearedFields: make(map[string]struct{}),
-	}
-	for _, opt := range opts {
-		opt(m)
-	}
-	return m
-}
-
-// withLarkCardMessageID sets the ID field of the mutation.
-func withLarkCardMessageID(id int) larkcardmessageOption {
-	return func(m *LarkCardMessageMutation) {
-		var (
-			err   error
-			once  sync.Once
-			value *LarkCardMessage
-		)
-		m.oldValue = func(ctx context.Context) (*LarkCardMessage, error) {
-			once.Do(func() {
-				if m.done {
-					err = errors.New("querying old values post mutation is not allowed")
-				} else {
-					value, err = m.Client().LarkCardMessage.Get(ctx, id)
-				}
-			})
-			return value, err
-		}
-		m.id = &id
-	}
-}
-
-// withLarkCardMessage sets the old LarkCardMessage of the mutation.
-func withLarkCardMessage(node *LarkCardMessage) larkcardmessageOption {
-	return func(m *LarkCardMessageMutation) {
-		m.oldValue = func(context.Context) (*LarkCardMessage, error) {
-			return node, nil
-		}
-		m.id = &node.ID
-	}
-}
-
-// Client returns a new `ent.Client` from the mutation. If the mutation was
-// executed in a transaction (ent.Tx), a transactional client is returned.
-func (m LarkCardMessageMutation) Client() *Client {
-	client := &Client{config: m.config}
-	client.init()
-	return client
-}
-
-// Tx returns an `ent.Tx` for mutations that were executed in transactions;
-// it returns an error otherwise.
-func (m LarkCardMessageMutation) Tx() (*Tx, error) {
-	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, errors.New("ent: mutation is not running in a transaction")
-	}
-	tx := &Tx{config: m.config}
-	tx.init()
-	return tx, nil
-}
-
-// ID returns the ID value in the mutation. Note that the ID is only available
-// if it was provided to the builder or after it was returned from the database.
-func (m *LarkCardMessageMutation) ID() (id int, exists bool) {
-	if m.id == nil {
-		return
-	}
-	return *m.id, true
-}
-
-// IDs queries the database and returns the entity ids that match the mutation's predicate.
-// That means, if the mutation is applied within a transaction with an isolation level such
-// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
-// or updated by the mutation.
-func (m *LarkCardMessageMutation) IDs(ctx context.Context) ([]int, error) {
-	switch {
-	case m.op.Is(OpUpdateOne | OpDeleteOne):
-		id, exists := m.ID()
-		if exists {
-			return []int{id}, nil
-		}
-		fallthrough
-	case m.op.Is(OpUpdate | OpDelete):
-		return m.Client().LarkCardMessage.Query().Where(m.predicates...).IDs(ctx)
-	default:
-		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
-	}
-}
-
-// SetMessageID sets the "message_id" field.
-func (m *LarkCardMessageMutation) SetMessageID(s string) {
-	m.message_id = &s
-}
-
-// MessageID returns the value of the "message_id" field in the mutation.
-func (m *LarkCardMessageMutation) MessageID() (r string, exists bool) {
-	v := m.message_id
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldMessageID returns the old "message_id" field's value of the LarkCardMessage entity.
-// If the LarkCardMessage object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *LarkCardMessageMutation) OldMessageID(ctx context.Context) (v string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldMessageID is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldMessageID requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldMessageID: %w", err)
-	}
-	return oldValue.MessageID, nil
-}
-
-// ResetMessageID resets all changes to the "message_id" field.
-func (m *LarkCardMessageMutation) ResetMessageID() {
-	m.message_id = nil
-}
-
-// SetCreatedAt sets the "created_at" field.
-func (m *LarkCardMessageMutation) SetCreatedAt(t time.Time) {
-	m.created_at = &t
-}
-
-// CreatedAt returns the value of the "created_at" field in the mutation.
-func (m *LarkCardMessageMutation) CreatedAt() (r time.Time, exists bool) {
-	v := m.created_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldCreatedAt returns the old "created_at" field's value of the LarkCardMessage entity.
-// If the LarkCardMessage object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *LarkCardMessageMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
-	}
-	return oldValue.CreatedAt, nil
-}
-
-// ResetCreatedAt resets all changes to the "created_at" field.
-func (m *LarkCardMessageMutation) ResetCreatedAt() {
-	m.created_at = nil
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (m *LarkCardMessageMutation) SetUpdatedAt(t time.Time) {
-	m.updated_at = &t
-}
-
-// UpdatedAt returns the value of the "updated_at" field in the mutation.
-func (m *LarkCardMessageMutation) UpdatedAt() (r time.Time, exists bool) {
-	v := m.updated_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldUpdatedAt returns the old "updated_at" field's value of the LarkCardMessage entity.
-// If the LarkCardMessage object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *LarkCardMessageMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
-	}
-	return oldValue.UpdatedAt, nil
-}
-
-// ResetUpdatedAt resets all changes to the "updated_at" field.
-func (m *LarkCardMessageMutation) ResetUpdatedAt() {
-	m.updated_at = nil
-}
-
-// SetCardID sets the "card" edge to the LarkMessage entity by id.
-func (m *LarkCardMessageMutation) SetCardID(id int) {
-	m.card = &id
-}
-
-// ClearCard clears the "card" edge to the LarkMessage entity.
-func (m *LarkCardMessageMutation) ClearCard() {
-	m.clearedcard = true
-}
-
-// CardCleared reports if the "card" edge to the LarkMessage entity was cleared.
-func (m *LarkCardMessageMutation) CardCleared() bool {
-	return m.clearedcard
-}
-
-// CardID returns the "card" edge ID in the mutation.
-func (m *LarkCardMessageMutation) CardID() (id int, exists bool) {
-	if m.card != nil {
-		return *m.card, true
-	}
-	return
-}
-
-// CardIDs returns the "card" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// CardID instead. It exists only for internal usage by the builders.
-func (m *LarkCardMessageMutation) CardIDs() (ids []int) {
-	if id := m.card; id != nil {
-		ids = append(ids, *id)
-	}
-	return
-}
-
-// ResetCard resets all changes to the "card" edge.
-func (m *LarkCardMessageMutation) ResetCard() {
-	m.card = nil
-	m.clearedcard = false
-}
-
-// Where appends a list predicates to the LarkCardMessageMutation builder.
-func (m *LarkCardMessageMutation) Where(ps ...predicate.LarkCardMessage) {
-	m.predicates = append(m.predicates, ps...)
-}
-
-// WhereP appends storage-level predicates to the LarkCardMessageMutation builder. Using this method,
-// users can use type-assertion to append predicates that do not depend on any generated package.
-func (m *LarkCardMessageMutation) WhereP(ps ...func(*sql.Selector)) {
-	p := make([]predicate.LarkCardMessage, len(ps))
-	for i := range ps {
-		p[i] = ps[i]
-	}
-	m.Where(p...)
-}
-
-// Op returns the operation name.
-func (m *LarkCardMessageMutation) Op() Op {
-	return m.op
-}
-
-// SetOp allows setting the mutation operation.
-func (m *LarkCardMessageMutation) SetOp(op Op) {
-	m.op = op
-}
-
-// Type returns the node type of this mutation (LarkCardMessage).
-func (m *LarkCardMessageMutation) Type() string {
-	return m.typ
-}
-
-// Fields returns all fields that were changed during this mutation. Note that in
-// order to get all numeric fields that were incremented/decremented, call
-// AddedFields().
-func (m *LarkCardMessageMutation) Fields() []string {
-	fields := make([]string, 0, 3)
-	if m.message_id != nil {
-		fields = append(fields, larkcardmessage.FieldMessageID)
-	}
-	if m.created_at != nil {
-		fields = append(fields, larkcardmessage.FieldCreatedAt)
-	}
-	if m.updated_at != nil {
-		fields = append(fields, larkcardmessage.FieldUpdatedAt)
-	}
-	return fields
-}
-
-// Field returns the value of a field with the given name. The second boolean
-// return value indicates that this field was not set, or was not defined in the
-// schema.
-func (m *LarkCardMessageMutation) Field(name string) (ent.Value, bool) {
-	switch name {
-	case larkcardmessage.FieldMessageID:
-		return m.MessageID()
-	case larkcardmessage.FieldCreatedAt:
-		return m.CreatedAt()
-	case larkcardmessage.FieldUpdatedAt:
-		return m.UpdatedAt()
-	}
-	return nil, false
-}
-
-// OldField returns the old value of the field from the database. An error is
-// returned if the mutation operation is not UpdateOne, or the query to the
-// database failed.
-func (m *LarkCardMessageMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
-	switch name {
-	case larkcardmessage.FieldMessageID:
-		return m.OldMessageID(ctx)
-	case larkcardmessage.FieldCreatedAt:
-		return m.OldCreatedAt(ctx)
-	case larkcardmessage.FieldUpdatedAt:
-		return m.OldUpdatedAt(ctx)
-	}
-	return nil, fmt.Errorf("unknown LarkCardMessage field %s", name)
-}
-
-// SetField sets the value of a field with the given name. It returns an error if
-// the field is not defined in the schema, or if the type mismatched the field
-// type.
-func (m *LarkCardMessageMutation) SetField(name string, value ent.Value) error {
-	switch name {
-	case larkcardmessage.FieldMessageID:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetMessageID(v)
-		return nil
-	case larkcardmessage.FieldCreatedAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetCreatedAt(v)
-		return nil
-	case larkcardmessage.FieldUpdatedAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetUpdatedAt(v)
-		return nil
-	}
-	return fmt.Errorf("unknown LarkCardMessage field %s", name)
-}
-
-// AddedFields returns all numeric fields that were incremented/decremented during
-// this mutation.
-func (m *LarkCardMessageMutation) AddedFields() []string {
-	return nil
-}
-
-// AddedField returns the numeric value that was incremented/decremented on a field
-// with the given name. The second boolean return value indicates that this field
-// was not set, or was not defined in the schema.
-func (m *LarkCardMessageMutation) AddedField(name string) (ent.Value, bool) {
-	return nil, false
-}
-
-// AddField adds the value to the field with the given name. It returns an error if
-// the field is not defined in the schema, or if the type mismatched the field
-// type.
-func (m *LarkCardMessageMutation) AddField(name string, value ent.Value) error {
-	switch name {
-	}
-	return fmt.Errorf("unknown LarkCardMessage numeric field %s", name)
-}
-
-// ClearedFields returns all nullable fields that were cleared during this
-// mutation.
-func (m *LarkCardMessageMutation) ClearedFields() []string {
-	return nil
-}
-
-// FieldCleared returns a boolean indicating if a field with the given name was
-// cleared in this mutation.
-func (m *LarkCardMessageMutation) FieldCleared(name string) bool {
-	_, ok := m.clearedFields[name]
-	return ok
-}
-
-// ClearField clears the value of the field with the given name. It returns an
-// error if the field is not defined in the schema.
-func (m *LarkCardMessageMutation) ClearField(name string) error {
-	return fmt.Errorf("unknown LarkCardMessage nullable field %s", name)
-}
-
-// ResetField resets all changes in the mutation for the field with the given name.
-// It returns an error if the field is not defined in the schema.
-func (m *LarkCardMessageMutation) ResetField(name string) error {
-	switch name {
-	case larkcardmessage.FieldMessageID:
-		m.ResetMessageID()
-		return nil
-	case larkcardmessage.FieldCreatedAt:
-		m.ResetCreatedAt()
-		return nil
-	case larkcardmessage.FieldUpdatedAt:
-		m.ResetUpdatedAt()
-		return nil
-	}
-	return fmt.Errorf("unknown LarkCardMessage field %s", name)
-}
-
-// AddedEdges returns all edge names that were set/added in this mutation.
-func (m *LarkCardMessageMutation) AddedEdges() []string {
-	edges := make([]string, 0, 1)
-	if m.card != nil {
-		edges = append(edges, larkcardmessage.EdgeCard)
-	}
-	return edges
-}
-
-// AddedIDs returns all IDs (to other nodes) that were added for the given edge
-// name in this mutation.
-func (m *LarkCardMessageMutation) AddedIDs(name string) []ent.Value {
-	switch name {
-	case larkcardmessage.EdgeCard:
-		if id := m.card; id != nil {
-			return []ent.Value{*id}
-		}
-	}
-	return nil
-}
-
-// RemovedEdges returns all edge names that were removed in this mutation.
-func (m *LarkCardMessageMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 1)
-	return edges
-}
-
-// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
-// the given name in this mutation.
-func (m *LarkCardMessageMutation) RemovedIDs(name string) []ent.Value {
-	return nil
-}
-
-// ClearedEdges returns all edge names that were cleared in this mutation.
-func (m *LarkCardMessageMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 1)
-	if m.clearedcard {
-		edges = append(edges, larkcardmessage.EdgeCard)
-	}
-	return edges
-}
-
-// EdgeCleared returns a boolean which indicates if the edge with the given name
-// was cleared in this mutation.
-func (m *LarkCardMessageMutation) EdgeCleared(name string) bool {
-	switch name {
-	case larkcardmessage.EdgeCard:
-		return m.clearedcard
-	}
-	return false
-}
-
-// ClearEdge clears the value of the edge with the given name. It returns an error
-// if that edge is not defined in the schema.
-func (m *LarkCardMessageMutation) ClearEdge(name string) error {
-	switch name {
-	case larkcardmessage.EdgeCard:
-		m.ClearCard()
-		return nil
-	}
-	return fmt.Errorf("unknown LarkCardMessage unique edge %s", name)
-}
-
-// ResetEdge resets all changes to the edge with the given name in this mutation.
-// It returns an error if the edge is not defined in the schema.
-func (m *LarkCardMessageMutation) ResetEdge(name string) error {
-	switch name {
-	case larkcardmessage.EdgeCard:
-		m.ResetCard()
-		return nil
-	}
-	return fmt.Errorf("unknown LarkCardMessage edge %s", name)
-}
-
-// LarkMessageMutation represents an operation that mutates the LarkMessage nodes in the graph.
-type LarkMessageMutation struct {
-	config
-	op                   Op
-	typ                  string
-	id                   *int
-	card_id              *string
-	card_payload         *map[string]interface{}
-	created_at           *time.Time
-	updated_at           *time.Time
-	clearedFields        map[string]struct{}
-	match                *string
-	clearedmatch         bool
-	card_messages        map[int]struct{}
-	removedcard_messages map[int]struct{}
-	clearedcard_messages bool
-	done                 bool
-	oldValue             func(context.Context) (*LarkMessage, error)
-	predicates           []predicate.LarkMessage
+	oldValue      func(context.Context) (*LarkMessage, error)
+	predicates    []predicate.LarkMessage
 }
 
 var _ ent.Mutation = (*LarkMessageMutation)(nil)
@@ -4059,60 +3553,6 @@ func (m *LarkMessageMutation) ResetMatch() {
 	m.clearedmatch = false
 }
 
-// AddCardMessageIDs adds the "card_messages" edge to the LarkCardMessage entity by ids.
-func (m *LarkMessageMutation) AddCardMessageIDs(ids ...int) {
-	if m.card_messages == nil {
-		m.card_messages = make(map[int]struct{})
-	}
-	for i := range ids {
-		m.card_messages[ids[i]] = struct{}{}
-	}
-}
-
-// ClearCardMessages clears the "card_messages" edge to the LarkCardMessage entity.
-func (m *LarkMessageMutation) ClearCardMessages() {
-	m.clearedcard_messages = true
-}
-
-// CardMessagesCleared reports if the "card_messages" edge to the LarkCardMessage entity was cleared.
-func (m *LarkMessageMutation) CardMessagesCleared() bool {
-	return m.clearedcard_messages
-}
-
-// RemoveCardMessageIDs removes the "card_messages" edge to the LarkCardMessage entity by IDs.
-func (m *LarkMessageMutation) RemoveCardMessageIDs(ids ...int) {
-	if m.removedcard_messages == nil {
-		m.removedcard_messages = make(map[int]struct{})
-	}
-	for i := range ids {
-		delete(m.card_messages, ids[i])
-		m.removedcard_messages[ids[i]] = struct{}{}
-	}
-}
-
-// RemovedCardMessages returns the removed IDs of the "card_messages" edge to the LarkCardMessage entity.
-func (m *LarkMessageMutation) RemovedCardMessagesIDs() (ids []int) {
-	for id := range m.removedcard_messages {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// CardMessagesIDs returns the "card_messages" edge IDs in the mutation.
-func (m *LarkMessageMutation) CardMessagesIDs() (ids []int) {
-	for id := range m.card_messages {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// ResetCardMessages resets all changes to the "card_messages" edge.
-func (m *LarkMessageMutation) ResetCardMessages() {
-	m.card_messages = nil
-	m.clearedcard_messages = false
-	m.removedcard_messages = nil
-}
-
 // Where appends a list predicates to the LarkMessageMutation builder.
 func (m *LarkMessageMutation) Where(ps ...predicate.LarkMessage) {
 	m.predicates = append(m.predicates, ps...)
@@ -4306,12 +3746,9 @@ func (m *LarkMessageMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *LarkMessageMutation) AddedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 1)
 	if m.match != nil {
 		edges = append(edges, larkmessage.EdgeMatch)
-	}
-	if m.card_messages != nil {
-		edges = append(edges, larkmessage.EdgeCardMessages)
 	}
 	return edges
 }
@@ -4324,47 +3761,27 @@ func (m *LarkMessageMutation) AddedIDs(name string) []ent.Value {
 		if id := m.match; id != nil {
 			return []ent.Value{*id}
 		}
-	case larkmessage.EdgeCardMessages:
-		ids := make([]ent.Value, 0, len(m.card_messages))
-		for id := range m.card_messages {
-			ids = append(ids, id)
-		}
-		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *LarkMessageMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 2)
-	if m.removedcard_messages != nil {
-		edges = append(edges, larkmessage.EdgeCardMessages)
-	}
+	edges := make([]string, 0, 1)
 	return edges
 }
 
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *LarkMessageMutation) RemovedIDs(name string) []ent.Value {
-	switch name {
-	case larkmessage.EdgeCardMessages:
-		ids := make([]ent.Value, 0, len(m.removedcard_messages))
-		for id := range m.removedcard_messages {
-			ids = append(ids, id)
-		}
-		return ids
-	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *LarkMessageMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 1)
 	if m.clearedmatch {
 		edges = append(edges, larkmessage.EdgeMatch)
-	}
-	if m.clearedcard_messages {
-		edges = append(edges, larkmessage.EdgeCardMessages)
 	}
 	return edges
 }
@@ -4375,8 +3792,6 @@ func (m *LarkMessageMutation) EdgeCleared(name string) bool {
 	switch name {
 	case larkmessage.EdgeMatch:
 		return m.clearedmatch
-	case larkmessage.EdgeCardMessages:
-		return m.clearedcard_messages
 	}
 	return false
 }
@@ -4398,9 +3813,6 @@ func (m *LarkMessageMutation) ResetEdge(name string) error {
 	switch name {
 	case larkmessage.EdgeMatch:
 		m.ResetMatch()
-		return nil
-	case larkmessage.EdgeCardMessages:
-		m.ResetCardMessages()
 		return nil
 	}
 	return fmt.Errorf("unknown LarkMessage edge %s", name)
@@ -11424,7 +10836,6 @@ type UploadTaskMutation struct {
 	error_message          *string
 	started_at             *time.Time
 	completed_at           *time.Time
-	lark_replied_at        *time.Time
 	created_at             *time.Time
 	updated_at             *time.Time
 	clearedFields          map[string]struct{}
@@ -12160,55 +11571,6 @@ func (m *UploadTaskMutation) ResetCompletedAt() {
 	delete(m.clearedFields, uploadtask.FieldCompletedAt)
 }
 
-// SetLarkRepliedAt sets the "lark_replied_at" field.
-func (m *UploadTaskMutation) SetLarkRepliedAt(t time.Time) {
-	m.lark_replied_at = &t
-}
-
-// LarkRepliedAt returns the value of the "lark_replied_at" field in the mutation.
-func (m *UploadTaskMutation) LarkRepliedAt() (r time.Time, exists bool) {
-	v := m.lark_replied_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldLarkRepliedAt returns the old "lark_replied_at" field's value of the UploadTask entity.
-// If the UploadTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *UploadTaskMutation) OldLarkRepliedAt(ctx context.Context) (v *time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldLarkRepliedAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldLarkRepliedAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldLarkRepliedAt: %w", err)
-	}
-	return oldValue.LarkRepliedAt, nil
-}
-
-// ClearLarkRepliedAt clears the value of the "lark_replied_at" field.
-func (m *UploadTaskMutation) ClearLarkRepliedAt() {
-	m.lark_replied_at = nil
-	m.clearedFields[uploadtask.FieldLarkRepliedAt] = struct{}{}
-}
-
-// LarkRepliedAtCleared returns if the "lark_replied_at" field was cleared in this mutation.
-func (m *UploadTaskMutation) LarkRepliedAtCleared() bool {
-	_, ok := m.clearedFields[uploadtask.FieldLarkRepliedAt]
-	return ok
-}
-
-// ResetLarkRepliedAt resets all changes to the "lark_replied_at" field.
-func (m *UploadTaskMutation) ResetLarkRepliedAt() {
-	m.lark_replied_at = nil
-	delete(m.clearedFields, uploadtask.FieldLarkRepliedAt)
-}
-
 // SetCreatedAt sets the "created_at" field.
 func (m *UploadTaskMutation) SetCreatedAt(t time.Time) {
 	m.created_at = &t
@@ -12393,7 +11755,7 @@ func (m *UploadTaskMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *UploadTaskMutation) Fields() []string {
-	fields := make([]string, 0, 16)
+	fields := make([]string, 0, 15)
 	if m.source_path != nil {
 		fields = append(fields, uploadtask.FieldSourcePath)
 	}
@@ -12432,9 +11794,6 @@ func (m *UploadTaskMutation) Fields() []string {
 	}
 	if m.completed_at != nil {
 		fields = append(fields, uploadtask.FieldCompletedAt)
-	}
-	if m.lark_replied_at != nil {
-		fields = append(fields, uploadtask.FieldLarkRepliedAt)
 	}
 	if m.created_at != nil {
 		fields = append(fields, uploadtask.FieldCreatedAt)
@@ -12476,8 +11835,6 @@ func (m *UploadTaskMutation) Field(name string) (ent.Value, bool) {
 		return m.StartedAt()
 	case uploadtask.FieldCompletedAt:
 		return m.CompletedAt()
-	case uploadtask.FieldLarkRepliedAt:
-		return m.LarkRepliedAt()
 	case uploadtask.FieldCreatedAt:
 		return m.CreatedAt()
 	case uploadtask.FieldUpdatedAt:
@@ -12517,8 +11874,6 @@ func (m *UploadTaskMutation) OldField(ctx context.Context, name string) (ent.Val
 		return m.OldStartedAt(ctx)
 	case uploadtask.FieldCompletedAt:
 		return m.OldCompletedAt(ctx)
-	case uploadtask.FieldLarkRepliedAt:
-		return m.OldLarkRepliedAt(ctx)
 	case uploadtask.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	case uploadtask.FieldUpdatedAt:
@@ -12623,13 +11978,6 @@ func (m *UploadTaskMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetCompletedAt(v)
 		return nil
-	case uploadtask.FieldLarkRepliedAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetLarkRepliedAt(v)
-		return nil
 	case uploadtask.FieldCreatedAt:
 		v, ok := value.(time.Time)
 		if !ok {
@@ -12728,9 +12076,6 @@ func (m *UploadTaskMutation) ClearedFields() []string {
 	if m.FieldCleared(uploadtask.FieldCompletedAt) {
 		fields = append(fields, uploadtask.FieldCompletedAt)
 	}
-	if m.FieldCleared(uploadtask.FieldLarkRepliedAt) {
-		fields = append(fields, uploadtask.FieldLarkRepliedAt)
-	}
 	return fields
 }
 
@@ -12771,9 +12116,6 @@ func (m *UploadTaskMutation) ClearField(name string) error {
 		return nil
 	case uploadtask.FieldCompletedAt:
 		m.ClearCompletedAt()
-		return nil
-	case uploadtask.FieldLarkRepliedAt:
-		m.ClearLarkRepliedAt()
 		return nil
 	}
 	return fmt.Errorf("unknown UploadTask nullable field %s", name)
@@ -12821,9 +12163,6 @@ func (m *UploadTaskMutation) ResetField(name string) error {
 		return nil
 	case uploadtask.FieldCompletedAt:
 		m.ResetCompletedAt()
-		return nil
-	case uploadtask.FieldLarkRepliedAt:
-		m.ResetLarkRepliedAt()
 		return nil
 	case uploadtask.FieldCreatedAt:
 		m.ResetCreatedAt()

@@ -28,7 +28,6 @@ func (UploadTask) Fields() []ent.Field {
 		field.String("error_message").Optional().Nillable(),
 		field.Time("started_at").Optional().Nillable(),
 		field.Time("completed_at").Optional().Nillable(),
-		field.Time("lark_replied_at").Optional().Nillable(),
 		field.Time("created_at").Default(time.Now).Immutable(),
 		field.Time("updated_at").Default(time.Now).UpdateDefault(time.Now),
 	}

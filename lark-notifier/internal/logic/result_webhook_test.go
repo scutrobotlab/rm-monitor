@@ -70,7 +70,13 @@ func TestCardEntityDataRendersCardJSON(t *testing.T) {
 	content.Data.BlueSchool = "蓝校"
 	content.Data.RedTeam = "红队"
 	content.Data.BlueTeam = "蓝队"
-	content.Data.Scores = []utils.MatchScore{{RedScore: "1", BlueScore: "0"}}
+	content.Data.Rounds = []utils.MatchRoundCard{{
+		PanelID:   "elem_round_1",
+		ContentID: "elem_round_1_content",
+		Title:     "Round 1 | 红方胜 | 1:0",
+		Content:   "[主视角](https://example.com/record)",
+		Expanded:  true,
+	}}
 	raw, err := cardEntityData(content)
 	if err != nil {
 		t.Fatal(err)
@@ -82,12 +88,40 @@ func TestCardEntityDataRendersCardJSON(t *testing.T) {
 	if got["schema"] != "2.0" {
 		t.Fatalf("schema = %v, want 2.0", got["schema"])
 	}
+	if _, ok := got["card_link"]; ok {
+		t.Fatal("card_link should be removed")
+	}
 	body := got["body"].(map[string]any)
-	if len(body["elements"].([]any)) == 0 {
+	elements := body["elements"].([]any)
+	if len(elements) == 0 {
 		t.Fatal("rendered card has no body elements")
+	}
+	foundPanel := false
+	for _, element := range elements {
+		m := element.(map[string]any)
+		if m["tag"] == "collapsible_panel" {
+			foundPanel = true
+			if m["element_id"] != "elem_round_1" {
+				t.Fatalf("panel element_id = %v, want elem_round_1", m["element_id"])
+			}
+			children := m["elements"].([]any)
+			content := children[0].(map[string]any)
+			if content["element_id"] != "elem_round_1_content" {
+				t.Fatalf("content element_id = %v, want elem_round_1_content", content["element_id"])
+			}
+		}
+		if m["tag"] == "column_set" && len(m["columns"].([]any)) != 3 {
+			t.Fatalf("unexpected extra column_set after team header: %#v", m)
+		}
+	}
+	if !foundPanel {
+		t.Fatal("round collapsible panel not found")
 	}
 	if !strings.Contains(raw, "img_red") || !strings.Contains(raw, `红\"校`) {
 		t.Fatalf("rendered card did not include escaped fields: %s", raw)
+	}
+	if strings.Contains(raw, "点击查看录制") || strings.Contains(raw, "card_link") {
+		t.Fatalf("rendered card still includes removed recording jump: %s", raw)
 	}
 }
 
@@ -96,24 +130,53 @@ func TestMatchNeedsCardSend(t *testing.T) {
 		t.Fatal("match without card should need send")
 	}
 	m := &ent.Match{Edges: ent.MatchEdges{LarkMessages: []*ent.LarkMessage{
-		{Edges: ent.LarkMessageEdges{}},
+		{CardID: "card_1"},
 	}}}
-	if !matchNeedsCardSend(m) {
-		t.Fatal("card without sent messages should need send")
-	}
-	m.Edges.LarkMessages[0].Edges.CardMessages = []*ent.LarkCardMessage{{MessageID: "om_1"}}
 	if matchNeedsCardSend(m) {
-		t.Fatal("card with sent messages should not need send")
+		t.Fatal("card presence should stop persistent send compensation")
 	}
 }
 
-func TestLarkMessageIDs(t *testing.T) {
-	got := larkMessageIDs([]*ent.LarkMessage{
-		{Edges: ent.LarkMessageEdges{CardMessages: []*ent.LarkCardMessage{{MessageID: "om_1"}, {MessageID: ""}}}},
-		{Edges: ent.LarkMessageEdges{CardMessages: []*ent.LarkCardMessage{{MessageID: "om_2"}}}},
-	})
-	if len(got) != 2 || got[0] != "om_1" || got[1] != "om_2" {
-		t.Fatalf("larkMessageIDs() = %#v", got)
+func TestRoundCardsIncludeUploadLinks(t *testing.T) {
+	url := "https://example.com/record"
+	winner := matchround.WinnerRed
+	logic := &NotifyLogic{}
+	got := logic.roundCards(&ent.Match{Edges: ent.MatchEdges{Rounds: []*ent.MatchRound{
+		{
+			RoundNo: 1,
+			Status:  matchround.StatusENDED,
+			Winner:  &winner,
+			Edges: ent.MatchRoundEdges{RecordTasks: []*ent.RecordTask{
+				{
+					Role: "主视角",
+					Edges: ent.RecordTaskEdges{UploadTask: &ent.UploadTask{
+						BitableRecordURL: &url,
+					}},
+				},
+			}},
+		},
+	}}})
+	if len(got) != 1 {
+		t.Fatalf("roundCards len = %d, want 1", len(got))
+	}
+	if got[0].PanelID != "elem_round_1" || got[0].ContentID != "elem_round_1_content" {
+		t.Fatalf("unexpected element ids: %#v", got[0])
+	}
+	if !strings.Contains(got[0].Title, "红方胜") || !strings.Contains(got[0].Title, "1:0") {
+		t.Fatalf("unexpected title: %s", got[0].Title)
+	}
+	if got[0].Content != "[主视角](https://example.com/record)" {
+		t.Fatalf("content = %q", got[0].Content)
+	}
+}
+
+func TestRoundCardsWithoutUploadsShowEmptyText(t *testing.T) {
+	logic := &NotifyLogic{}
+	got := logic.roundCards(&ent.Match{Edges: ent.MatchEdges{Rounds: []*ent.MatchRound{
+		{RoundNo: 1, Status: matchround.StatusSTARTED},
+	}}})
+	if len(got) != 1 || got[0].Content != "暂无录制" {
+		t.Fatalf("roundCards = %#v", got)
 	}
 }
 

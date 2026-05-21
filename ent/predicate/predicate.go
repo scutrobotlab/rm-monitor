@@ -12,9 +12,6 @@ type HighlightClip func(*sql.Selector)
 // HighlightPublishTask is the predicate function for highlightpublishtask builders.
 type HighlightPublishTask func(*sql.Selector)
 
-// LarkCardMessage is the predicate function for larkcardmessage builders.
-type LarkCardMessage func(*sql.Selector)
-
 // LarkMessage is the predicate function for larkmessage builders.
 type LarkMessage func(*sql.Selector)
 

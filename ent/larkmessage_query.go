@@ -4,7 +4,6 @@ package ent
 
 import (
 	"context"
-	"database/sql/driver"
 	"fmt"
 	"math"
 
@@ -12,7 +11,6 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
-	"scutbot.cn/web/rm-monitor/ent/larkcardmessage"
 	"scutbot.cn/web/rm-monitor/ent/larkmessage"
 	"scutbot.cn/web/rm-monitor/ent/match"
 	"scutbot.cn/web/rm-monitor/ent/predicate"
@@ -21,13 +19,12 @@ import (
 // LarkMessageQuery is the builder for querying LarkMessage entities.
 type LarkMessageQuery struct {
 	config
-	ctx              *QueryContext
-	order            []larkmessage.OrderOption
-	inters           []Interceptor
-	predicates       []predicate.LarkMessage
-	withMatch        *MatchQuery
-	withCardMessages *LarkCardMessageQuery
-	withFKs          bool
+	ctx        *QueryContext
+	order      []larkmessage.OrderOption
+	inters     []Interceptor
+	predicates []predicate.LarkMessage
+	withMatch  *MatchQuery
+	withFKs    bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -79,28 +76,6 @@ func (_q *LarkMessageQuery) QueryMatch() *MatchQuery {
 			sqlgraph.From(larkmessage.Table, larkmessage.FieldID, selector),
 			sqlgraph.To(match.Table, match.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, larkmessage.MatchTable, larkmessage.MatchColumn),
-		)
-		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
-		return fromU, nil
-	}
-	return query
-}
-
-// QueryCardMessages chains the current query on the "card_messages" edge.
-func (_q *LarkMessageQuery) QueryCardMessages() *LarkCardMessageQuery {
-	query := (&LarkCardMessageClient{config: _q.config}).Query()
-	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := _q.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		selector := _q.sqlQuery(ctx)
-		if err := selector.Err(); err != nil {
-			return nil, err
-		}
-		step := sqlgraph.NewStep(
-			sqlgraph.From(larkmessage.Table, larkmessage.FieldID, selector),
-			sqlgraph.To(larkcardmessage.Table, larkcardmessage.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, larkmessage.CardMessagesTable, larkmessage.CardMessagesColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -295,13 +270,12 @@ func (_q *LarkMessageQuery) Clone() *LarkMessageQuery {
 		return nil
 	}
 	return &LarkMessageQuery{
-		config:           _q.config,
-		ctx:              _q.ctx.Clone(),
-		order:            append([]larkmessage.OrderOption{}, _q.order...),
-		inters:           append([]Interceptor{}, _q.inters...),
-		predicates:       append([]predicate.LarkMessage{}, _q.predicates...),
-		withMatch:        _q.withMatch.Clone(),
-		withCardMessages: _q.withCardMessages.Clone(),
+		config:     _q.config,
+		ctx:        _q.ctx.Clone(),
+		order:      append([]larkmessage.OrderOption{}, _q.order...),
+		inters:     append([]Interceptor{}, _q.inters...),
+		predicates: append([]predicate.LarkMessage{}, _q.predicates...),
+		withMatch:  _q.withMatch.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
@@ -316,17 +290,6 @@ func (_q *LarkMessageQuery) WithMatch(opts ...func(*MatchQuery)) *LarkMessageQue
 		opt(query)
 	}
 	_q.withMatch = query
-	return _q
-}
-
-// WithCardMessages tells the query-builder to eager-load the nodes that are connected to
-// the "card_messages" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *LarkMessageQuery) WithCardMessages(opts ...func(*LarkCardMessageQuery)) *LarkMessageQuery {
-	query := (&LarkCardMessageClient{config: _q.config}).Query()
-	for _, opt := range opts {
-		opt(query)
-	}
-	_q.withCardMessages = query
 	return _q
 }
 
@@ -409,9 +372,8 @@ func (_q *LarkMessageQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*
 		nodes       = []*LarkMessage{}
 		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
-		loadedTypes = [2]bool{
+		loadedTypes = [1]bool{
 			_q.withMatch != nil,
-			_q.withCardMessages != nil,
 		}
 	)
 	if _q.withMatch != nil {
@@ -441,13 +403,6 @@ func (_q *LarkMessageQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*
 	if query := _q.withMatch; query != nil {
 		if err := _q.loadMatch(ctx, query, nodes, nil,
 			func(n *LarkMessage, e *Match) { n.Edges.Match = e }); err != nil {
-			return nil, err
-		}
-	}
-	if query := _q.withCardMessages; query != nil {
-		if err := _q.loadCardMessages(ctx, query, nodes,
-			func(n *LarkMessage) { n.Edges.CardMessages = []*LarkCardMessage{} },
-			func(n *LarkMessage, e *LarkCardMessage) { n.Edges.CardMessages = append(n.Edges.CardMessages, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -483,37 +438,6 @@ func (_q *LarkMessageQuery) loadMatch(ctx context.Context, query *MatchQuery, no
 		for i := range nodes {
 			assign(nodes[i], n)
 		}
-	}
-	return nil
-}
-func (_q *LarkMessageQuery) loadCardMessages(ctx context.Context, query *LarkCardMessageQuery, nodes []*LarkMessage, init func(*LarkMessage), assign func(*LarkMessage, *LarkCardMessage)) error {
-	fks := make([]driver.Value, 0, len(nodes))
-	nodeids := make(map[int]*LarkMessage)
-	for i := range nodes {
-		fks = append(fks, nodes[i].ID)
-		nodeids[nodes[i].ID] = nodes[i]
-		if init != nil {
-			init(nodes[i])
-		}
-	}
-	query.withFKs = true
-	query.Where(predicate.LarkCardMessage(func(s *sql.Selector) {
-		s.Where(sql.InValues(s.C(larkmessage.CardMessagesColumn), fks...))
-	}))
-	neighbors, err := query.All(ctx)
-	if err != nil {
-		return err
-	}
-	for _, n := range neighbors {
-		fk := n.lark_message_card_messages
-		if fk == nil {
-			return fmt.Errorf(`foreign-key "lark_message_card_messages" is nil for node %v`, n.ID)
-		}
-		node, ok := nodeids[*fk]
-		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "lark_message_card_messages" returned %v for node %v`, *fk, n.ID)
-		}
-		assign(node, n)
 	}
 	return nil
 }

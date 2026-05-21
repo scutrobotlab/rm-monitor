@@ -11,7 +11,6 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
-	"scutbot.cn/web/rm-monitor/ent/larkcardmessage"
 	"scutbot.cn/web/rm-monitor/ent/larkmessage"
 	"scutbot.cn/web/rm-monitor/ent/match"
 )
@@ -73,21 +72,6 @@ func (_c *LarkMessageCreate) SetMatchID(id string) *LarkMessageCreate {
 // SetMatch sets the "match" edge to the Match entity.
 func (_c *LarkMessageCreate) SetMatch(v *Match) *LarkMessageCreate {
 	return _c.SetMatchID(v.ID)
-}
-
-// AddCardMessageIDs adds the "card_messages" edge to the LarkCardMessage entity by IDs.
-func (_c *LarkMessageCreate) AddCardMessageIDs(ids ...int) *LarkMessageCreate {
-	_c.mutation.AddCardMessageIDs(ids...)
-	return _c
-}
-
-// AddCardMessages adds the "card_messages" edges to the LarkCardMessage entity.
-func (_c *LarkMessageCreate) AddCardMessages(v ...*LarkCardMessage) *LarkMessageCreate {
-	ids := make([]int, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _c.AddCardMessageIDs(ids...)
 }
 
 // Mutation returns the LarkMessageMutation object of the builder.
@@ -207,22 +191,6 @@ func (_c *LarkMessageCreate) createSpec() (*LarkMessage, *sqlgraph.CreateSpec) {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_node.match_lark_messages = &nodes[0]
-		_spec.Edges = append(_spec.Edges, edge)
-	}
-	if nodes := _c.mutation.CardMessagesIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   larkmessage.CardMessagesTable,
-			Columns: []string{larkmessage.CardMessagesColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(larkcardmessage.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

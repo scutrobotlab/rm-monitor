@@ -120,28 +120,6 @@ var (
 			},
 		},
 	}
-	// LarkCardMessagesColumns holds the columns for the "lark_card_messages" table.
-	LarkCardMessagesColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeInt, Increment: true},
-		{Name: "message_id", Type: field.TypeString, Unique: true},
-		{Name: "created_at", Type: field.TypeTime},
-		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "lark_message_card_messages", Type: field.TypeInt},
-	}
-	// LarkCardMessagesTable holds the schema information for the "lark_card_messages" table.
-	LarkCardMessagesTable = &schema.Table{
-		Name:       "lark_card_messages",
-		Columns:    LarkCardMessagesColumns,
-		PrimaryKey: []*schema.Column{LarkCardMessagesColumns[0]},
-		ForeignKeys: []*schema.ForeignKey{
-			{
-				Symbol:     "lark_card_messages_lark_messages_card_messages",
-				Columns:    []*schema.Column{LarkCardMessagesColumns[4]},
-				RefColumns: []*schema.Column{LarkMessagesColumns[0]},
-				OnDelete:   schema.NoAction,
-			},
-		},
-	}
 	// LarkMessagesColumns holds the columns for the "lark_messages" table.
 	LarkMessagesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -430,7 +408,6 @@ var (
 		{Name: "error_message", Type: field.TypeString, Nullable: true},
 		{Name: "started_at", Type: field.TypeTime, Nullable: true},
 		{Name: "completed_at", Type: field.TypeTime, Nullable: true},
-		{Name: "lark_replied_at", Type: field.TypeTime, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "media_artifact_upload_task", Type: field.TypeInt, Unique: true, Nullable: true},
@@ -444,13 +421,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "upload_tasks_media_artifacts_upload_task",
-				Columns:    []*schema.Column{UploadTasksColumns[17]},
+				Columns:    []*schema.Column{UploadTasksColumns[16]},
 				RefColumns: []*schema.Column{MediaArtifactsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "upload_tasks_record_tasks_upload_task",
-				Columns:    []*schema.Column{UploadTasksColumns[18]},
+				Columns:    []*schema.Column{UploadTasksColumns[17]},
 				RefColumns: []*schema.Column{RecordTasksColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -459,12 +436,12 @@ var (
 			{
 				Name:    "uploadtask_record_task_upload_task",
 				Unique:  true,
-				Columns: []*schema.Column{UploadTasksColumns[18]},
+				Columns: []*schema.Column{UploadTasksColumns[17]},
 			},
 			{
 				Name:    "uploadtask_media_artifact_upload_task",
 				Unique:  true,
-				Columns: []*schema.Column{UploadTasksColumns[17]},
+				Columns: []*schema.Column{UploadTasksColumns[16]},
 			},
 			{
 				Name:    "uploadtask_status",
@@ -474,7 +451,7 @@ var (
 			{
 				Name:    "uploadtask_status_priority_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{UploadTasksColumns[2], UploadTasksColumns[5], UploadTasksColumns[15]},
+				Columns: []*schema.Column{UploadTasksColumns[2], UploadTasksColumns[5], UploadTasksColumns[14]},
 			},
 		},
 	}
@@ -482,7 +459,6 @@ var (
 	Tables = []*schema.Table{
 		HighlightClipsTable,
 		HighlightPublishTasksTable,
-		LarkCardMessagesTable,
 		LarkMessagesTable,
 		MatchesTable,
 		MatchRoundsTable,
@@ -498,7 +474,6 @@ func init() {
 	HighlightClipsTable.ForeignKeys[0].RefTable = MatchRoundsTable
 	HighlightClipsTable.ForeignKeys[1].RefTable = MediaArtifactsTable
 	HighlightPublishTasksTable.ForeignKeys[0].RefTable = HighlightClipsTable
-	LarkCardMessagesTable.ForeignKeys[0].RefTable = LarkMessagesTable
 	LarkMessagesTable.ForeignKeys[0].RefTable = MatchesTable
 	MatchesTable.ForeignKeys[0].RefTable = TeamsTable
 	MatchesTable.ForeignKeys[1].RefTable = TeamsTable

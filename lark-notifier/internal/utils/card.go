@@ -25,9 +25,12 @@ var matchCardTemplate = template.Must(template.New("match-card").
 	}).
 	Parse(matchCardTemplateSource))
 
-type MatchScore struct {
-	RedScore  string `json:"red_score"`
-	BlueScore string `json:"blue_score"`
+type MatchRoundCard struct {
+	PanelID   string
+	ContentID string
+	Title     string
+	Content   string
+	Expanded  bool
 }
 
 type MatchCardData struct {
@@ -42,7 +45,7 @@ type MatchCardData struct {
 	BlueSchool    string
 	RedAvatar     string
 	BlueAvatar    string
-	Scores        []MatchScore
+	Rounds        []MatchRoundCard
 	Color         string
 	MatchType     string
 	ZoneTitle     string
@@ -77,9 +80,6 @@ func NewMatchCardContent(ctx context.Context, svcCtx *svc.ServiceContext, m *typ
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get blue avatar")
 	}
-	content.Data.Scores = []MatchScore{
-		{"0", "0"},
-	}
 	content.Data.Color = "orange"
 	content.Data.MatchType = m.MatchType
 	content.Data.ZoneTitle = m.ZoneName
@@ -108,11 +108,15 @@ func (c *MatchCardContent) RenderJSON() (string, error) {
 	if err := matchCardTemplate.Execute(&buf, c.Data); err != nil {
 		return "", errors.Wrap(err, "render match card template")
 	}
-	var compact bytes.Buffer
-	if err := json.Compact(&compact, buf.Bytes()); err != nil {
+	var decoded any
+	if err := json.Unmarshal(buf.Bytes(), &decoded); err != nil {
+		return "", errors.Wrap(err, "validate rendered match card json")
+	}
+	compact, err := json.Marshal(decoded)
+	if err != nil {
 		return "", errors.Wrap(err, "compact rendered match card json")
 	}
-	return compact.String(), nil
+	return string(compact), nil
 }
 
 func jsonLiteral(v any) (string, error) {

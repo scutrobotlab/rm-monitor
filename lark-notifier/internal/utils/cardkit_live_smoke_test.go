@@ -32,10 +32,16 @@ func TestCardKitRenderedCardJSONSmoke(t *testing.T) {
 		BlueSchool:    "蓝校",
 		RedAvatar:     "img_v3_0211t_6fe68794-1131-4b50-a0e6-4cd78d1c5fag",
 		BlueAvatar:    "img_v3_0211t_6fe68794-1131-4b50-a0e6-4cd78d1c5fag",
-		Scores:        []MatchScore{{RedScore: "0", BlueScore: "0"}},
-		Color:         "orange",
-		MatchType:     "测试",
-		ZoneTitle:     "测试赛区",
+		Rounds: []MatchRoundCard{{
+			PanelID:   "elem_round_1",
+			ContentID: "elem_round_1_content",
+			Title:     "Round 1 | 进行中 | 0:0",
+			Content:   "暂无录制",
+			Expanded:  true,
+		}},
+		Color:     "orange",
+		MatchType: "测试",
+		ZoneTitle: "测试赛区",
 	}}
 	data, err := content.RenderJSON()
 	if err != nil {

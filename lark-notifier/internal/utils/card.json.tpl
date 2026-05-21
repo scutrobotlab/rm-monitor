@@ -12,9 +12,6 @@
             }
         }
     },
-    "card_link": {
-        "url": "https://scutrobotlab.feishu.cn/wiki/XVnnwe7tBixaffkMdYecQ6yOncc?table=tblC6WwndT5b77ky&view=vewoe7CmMv"
-    },
     "body": {
         "direction": "vertical",
         "horizontal_spacing": "8px",
@@ -110,57 +107,32 @@
                 ],
                 "margin": "0px 0px 0px 0px"
             },
+            {{- range $i, $round := .Rounds }}
+            {{- if $i }},{{ end }}
             {
-                "tag": "column_set",
-                "horizontal_spacing": "0px",
-                "horizontal_align": "left",
-                "columns": [
+                "tag": "collapsible_panel",
+                "element_id": {{json $round.PanelID}},
+                "expanded": {{json $round.Expanded}},
+                "title": {
+                    "tag": "markdown",
+                    "content": {{json $round.Title}},
+                    "text_align": "center",
+                    "text_size": "normal_v2"
+                },
+                "elements": [
                     {
-                        "tag": "column",
-                        "width": "weighted",
-                        "elements": [],
-                        "vertical_spacing": "8px",
-                        "horizontal_align": "left",
-                        "vertical_align": "top",
-                        "weight": 1
-                    },
-                    {
-                        "tag": "column",
-                        "width": "weighted",
-                        "background_style": "grey-50",
-                        "elements": [
-                            {{- range $i, $score := .Scores }}
-                            {{- if $i }},{{ end }}
-                            {
-                                "tag": "markdown",
-                                "content": "<font color=red>**{{jsonText $score.RedScore}}**</font> : <font color=blue>**{{jsonText $score.BlueScore}}** </font>",
-                                "text_align": "center",
-                                "text_size": "normal_v2",
-                                "margin": "0px 0px 0px 0px"
-                            }
-                            {{- end }}
-                        ],
-                        "padding": "0px 0px 0px 0px",
-                        "direction": "vertical",
-                        "horizontal_spacing": "8px",
-                        "vertical_spacing": "8px",
-                        "horizontal_align": "center",
-                        "vertical_align": "center",
-                        "margin": "0px 0px 0px 0px",
-                        "weight": 4
-                    },
-                    {
-                        "tag": "column",
-                        "width": "weighted",
-                        "elements": [],
-                        "vertical_spacing": "8px",
-                        "horizontal_align": "left",
-                        "vertical_align": "top",
-                        "weight": 1
+                        "tag": "markdown",
+                        "element_id": {{json $round.ContentID}},
+                        "content": {{json $round.Content}},
+                        "text_align": "left",
+                        "text_size": "normal_v2",
+                        "margin": "0px 0px 0px 0px"
                     }
                 ],
+                "padding": "8px 8px 8px 8px",
                 "margin": "4px 0px 4px 0px"
             },
+            {{- end }}
             {
                 "tag": "markdown",
                 "content": "{{jsonText .Report}}",
@@ -181,21 +153,6 @@
                     "tag": "standard_icon",
                     "token": "tab-video_filled",
                     "color": "black"
-                }
-            },
-            {
-                "tag": "div",
-                "text": {
-                    "tag": "plain_text",
-                    "content": "点击查看录制",
-                    "text_size": "notation",
-                    "text_align": "left",
-                    "text_color": "green"
-                },
-                "icon": {
-                    "tag": "standard_icon",
-                    "token": "wiki-bitable_colorful",
-                    "color": "light_grey"
                 }
             }
         ]

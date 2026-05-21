@@ -115,11 +115,6 @@ func CompletedAt(v time.Time) predicate.UploadTask {
 	return predicate.UploadTask(sql.FieldEQ(FieldCompletedAt, v))
 }
 
-// LarkRepliedAt applies equality check predicate on the "lark_replied_at" field. It's identical to LarkRepliedAtEQ.
-func LarkRepliedAt(v time.Time) predicate.UploadTask {
-	return predicate.UploadTask(sql.FieldEQ(FieldLarkRepliedAt, v))
-}
-
 // CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
 func CreatedAt(v time.Time) predicate.UploadTask {
 	return predicate.UploadTask(sql.FieldEQ(FieldCreatedAt, v))
@@ -918,56 +913,6 @@ func CompletedAtIsNil() predicate.UploadTask {
 // CompletedAtNotNil applies the NotNil predicate on the "completed_at" field.
 func CompletedAtNotNil() predicate.UploadTask {
 	return predicate.UploadTask(sql.FieldNotNull(FieldCompletedAt))
-}
-
-// LarkRepliedAtEQ applies the EQ predicate on the "lark_replied_at" field.
-func LarkRepliedAtEQ(v time.Time) predicate.UploadTask {
-	return predicate.UploadTask(sql.FieldEQ(FieldLarkRepliedAt, v))
-}
-
-// LarkRepliedAtNEQ applies the NEQ predicate on the "lark_replied_at" field.
-func LarkRepliedAtNEQ(v time.Time) predicate.UploadTask {
-	return predicate.UploadTask(sql.FieldNEQ(FieldLarkRepliedAt, v))
-}
-
-// LarkRepliedAtIn applies the In predicate on the "lark_replied_at" field.
-func LarkRepliedAtIn(vs ...time.Time) predicate.UploadTask {
-	return predicate.UploadTask(sql.FieldIn(FieldLarkRepliedAt, vs...))
-}
-
-// LarkRepliedAtNotIn applies the NotIn predicate on the "lark_replied_at" field.
-func LarkRepliedAtNotIn(vs ...time.Time) predicate.UploadTask {
-	return predicate.UploadTask(sql.FieldNotIn(FieldLarkRepliedAt, vs...))
-}
-
-// LarkRepliedAtGT applies the GT predicate on the "lark_replied_at" field.
-func LarkRepliedAtGT(v time.Time) predicate.UploadTask {
-	return predicate.UploadTask(sql.FieldGT(FieldLarkRepliedAt, v))
-}
-
-// LarkRepliedAtGTE applies the GTE predicate on the "lark_replied_at" field.
-func LarkRepliedAtGTE(v time.Time) predicate.UploadTask {
-	return predicate.UploadTask(sql.FieldGTE(FieldLarkRepliedAt, v))
-}
-
-// LarkRepliedAtLT applies the LT predicate on the "lark_replied_at" field.
-func LarkRepliedAtLT(v time.Time) predicate.UploadTask {
-	return predicate.UploadTask(sql.FieldLT(FieldLarkRepliedAt, v))
-}
-
-// LarkRepliedAtLTE applies the LTE predicate on the "lark_replied_at" field.
-func LarkRepliedAtLTE(v time.Time) predicate.UploadTask {
-	return predicate.UploadTask(sql.FieldLTE(FieldLarkRepliedAt, v))
-}
-
-// LarkRepliedAtIsNil applies the IsNil predicate on the "lark_replied_at" field.
-func LarkRepliedAtIsNil() predicate.UploadTask {
-	return predicate.UploadTask(sql.FieldIsNull(FieldLarkRepliedAt))
-}
-
-// LarkRepliedAtNotNil applies the NotNil predicate on the "lark_replied_at" field.
-func LarkRepliedAtNotNil() predicate.UploadTask {
-	return predicate.UploadTask(sql.FieldNotNull(FieldLarkRepliedAt))
 }
 
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.

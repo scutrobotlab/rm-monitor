@@ -45,8 +45,6 @@ type UploadTask struct {
 	StartedAt *time.Time `json:"started_at,omitempty"`
 	// CompletedAt holds the value of the "completed_at" field.
 	CompletedAt *time.Time `json:"completed_at,omitempty"`
-	// LarkRepliedAt holds the value of the "lark_replied_at" field.
-	LarkRepliedAt *time.Time `json:"lark_replied_at,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
@@ -101,7 +99,7 @@ func (*UploadTask) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullInt64)
 		case uploadtask.FieldSourcePath, uploadtask.FieldStatus, uploadtask.FieldK8sJobName, uploadtask.FieldBitableAppToken, uploadtask.FieldBitableTableID, uploadtask.FieldBitableRecordID, uploadtask.FieldBitableRecordURL, uploadtask.FieldAttachmentFileToken, uploadtask.FieldErrorMessage:
 			values[i] = new(sql.NullString)
-		case uploadtask.FieldStartedAt, uploadtask.FieldCompletedAt, uploadtask.FieldLarkRepliedAt, uploadtask.FieldCreatedAt, uploadtask.FieldUpdatedAt:
+		case uploadtask.FieldStartedAt, uploadtask.FieldCompletedAt, uploadtask.FieldCreatedAt, uploadtask.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
 		case uploadtask.ForeignKeys[0]: // media_artifact_upload_task
 			values[i] = new(sql.NullInt64)
@@ -214,13 +212,6 @@ func (_m *UploadTask) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.CompletedAt = new(time.Time)
 				*_m.CompletedAt = value.Time
-			}
-		case uploadtask.FieldLarkRepliedAt:
-			if value, ok := values[i].(*sql.NullTime); !ok {
-				return fmt.Errorf("unexpected type %T for field lark_replied_at", values[i])
-			} else if value.Valid {
-				_m.LarkRepliedAt = new(time.Time)
-				*_m.LarkRepliedAt = value.Time
 			}
 		case uploadtask.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -348,11 +339,6 @@ func (_m *UploadTask) String() string {
 	builder.WriteString(", ")
 	if v := _m.CompletedAt; v != nil {
 		builder.WriteString("completed_at=")
-		builder.WriteString(v.Format(time.ANSIC))
-	}
-	builder.WriteString(", ")
-	if v := _m.LarkRepliedAt; v != nil {
-		builder.WriteString("lark_replied_at=")
 		builder.WriteString(v.Format(time.ANSIC))
 	}
 	builder.WriteString(", ")

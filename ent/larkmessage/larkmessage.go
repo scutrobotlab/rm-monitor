@@ -24,8 +24,6 @@ const (
 	FieldUpdatedAt = "updated_at"
 	// EdgeMatch holds the string denoting the match edge name in mutations.
 	EdgeMatch = "match"
-	// EdgeCardMessages holds the string denoting the card_messages edge name in mutations.
-	EdgeCardMessages = "card_messages"
 	// Table holds the table name of the larkmessage in the database.
 	Table = "lark_messages"
 	// MatchTable is the table that holds the match relation/edge.
@@ -35,13 +33,6 @@ const (
 	MatchInverseTable = "matches"
 	// MatchColumn is the table column denoting the match relation/edge.
 	MatchColumn = "match_lark_messages"
-	// CardMessagesTable is the table that holds the card_messages relation/edge.
-	CardMessagesTable = "lark_card_messages"
-	// CardMessagesInverseTable is the table name for the LarkCardMessage entity.
-	// It exists in this package in order to avoid circular dependency with the "larkcardmessage" package.
-	CardMessagesInverseTable = "lark_card_messages"
-	// CardMessagesColumn is the table column denoting the card_messages relation/edge.
-	CardMessagesColumn = "lark_message_card_messages"
 )
 
 // Columns holds all SQL columns for larkmessage fields.
@@ -112,31 +103,10 @@ func ByMatchField(field string, opts ...sql.OrderTermOption) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newMatchStep(), sql.OrderByField(field, opts...))
 	}
 }
-
-// ByCardMessagesCount orders the results by card_messages count.
-func ByCardMessagesCount(opts ...sql.OrderTermOption) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newCardMessagesStep(), opts...)
-	}
-}
-
-// ByCardMessages orders the results by card_messages terms.
-func ByCardMessages(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newCardMessagesStep(), append([]sql.OrderTerm{term}, terms...)...)
-	}
-}
 func newMatchStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(MatchInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.M2O, true, MatchTable, MatchColumn),
-	)
-}
-func newCardMessagesStep() *sqlgraph.Step {
-	return sqlgraph.NewStep(
-		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(CardMessagesInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, false, CardMessagesTable, CardMessagesColumn),
 	)
 }
