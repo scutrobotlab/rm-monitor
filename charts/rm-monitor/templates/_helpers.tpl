@@ -104,7 +104,6 @@ PublishConf:
     MaxConcurrentJobs: {{ .Values.publish.bilibili.maxConcurrentJobs }}
     Cover:
       Enabled: {{ .Values.publish.bilibili.cover.enabled }}
-      At: {{ .Values.publish.bilibili.cover.at | quote }}
 {{- end -}}
 
 {{- define "rm-monitor.llmConf" -}}

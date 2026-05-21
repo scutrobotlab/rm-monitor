@@ -7,7 +7,6 @@ import (
 	"os"
 	pathpkg "path"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
@@ -23,6 +22,7 @@ import (
 	common "scutbot.cn/web/rm-monitor/pkg/config"
 	"scutbot.cn/web/rm-monitor/pkg/db"
 	"scutbot.cn/web/rm-monitor/pkg/highlight"
+	"scutbot.cn/web/rm-monitor/pkg/jobcontract"
 	"scutbot.cn/web/rm-monitor/pkg/kubejob"
 	"scutbot.cn/web/rm-monitor/pkg/logx"
 	"scutbot.cn/web/rm-monitor/pkg/storagepath"
@@ -46,6 +46,9 @@ func (l *DispatchLogic) Tick() error {
 		return nil
 	}
 	if err := l.createHighlightClips(conf); err != nil {
+		return err
+	}
+	if err := l.reconcileHighlightResults(); err != nil {
 		return err
 	}
 	if err := l.recoverDispatching(); err != nil {
@@ -251,12 +254,23 @@ func (l *DispatchLogic) dispatchPending() error {
 		if claimed == 0 {
 			continue
 		}
+		artifactCtx, err := l.buildHighlightContext(clip.ID)
+		if err != nil {
+			_ = l.svcCtx.DB.HighlightClip.UpdateOneID(clip.ID).SetStatus(highlightclip.StatusFAILED).SetErrorMessage(err.Error()).Exec(l.ctx)
+			continue
+		}
+		artifactCtxRaw, err := json.Marshal(artifactCtx)
+		if err != nil {
+			_ = l.svcCtx.DB.HighlightClip.UpdateOneID(clip.ID).SetStatus(highlightclip.StatusFAILED).SetErrorMessage(err.Error()).Exec(l.ctx)
+			continue
+		}
 		if l.svcCtx.K8s != nil {
 			job := kubejob.Build(l.svcCtx.Config.K8sJobConf, kubejob.JobSpec{
 				Name:              jobName,
 				App:               "highlight-artifact-job",
 				Image:             jobConf.Image,
-				Args:              []string{"-f", "/etc/rm-monitor/config.yml", "-clip", strconv.Itoa(clip.ID)},
+				Args:              []string{"-f", "/etc/rm-monitor/config.yml"},
+				Env:               map[string]string{jobcontract.EnvName: string(artifactCtxRaw)},
 				CPU:               "2000m",
 				Memory:            "1Gi",
 				CPULimit:          "4000m",
@@ -271,6 +285,158 @@ func (l *DispatchLogic) dispatchPending() error {
 		}
 		if err := l.svcCtx.DB.HighlightClip.UpdateOneID(clip.ID).SetStatus(highlightclip.StatusRUNNING).SetStartedAt(time.Now()).Exec(l.ctx); err != nil {
 			return errors.Wrap(err, "mark highlight running")
+		}
+	}
+	return nil
+}
+
+type highlightJobContext struct {
+	HighlightClipID    int     `json:"highlight_clip_id"`
+	HighlightIndex     int     `json:"highlight_index"`
+	Role               string  `json:"role"`
+	AlgorithmVersion   string  `json:"algorithm_version"`
+	StartSeconds       float64 `json:"start_seconds"`
+	EndSeconds         float64 `json:"end_seconds"`
+	PeakSeconds        float64 `json:"peak_seconds"`
+	Score              float64 `json:"score"`
+	SourceArtifactPath string  `json:"source_artifact_path"`
+	RoundDir           string  `json:"round_dir"`
+	OutputDir          string  `json:"output_dir"`
+	Event              string  `json:"event"`
+	Zone               string  `json:"zone"`
+	Order              int     `json:"order"`
+	MatchType          string  `json:"match_type"`
+	RoundNo            int     `json:"round_no"`
+	RedSchool          string  `json:"red_school"`
+	RedName            string  `json:"red_name"`
+	BlueSchool         string  `json:"blue_school"`
+	BlueName           string  `json:"blue_name"`
+}
+
+func (l *DispatchLogic) buildHighlightContext(clipID int) (highlightJobContext, error) {
+	clip, err := l.svcCtx.DB.HighlightClip.Query().
+		Where(highlightclip.ID(clipID)).
+		WithSourceArtifact().
+		WithMatchRound(func(q *ent.MatchRoundQuery) {
+			q.WithMatch(func(q *ent.MatchQuery) { q.WithRedTeam().WithBlueTeam() })
+		}).
+		Only(l.ctx)
+	if err != nil {
+		return highlightJobContext{}, errors.Wrap(err, "query highlight clip context")
+	}
+	if clip.Edges.SourceArtifact == nil || clip.Edges.MatchRound == nil || clip.Edges.MatchRound.Edges.Match == nil {
+		return highlightJobContext{}, errors.New("highlight clip missing source artifact or match round")
+	}
+	match := clip.Edges.MatchRound.Edges.Match
+	if match.Edges.RedTeam == nil || match.Edges.BlueTeam == nil {
+		return highlightJobContext{}, errors.New("highlight clip missing team context")
+	}
+	sourcePath := filepath.ToSlash(clip.Edges.SourceArtifact.Path)
+	return highlightJobContext{
+		HighlightClipID:    clip.ID,
+		HighlightIndex:     clip.HighlightIndex,
+		Role:               clip.Role,
+		AlgorithmVersion:   clip.AlgorithmVersion,
+		StartSeconds:       clip.StartSeconds,
+		EndSeconds:         clip.EndSeconds,
+		PeakSeconds:        clip.PeakSeconds,
+		Score:              clip.Score,
+		SourceArtifactPath: sourcePath,
+		RoundDir:           pathpkg.Dir(sourcePath),
+		OutputDir:          clip.OutputDir,
+		Event:              match.Event,
+		Zone:               match.Zone,
+		Order:              match.Order,
+		MatchType:          match.MatchType,
+		RoundNo:            clip.Edges.MatchRound.RoundNo,
+		RedSchool:          match.Edges.RedTeam.SchoolName,
+		RedName:            match.Edges.RedTeam.Name,
+		BlueSchool:         match.Edges.BlueTeam.SchoolName,
+		BlueName:           match.Edges.BlueTeam.Name,
+	}, nil
+}
+
+type highlightResultFile struct {
+	OutputDir    string          `json:"output_dir"`
+	Title        string          `json:"title"`
+	Description  string          `json:"description"`
+	Tags         []string        `json:"tags"`
+	ModelPayload json.RawMessage `json:"model_payload"`
+}
+
+type highlightErrorFile struct {
+	ErrorMessage string `json:"error_message"`
+}
+
+func (l *DispatchLogic) reconcileHighlightResults() error {
+	recordConf := l.svcCtx.Config.RecordConf.WithDefaults()
+	clips, err := l.svcCtx.DB.HighlightClip.Query().
+		Where(highlightclip.StatusEQ(highlightclip.StatusRUNNING)).
+		Limit(100).
+		All(l.ctx)
+	if err != nil {
+		return errors.Wrap(err, "query running highlight clips")
+	}
+	namespace := l.svcCtx.Config.K8sJobConf.WithDefaults().Namespace
+	for _, clip := range clips {
+		outputDir := storagepath.Resolve(recordConf.BaseDir, clip.OutputDir)
+		resultPath := filepath.Join(outputDir, jobcontract.DirName, jobName("highlight", clip.ID), jobcontract.ResultFile)
+		if raw, err := os.ReadFile(resultPath); err == nil {
+			var result highlightResultFile
+			if err := json.Unmarshal(raw, &result); err != nil {
+				return errors.Wrap(err, "parse highlight result")
+			}
+			modelPayload := string(result.ModelPayload)
+			if strings.TrimSpace(modelPayload) == "" {
+				modelPayload = "{}"
+			}
+			if err := l.svcCtx.DB.HighlightClip.UpdateOneID(clip.ID).
+				SetStatus(highlightclip.StatusSUCCEEDED).
+				SetOutputDir(result.OutputDir).
+				SetTitle(result.Title).
+				SetDescription(result.Description).
+				SetTags(result.Tags).
+				SetModelPayload(modelPayload).
+				SetCompletedAt(time.Now()).
+				ClearErrorMessage().
+				Exec(l.ctx); err != nil {
+				return errors.Wrap(err, "mark highlight succeeded")
+			}
+			if l.svcCtx.Config.PostgresConf.DSN != "" {
+				_ = db.Notify(l.ctx, l.svcCtx.Config.PostgresConf.DSN, db.HighlightClipChangedChannel, fmt.Sprintf("%d", clip.ID))
+			}
+			continue
+		}
+		errorPath := filepath.Join(outputDir, jobcontract.DirName, jobName("highlight", clip.ID), jobcontract.ErrorFile)
+		if raw, err := os.ReadFile(errorPath); err == nil {
+			var result highlightErrorFile
+			if err := json.Unmarshal(raw, &result); err != nil {
+				return errors.Wrap(err, "parse highlight error")
+			}
+			if result.ErrorMessage == "" {
+				result.ErrorMessage = "highlight artifact job failed"
+			}
+			if err := l.svcCtx.DB.HighlightClip.UpdateOneID(clip.ID).SetStatus(highlightclip.StatusFAILED).SetErrorMessage(result.ErrorMessage).SetCompletedAt(time.Now()).Exec(l.ctx); err != nil {
+				return errors.Wrap(err, "mark highlight failed")
+			}
+			continue
+		}
+		if l.svcCtx.K8s == nil || clip.K8sJobName == nil || *clip.K8sJobName == "" {
+			continue
+		}
+		state, err := l.svcCtx.K8s.JobState(l.ctx, namespace, *clip.K8sJobName)
+		if err != nil {
+			return err
+		}
+		if state == kubejob.JobStateFailed {
+			if err := l.svcCtx.DB.HighlightClip.UpdateOneID(clip.ID).SetStatus(highlightclip.StatusFAILED).SetErrorMessage("highlight artifact job failed without result file").SetCompletedAt(time.Now()).Exec(l.ctx); err != nil {
+				return errors.Wrap(err, "mark highlight job failed")
+			}
+		}
+		if state == kubejob.JobStateSucceeded {
+			if err := l.svcCtx.DB.HighlightClip.UpdateOneID(clip.ID).SetStatus(highlightclip.StatusFAILED).SetErrorMessage("highlight artifact job completed without result file").SetCompletedAt(time.Now()).Exec(l.ctx); err != nil {
+				return errors.Wrap(err, "mark highlight job completed without result")
+			}
 		}
 	}
 	return nil
@@ -442,7 +608,7 @@ func (l *DispatchLogic) dispatchPendingPublish() error {
 				App:               "highlight-publish-bilibili-job",
 				Image:             jobConf.Image,
 				Args:              []string{"-f", "/etc/rm-monitor/config.yml"},
-				Env:               map[string]string{"RM_MONITOR_PUBLISH_CONTEXT": string(publishCtxRaw)},
+				Env:               map[string]string{jobcontract.EnvName: string(publishCtxRaw)},
 				CPU:               "2000m",
 				Memory:            "1Gi",
 				CPULimit:          "4000m",
@@ -546,8 +712,8 @@ func (l *DispatchLogic) reconcilePublishResults() error {
 		if clip == nil {
 			continue
 		}
-		publishDir := storagepath.Resolve(recordConf.BaseDir, pathpkg.Join(clip.OutputDir, "publish"))
-		resultPath := filepath.Join(publishDir, "publish-result.json")
+		outputDir := storagepath.Resolve(recordConf.BaseDir, clip.OutputDir)
+		resultPath := filepath.Join(outputDir, jobcontract.DirName, jobName("highlight-publish-bilibili", task.ID), jobcontract.ResultFile)
 		if raw, err := os.ReadFile(resultPath); err == nil {
 			var result publishResultFile
 			if err := json.Unmarshal(raw, &result); err != nil {
@@ -568,7 +734,7 @@ func (l *DispatchLogic) reconcilePublishResults() error {
 			}
 			continue
 		}
-		errorPath := filepath.Join(publishDir, "publish-error.json")
+		errorPath := filepath.Join(outputDir, jobcontract.DirName, jobName("highlight-publish-bilibili", task.ID), jobcontract.ErrorFile)
 		if raw, err := os.ReadFile(errorPath); err == nil {
 			var result publishErrorFile
 			if err := json.Unmarshal(raw, &result); err != nil {

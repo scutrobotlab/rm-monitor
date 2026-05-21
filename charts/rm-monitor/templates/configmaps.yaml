@@ -47,13 +47,13 @@ data:
 {{ include "rm-monitor.jobConf" (dict "root" . "component" "manifest-job" "configMapName" "manifest-job-config" "recordsPVC" .Values.storage.shared.pvcName) | indent 6 }}
     STTJobConf:
 {{- if .Values.stt.enabled }}
-{{ include "rm-monitor.jobConf" (dict "root" . "component" "stt-job" "configMapName" "stt-job-config" "recordsPVC" .Values.storage.shared.pvcName) | indent 6 }}
+{{ include "rm-monitor.jobConf" (dict "root" . "component" "stt-job" "configMapName" "stt-job-config" "recordsPVC" .Values.storage.record.pvcName) | indent 6 }}
 {{- else }}
       Namespace: {{ include "rm-monitor.namespace" . }}
       Image: ""
       ConfigMapName: stt-job-config
       ServiceAccountName: {{ .Values.serviceAccount.name }}
-      RecordsPVC: {{ .Values.storage.shared.pvcName }}
+      RecordsPVC: {{ .Values.storage.record.pvcName }}
       RecordsMountPath: {{ .Values.jobs.recordsMountPath }}
       ImagePullPolicy: {{ include "rm-monitor.jobImagePullPolicy" . }}
       BackoffLimit: {{ .Values.jobs.backoffLimit }}
@@ -83,8 +83,6 @@ metadata:
   namespace: {{ include "rm-monitor.namespace" . }}
 data:
   config.yml: |
-{{ include "rm-monitor.postgresConf" . | indent 4 }}
-      AutoMigrate: false
 {{ include "rm-monitor.recordConf" . | indent 4 }}
 ---
 apiVersion: v1
@@ -94,9 +92,6 @@ metadata:
   namespace: {{ include "rm-monitor.namespace" . }}
 data:
   config.yml: |
-{{ include "rm-monitor.postgresConf" . | indent 4 }}
-      AutoMigrate: false
-{{ include "rm-monitor.redisConf" . | indent 4 }}
     WhisperServerUrl: {{ .Values.stt.whisperServerUrl }}
 {{ include "rm-monitor.recordConf" . | indent 4 }}
 ---
@@ -107,9 +102,6 @@ metadata:
   namespace: {{ include "rm-monitor.namespace" . }}
 data:
   config.yml: |
-{{ include "rm-monitor.postgresConf" . | indent 4 }}
-      AutoMigrate: false
-{{ include "rm-monitor.recordConf" . | indent 4 }}
 {{ include "rm-monitor.danmuConf" . | indent 4 }}
 ---
 apiVersion: v1
@@ -136,8 +128,6 @@ metadata:
   namespace: {{ include "rm-monitor.namespace" . }}
 data:
   config.yml: |
-{{ include "rm-monitor.postgresConf" . | indent 4 }}
-      AutoMigrate: false
 {{ include "rm-monitor.recordConf" . | indent 4 }}
 {{ include "rm-monitor.highlightConf" . | indent 4 }}
 {{ include "rm-monitor.llmConf" . | indent 4 }}
@@ -149,8 +139,6 @@ metadata:
   namespace: {{ include "rm-monitor.namespace" . }}
 data:
   config.yml: |
-{{ include "rm-monitor.postgresConf" . | indent 4 }}
-      AutoMigrate: false
 {{ include "rm-monitor.recordConf" . | indent 4 }}
 {{ include "rm-monitor.publishConf" . | indent 4 }}
 ---
@@ -194,8 +182,6 @@ metadata:
   namespace: {{ include "rm-monitor.namespace" . }}
 data:
   config.yml: |
-{{ include "rm-monitor.postgresConf" . | indent 4 }}
-      AutoMigrate: false
     LarkConf:
       AppId: {{ .Values.lark.appId }}
       AppSecret: {{ .Values.lark.appSecret }}

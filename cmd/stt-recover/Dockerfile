@@ -7,14 +7,14 @@ RUN --mount=type=cache,target=/go/pkg/mod go mod download
 COPY . .
 
 RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
-    go build -ldflags "-s -w" -trimpath -o /usr/local/bin/stt-recover ./cmd/stt-recover
+    CGO_ENABLED=0 go build -ldflags "-s -w" -trimpath -o /usr/local/bin/stt-recover ./cmd/stt-recover
 
 FROM alpine:3.20
 
 ENV TZ=Asia/Shanghai
-RUN apk add --no-cache ca-certificates tzdata ffmpeg
-
 WORKDIR /app
+RUN apk add --no-cache ca-certificates ffmpeg tzdata
+
 COPY --from=builder /usr/local/bin/stt-recover /usr/local/bin/stt-recover
 
 ENTRYPOINT ["/usr/local/bin/stt-recover"]

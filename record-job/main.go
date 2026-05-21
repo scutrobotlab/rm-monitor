@@ -11,20 +11,17 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"sync/atomic"
+	"syscall"
 	"time"
 
 	"github.com/pkg/errors"
-	"scutbot.cn/web/rm-monitor/ent"
-	"scutbot.cn/web/rm-monitor/ent/matchround"
-	"scutbot.cn/web/rm-monitor/ent/mediaartifact"
-	"scutbot.cn/web/rm-monitor/ent/recordtask"
 	"scutbot.cn/web/rm-monitor/pkg/app"
-	"scutbot.cn/web/rm-monitor/pkg/db"
+	"scutbot.cn/web/rm-monitor/pkg/jobcontract"
 	"scutbot.cn/web/rm-monitor/pkg/logx"
 	"scutbot.cn/web/rm-monitor/pkg/storagepath"
 	"scutbot.cn/web/rm-monitor/record-job/internal/config"
@@ -32,11 +29,9 @@ import (
 
 var (
 	configFile = flag.String("f", "etc/config.yml", "the config file")
-	taskIDFlag = flag.Int("task", 0, "record task id")
 )
 
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-const maxPrematureExitAttempts = 3
 const recordMetaFile = "record-meta.json"
 
 func init() {
@@ -45,55 +40,56 @@ func init() {
 
 func main() {
 	flag.Parse()
-	if *taskIDFlag == 0 {
-		logx.Error("task id is required")
-		os.Exit(1)
-	}
 	var c config.Config
 	app.MustLoadConfig(*configFile, &c)
-	client, err := db.Open(context.Background(), c.PostgresConf)
-	if err != nil {
+
+	var jobCtx jobcontract.RecordContext
+	if err := jobcontract.ContextFromEnv(&jobCtx); err != nil {
 		logx.Error(err)
 		os.Exit(1)
 	}
-	defer client.Close()
-	if err := run(context.Background(), client, c, *taskIDFlag); err != nil {
+	if jobCtx.BaseDir == "" {
+		jobCtx.BaseDir = c.RecordConf.WithDefaults().BaseDir
+	}
+	jobDir := recordJobDir(jobCtx.BaseDir, jobCtx.OutputPath, jobCtx.RecordTaskID)
+	if err := jobcontract.WriteContext(jobDir, jobCtx); err != nil {
+		logx.Error(err)
+		os.Exit(1)
+	}
+	if err := run(context.Background(), jobCtx, jobDir); err != nil {
+		_ = jobcontract.WriteError(jobDir, "record", jobCtx.RecordTaskID, err)
 		logx.Error(err)
 		os.Exit(1)
 	}
 }
 
-func run(ctx context.Context, client *ent.Client, c config.Config, taskID int) error {
-	task, err := loadTask(ctx, client, taskID)
-	if err != nil {
-		return errors.Wrap(err, "get record task")
+func run(ctx context.Context, jobCtx jobcontract.RecordContext, jobDir string) error {
+	if jobCtx.RecordTaskID == 0 {
+		return errors.New("record_task_id is required")
 	}
-	conf := c.RecordConf.WithDefaults()
-	fullPath := storagepath.Resolve(conf.BaseDir, task.OutputPath)
+	fullPath := storagepath.Resolve(jobCtx.BaseDir, jobCtx.OutputPath)
 	if err := os.MkdirAll(filepath.Dir(fullPath), 0o755); err != nil {
 		return errors.Wrap(err, "create output dir")
 	}
 	partPath := fullPath + ".part"
 	_ = os.Remove(partPath)
 
-	jobCtx, cancel := context.WithCancel(ctx)
+	runCtx, cancel := signal.NotifyContext(ctx, syscall.SIGTERM, syscall.SIGINT)
 	defer cancel()
 	var stopRequested atomic.Bool
-	go watchCancel(jobCtx, client, taskID, &stopRequested, cancel)
-
-	if err := client.RecordTask.UpdateOneID(taskID).SetStatus(recordtask.StatusRUNNING).SetStartedAt(time.Now()).Exec(ctx); err != nil {
-		return errors.Wrap(err, "mark running")
-	}
+	go func() {
+		<-runCtx.Done()
+		stopRequested.Store(true)
+	}()
 
 	recordStartedAt := time.Now()
-	writeMeta := roleKeepsAudio(conf.AudioRoles, task.Role)
-	if writeMeta {
+	if jobCtx.KeepAudio {
 		if err := writeRecordMeta(filepath.Dir(fullPath), recordMeta{
 			Schema:                "rm-monitor/record-meta/v1",
-			RecordTaskID:          task.ID,
-			Role:                  task.Role,
-			SourceURL:             task.SourceURL,
-			OutputPath:            task.OutputPath,
+			RecordTaskID:          jobCtx.RecordTaskID,
+			Role:                  jobCtx.Role,
+			SourceURL:             jobCtx.SourceURL,
+			OutputPath:            jobCtx.OutputPath,
 			RecordWallStartedAt:   recordStartedAt,
 			MediaTimeZeroWallAt:   recordStartedAt,
 			RecordWallCompletedAt: nil,
@@ -104,8 +100,8 @@ func run(ctx context.Context, client *ent.Client, c config.Config, taskID int) e
 		}
 	}
 
-	args := recordFFmpegArgs(task.SourceURL, partPath, roleKeepsAudio(conf.AudioRoles, task.Role))
-	cmd := exec.CommandContext(jobCtx, "ffmpeg", args...)
+	args := recordFFmpegArgs(jobCtx.SourceURL, partPath, jobCtx.KeepAudio)
+	cmd := exec.CommandContext(runCtx, "ffmpeg", args...)
 	var stderr bytes.Buffer
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = io.MultiWriter(os.Stderr, &stderr)
@@ -116,80 +112,50 @@ func run(ctx context.Context, client *ent.Client, c config.Config, taskID int) e
 		return cmd.Process.Signal(os.Interrupt)
 	}
 	cmd.WaitDelay = 10 * time.Second
-	logx.Infof("recording %s to %s", task.SourceURL, path.Clean(task.OutputPath))
-	err = cmd.Run()
-	if jobCtx.Err() != nil && !stopRequested.Load() {
-		if writeMeta {
-			_ = removeRecordMeta(filepath.Dir(fullPath))
-		}
-		_ = client.RecordTask.UpdateOneID(taskID).SetStatus(recordtask.StatusCANCELED).SetErrorMessage(jobCtx.Err().Error()).Exec(ctx)
-		return jobCtx.Err()
-	}
+	logx.Infof("recording %s to %s", jobCtx.SourceURL, path.Clean(jobCtx.OutputPath))
+	err := cmd.Run()
 	if err != nil && !stopRequested.Load() {
-		if writeMeta {
+		if jobCtx.KeepAudio {
 			_ = removeRecordMeta(filepath.Dir(fullPath))
 		}
 		msg := commandError(err, stderr.String())
-		_ = client.RecordTask.UpdateOneID(taskID).SetStatus(recordtask.StatusFAILED).SetErrorMessage(msg).Exec(ctx)
 		return errors.New(msg)
 	}
 	if !stopRequested.Load() {
-		latest, latestErr := loadTask(ctx, client, taskID)
-		if latestErr != nil {
-			if writeMeta {
-				_ = removeRecordMeta(filepath.Dir(fullPath))
-			}
-			_ = client.RecordTask.UpdateOneID(taskID).SetStatus(recordtask.StatusFAILED).SetErrorMessage(latestErr.Error()).Exec(ctx)
-			return errors.Wrap(latestErr, "reload record task after ffmpeg exit")
+		if jobCtx.KeepAudio {
+			_ = removeRecordMeta(filepath.Dir(fullPath))
 		}
-		if latest.Edges.MatchRound != nil && latest.Edges.MatchRound.Status == matchround.StatusSTARTED {
-			if writeMeta {
-				_ = removeRecordMeta(filepath.Dir(fullPath))
-			}
-			msg := "ffmpeg exited before match round ended"
-			update := client.RecordTask.UpdateOneID(taskID).SetErrorMessage(msg)
-			if latest.Attempts < maxPrematureExitAttempts {
-				update.SetStatus(recordtask.StatusPENDING).ClearStartedAt()
-			} else {
-				update.SetStatus(recordtask.StatusFAILED)
-			}
-			_ = update.Exec(ctx)
-			_ = db.Notify(ctx, c.PostgresConf.DSN, db.RecordTaskChangedChannel, strconv.Itoa(taskID))
-			return errors.New(msg)
-		}
+		return errors.New("ffmpeg exited before dispatcher requested stop")
 	}
 
 	if err := os.Rename(partPath, fullPath); err != nil {
-		if writeMeta {
+		if jobCtx.KeepAudio {
 			_ = removeRecordMeta(filepath.Dir(fullPath))
 		}
-		_ = client.RecordTask.UpdateOneID(taskID).SetStatus(recordtask.StatusFAILED).SetErrorMessage(err.Error()).Exec(ctx)
 		return errors.Wrap(err, "commit output")
 	}
 	stat, statErr := os.Stat(fullPath)
 	if statErr != nil {
-		if writeMeta {
+		if jobCtx.KeepAudio {
 			_ = removeRecordMeta(filepath.Dir(fullPath))
 		}
-		_ = client.RecordTask.UpdateOneID(taskID).SetStatus(recordtask.StatusFAILED).SetErrorMessage(statErr.Error()).Exec(ctx)
 		return errors.Wrap(statErr, "stat output")
 	}
 	sum, err := checksum(fullPath)
 	if err != nil {
-		if writeMeta {
+		if jobCtx.KeepAudio {
 			_ = removeRecordMeta(filepath.Dir(fullPath))
 		}
-		_ = client.RecordTask.UpdateOneID(taskID).SetStatus(recordtask.StatusFAILED).SetErrorMessage(err.Error()).Exec(ctx)
 		return err
 	}
 	completedAt := time.Now()
-	if writeMeta {
+	if jobCtx.KeepAudio {
 		if err := writeRecordMeta(filepath.Dir(fullPath), recordMeta{
 			Schema:                "rm-monitor/record-meta/v1",
-			RecordTaskID:          task.ID,
-			Role:                  task.Role,
-			SourceURL:             task.SourceURL,
-			OutputPath:            task.OutputPath,
+			RecordTaskID:          jobCtx.RecordTaskID,
+			Role:                  jobCtx.Role,
+			SourceURL:             jobCtx.SourceURL,
+			OutputPath:            jobCtx.OutputPath,
 			RecordWallStartedAt:   recordStartedAt,
 			RecordWallCompletedAt: &completedAt,
 			MediaTimeZeroWallAt:   recordStartedAt,
@@ -197,23 +163,19 @@ func run(ctx context.Context, client *ent.Client, c config.Config, taskID int) e
 			Checksum:              sum,
 		}); err != nil {
 			_ = removeRecordMeta(filepath.Dir(fullPath))
-			_ = client.RecordTask.UpdateOneID(taskID).SetStatus(recordtask.StatusFAILED).SetErrorMessage(err.Error()).Exec(ctx)
 			return errors.Wrap(err, "write final record metadata")
 		}
 	}
-	if err := client.RecordTask.UpdateOneID(taskID).
-		SetStatus(recordtask.StatusSUCCEEDED).
-		SetCompletedAt(completedAt).
-		SetFileSize(stat.Size()).
-		SetChecksum(sum).
-		ClearErrorMessage().
-		Exec(ctx); err != nil {
-		return errors.Wrap(err, "mark record succeeded")
-	}
-	if err := upsertSourceArtifact(ctx, client, taskID, task.OutputPath, stat.Size(), sum); err != nil {
-		return errors.Wrap(err, "upsert source artifact")
-	}
-	return db.Notify(ctx, c.PostgresConf.DSN, db.RecordTaskChangedChannel, strconv.Itoa(taskID))
+	return jobcontract.WriteResult(jobDir, jobcontract.RecordResult{
+		Schema:       "rm-monitor/record-result/v1",
+		RecordTaskID: jobCtx.RecordTaskID,
+		OutputPath:   jobCtx.OutputPath,
+		Format:       "flv",
+		Codec:        "copy",
+		FileSize:     stat.Size(),
+		Checksum:     sum,
+		CompletedAt:  completedAt,
+	})
 }
 
 type recordMeta struct {
@@ -265,6 +227,11 @@ func roleKeepsAudio(audioRoles []string, role string) bool {
 	return false
 }
 
+func recordJobDir(baseDir, outputPath string, taskID int) string {
+	fullPath := storagepath.Resolve(baseDir, outputPath)
+	return filepath.Join(filepath.Dir(fullPath), jobcontract.DirName, fmt.Sprintf("record-%d", taskID))
+}
+
 func recordFFmpegArgs(sourceURL, outputPath string, keepAudio bool) []string {
 	args := []string{
 		"-hide_banner",
@@ -302,21 +269,6 @@ func recordFFmpegArgs(sourceURL, outputPath string, keepAudio bool) []string {
 	return args
 }
 
-func upsertSourceArtifact(ctx context.Context, client *ent.Client, taskID int, outputPath string, size int64, sum string) error {
-	return client.MediaArtifact.Create().
-		SetRecordTaskID(taskID).
-		SetKind(mediaartifact.KindSource).
-		SetPath(outputPath).
-		SetFormat(mediaartifact.FormatFlv).
-		SetCodec(mediaartifact.CodecCopy).
-		SetFileSize(size).
-		SetChecksum(sum).
-		SetStatus(mediaartifact.StatusAVAILABLE).
-		OnConflictColumns(mediaartifact.RecordTaskColumn, mediaartifact.FieldKind).
-		UpdateNewValues().
-		Exec(ctx)
-}
-
 func commandError(err error, stderr string) string {
 	const max = 2048
 	msg := err.Error()
@@ -327,37 +279,6 @@ func commandError(err error, stderr string) string {
 		msg = fmt.Sprintf("%s: %s", msg, stderr)
 	}
 	return msg
-}
-
-func loadTask(ctx context.Context, client *ent.Client, taskID int) (*ent.RecordTask, error) {
-	return client.RecordTask.Query().
-		Where(recordtask.ID(taskID)).
-		WithMatchRound(func(q *ent.MatchRoundQuery) {
-			q.WithMatch(func(q *ent.MatchQuery) {
-				q.WithRedTeam().WithBlueTeam().WithRounds(func(q *ent.MatchRoundQuery) {
-					q.Order(matchround.ByRoundNo())
-				})
-			})
-		}).
-		Only(ctx)
-}
-
-func watchCancel(ctx context.Context, client *ent.Client, taskID int, stopRequested *atomic.Bool, cancel context.CancelFunc) {
-	ticker := time.NewTicker(2 * time.Second)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			task, err := client.RecordTask.Get(ctx, taskID)
-			if err == nil && task.Status == recordtask.StatusCANCEL_REQUESTED {
-				stopRequested.Store(true)
-				cancel()
-				return
-			}
-		}
-	}
 }
 
 func checksum(file string) (string, error) {

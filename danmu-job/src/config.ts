@@ -1,10 +1,6 @@
 import fs from "node:fs";
 import YAML from "yaml";
 
-export type PostgresConf = {
-  DSN: string;
-};
-
 export type RecordConf = {
   BaseDir?: string;
   MatchDirTemplate?: string;
@@ -19,7 +15,6 @@ export type DanmuConf = {
 };
 
 export type Config = {
-  PostgresConf: PostgresConf;
   RecordConf?: RecordConf;
   DanmuConf?: DanmuConf;
 };

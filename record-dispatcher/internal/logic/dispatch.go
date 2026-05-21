@@ -4,7 +4,10 @@ import (
 	"context"
 	"crypto/sha1"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	pathpkg "path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -14,14 +17,17 @@ import (
 	"scutbot.cn/web/rm-monitor/ent"
 	"scutbot.cn/web/rm-monitor/ent/match"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
+	"scutbot.cn/web/rm-monitor/ent/mediaartifact"
 	"scutbot.cn/web/rm-monitor/ent/recordtask"
 	common "scutbot.cn/web/rm-monitor/pkg/config"
 	"scutbot.cn/web/rm-monitor/pkg/db"
+	"scutbot.cn/web/rm-monitor/pkg/jobcontract"
 	"scutbot.cn/web/rm-monitor/pkg/kubejob"
 	"scutbot.cn/web/rm-monitor/pkg/logx"
 	"scutbot.cn/web/rm-monitor/pkg/pathfmt"
 	"scutbot.cn/web/rm-monitor/pkg/recording"
-	"scutbot.cn/web/rm-monitor/pkg/sttcoord"
+	"scutbot.cn/web/rm-monitor/pkg/storagepath"
+	"scutbot.cn/web/rm-monitor/pkg/stttext"
 	"scutbot.cn/web/rm-monitor/record-dispatcher/internal/svc"
 )
 
@@ -44,6 +50,9 @@ func (l *DispatchLogic) Tick() error {
 	if err := l.createTasksForStartedRounds(); err != nil {
 		return err
 	}
+	if err := l.reconcileRecordResults(); err != nil {
+		return err
+	}
 	if err := l.recoverDispatchingTasks(); err != nil {
 		return err
 	}
@@ -64,10 +73,22 @@ func (l *DispatchLogic) cancelEndedRounds() error {
 	}
 	for _, task := range tasks {
 		if task.Edges.MatchRound != nil && task.Edges.MatchRound.Status == matchround.StatusENDED {
-			if err := l.svcCtx.DB.RecordTask.UpdateOneID(task.ID).SetStatus(recordtask.StatusCANCEL_REQUESTED).Exec(l.ctx); err != nil {
-				return errors.Wrap(err, "request record cancel")
+			name := jobName("record", task.ID)
+			if task.K8sJobName != nil && *task.K8sJobName != "" {
+				name = *task.K8sJobName
 			}
-			_ = db.Notify(l.ctx, l.svcCtx.Config.PostgresConf.DSN, db.RecordTaskChangedChannel, strconv.Itoa(task.ID))
+			if l.svcCtx.K8s != nil {
+				if err := l.svcCtx.K8s.DeleteJob(l.ctx, l.svcCtx.Config.K8sJobConf.WithDefaults().Namespace, name); err != nil {
+					return err
+				}
+			}
+			if err := l.svcCtx.DB.RecordTask.UpdateOneID(task.ID).SetStatus(recordtask.StatusCANCEL_REQUESTED).Exec(l.ctx); err != nil {
+				return errors.Wrap(err, "mark record stopping")
+			}
+			if l.svcCtx.K8s != nil && task.Edges.MatchRound != nil {
+				_ = l.svcCtx.K8s.DeleteJob(l.ctx, l.svcCtx.Config.STTJobConf.WithDefaults().Namespace, jobName("stt", task.Edges.MatchRound.ID))
+				_ = l.svcCtx.K8s.DeleteJob(l.ctx, l.svcCtx.Config.DanmuJobConf.WithDefaults().Namespace, jobName("danmu", task.Edges.MatchRound.ID))
+			}
 		}
 	}
 	return nil
@@ -171,15 +192,25 @@ func (l *DispatchLogic) dispatchDanmuJob(r *ent.MatchRound, chatRoomID string) e
 		l.Errorf("skip danmu job for round %d: chatRoomId not found", r.ID)
 		return nil
 	}
+	jobCtx, err := l.danmuContext(r, chatRoomID)
+	if err != nil {
+		return err
+	}
+	rawCtx, err := json.Marshal(jobCtx)
+	if err != nil {
+		return errors.Wrap(err, "encode danmu job context")
+	}
 	name := jobName("danmu", r.ID)
 	job := kubejob.Build(l.svcCtx.Config.DanmuJobConf, kubejob.JobSpec{
-		Name:              name,
-		App:               "danmu-job",
-		Image:             jobConf.Image,
-		Args:              []string{"-f", "/etc/rm-monitor/config.yml", "-round", strconv.Itoa(r.ID), "-chat-room", chatRoomID},
-		CPU:               "50m",
-		Memory:            "128Mi",
-		PriorityClassName: kubejob.PriorityClassRecordCritical,
+		Name:                    name,
+		App:                     "danmu-job",
+		Image:                   jobConf.Image,
+		Args:                    []string{"-f", "/etc/rm-monitor/config.yml"},
+		Env:                     map[string]string{jobcontract.EnvName: string(rawCtx)},
+		CPU:                     "50m",
+		Memory:                  "128Mi",
+		PriorityClassName:       kubejob.PriorityClassRecordCritical,
+		TerminationGraceSeconds: 60,
 	})
 	return l.svcCtx.K8s.CreateJob(l.ctx, jobConf.Namespace, job)
 }
@@ -195,6 +226,14 @@ func (l *DispatchLogic) dispatchSTTJob(conf common.RecordConf, r *ent.MatchRound
 	if r.Edges.Match == nil {
 		return errors.New("stt round has no match edge")
 	}
+	jobCtx, err := l.sttContext(conf, r, sourceURL)
+	if err != nil {
+		return err
+	}
+	rawCtx, err := json.Marshal(jobCtx)
+	if err != nil {
+		return errors.Wrap(err, "encode stt job context")
+	}
 	jobConf := l.svcCtx.Config.STTJobConf.WithDefaults()
 	name := jobName("stt", r.ID)
 	job := kubejob.Build(l.svcCtx.Config.STTJobConf, kubejob.JobSpec{
@@ -204,23 +243,112 @@ func (l *DispatchLogic) dispatchSTTJob(conf common.RecordConf, r *ent.MatchRound
 		Image:         jobConf.Image,
 		CPU:           "100m",
 		Memory:        "128Mi",
-		Env:           map[string]string{"STT_SOURCE_URL": sourceURL},
+		Env:           map[string]string{jobcontract.EnvName: string(rawCtx)},
 		ExtraContainers: []kubejob.ContainerSpec{
 			{
 				Name:   "recognizer",
 				Image:  jobConf.Image,
-				Args:   []string{"-f", "/etc/rm-monitor/config.yml", "-mode", "recognizer", "-round", strconv.Itoa(r.ID)},
+				Args:   []string{"-f", "/etc/rm-monitor/config.yml", "-mode", "recognizer"},
+				Env:    map[string]string{jobcontract.EnvName: string(rawCtx)},
 				CPU:    "100m",
 				Memory: "128Mi",
 			},
 		},
-		Args:              []string{"-f", "/etc/rm-monitor/config.yml", "-mode", "audio-recorder", "-round", strconv.Itoa(r.ID)},
-		PriorityClassName: kubejob.PriorityClassRecordCritical,
+		Args:                    []string{"-f", "/etc/rm-monitor/config.yml", "-mode", "audio-recorder"},
+		PriorityClassName:       kubejob.PriorityClassRecordCritical,
+		TerminationGraceSeconds: 60,
 	})
-	if err := l.svcCtx.K8s.CreateJob(l.ctx, jobConf.Namespace, job); err != nil {
-		return err
+	return l.svcCtx.K8s.CreateJob(l.ctx, jobConf.Namespace, job)
+}
+
+func (l *DispatchLogic) danmuContext(r *ent.MatchRound, chatRoomID string) (jobcontract.DanmuContext, error) {
+	conf := l.svcCtx.Config.RecordConf.WithDefaults()
+	roundDir, err := l.roundDir(conf, r, "")
+	if err != nil {
+		return jobcontract.DanmuContext{}, err
 	}
-	return sttcoord.SetPending(l.ctx, l.svcCtx.Redis, r.Edges.Match.ID, r.RoundNo)
+	return jobcontract.DanmuContext{
+		Schema:       "rm-monitor/danmu-context/v1",
+		MatchRoundID: r.ID,
+		ChatRoomID:   chatRoomID,
+		RoundDir:     roundDir,
+		StartedAt:    r.StartedAt,
+	}, nil
+}
+
+func (l *DispatchLogic) sttContext(conf common.RecordConf, r *ent.MatchRound, sourceURL string) (jobcontract.STTContext, error) {
+	m := r.Edges.Match
+	if m == nil {
+		return jobcontract.STTContext{}, errors.New("stt round has no match edge")
+	}
+	red, err := m.Edges.RedTeamOrErr()
+	if err != nil {
+		return jobcontract.STTContext{}, err
+	}
+	blue, err := m.Edges.BlueTeamOrErr()
+	if err != nil {
+		return jobcontract.STTContext{}, err
+	}
+	roundDir, err := l.roundDir(conf, r, conf.STTRole)
+	if err != nil {
+		return jobcontract.STTContext{}, err
+	}
+	return jobcontract.STTContext{
+		Schema:           "rm-monitor/stt-context/v1",
+		MatchRoundID:     r.ID,
+		MatchID:          m.ID,
+		RoundNo:          r.RoundNo,
+		Role:             conf.STTRole,
+		SourceURL:        sourceURL,
+		RoundDir:         roundDir,
+		AudioDir:         filepath.Join(roundDir, "audio"),
+		STTPath:          filepath.Join(roundDir, "stt.jsonl"),
+		SubtitleName:     fmt.Sprintf("%s.srt", conf.STTRole),
+		WhisperServerURL: l.svcCtx.Config.WhisperServerUrl,
+		Prompt: stttext.BuildPrompt(stttext.PromptData{
+			Event:      m.Event,
+			Zone:       m.Zone,
+			MatchID:    m.ID,
+			MatchType:  m.MatchType,
+			Order:      m.Order,
+			RoundNo:    r.RoundNo,
+			Role:       conf.STTRole,
+			RedSchool:  red.SchoolName,
+			RedName:    red.Name,
+			BlueSchool: blue.SchoolName,
+			BlueName:   blue.Name,
+		}),
+	}, nil
+}
+
+func (l *DispatchLogic) roundDir(conf common.RecordConf, r *ent.MatchRound, role string) (string, error) {
+	m := r.Edges.Match
+	if m == nil {
+		return "", errors.New("round has no match edge")
+	}
+	red, err := m.Edges.RedTeamOrErr()
+	if err != nil {
+		return "", err
+	}
+	blue, err := m.Edges.BlueTeamOrErr()
+	if err != nil {
+		return "", err
+	}
+	rel, err := pathfmt.RenderMatchDir(conf.MatchNameTemplate, conf.MatchDirTemplate, pathfmt.Data{
+		Event:      m.Event,
+		Zone:       m.Zone,
+		Order:      m.Order,
+		RedSchool:  red.SchoolName,
+		RedName:    red.Name,
+		BlueSchool: blue.SchoolName,
+		BlueName:   blue.Name,
+		RoundNo:    r.RoundNo,
+		Role:       role,
+	})
+	if err != nil {
+		return "", err
+	}
+	return storagepath.Resolve(conf.BaseDir, pathpkg.Join(rel, fmt.Sprintf("Round-%d", r.RoundNo))), nil
 }
 
 func filterBlacklistedRoles(urls map[string]string, blacklist []string) map[string]string {
@@ -239,6 +367,15 @@ func filterBlacklistedRoles(urls map[string]string, blacklist []string) map[stri
 		out[role] = url
 	}
 	return out
+}
+
+func roleKeepsAudio(audioRoles []string, role string) bool {
+	for _, item := range audioRoles {
+		if strings.TrimSpace(item) == role {
+			return true
+		}
+	}
+	return false
 }
 
 func (l *DispatchLogic) outputPath(conf common.RecordConf, m *ent.Match, roundNo int, role string) (string, error) {
@@ -266,6 +403,7 @@ func (l *DispatchLogic) outputPath(conf common.RecordConf, m *ent.Match, roundNo
 func (l *DispatchLogic) dispatchPendingTasks() error {
 	tasks, err := l.svcCtx.DB.RecordTask.Query().
 		Where(recordtask.StatusEQ(recordtask.StatusPENDING)).
+		WithMatchRound().
 		Order(recordtask.ByPriority(sql.OrderDesc()), recordtask.ByCreatedAt()).
 		Limit(20).
 		All(l.ctx)
@@ -286,16 +424,23 @@ func (l *DispatchLogic) dispatchPendingTasks() error {
 		if claimed == 0 {
 			continue
 		}
+		jobCtx := l.recordContext(task)
+		rawCtx, err := json.Marshal(jobCtx)
+		if err != nil {
+			return errors.Wrap(err, "encode record job context")
+		}
 		if l.svcCtx.K8s != nil {
 			job := kubejob.Build(l.svcCtx.Config.K8sJobConf, kubejob.JobSpec{
-				Name:              jobName,
-				App:               "record-job",
-				Image:             l.svcCtx.Config.K8sJobConf.Image,
-				Args:              []string{"-f", "/etc/rm-monitor/config.yml", "-task", strconv.Itoa(task.ID)},
-				CPU:               "500m",
-				Memory:            "512Mi",
-				MemLimit:          "1Gi",
-				PriorityClassName: kubejob.PriorityClassRecordCritical,
+				Name:                    jobName,
+				App:                     "record-job",
+				Image:                   l.svcCtx.Config.K8sJobConf.Image,
+				Args:                    []string{"-f", "/etc/rm-monitor/config.yml"},
+				Env:                     map[string]string{jobcontract.EnvName: string(rawCtx)},
+				CPU:                     "500m",
+				Memory:                  "512Mi",
+				MemLimit:                "1Gi",
+				PriorityClassName:       kubejob.PriorityClassRecordCritical,
+				TerminationGraceSeconds: 60,
 			})
 			if err := l.svcCtx.K8s.CreateJob(l.ctx, l.svcCtx.Config.K8sJobConf.WithDefaults().Namespace, job); err != nil {
 				_ = l.svcCtx.DB.RecordTask.UpdateOneID(task.ID).SetStatus(recordtask.StatusFAILED).SetErrorMessage(err.Error()).Exec(l.ctx)
@@ -308,6 +453,110 @@ func (l *DispatchLogic) dispatchPendingTasks() error {
 		_ = db.Notify(l.ctx, l.svcCtx.Config.PostgresConf.DSN, db.RecordTaskChangedChannel, strconv.Itoa(task.ID))
 	}
 	return nil
+}
+
+func (l *DispatchLogic) recordContext(task *ent.RecordTask) jobcontract.RecordContext {
+	conf := l.svcCtx.Config.RecordConf.WithDefaults()
+	roundID := 0
+	if task.Edges.MatchRound != nil {
+		roundID = task.Edges.MatchRound.ID
+	}
+	return jobcontract.RecordContext{
+		Schema:       "rm-monitor/record-context/v1",
+		RecordTaskID: task.ID,
+		MatchRoundID: roundID,
+		Role:         task.Role,
+		SourceURL:    task.SourceURL,
+		OutputPath:   task.OutputPath,
+		BaseDir:      conf.BaseDir,
+		KeepAudio:    roleKeepsAudio(conf.AudioRoles, task.Role),
+	}
+}
+
+func (l *DispatchLogic) reconcileRecordResults() error {
+	tasks, err := l.svcCtx.DB.RecordTask.Query().
+		Where(recordtask.StatusIn(recordtask.StatusRUNNING, recordtask.StatusCANCEL_REQUESTED)).
+		Limit(200).
+		All(l.ctx)
+	if err != nil {
+		return errors.Wrap(err, "query running record tasks for results")
+	}
+	namespace := l.svcCtx.Config.K8sJobConf.WithDefaults().Namespace
+	for _, task := range tasks {
+		resultPath, errorPath := l.recordResultPaths(task)
+		var result jobcontract.RecordResult
+		if ok, err := jobcontract.ReadJSON(resultPath, &result); err != nil {
+			return err
+		} else if ok {
+			if err := l.applyRecordResult(result); err != nil {
+				return err
+			}
+			continue
+		}
+		var jobErr jobcontract.ErrorResult
+		if ok, err := jobcontract.ReadJSON(errorPath, &jobErr); err != nil {
+			return err
+		} else if ok {
+			if err := l.svcCtx.DB.RecordTask.UpdateOneID(task.ID).SetStatus(recordtask.StatusFAILED).SetErrorMessage(jobErr.ErrorMessage).SetCompletedAt(time.Now()).Exec(l.ctx); err != nil {
+				return errors.Wrap(err, "mark record failed")
+			}
+			continue
+		}
+		if l.svcCtx.K8s == nil || task.K8sJobName == nil || *task.K8sJobName == "" {
+			continue
+		}
+		state, err := l.svcCtx.K8s.JobState(l.ctx, namespace, *task.K8sJobName)
+		if err != nil {
+			return err
+		}
+		if state == kubejob.JobStateMissing && task.UpdatedAt.After(time.Now().Add(-2*time.Minute)) {
+			continue
+		}
+		if state == kubejob.JobStateFailed || state == kubejob.JobStateSucceeded || state == kubejob.JobStateMissing {
+			msg := fmt.Sprintf("record job %s finished as %s without result.json or error.json", *task.K8sJobName, state)
+			if err := l.svcCtx.DB.RecordTask.UpdateOneID(task.ID).SetStatus(recordtask.StatusFAILED).SetErrorMessage(msg).SetCompletedAt(time.Now()).Exec(l.ctx); err != nil {
+				return errors.Wrap(err, "mark record missing result failed")
+			}
+		}
+	}
+	return nil
+}
+
+func (l *DispatchLogic) recordResultPaths(task *ent.RecordTask) (string, string) {
+	conf := l.svcCtx.Config.RecordConf.WithDefaults()
+	dir := filepath.Join(conf.BaseDir, filepath.FromSlash(pathpkg.Dir(filepath.ToSlash(task.OutputPath))), jobcontract.DirName, jobName("record", task.ID))
+	return filepath.Join(dir, jobcontract.ResultFile), filepath.Join(dir, jobcontract.ErrorFile)
+}
+
+func (l *DispatchLogic) applyRecordResult(result jobcontract.RecordResult) error {
+	completedAt := result.CompletedAt
+	if completedAt.IsZero() {
+		completedAt = time.Now()
+	}
+	if err := l.svcCtx.DB.RecordTask.UpdateOneID(result.RecordTaskID).
+		SetStatus(recordtask.StatusSUCCEEDED).
+		SetCompletedAt(completedAt).
+		SetFileSize(result.FileSize).
+		SetChecksum(result.Checksum).
+		ClearErrorMessage().
+		Exec(l.ctx); err != nil {
+		return errors.Wrap(err, "mark record succeeded")
+	}
+	if err := l.svcCtx.DB.MediaArtifact.Create().
+		SetRecordTaskID(result.RecordTaskID).
+		SetKind(mediaartifact.KindSource).
+		SetPath(result.OutputPath).
+		SetFormat(mediaartifact.FormatFlv).
+		SetCodec(mediaartifact.CodecCopy).
+		SetFileSize(result.FileSize).
+		SetChecksum(result.Checksum).
+		SetStatus(mediaartifact.StatusAVAILABLE).
+		OnConflictColumns(mediaartifact.RecordTaskColumn, mediaartifact.FieldKind).
+		UpdateNewValues().
+		Exec(l.ctx); err != nil {
+		return errors.Wrap(err, "upsert source artifact")
+	}
+	return db.Notify(l.ctx, l.svcCtx.Config.PostgresConf.DSN, db.RecordTaskChangedChannel, strconv.Itoa(result.RecordTaskID))
 }
 
 func (l *DispatchLogic) dispatchCompletedManifestJobs() error {

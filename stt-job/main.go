@@ -9,26 +9,19 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"strconv"
 	"strings"
-	"sync/atomic"
+	"syscall"
 	"time"
 
 	"github.com/pkg/errors"
 	"resty.dev/v3"
 
-	"scutbot.cn/web/rm-monitor/ent"
-	"scutbot.cn/web/rm-monitor/ent/matchround"
 	"scutbot.cn/web/rm-monitor/pkg/app"
-	common "scutbot.cn/web/rm-monitor/pkg/config"
-	"scutbot.cn/web/rm-monitor/pkg/db"
+	"scutbot.cn/web/rm-monitor/pkg/jobcontract"
 	"scutbot.cn/web/rm-monitor/pkg/logx"
-	"scutbot.cn/web/rm-monitor/pkg/pathfmt"
-	"scutbot.cn/web/rm-monitor/pkg/redisx"
-	"scutbot.cn/web/rm-monitor/pkg/storagepath"
-	"scutbot.cn/web/rm-monitor/pkg/sttcoord"
-	"scutbot.cn/web/rm-monitor/pkg/stttext"
 	"scutbot.cn/web/rm-monitor/pkg/subtitle"
 	jobconfig "scutbot.cn/web/rm-monitor/stt-job/internal/config"
 )
@@ -36,7 +29,6 @@ import (
 var (
 	configFile = flag.String("f", "etc/config.yml", "the config file")
 	modeFlag   = flag.String("mode", "", "audio-recorder, recognizer, or backfill-subtitles")
-	roundFlag  = flag.Int("round", 0, "match round id")
 )
 
 const (
@@ -53,24 +45,29 @@ func init() {
 
 func main() {
 	flag.Parse()
-	if *roundFlag == 0 && *modeFlag != modeBackfill {
-		logx.Error("round id is required")
-		os.Exit(1)
-	}
 	var c jobconfig.Config
 	app.MustLoadConfig(*configFile, &c)
-	client, err := db.Open(context.Background(), c.PostgresConf)
-	if err != nil {
-		logx.Error(err)
-		os.Exit(1)
+	var sttCtx jobcontract.STTContext
+	if *modeFlag != modeBackfill {
+		if err := jobcontract.ContextFromEnv(&sttCtx); err != nil {
+			logx.Error(err)
+			os.Exit(1)
+		}
+		if sttCtx.WhisperServerURL == "" {
+			sttCtx.WhisperServerURL = c.WhisperServerUrl
+		}
+		jobDir := sttJobDir(sttCtx)
+		if err := jobcontract.WriteContext(jobDir, sttCtx); err != nil {
+			logx.Error(err)
+			os.Exit(1)
+		}
 	}
-	defer client.Close()
 	var runErr error
 	switch *modeFlag {
 	case modeAudioRecorder:
-		runErr = runAudioRecorder(context.Background(), client, c, *roundFlag)
+		runErr = runAudioRecorder(context.Background(), sttCtx)
 	case modeRecognizer:
-		runErr = runRecognizer(context.Background(), client, c, *roundFlag)
+		runErr = runRecognizer(context.Background(), sttCtx)
 	case modeBackfill:
 		var summary subtitle.BackfillSummary
 		summary, runErr = subtitle.Backfill(c.RecordConf, subtitle.BackfillOptions{Force: true, Rounds: true, Highlights: true})
@@ -80,48 +77,17 @@ func main() {
 	default:
 		runErr = errors.Errorf("unknown mode %q", *modeFlag)
 	}
-	if *modeFlag == modeRecognizer {
-		status := sttcoord.StatusDone
-		if runErr != nil {
-			status = sttcoord.StatusFailed
-		}
-		if err := updateSTTStatus(context.Background(), client, c, *roundFlag, status); err != nil {
-			if runErr == nil {
-				runErr = err
-			} else {
-				logx.Errorf("update stt status failed: %v", err)
-			}
-		}
-	}
 	if runErr != nil {
+		if *modeFlag != modeBackfill {
+			_ = jobcontract.WriteError(sttJobDir(sttCtx), "stt", sttCtx.MatchRoundID, runErr)
+		}
 		logx.Error(runErr)
 		os.Exit(1)
 	}
 }
 
-func updateSTTStatus(ctx context.Context, client *ent.Client, c jobconfig.Config, roundID int, status string) error {
-	round, err := client.MatchRound.Query().
-		Where(matchround.ID(roundID)).
-		WithMatch().
-		Only(ctx)
-	if err != nil {
-		return errors.Wrap(err, "load round for stt status")
-	}
-	m, err := round.Edges.MatchOrErr()
-	if err != nil {
-		return err
-	}
-	redisClient := redisx.MustNew(c.RedisConf.WithDefaults())
-	defer redisClient.Close()
-	return sttcoord.Set(ctx, redisClient, m.ID, round.RoundNo, status)
-}
-
-func runAudioRecorder(ctx context.Context, client *ent.Client, c jobconfig.Config, roundID int) error {
-	conf := c.RecordConf.WithDefaults()
-	info, err := loadRoundInfo(ctx, client, conf, roundID)
-	if err != nil {
-		return err
-	}
+func runAudioRecorder(ctx context.Context, sttCtx jobcontract.STTContext) error {
+	info := roundInfoFromContext(sttCtx)
 	if err := os.RemoveAll(info.AudioDir); err != nil {
 		return errors.Wrap(err, "clean audio dir")
 	}
@@ -131,17 +97,15 @@ func runAudioRecorder(ctx context.Context, client *ent.Client, c jobconfig.Confi
 	if err := os.MkdirAll(info.AudioDir, 0o755); err != nil {
 		return errors.Wrap(err, "create audio dir")
 	}
-	sourceURL := strings.TrimSpace(os.Getenv("STT_SOURCE_URL"))
+	sourceURL := strings.TrimSpace(sttCtx.SourceURL)
 	if sourceURL == "" {
-		err := errors.New("STT_SOURCE_URL is empty")
+		err := errors.New("stt source_url is empty")
 		writeMarker(info.AudioDir, ".ffmpeg.failed", err.Error())
 		return err
 	}
 
-	jobCtx, cancel := context.WithCancel(ctx)
+	jobCtx, cancel := signal.NotifyContext(ctx, syscall.SIGTERM, syscall.SIGINT)
 	defer cancel()
-	var stopRequested atomic.Bool
-	go watchRoundEnded(jobCtx, client, roundID, &stopRequested, cancel)
 
 	pattern := filepath.Join(info.AudioDir, "part-%05d.wav")
 	args := []string{
@@ -187,42 +151,32 @@ func runAudioRecorder(ctx context.Context, client *ent.Client, c jobconfig.Confi
 		return cmd.Process.Signal(os.Interrupt)
 	}
 	cmd.WaitDelay = 10 * time.Second
-	logx.Infof("recording stt audio for round %d role %s", roundID, conf.STTRole)
-	err = cmd.Run()
+	logx.Infof("recording stt audio for round %d role %s", sttCtx.MatchRoundID, sttCtx.Role)
+	err := cmd.Run()
 	stderrText := stderr.String()
 	if isNoAudio(stderrText) {
 		writeMarker(info.AudioDir, ".ffmpeg.no_audio", stderrText)
 		writeMarker(info.AudioDir, ".ffmpeg.done", "no audio")
 		return nil
 	}
-	if err != nil && !stopRequested.Load() {
+	stopRequested := jobCtx.Err() != nil
+	if err != nil && !stopRequested {
 		msg := commandError(err, stderrText)
 		writeMarker(info.AudioDir, ".ffmpeg.failed", msg)
 		return errors.New(msg)
 	}
-	if !stopRequested.Load() {
-		latest, latestErr := loadRound(ctx, client, roundID)
-		if latestErr != nil {
-			writeMarker(info.AudioDir, ".ffmpeg.failed", latestErr.Error())
-			return latestErr
-		}
-		if latest.Status == matchround.StatusSTARTED {
-			msg := "ffmpeg exited before match round ended"
-			writeMarker(info.AudioDir, ".ffmpeg.failed", msg)
-			return errors.New(msg)
-		}
+	if !stopRequested {
+		msg := "ffmpeg exited before dispatcher requested stop"
+		writeMarker(info.AudioDir, ".ffmpeg.failed", msg)
+		return errors.New(msg)
 	}
 	writeMarker(info.AudioDir, ".ffmpeg.done", "done")
 	return nil
 }
 
-func runRecognizer(ctx context.Context, client *ent.Client, c jobconfig.Config, roundID int) error {
-	conf := c.RecordConf.WithDefaults()
-	info, err := loadRoundInfo(ctx, client, conf, roundID)
-	if err != nil {
-		return err
-	}
-	serverURL := strings.TrimSpace(c.WhisperServerUrl)
+func runRecognizer(ctx context.Context, sttCtx jobcontract.STTContext) error {
+	info := roundInfoFromContext(sttCtx)
+	serverURL := strings.TrimSpace(sttCtx.WhisperServerURL)
 	if serverURL == "" {
 		return errors.New("WhisperServerUrl is empty")
 	}
@@ -236,7 +190,7 @@ func runRecognizer(ctx context.Context, client *ent.Client, c jobconfig.Config, 
 					return err
 				}
 			}
-			return os.RemoveAll(info.AudioDir)
+			return finishSTT(sttCtx, info)
 		}
 		current := segmentPath(info.AudioDir, index)
 		if fileExists(current) {
@@ -248,10 +202,7 @@ func runRecognizer(ctx context.Context, client *ent.Client, c jobconfig.Config, 
 				continue
 			}
 		} else if markerExists(info.AudioDir, ".ffmpeg.done") {
-			if err := writeRoundSubtitle(info); err != nil {
-				return err
-			}
-			return os.RemoveAll(info.AudioDir)
+			return finishSTT(sttCtx, info)
 		} else if markerExists(info.AudioDir, ".ffmpeg.failed") {
 			return errors.New(readMarker(info.AudioDir, ".ffmpeg.failed"))
 		}
@@ -272,8 +223,6 @@ func writeRoundSubtitle(info roundInfo) error {
 }
 
 type roundInfo struct {
-	Round        *ent.MatchRound
-	Match        *ent.Match
 	RoundDir     string
 	AudioDir     string
 	STTPath      string
@@ -281,86 +230,33 @@ type roundInfo struct {
 	Prompt       string
 }
 
-func loadRoundInfo(ctx context.Context, client *ent.Client, conf common.RecordConf, roundID int) (roundInfo, error) {
-	round, err := client.MatchRound.Query().
-		Where(matchround.ID(roundID)).
-		WithMatch(func(q *ent.MatchQuery) {
-			q.WithRedTeam().WithBlueTeam()
-		}).
-		Only(ctx)
-	if err != nil {
-		return roundInfo{}, errors.Wrap(err, "load match round")
-	}
-	match, err := round.Edges.MatchOrErr()
-	if err != nil {
-		return roundInfo{}, err
-	}
-	red, err := match.Edges.RedTeamOrErr()
-	if err != nil {
-		return roundInfo{}, err
-	}
-	blue, err := match.Edges.BlueTeamOrErr()
-	if err != nil {
-		return roundInfo{}, err
-	}
-	rel, err := pathfmt.RenderMatchDir(conf.MatchNameTemplate, conf.MatchDirTemplate, pathfmt.Data{
-		Event:      match.Event,
-		Zone:       match.Zone,
-		Order:      match.Order,
-		RedSchool:  red.SchoolName,
-		RedName:    red.Name,
-		BlueSchool: blue.SchoolName,
-		BlueName:   blue.Name,
-		RoundNo:    round.RoundNo,
-		Role:       conf.STTRole,
-	})
-	if err != nil {
-		return roundInfo{}, err
-	}
-	roundDir := storagepath.Resolve(conf.BaseDir, filepath.Join(rel, fmt.Sprintf("Round-%d", round.RoundNo)))
+func roundInfoFromContext(sttCtx jobcontract.STTContext) roundInfo {
 	return roundInfo{
-		Round:        round,
-		Match:        match,
-		RoundDir:     roundDir,
-		AudioDir:     filepath.Join(roundDir, "audio"),
-		STTPath:      filepath.Join(roundDir, "stt.jsonl"),
-		SubtitleName: fmt.Sprintf("%s.srt", conf.STTRole),
-		Prompt: stttext.BuildPrompt(stttext.PromptData{
-			Event:      match.Event,
-			Zone:       match.Zone,
-			MatchID:    match.ID,
-			MatchType:  match.MatchType,
-			Order:      match.Order,
-			RoundNo:    round.RoundNo,
-			Role:       conf.STTRole,
-			RedSchool:  red.SchoolName,
-			RedName:    red.Name,
-			BlueSchool: blue.SchoolName,
-			BlueName:   blue.Name,
-		}),
-	}, nil
-}
-
-func loadRound(ctx context.Context, client *ent.Client, roundID int) (*ent.MatchRound, error) {
-	return client.MatchRound.Get(ctx, roundID)
-}
-
-func watchRoundEnded(ctx context.Context, client *ent.Client, roundID int, stopRequested *atomic.Bool, cancel context.CancelFunc) {
-	ticker := time.NewTicker(2 * time.Second)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			round, err := client.MatchRound.Get(ctx, roundID)
-			if err == nil && round.Status == matchround.StatusENDED {
-				stopRequested.Store(true)
-				cancel()
-				return
-			}
-		}
+		RoundDir:     sttCtx.RoundDir,
+		AudioDir:     sttCtx.AudioDir,
+		STTPath:      sttCtx.STTPath,
+		SubtitleName: sttCtx.SubtitleName,
+		Prompt:       sttCtx.Prompt,
 	}
+}
+
+func finishSTT(sttCtx jobcontract.STTContext, info roundInfo) error {
+	if err := writeRoundSubtitle(info); err != nil {
+		return err
+	}
+	if err := os.RemoveAll(info.AudioDir); err != nil {
+		return errors.Wrap(err, "clean audio dir")
+	}
+	return jobcontract.WriteResult(sttJobDir(sttCtx), jobcontract.STTResult{
+		Schema:       "rm-monitor/stt-result/v1",
+		MatchRoundID: sttCtx.MatchRoundID,
+		STTPath:      sttCtx.STTPath,
+		CompletedAt:  time.Now(),
+	})
+}
+
+func sttJobDir(sttCtx jobcontract.STTContext) string {
+	return filepath.Join(sttCtx.RoundDir, jobcontract.DirName, fmt.Sprintf("stt-%d", sttCtx.MatchRoundID))
 }
 
 func isNetworkSource(source string) bool {

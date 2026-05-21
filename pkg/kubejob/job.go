@@ -60,6 +60,21 @@ func (c *Client) CreateJob(ctx context.Context, namespace string, job *batchv1.J
 	return errors.Wrap(err, "create k8s job")
 }
 
+func (c *Client) DeleteJob(ctx context.Context, namespace, name string) error {
+	propagation := metav1.DeletePropagationBackground
+	err := c.rest.Delete().
+		Namespace(namespace).
+		Resource("jobs").
+		Name(name).
+		Body(&metav1.DeleteOptions{PropagationPolicy: &propagation}).
+		Do(ctx).
+		Error()
+	if apierrors.IsNotFound(err) {
+		return nil
+	}
+	return errors.Wrap(err, "delete k8s job")
+}
+
 func (c *Client) JobExists(ctx context.Context, namespace, name string) (bool, error) {
 	var job batchv1.Job
 	err := c.rest.Get().
@@ -193,6 +208,7 @@ type JobSpec struct {
 	PriorityClassName       string
 	SpreadByHostname        bool
 	PreferAvoidNodeLabelKey string
+	TerminationGraceSeconds int64
 	SecretMounts            []SecretMountSpec
 	ExtraContainers         []ContainerSpec
 }
@@ -295,6 +311,9 @@ func Build(conf config.K8sJobConf, spec JobSpec) *batchv1.Job {
 		ServiceAccountName: conf.ServiceAccountName,
 		Containers:         containers,
 		Volumes:            volumes,
+	}
+	if spec.TerminationGraceSeconds > 0 {
+		podSpec.TerminationGracePeriodSeconds = &spec.TerminationGraceSeconds
 	}
 	if spec.PriorityClassName != "" {
 		podSpec.PriorityClassName = spec.PriorityClassName

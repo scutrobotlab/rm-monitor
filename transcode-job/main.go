@@ -12,24 +12,18 @@ import (
 	"os/exec"
 	pathpkg "path"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/pkg/errors"
-	"scutbot.cn/web/rm-monitor/ent"
-	"scutbot.cn/web/rm-monitor/ent/mediaartifact"
-	"scutbot.cn/web/rm-monitor/ent/recordtask"
-	"scutbot.cn/web/rm-monitor/ent/transcodetask"
 	"scutbot.cn/web/rm-monitor/pkg/app"
-	"scutbot.cn/web/rm-monitor/pkg/db"
+	"scutbot.cn/web/rm-monitor/pkg/jobcontract"
 	"scutbot.cn/web/rm-monitor/pkg/logx"
 	"scutbot.cn/web/rm-monitor/transcode-job/internal/config"
 )
 
 var (
 	configFile = flag.String("f", "etc/config.yml", "the config file")
-	taskIDFlag = flag.Int("task", 0, "transcode task id")
 )
 
 func init() {
@@ -38,58 +32,59 @@ func init() {
 
 func main() {
 	flag.Parse()
-	if *taskIDFlag == 0 {
-		logx.Error("task id is required")
-		os.Exit(1)
-	}
 	var c config.Config
 	app.MustLoadConfig(*configFile, &c)
-	client, err := db.Open(context.Background(), c.PostgresConf)
+
+	var jobCtx jobcontract.TranscodeContext
+	if err := jobcontract.ContextFromEnv(&jobCtx); err != nil {
+		logx.Error(err)
+		os.Exit(1)
+	}
+	if jobCtx.BaseDir == "" {
+		jobCtx.BaseDir = c.TranscodeConf.WithDefaults().BaseDir
+	}
+	if jobCtx.SourceRetentionDays == 0 {
+		jobCtx.SourceRetentionDays = c.TranscodeConf.WithDefaults().SourceRetentionDays
+	}
+	jobDir, err := transcodeJobDir(jobCtx)
 	if err != nil {
 		logx.Error(err)
 		os.Exit(1)
 	}
-	defer client.Close()
-	if err := run(context.Background(), client, c, *taskIDFlag); err != nil {
+	if err := jobcontract.WriteContext(jobDir, jobCtx); err != nil {
+		logx.Error(err)
+		os.Exit(1)
+	}
+	if err := run(context.Background(), jobCtx, jobDir); err != nil {
+		_ = jobcontract.WriteError(jobDir, "transcode", jobCtx.TaskID, err)
 		logx.Error(err)
 		os.Exit(1)
 	}
 }
 
-func run(ctx context.Context, client *ent.Client, c config.Config, taskID int) error {
-	task, err := client.TranscodeTask.Query().
-		Where(transcodetask.ID(taskID)).
-		WithSourceArtifact(func(q *ent.MediaArtifactQuery) {
-			q.WithRecordTask()
-		}).
-		Only(ctx)
-	if err != nil {
-		return errors.Wrap(err, "get transcode task")
+func run(ctx context.Context, jobCtx jobcontract.TranscodeContext, jobDir string) error {
+	if jobCtx.TaskID == 0 {
+		return errors.New("task_id is required")
 	}
-	source := task.Edges.SourceArtifact
-	if source == nil || source.Edges.RecordTask == nil {
-		return errors.New("transcode task missing source artifact or record task")
-	}
-	transcodeConf := c.TranscodeConf.WithDefaults()
-	sourceRel, sourceMountedPath, err := artifactPath(transcodeConf.BaseDir, source.Path)
+	sourceRel, sourceMountedPath, err := artifactPath(jobCtx.BaseDir, jobCtx.SourcePath)
 	if err != nil {
-		_ = client.TranscodeTask.UpdateOneID(taskID).SetStatus(transcodetask.StatusFAILED).SetErrorMessage(err.Error()).Exec(ctx)
 		return err
 	}
-	archiveRel := strings.TrimSuffix(sourceRel, pathpkg.Ext(sourceRel)) + ".mp4"
-	tmpArchiveRel := fmt.Sprintf("%s.tmp-%d", archiveRel, taskID)
-	archiveMountedPath := filepath.Join(transcodeConf.BaseDir, filepath.FromSlash(archiveRel))
-	tmpArchiveMountedPath := filepath.Join(transcodeConf.BaseDir, filepath.FromSlash(tmpArchiveRel))
+	archiveRel := strings.TrimSpace(jobCtx.ArchivePath)
+	if archiveRel == "" {
+		archiveRel = strings.TrimSuffix(sourceRel, pathpkg.Ext(sourceRel)) + ".mp4"
+	}
+	archiveRel, archiveMountedPath, err := artifactPath(jobCtx.BaseDir, archiveRel)
+	if err != nil {
+		return err
+	}
+	tmpArchiveRel := fmt.Sprintf("%s.tmp-%d", archiveRel, jobCtx.TaskID)
+	tmpArchiveMountedPath := filepath.Join(jobCtx.BaseDir, filepath.FromSlash(tmpArchiveRel))
 
 	if err := ensureSVTAV1(ctx); err != nil {
-		_ = client.TranscodeTask.UpdateOneID(taskID).SetStatus(transcodetask.StatusFAILED).SetErrorMessage(err.Error()).Exec(ctx)
 		return err
 	}
-	if err := client.TranscodeTask.UpdateOneID(taskID).SetStatus(transcodetask.StatusRUNNING).SetStartedAt(time.Now()).ClearErrorMessage().Exec(ctx); err != nil {
-		return errors.Wrap(err, "mark transcode running")
-	}
 	if err := os.MkdirAll(filepath.Dir(archiveMountedPath), 0o755); err != nil {
-		_ = client.TranscodeTask.UpdateOneID(taskID).SetStatus(transcodetask.StatusFAILED).SetErrorMessage(err.Error()).Exec(ctx)
 		return errors.Wrap(err, "create archive dir")
 	}
 	_ = os.Remove(tmpArchiveMountedPath)
@@ -119,82 +114,63 @@ func run(ctx context.Context, client *ent.Client, c config.Config, taskID int) e
 	if err := cmd.Run(); err != nil {
 		_ = os.Remove(tmpArchiveMountedPath)
 		msg := commandError(err, stderr.String())
-		_ = client.TranscodeTask.UpdateOneID(taskID).SetStatus(transcodetask.StatusFAILED).SetErrorMessage(msg).Exec(ctx)
 		return errors.New(msg)
 	}
 	stat, err := os.Stat(tmpArchiveMountedPath)
 	if err != nil {
-		_ = client.TranscodeTask.UpdateOneID(taskID).SetStatus(transcodetask.StatusFAILED).SetErrorMessage(err.Error()).Exec(ctx)
 		return errors.Wrap(err, "stat archive")
 	}
 	if stat.Size() == 0 {
 		err := errors.New("archive output is empty")
 		_ = os.Remove(tmpArchiveMountedPath)
-		_ = client.TranscodeTask.UpdateOneID(taskID).SetStatus(transcodetask.StatusFAILED).SetErrorMessage(err.Error()).Exec(ctx)
 		return err
 	}
 	sum, err := checksum(tmpArchiveMountedPath)
 	if err != nil {
 		_ = os.Remove(tmpArchiveMountedPath)
-		_ = client.TranscodeTask.UpdateOneID(taskID).SetStatus(transcodetask.StatusFAILED).SetErrorMessage(err.Error()).Exec(ctx)
 		return err
 	}
 	if err := os.Rename(tmpArchiveMountedPath, archiveMountedPath); err != nil {
 		_ = os.Remove(tmpArchiveMountedPath)
-		_ = client.TranscodeTask.UpdateOneID(taskID).SetStatus(transcodetask.StatusFAILED).SetErrorMessage(err.Error()).Exec(ctx)
 		return errors.Wrap(err, "publish archive")
 	}
 	published, err := os.Stat(archiveMountedPath)
 	if err != nil {
-		_ = client.TranscodeTask.UpdateOneID(taskID).SetStatus(transcodetask.StatusFAILED).SetErrorMessage(err.Error()).Exec(ctx)
 		return errors.Wrap(err, "stat published archive")
 	}
 	if published.Size() != stat.Size() {
 		err := errors.Errorf("published archive size mismatch: local=%d published=%d", stat.Size(), published.Size())
-		_ = client.TranscodeTask.UpdateOneID(taskID).SetStatus(transcodetask.StatusFAILED).SetErrorMessage(err.Error()).Exec(ctx)
 		return err
 	}
 
-	if err := client.MediaArtifact.Create().
-		SetRecordTaskID(source.Edges.RecordTask.ID).
-		SetKind(mediaartifact.KindArchive).
-		SetPath(archiveRel).
-		SetFormat(mediaartifact.FormatMp4).
-		SetCodec(mediaartifact.CodecAv1).
-		SetFileSize(stat.Size()).
-		SetChecksum(sum).
-		SetStatus(mediaartifact.StatusAVAILABLE).
-		OnConflictColumns(mediaartifact.RecordTaskColumn, mediaartifact.FieldKind).
-		UpdateNewValues().
-		Exec(ctx); err != nil {
-		_ = client.TranscodeTask.UpdateOneID(taskID).SetStatus(transcodetask.StatusFAILED).SetErrorMessage(err.Error()).Exec(ctx)
-		return errors.Wrap(err, "upsert archive artifact")
+	return jobcontract.WriteResult(jobDir, jobcontract.TranscodeResult{
+		Schema:           "rm-monitor/transcode-result/v1",
+		TaskID:           jobCtx.TaskID,
+		SourceArtifactID: jobCtx.SourceArtifactID,
+		RecordTaskID:     jobCtx.RecordTaskID,
+		ArchivePath:      archiveRel,
+		Format:           "mp4",
+		Codec:            "av1",
+		FileSize:         stat.Size(),
+		Checksum:         sum,
+		CompletedAt:      time.Now(),
+	})
+}
+
+func transcodeJobDir(jobCtx jobcontract.TranscodeContext) (string, error) {
+	archiveRel := strings.TrimSpace(jobCtx.ArchivePath)
+	if archiveRel == "" {
+		sourceRel, _, err := artifactPath(jobCtx.BaseDir, jobCtx.SourcePath)
+		if err != nil {
+			return "", err
+		}
+		archiveRel = strings.TrimSuffix(sourceRel, pathpkg.Ext(sourceRel)) + ".mp4"
 	}
-	archive, err := client.MediaArtifact.Query().
-		Where(
-			mediaartifact.HasRecordTaskWith(recordtask.ID(source.Edges.RecordTask.ID)),
-			mediaartifact.KindEQ(mediaartifact.KindArchive),
-		).
-		Only(ctx)
+	archiveRel, _, err := artifactPath(jobCtx.BaseDir, archiveRel)
 	if err != nil {
-		_ = client.TranscodeTask.UpdateOneID(taskID).SetStatus(transcodetask.StatusFAILED).SetErrorMessage(err.Error()).Exec(ctx)
-		return errors.Wrap(err, "query archive artifact")
+		return "", err
 	}
-	now := time.Now()
-	if err := client.MediaArtifact.UpdateOneID(source.ID).
-		SetDeletableAt(now.AddDate(0, 0, transcodeConf.SourceRetentionDays)).
-		Exec(ctx); err != nil {
-		return errors.Wrap(err, "set source retention")
-	}
-	if err := client.TranscodeTask.UpdateOneID(taskID).
-		SetArchiveArtifactID(archive.ID).
-		SetStatus(transcodetask.StatusSUCCEEDED).
-		SetCompletedAt(now).
-		ClearErrorMessage().
-		Exec(ctx); err != nil {
-		return errors.Wrap(err, "mark transcode succeeded")
-	}
-	return db.Notify(ctx, c.PostgresConf.DSN, db.TranscodeTaskChangedChannel, strconv.Itoa(taskID))
+	return filepath.Join(jobCtx.BaseDir, filepath.FromSlash(pathpkg.Dir(archiveRel)), jobcontract.DirName, fmt.Sprintf("transcode-%d", jobCtx.TaskID)), nil
 }
 
 func artifactPath(baseDir, artifactPath string) (string, string, error) {

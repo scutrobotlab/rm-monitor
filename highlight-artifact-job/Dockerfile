@@ -1,21 +1,22 @@
 # syntax=docker/dockerfile:1.7
-ARG APP
-FROM golang:1.26-alpine AS builder
-ARG APP
+FROM rust:1.88-bookworm AS builder
+WORKDIR /app/highlight-artifact-job
+COPY highlight-artifact-job/Cargo.toml highlight-artifact-job/Cargo.lock* ./
+COPY highlight-artifact-job/src ./src
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+    --mount=type=cache,target=/usr/local/cargo/git \
+    --mount=type=cache,target=/app/highlight-artifact-job/target \
+    cargo build --release \
+    && cp /app/highlight-artifact-job/target/release/highlight-artifact-job /usr/local/bin/highlight-artifact-job
 
-WORKDIR /go/src
-COPY go.mod go.sum ./
-RUN --mount=type=cache,target=/go/pkg/mod go mod download
-COPY . .
-
-RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build go build -ldflags "-s -w" -trimpath -o /usr/local/bin/app ${APP}/main.go
-
-FROM alpine:3.20
+FROM debian:bookworm-slim
 
 ENV TZ=Asia/Shanghai
 WORKDIR /app
-RUN apk add --no-cache ca-certificates ffmpeg tzdata
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates tzdata ffmpeg fonts-noto-cjk \
+    && rm -rf /var/lib/apt/lists/*
 
-COPY --from=builder /usr/local/bin/app /usr/local/bin/app
+COPY --from=builder /usr/local/bin/highlight-artifact-job /usr/local/bin/highlight-artifact-job
 
-ENTRYPOINT ["/usr/local/bin/app"]
+ENTRYPOINT ["/usr/local/bin/highlight-artifact-job"]

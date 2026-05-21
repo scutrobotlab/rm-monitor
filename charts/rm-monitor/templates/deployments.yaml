@@ -43,10 +43,19 @@ spec:
               mountPath: {{ include "rm-monitor.configPath" $ }}
               subPath: config.yml
               readOnly: true
+            {{- if or (eq $component "record-dispatcher") (eq $component "uploader-dispatcher") (eq $component "transcode-dispatcher") }}
+            - name: records
+              mountPath: {{ $.Values.jobs.recordsMountPath }}
+            {{- end }}
       volumes:
         - name: config
           configMap:
             name: {{ $cfg.configMap }}
+        {{- if or (eq $component "record-dispatcher") (eq $component "uploader-dispatcher") (eq $component "transcode-dispatcher") }}
+        - name: records
+          persistentVolumeClaim:
+            claimName: {{ $.Values.storage.shared.pvcName }}
+        {{- end }}
 ---
 {{- end }}
 {{- if .Values.highlight.enabled }}

@@ -1,13 +1,20 @@
-FROM golang:1.26 AS builder
-WORKDIR /src
+# syntax=docker/dockerfile:1.7
+FROM golang:1.26-alpine AS builder
+
+WORKDIR /go/src
 COPY go.mod go.sum ./
-RUN go mod download
+RUN --mount=type=cache,target=/go/pkg/mod go mod download
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
-    go build -ldflags "-s -w" -trimpath -o /usr/local/bin/stt-normalize ./cmd/stt-normalize
+
+RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 go build -ldflags "-s -w" -trimpath -o /usr/local/bin/stt-normalize ./cmd/stt-normalize
 
 FROM alpine:3.20
-RUN apk add --no-cache ca-certificates tzdata
+
+ENV TZ=Asia/Shanghai
 WORKDIR /app
+RUN apk add --no-cache ca-certificates tzdata
+
 COPY --from=builder /usr/local/bin/stt-normalize /usr/local/bin/stt-normalize
+
 ENTRYPOINT ["/usr/local/bin/stt-normalize"]

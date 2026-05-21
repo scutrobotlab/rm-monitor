@@ -1,9 +1,7 @@
 import fs from "node:fs";
 import { setTimeout as sleep } from "node:timers/promises";
 import path from "node:path";
-import { Pool } from "pg";
-import { danmuConfWithDefaults, loadConfig, recordConfWithDefaults } from "./config.js";
-import { renderMatchDir, resolveUnderBase } from "./pathfmt.js";
+import { danmuConfWithDefaults, loadConfig } from "./config.js";
 import { DanmuStats, statsBucketSeconds } from "./stats.js";
 import { BilibiliXMLWriter, type DanmuMessage } from "./xml.js";
 
@@ -15,17 +13,16 @@ const recordMetaFileName = "record-meta.json";
 type RoundInfo = {
   id: number;
   roundNo: number;
-  status: string;
   startedAt: Date;
   endedAt: Date | null;
-  matchID: string;
-  event: string;
-  zone: string;
-  order: number;
-  redSchool: string;
-  redName: string;
-  blueSchool: string;
-  blueName: string;
+};
+
+type DanmuJobContext = {
+  schema?: string;
+  match_round_id: number;
+  chat_room_id: string;
+  round_dir: string;
+  started_at: string;
 };
 
 type RecordMeta = {
@@ -60,17 +57,11 @@ type LeanMessage = {
 
 const args = parseArgs(process.argv.slice(2));
 const configFile = args.f || "etc/config.yml";
-const roundID = Number(args.round || 0);
-const chatRoomID = String(args["chat-room"] || process.env.DANMU_CHAT_ROOM_ID || "").trim();
-if (!roundID) {
-  fatal("round id is required");
-}
-if (!chatRoomID) {
-  fatal("chat room id is required");
-}
+const jobContext = loadJobContext();
+const roundID = Number(jobContext.match_round_id || 0);
+const chatRoomID = String(jobContext.chat_room_id || "").trim();
 
 const config = loadConfig(configFile);
-const recordConf = recordConfWithDefaults(config.RecordConf);
 const danmuConf = danmuConfWithDefaults(config.DanmuConf);
 
 if (!danmuConf.Enabled) {
@@ -80,7 +71,6 @@ if (!danmuConf.AppID || !danmuConf.AppKey) {
   fatal("DanmuConf AppID/AppKey is required");
 }
 
-const pool = new Pool({ connectionString: config.PostgresConf.DSN });
 let writer = null as BilibiliXMLWriter | null;
 const stats = new DanmuStats();
 let runtimeClient = null as { close?: () => Promise<void> } | null;
@@ -99,6 +89,7 @@ try {
   await run();
 } catch (error) {
   writer?.abort();
+  await writeJobError(error);
   console.error(error instanceof Error ? error.message : String(error));
   process.exitCode = 1;
 } finally {
@@ -116,12 +107,22 @@ try {
   } catch {
     // ignore close failures
   }
-  await pool.end();
 }
 
 async function run() {
-  const round = await loadRound(roundID);
-  const roundDir = outputRoundDir(round);
+  if (!roundID) {
+    throw new Error("match_round_id is required in job context");
+  }
+  if (!chatRoomID) {
+    throw new Error("chat_room_id is required in job context");
+  }
+  const startedAt = new Date(jobContext.started_at);
+  if (!Number.isFinite(startedAt.getTime())) {
+    throw new Error(`invalid started_at in job context: ${jobContext.started_at}`);
+  }
+  const round: RoundInfo = { id: roundID, roundNo: roundNumberFromDir(jobContext.round_dir), startedAt, endedAt: null };
+  const roundDir = jobContext.round_dir;
+  await writeJobContext();
   const recordMetaPath = path.join(roundDir, recordMetaFileName);
   const recordMeta = await waitForRecordMeta(recordMetaPath, round.id);
   const mediaTimeZeroWallAt = new Date(recordMeta.media_time_zero_wall_at);
@@ -139,9 +140,9 @@ async function run() {
     room = runtime.room;
     stopSampling = startOnlineSampler(runtime.room, round);
   }
-  await waitUntilRoundEnded(round.id);
+  await waitUntilStopped();
   stopSampling();
-  const finalRound = await loadRound(round.id);
+  const finalRound = { ...round, endedAt: new Date() };
   await writer.close();
   await stats.writeOutputs(roundDir, {
     roundNo: finalRound.roundNo,
@@ -152,16 +153,13 @@ async function run() {
     videoOffsetSeconds: danmuConf.VideoOffsetSeconds,
     mediaTimeZeroWallAt,
   });
+  await writeJobResult(outputPath);
 }
 
 async function connectLeanCloudWithRetry(roomID: string, round: RoundInfo) {
   let attempt = 0;
   for (;;) {
     if (shuttingDown) {
-      throw new Error("shutting down");
-    }
-    if (await isRoundEnded(round.id)) {
-      console.error(`round ${round.id} ended before danmu connection was established`);
       return null;
     }
     try {
@@ -324,9 +322,6 @@ async function waitForRecordMeta(recordMetaPath: string, roundID: number): Promi
       mediaTimeZeroWallMs = new Date(meta.media_time_zero_wall_at).getTime();
       return meta;
     }
-    if (await isRoundEnded(roundID)) {
-      throw new Error(`record metadata not found before round ended: ${recordMetaPath}`);
-    }
     await sleep(500);
   }
 }
@@ -370,85 +365,13 @@ async function resolveRoom(client: any, roomID: string) {
   return client.getConversation(roomID, true);
 }
 
-async function loadRound(id: number): Promise<RoundInfo> {
-  const result = await pool.query(
-    `
-      SELECT
-        mr.id,
-        mr.round_no,
-        mr.status,
-        mr.started_at,
-        mr.ended_at,
-        m.id AS match_id,
-        m.event,
-        m.zone,
-        m."order",
-        red.school_name AS red_school,
-        red.name AS red_name,
-        blue.school_name AS blue_school,
-        blue.name AS blue_name
-      FROM match_rounds mr
-      JOIN matches m ON mr.match_rounds = m.id
-      JOIN teams red ON m.team_red_matches = red.id
-      JOIN teams blue ON m.team_blue_matches = blue.id
-      WHERE mr.id = $1
-    `,
-    [id],
-  );
-  if (result.rowCount !== 1) {
-    throw new Error(`match round ${id} not found`);
-  }
-  const row = result.rows[0];
-  return {
-    id: Number(row.id),
-    roundNo: Number(row.round_no),
-    status: String(row.status),
-    startedAt: new Date(row.started_at),
-    endedAt: row.ended_at ? new Date(row.ended_at) : null,
-    matchID: String(row.match_id),
-    event: String(row.event),
-    zone: String(row.zone),
-    order: Number(row.order),
-    redSchool: String(row.red_school ?? ""),
-    redName: String(row.red_name ?? ""),
-    blueSchool: String(row.blue_school ?? ""),
-    blueName: String(row.blue_name ?? ""),
-  };
-}
-
-async function waitUntilRoundEnded(id: number) {
+async function waitUntilStopped() {
   for (;;) {
     if (shuttingDown) {
-      throw new Error("shutting down");
-    }
-    if (await isRoundEnded(id)) {
       return;
     }
-    await sleep(2000);
+    await sleep(1000);
   }
-}
-
-async function isRoundEnded(id: number): Promise<boolean> {
-  const result = await pool.query(`SELECT status FROM match_rounds WHERE id = $1`, [id]);
-  if (result.rowCount !== 1) {
-    throw new Error(`match round ${id} not found during watch`);
-  }
-  return String(result.rows[0].status) === "ENDED";
-}
-
-function outputRoundDir(round: RoundInfo): string {
-  const rel = renderMatchDir(recordConf, {
-    Event: round.event,
-    Zone: round.zone,
-    Order: round.order,
-    RedSchool: round.redSchool,
-    RedName: round.redName,
-    BlueSchool: round.blueSchool,
-    BlueName: round.blueName,
-    RoundNo: round.roundNo,
-    Role: "",
-  });
-  return resolveUnderBase(recordConf.BaseDir, path.posix.join(rel, `Round-${round.roundNo}`));
 }
 
 async function loadLeancloudRuntime(): Promise<any> {
@@ -522,6 +445,57 @@ function parseArgs(values: string[]): Record<string, string> {
     i++;
   }
   return out;
+}
+
+function loadJobContext(): DanmuJobContext {
+  const raw = process.env.RM_MONITOR_JOB_CONTEXT || "";
+  if (!raw.trim()) {
+    fatal("RM_MONITOR_JOB_CONTEXT is required");
+  }
+  return JSON.parse(raw) as DanmuJobContext;
+}
+
+function jobDir(): string {
+  return path.join(jobContext.round_dir, ".job", `danmu-${roundID}`);
+}
+
+async function writeJobContext() {
+  await atomicWriteJSON(path.join(jobDir(), "context.json"), jobContext);
+}
+
+async function writeJobResult(outputPath: string) {
+  await atomicWriteJSON(path.join(jobDir(), "result.json"), {
+    schema: "rm-monitor/danmu-result/v1",
+    match_round_id: roundID,
+    output_path: outputPath,
+    completed_at: new Date().toISOString(),
+  });
+}
+
+async function writeJobError(error: unknown) {
+  if (!roundID || !jobContext.round_dir) {
+    return;
+  }
+  await atomicWriteJSON(path.join(jobDir(), "error.json"), {
+    schema: "rm-monitor/job-error/v1",
+    job_type: "danmu",
+    task_id: roundID,
+    error_message: error instanceof Error ? error.message : String(error),
+    failed_at: new Date().toISOString(),
+  });
+}
+
+async function atomicWriteJSON(filePath: string, value: unknown) {
+  await fs.promises.mkdir(path.dirname(filePath), { recursive: true });
+  const tmp = `${filePath}.tmp-${process.pid}-${Date.now()}`;
+  await fs.promises.writeFile(tmp, `${JSON.stringify(value, null, 2)}\n`, "utf8");
+  await fs.promises.rename(tmp, filePath);
+}
+
+function roundNumberFromDir(roundDir: string): number {
+  const base = path.basename(roundDir);
+  const match = /^Round-(\d+)$/i.exec(base);
+  return match ? Number(match[1]) : 0;
 }
 
 function fatal(message: string): never {

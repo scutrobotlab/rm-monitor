@@ -2,8 +2,6 @@ use std::{
     collections::HashMap,
     fs::{self, File},
     path::{Path, PathBuf},
-    process::Stdio,
-    time::Duration,
 };
 
 use anyhow::{bail, Context, Result};
@@ -16,11 +14,9 @@ use biliup::{
 use bytes::Bytes;
 use chrono::Utc;
 use clap::Parser;
-use danmu2ass::{AssWriter, CanvasConfig, Parser as DanmuParser};
 use futures::StreamExt;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use tokio::{process::Command, time::timeout};
 
 #[derive(Parser)]
 struct Args {
@@ -103,16 +99,11 @@ impl Default for BilibiliConf {
 struct CoverConf {
     #[serde(rename = "Enabled", default = "default_true")]
     enabled: bool,
-    #[serde(rename = "At", default = "default_cover_at")]
-    at: String,
 }
 
 impl Default for CoverConf {
     fn default() -> Self {
-        Self {
-            enabled: true,
-            at: default_cover_at(),
-        }
+        Self { enabled: true }
     }
 }
 
@@ -146,10 +137,6 @@ fn default_tags() -> Vec<String> {
 fn default_true() -> bool {
     true
 }
-fn default_cover_at() -> String {
-    "peak".to_string()
-}
-
 #[derive(Debug, Deserialize, Serialize)]
 struct PublishContext {
     task_id: i32,
@@ -193,11 +180,11 @@ async fn main() -> Result<()> {
     if !config.publish.bilibili.enabled {
         bail!("bilibili publish is disabled");
     }
-    let ctx: PublishContext = serde_json::from_str(
-        &std::env::var("RM_MONITOR_PUBLISH_CONTEXT")
-            .context("RM_MONITOR_PUBLISH_CONTEXT is required")?,
-    )
-    .context("parse publish context")?;
+    let raw_context =
+        std::env::var("RM_MONITOR_JOB_CONTEXT").context("RM_MONITOR_JOB_CONTEXT is required")?;
+    let ctx: PublishContext =
+        serde_json::from_str(&raw_context).context("parse publish context")?;
+    let _ = write_context(&config, &ctx, &raw_context);
     if let Err(err) = run(&config, &ctx).await {
         let _ = write_error(&config, &ctx, &err.to_string());
         return Err(err);
@@ -208,32 +195,14 @@ async fn main() -> Result<()> {
 async fn run(config: &Config, ctx: &PublishContext) -> Result<()> {
     let base_dir = PathBuf::from(&config.record.base_dir);
     let output_dir = resolve_under(&base_dir, &ctx.output_dir)?;
-    let video = output_dir.join("video.mp4");
-    let danmu = output_dir.join("video.danmuku.xml");
-    let srt = output_dir.join("video.srt");
-    ensure_file(&video)?;
-    ensure_file(&danmu)?;
-    ensure_file(&srt)?;
-
+    let publish_video = output_dir.join("video-artifact.mp4");
+    let cover = output_dir.join("cover.jpg");
     let publish_dir = output_dir.join("publish");
     fs::create_dir_all(&publish_dir).context("create publish dir")?;
-    let ass = publish_dir.join("video.danmuku.ass");
-    let cover = publish_dir.join("cover.jpg");
-    let publish_video = publish_dir.join("video.bilibili.mp4");
-
-    render_ass(&danmu, &ass).context("render danmu ass")?;
+    ensure_file(&publish_video)?;
     if config.publish.bilibili.cover.enabled {
-        if config.publish.bilibili.cover.at != "peak" {
-            bail!("unsupported cover.at {}", config.publish.bilibili.cover.at);
-        }
-        extract_cover(
-            &video,
-            &cover,
-            (ctx.peak_seconds - ctx.start_seconds).max(0.0),
-        )
-        .await?;
+        ensure_file(&cover)?;
     }
-    burn_video(&video, &ass, &srt, &publish_video).await?;
 
     let metadata = render_metadata(config, &ctx)?;
     let copied_cookie = copy_cookie(&config.publish.bilibili.cookie_path)?;
@@ -250,114 +219,9 @@ async fn run(config: &Config, ctx: &PublishContext) -> Result<()> {
         &copied_cookie,
     )
     .await?;
-    write_result(&output_dir, &result)?;
+    write_result(&output_dir, ctx.task_id, &result)?;
     update_highlight_json(output_dir.join("highlight.json"), &result)
         .context("update highlight json")?;
-    Ok(())
-}
-
-fn render_ass(input: &Path, output: &Path) -> Result<()> {
-    let tmp = output.with_extension("ass.part");
-    let canvas_config = CanvasConfig {
-        duration: 15.0,
-        width: 1920,
-        height: 1080,
-        font: "Noto Sans CJK SC".to_string(),
-        font_size: 36,
-        width_ratio: 1.2,
-        horizontal_gap: 20.0,
-        lane_size: 48,
-        float_percentage: 0.55,
-        bottom_percentage: 0.3,
-        opacity: ((1.0 - 0.72) * 255.0) as u8,
-        bold: 1,
-        outline: 1.0,
-        time_offset: 0.0,
-    };
-    let parser = DanmuParser::from_path(input)?;
-    let title = output
-        .file_stem()
-        .and_then(|v| v.to_str())
-        .unwrap_or("danmu")
-        .to_string();
-    let mut writer = AssWriter::new(File::create(&tmp)?, title, canvas_config.clone())?;
-    let mut canvas = canvas_config.canvas();
-    for danmu in parser {
-        if let Some(drawable) = canvas.draw(danmu?)? {
-            writer.write(drawable)?;
-        }
-    }
-    drop(writer);
-    fs::rename(tmp, output)?;
-    Ok(())
-}
-
-async fn extract_cover(video: &Path, cover: &Path, seconds: f64) -> Result<()> {
-    let tmp = cover.with_extension("jpg.part");
-    let status = Command::new("ffmpeg")
-        .args([
-            "-hide_banner",
-            "-loglevel",
-            "info",
-            "-nostdin",
-            "-ss",
-            &format!("{seconds:.3}"),
-        ])
-        .arg("-i")
-        .arg(video)
-        .args(["-frames:v", "1", "-q:v", "2", "-y"])
-        .arg(&tmp)
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit())
-        .status()
-        .await
-        .context("run ffmpeg cover")?;
-    if !status.success() {
-        bail!("ffmpeg cover failed with {status}");
-    }
-    ensure_file(&tmp)?;
-    fs::rename(tmp, cover).context("publish cover")?;
-    Ok(())
-}
-
-async fn burn_video(video: &Path, ass: &Path, srt: &Path, output: &Path) -> Result<()> {
-    let tmp = output.with_extension("mp4.part");
-    let filter = format!("ass={},subtitles={}", filter_path(ass), filter_path(srt));
-    let status = timeout(
-        Duration::from_secs(3600),
-        Command::new("ffmpeg")
-            .args(["-hide_banner", "-loglevel", "info", "-nostdin"])
-            .arg("-i")
-            .arg(video)
-            .args([
-                "-vf", &filter, "-map", "0:v:0", "-map", "0:a:0?", "-sn", "-dn",
-            ])
-            .args([
-                "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p",
-            ])
-            .args([
-                "-c:a",
-                "aac",
-                "-b:a",
-                "128k",
-                "-movflags",
-                "+faststart",
-                "-f",
-                "mp4",
-                "-y",
-            ])
-            .arg(&tmp)
-            .stdout(Stdio::inherit())
-            .stderr(Stdio::inherit())
-            .status(),
-    )
-    .await
-    .context("ffmpeg burn timeout")??;
-    if !status.success() {
-        bail!("ffmpeg burn failed with {status}");
-    }
-    ensure_file(&tmp)?;
-    fs::rename(tmp, output).context("publish burned video")?;
     Ok(())
 }
 
@@ -546,23 +410,36 @@ fn update_highlight_json(path: PathBuf, result: &PublishResult) -> Result<()> {
     atomic_write(&path, &raw)
 }
 
-fn write_result(output_dir: &Path, result: &PublishResult) -> Result<()> {
+fn write_result(output_dir: &Path, task_id: i32, result: &PublishResult) -> Result<()> {
     let raw = serde_json::to_vec_pretty(result)?;
-    atomic_write(
-        &output_dir.join("publish").join("publish-result.json"),
-        &raw,
-    )
+    atomic_write(&job_dir(output_dir, task_id).join("result.json"), &raw)
 }
 
 fn write_error(config: &Config, ctx: &PublishContext, msg: &str) -> Result<()> {
     let output_dir = resolve_under(Path::new(&config.record.base_dir), &ctx.output_dir)?;
     let raw = serde_json::to_vec_pretty(&serde_json::json!({
         "status": "failed",
+        "task_type": "highlight-publish-bilibili",
         "task_id": ctx.task_id,
         "error_message": msg.chars().take(2000).collect::<String>(),
         "completed_at": Utc::now(),
     }))?;
-    atomic_write(&output_dir.join("publish").join("publish-error.json"), &raw)
+    atomic_write(&job_dir(&output_dir, ctx.task_id).join("error.json"), &raw)
+}
+
+fn write_context(config: &Config, ctx: &PublishContext, raw_context: &str) -> Result<()> {
+    let output_dir = resolve_under(Path::new(&config.record.base_dir), &ctx.output_dir)?;
+    let parsed: Value = serde_json::from_str(raw_context)?;
+    atomic_write(
+        &job_dir(&output_dir, ctx.task_id).join("context.json"),
+        &serde_json::to_vec_pretty(&parsed)?,
+    )
+}
+
+fn job_dir(output_dir: &Path, task_id: i32) -> PathBuf {
+    output_dir
+        .join(".job")
+        .join(format!("highlight-publish-bilibili-{task_id}"))
 }
 
 fn resolve_under(base: &Path, rel: &str) -> Result<PathBuf> {
@@ -589,14 +466,6 @@ fn atomic_write(path: &Path, data: &[u8]) -> Result<()> {
     fs::write(&tmp, data)?;
     fs::rename(tmp, path)?;
     Ok(())
-}
-
-fn filter_path(path: &Path) -> String {
-    path.to_string_lossy()
-        .replace('\\', "\\\\")
-        .replace(':', "\\:")
-        .replace('\'', "\\'")
-        .replace(',', "\\,")
 }
 
 fn copy_cookie(cookie_path: &str) -> Result<PathBuf> {

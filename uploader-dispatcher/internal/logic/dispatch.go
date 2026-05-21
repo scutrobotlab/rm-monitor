@@ -3,8 +3,9 @@ package logic
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/json"
 	"fmt"
-	"strconv"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -17,8 +18,11 @@ import (
 	"scutbot.cn/web/rm-monitor/ent/recordtask"
 	"scutbot.cn/web/rm-monitor/ent/uploadtask"
 	"scutbot.cn/web/rm-monitor/pkg/bitableupload"
+	"scutbot.cn/web/rm-monitor/pkg/db"
+	"scutbot.cn/web/rm-monitor/pkg/jobcontract"
 	"scutbot.cn/web/rm-monitor/pkg/kubejob"
 	"scutbot.cn/web/rm-monitor/pkg/logx"
+	"scutbot.cn/web/rm-monitor/pkg/storagepath"
 	"scutbot.cn/web/rm-monitor/uploader-dispatcher/internal/svc"
 )
 
@@ -43,6 +47,9 @@ func (l *DispatchLogic) Tick() error {
 		return err
 	}
 	if err := l.prepareUploadTasks(); err != nil {
+		return err
+	}
+	if err := l.reconcileUploadResults(); err != nil {
 		return err
 	}
 	if err := l.recoverDispatching(); err != nil {
@@ -543,6 +550,7 @@ func (l *DispatchLogic) dispatchPending() error {
 		).
 		Order(uploadtask.ByPriority(sql.OrderDesc()), uploadtask.ByCreatedAt()).
 		Limit(limit).
+		WithSourceArtifact().
 		All(l.ctx)
 	if err != nil {
 		return errors.Wrap(err, "query pending upload tasks")
@@ -561,12 +569,22 @@ func (l *DispatchLogic) dispatchPending() error {
 		if claimed == 0 {
 			continue
 		}
+		jobCtx, err := l.uploadContext(task)
+		if err != nil {
+			_ = l.svcCtx.DB.UploadTask.UpdateOneID(task.ID).SetStatus(uploadtask.StatusFAILED).SetErrorMessage(err.Error()).Exec(l.ctx)
+			continue
+		}
+		rawCtx, err := json.Marshal(jobCtx)
+		if err != nil {
+			return errors.Wrap(err, "encode upload job context")
+		}
 		if l.svcCtx.K8s != nil {
 			job := kubejob.Build(l.svcCtx.Config.K8sJobConf, kubejob.JobSpec{
 				Name:     jobName,
 				App:      "uploader-job",
 				Image:    l.svcCtx.Config.K8sJobConf.Image,
-				Args:     []string{"-f", "/etc/rm-monitor/config.yml", "-task", strconv.Itoa(task.ID)},
+				Args:     []string{"-f", "/etc/rm-monitor/config.yml"},
+				Env:      map[string]string{jobcontract.EnvName: string(rawCtx)},
 				CPU:      "100m",
 				Memory:   "256Mi",
 				MemLimit: "1Gi",
@@ -581,6 +599,99 @@ func (l *DispatchLogic) dispatchPending() error {
 		}
 	}
 	return nil
+}
+
+func (l *DispatchLogic) uploadContext(task *ent.UploadTask) (jobcontract.UploadContext, error) {
+	conf := l.svcCtx.Config.UploadConf.WithDefaults()
+	if task.BitableAppToken == nil || task.BitableTableID == nil || task.BitableRecordID == nil {
+		return jobcontract.UploadContext{}, errors.New("upload task missing bitable context")
+	}
+	recordURL := ""
+	if task.BitableRecordURL != nil {
+		recordURL = *task.BitableRecordURL
+	}
+	return jobcontract.UploadContext{
+		Schema:              "rm-monitor/upload-context/v1",
+		UploadTaskID:        task.ID,
+		SourcePath:          task.SourcePath,
+		BaseDir:             conf.BaseDir,
+		BitableAppToken:     *task.BitableAppToken,
+		BitableTableID:      *task.BitableTableID,
+		BitableRecordID:     *task.BitableRecordID,
+		BitableRecordURL:    recordURL,
+		AttachmentFieldName: bitableupload.FieldAttachment,
+	}, nil
+}
+
+func (l *DispatchLogic) reconcileUploadResults() error {
+	tasks, err := l.svcCtx.DB.UploadTask.Query().
+		Where(uploadtask.StatusEQ(uploadtask.StatusRUNNING)).
+		Limit(100).
+		All(l.ctx)
+	if err != nil {
+		return errors.Wrap(err, "query running upload tasks")
+	}
+	namespace := l.svcCtx.Config.K8sJobConf.WithDefaults().Namespace
+	for _, task := range tasks {
+		resultPath, errorPath := l.uploadResultPaths(task)
+		var result jobcontract.UploadResult
+		if ok, err := jobcontract.ReadJSON(resultPath, &result); err != nil {
+			return err
+		} else if ok {
+			if err := l.applyUploadResult(result); err != nil {
+				return err
+			}
+			continue
+		}
+		var jobErr jobcontract.ErrorResult
+		if ok, err := jobcontract.ReadJSON(errorPath, &jobErr); err != nil {
+			return err
+		} else if ok {
+			if err := l.svcCtx.DB.UploadTask.UpdateOneID(task.ID).SetStatus(uploadtask.StatusFAILED).SetErrorMessage(jobErr.ErrorMessage).SetCompletedAt(time.Now()).Exec(l.ctx); err != nil {
+				return errors.Wrap(err, "mark upload failed")
+			}
+			continue
+		}
+		if l.svcCtx.K8s == nil || task.K8sJobName == nil || *task.K8sJobName == "" {
+			continue
+		}
+		state, err := l.svcCtx.K8s.JobState(l.ctx, namespace, *task.K8sJobName)
+		if err != nil {
+			return err
+		}
+		if state == kubejob.JobStateFailed || state == kubejob.JobStateSucceeded {
+			msg := fmt.Sprintf("upload job %s finished as %s without result.json or error.json", *task.K8sJobName, state)
+			if err := l.svcCtx.DB.UploadTask.UpdateOneID(task.ID).SetStatus(uploadtask.StatusFAILED).SetErrorMessage(msg).SetCompletedAt(time.Now()).Exec(l.ctx); err != nil {
+				return errors.Wrap(err, "mark upload missing result failed")
+			}
+		}
+	}
+	return nil
+}
+
+func (l *DispatchLogic) uploadResultPaths(task *ent.UploadTask) (string, string) {
+	conf := l.svcCtx.Config.UploadConf.WithDefaults()
+	dir := filepath.Join(filepath.Dir(storagepath.Resolve(conf.BaseDir, task.SourcePath)), jobcontract.DirName, jobName("upload", task.ID))
+	return filepath.Join(dir, jobcontract.ResultFile), filepath.Join(dir, jobcontract.ErrorFile)
+}
+
+func (l *DispatchLogic) applyUploadResult(result jobcontract.UploadResult) error {
+	completedAt := result.CompletedAt
+	if completedAt.IsZero() {
+		completedAt = time.Now()
+	}
+	update := l.svcCtx.DB.UploadTask.UpdateOneID(result.UploadTaskID).
+		SetStatus(uploadtask.StatusSUCCEEDED).
+		SetCompletedAt(completedAt).
+		SetAttachmentFileToken(result.AttachmentFileToken).
+		ClearErrorMessage()
+	if result.BitableRecordURL != "" {
+		update.SetBitableRecordURL(result.BitableRecordURL)
+	}
+	if err := update.Exec(l.ctx); err != nil {
+		return errors.Wrap(err, "mark upload succeeded")
+	}
+	return db.Notify(l.ctx, l.svcCtx.Config.PostgresConf.DSN, db.UploadTaskChangedChannel, fmt.Sprintf("%d", result.UploadTaskID))
 }
 
 func jobName(prefix string, id int) string {

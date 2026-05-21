@@ -123,8 +123,6 @@ jobs:
         with:
           context: .
           file: ${{ matrix.dockerfile }}
-          build-args: |
-            APP=${{ matrix.app }}
           push: ${{ github.event_name == 'push' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

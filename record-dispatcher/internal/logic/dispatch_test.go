@@ -6,6 +6,7 @@ import (
 	"scutbot.cn/web/rm-monitor/ent"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
 	common "scutbot.cn/web/rm-monitor/pkg/config"
+	"scutbot.cn/web/rm-monitor/pkg/jobcontract"
 	"scutbot.cn/web/rm-monitor/pkg/kubejob"
 )
 
@@ -56,7 +57,7 @@ func TestCompletedMatchRequiresAllRoundsEnded(t *testing.T) {
 	}
 }
 
-func TestSTTJobSpecCarriesSourceURL(t *testing.T) {
+func TestSTTJobSpecCarriesContextToBothContainers(t *testing.T) {
 	jobConf := common.K8sJobConf{
 		Namespace:        "rm-monitor",
 		Image:            "example/stt-job:test",
@@ -70,19 +71,19 @@ func TestSTTJobSpecCarriesSourceURL(t *testing.T) {
 		App:           "stt-job",
 		ContainerName: "audio-recorder",
 		Image:         jobConf.Image,
-		Env:           map[string]string{"STT_SOURCE_URL": "https://example.test/live.m3u8"},
+		Env:           map[string]string{jobcontract.EnvName: `{"source_url":"https://example.test/live.m3u8"}`},
 		ExtraContainers: []kubejob.ContainerSpec{
-			{Name: "recognizer", Image: jobConf.Image},
+			{Name: "recognizer", Image: jobConf.Image, Env: map[string]string{jobcontract.EnvName: `{"source_url":"https://example.test/live.m3u8"}`}},
 		},
 	})
 	containers := job.Spec.Template.Spec.Containers
 	if len(containers) != 2 {
 		t.Fatalf("containers = %d, want 2", len(containers))
 	}
-	if containers[0].Env[0].Name != "STT_SOURCE_URL" || containers[0].Env[0].Value != "https://example.test/live.m3u8" {
+	if containers[0].Env[0].Name != jobcontract.EnvName {
 		t.Fatalf("audio recorder env = %#v", containers[0].Env)
 	}
-	if len(containers[1].Env) != 0 {
-		t.Fatalf("recognizer should not receive source url env, got %#v", containers[1].Env)
+	if containers[1].Env[0].Name != jobcontract.EnvName {
+		t.Fatalf("recognizer env = %#v", containers[1].Env)
 	}
 }

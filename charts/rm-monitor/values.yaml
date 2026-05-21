@@ -92,7 +92,6 @@ publish:
     maxConcurrentJobs: 1
     cover:
       enabled: true
-      at: peak
 
 transcode:
   sourceRetentionDays: 7
