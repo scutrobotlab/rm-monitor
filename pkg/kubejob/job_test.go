@@ -14,18 +14,27 @@ func TestBuildSharedPVCUsesNoNodeSelector(t *testing.T) {
 		RecordsPVC:       "shared-records",
 		RecordsMountPath: "/records",
 	}, JobSpec{
-		Name:              "transcode-1",
-		App:               "transcode-job",
-		Image:             "example/transcode-job:test",
-		PriorityClassName: PriorityClassBackground,
-		SpreadByHostname:  true,
+		Name:                    "transcode-1",
+		App:                     "transcode-job",
+		Image:                   "example/transcode-job:test",
+		PriorityClassName:       PriorityClassBackground,
+		SpreadByHostname:        true,
+		PreferAvoidNodeLabelKey: "rm-monitor/record",
 	})
 	pod := job.Spec.Template.Spec
 	if len(pod.NodeSelector) != 0 {
 		t.Fatalf("NodeSelector = %#v, want empty", pod.NodeSelector)
 	}
-	if pod.Affinity != nil {
-		t.Fatalf("Affinity = %#v, want nil", pod.Affinity)
+	if pod.Affinity == nil || pod.Affinity.NodeAffinity == nil {
+		t.Fatalf("Affinity = %#v, want preferred node affinity", pod.Affinity)
+	}
+	preferred := pod.Affinity.NodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution
+	if len(preferred) != 1 {
+		t.Fatalf("preferred node affinity = %#v, want one term", preferred)
+	}
+	expressions := preferred[0].Preference.MatchExpressions
+	if len(expressions) != 1 || expressions[0].Key != "rm-monitor/record" || expressions[0].Operator != "DoesNotExist" {
+		t.Fatalf("preferred expression = %#v, want rm-monitor/record DoesNotExist", expressions)
 	}
 	if got := pod.PriorityClassName; got != PriorityClassBackground {
 		t.Fatalf("priority class = %q, want %s", got, PriorityClassBackground)

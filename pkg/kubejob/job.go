@@ -140,22 +140,23 @@ func jobFailed(job batchv1.Job) bool {
 }
 
 type JobSpec struct {
-	Name              string
-	App               string
-	ContainerName     string
-	Image             string
-	Command           []string
-	Args              []string
-	Env               map[string]string
-	SecretEnv         map[string]corev1.SecretKeySelector
-	WorkDir           string
-	CPU               string
-	Memory            string
-	CPULimit          string
-	MemLimit          string
-	PriorityClassName string
-	SpreadByHostname  bool
-	ExtraContainers   []ContainerSpec
+	Name                    string
+	App                     string
+	ContainerName           string
+	Image                   string
+	Command                 []string
+	Args                    []string
+	Env                     map[string]string
+	SecretEnv               map[string]corev1.SecretKeySelector
+	WorkDir                 string
+	CPU                     string
+	Memory                  string
+	CPULimit                string
+	MemLimit                string
+	PriorityClassName       string
+	SpreadByHostname        bool
+	PreferAvoidNodeLabelKey string
+	ExtraContainers         []ContainerSpec
 }
 
 type ContainerSpec struct {
@@ -234,6 +235,25 @@ func Build(conf config.K8sJobConf, spec JobSpec) *batchv1.Job {
 	}
 	if spec.PriorityClassName != "" {
 		podSpec.PriorityClassName = spec.PriorityClassName
+	}
+	if spec.PreferAvoidNodeLabelKey != "" {
+		podSpec.Affinity = &corev1.Affinity{
+			NodeAffinity: &corev1.NodeAffinity{
+				PreferredDuringSchedulingIgnoredDuringExecution: []corev1.PreferredSchedulingTerm{
+					{
+						Weight: 100,
+						Preference: corev1.NodeSelectorTerm{
+							MatchExpressions: []corev1.NodeSelectorRequirement{
+								{
+									Key:      spec.PreferAvoidNodeLabelKey,
+									Operator: corev1.NodeSelectorOpDoesNotExist,
+								},
+							},
+						},
+					},
+				},
+			},
+		}
 	}
 	if spec.SpreadByHostname {
 		podSpec.TopologySpreadConstraints = []corev1.TopologySpreadConstraint{

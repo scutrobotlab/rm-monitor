@@ -183,16 +183,17 @@ func (l *DispatchLogic) dispatchPending() error {
 		}
 		if l.svcCtx.K8s != nil {
 			job := kubejob.Build(l.svcCtx.Config.K8sJobConf, kubejob.JobSpec{
-				Name:              jobName,
-				App:               "transcode-job",
-				Image:             jobConf.Image,
-				Args:              []string{"-f", "/etc/rm-monitor/config.yml", "-task", strconv.Itoa(task.ID)},
-				CPU:               conf.CPURequest,
-				Memory:            conf.MemoryRequest,
-				CPULimit:          conf.CPULimit,
-				MemLimit:          conf.MemoryLimit,
-				PriorityClassName: kubejob.PriorityClassBackground,
-				SpreadByHostname:  true,
+				Name:                    jobName,
+				App:                     "transcode-job",
+				Image:                   jobConf.Image,
+				Args:                    []string{"-f", "/etc/rm-monitor/config.yml", "-task", strconv.Itoa(task.ID)},
+				CPU:                     conf.CPURequest,
+				Memory:                  conf.MemoryRequest,
+				CPULimit:                conf.CPULimit,
+				MemLimit:                conf.MemoryLimit,
+				PriorityClassName:       kubejob.PriorityClassBackground,
+				SpreadByHostname:        true,
+				PreferAvoidNodeLabelKey: "rm-monitor/record",
 			})
 			if err := l.svcCtx.K8s.CreateJob(l.ctx, jobConf.Namespace, job); err != nil {
 				_ = l.svcCtx.DB.TranscodeTask.UpdateOneID(task.ID).SetStatus(transcodetask.StatusFAILED).SetErrorMessage(err.Error()).Exec(l.ctx)
