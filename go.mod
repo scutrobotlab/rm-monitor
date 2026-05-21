@@ -6,6 +6,7 @@ require (
 	entgo.io/ent v0.14.5
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.7.4
+	github.com/liuzl/gocc v0.0.0-20231231122217-0372e1059ca5
 	github.com/larksuite/oapi-sdk-go/v3 v3.4.16
 	github.com/openai/openai-go v1.12.0
 	github.com/pkg/errors v0.9.1
@@ -41,6 +42,8 @@ require (
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
+	github.com/liuzl/cedar-go v0.0.0-20170805034717-80a9c64b256d // indirect
+	github.com/liuzl/da v0.0.0-20180704015230-14771aad5b1d // indirect
 	github.com/mattn/go-runewidth v0.0.9 // indirect
 	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect

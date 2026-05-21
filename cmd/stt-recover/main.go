@@ -27,6 +27,7 @@ import (
 	"scutbot.cn/web/rm-monitor/pkg/redisx"
 	"scutbot.cn/web/rm-monitor/pkg/storagepath"
 	"scutbot.cn/web/rm-monitor/pkg/sttcoord"
+	"scutbot.cn/web/rm-monitor/pkg/stttext"
 )
 
 const segmentSeconds = 60
@@ -44,6 +45,14 @@ type row struct {
 	RoundNo          int
 	SourcePath       string
 	HasSuccessfulSTT bool
+	Event            string
+	Zone             string
+	MatchType        string
+	Order            int
+	RedSchool        string
+	RedName          string
+	BlueSchool       string
+	BlueName         string
 }
 
 type recoverResult struct {
@@ -131,7 +140,7 @@ func main() {
 	}
 	defer sqlDB.Close()
 
-	rows, err := queryRows(ctx, sqlDB, parseIntList(*roundIDsFlag), parseStringList(*matchIDsFlag), *limit)
+	rows, err := queryRows(ctx, sqlDB, c.RecordConf.STTRole, parseIntList(*roundIDsFlag), parseStringList(*matchIDsFlag), *limit)
 	if err != nil {
 		fatal(err)
 	}
@@ -221,7 +230,7 @@ func recoverRows(ctx context.Context, c toolConfig, rows []row, force bool, conc
 	return out
 }
 
-func queryRows(ctx context.Context, db *stdsql.DB, roundIDs []int, matchIDs []string, limit int) ([]row, error) {
+func queryRows(ctx context.Context, db *stdsql.DB, role string, roundIDs []int, matchIDs []string, limit int) ([]row, error) {
 	args := []any{}
 	filters := []string{}
 	if len(roundIDs) > 0 {
@@ -244,20 +253,25 @@ func queryRows(ctx context.Context, db *stdsql.DB, roundIDs []int, matchIDs []st
 	if len(filters) > 0 {
 		where = " and (" + strings.Join(filters, " or ") + ")"
 	}
-	args = append(args, limit)
+	args = append(args, strings.TrimSpace(role), limit)
+	roleArg := len(args) - 1
+	limitArg := len(args)
 	q := fmt.Sprintf(`
-select m.id, mr.id, mr.round_no, ma.path
+select m.id, mr.id, mr.round_no, ma.path, m.event, m.zone, m.match_type, m."order",
+       red.name, red.school_name, blue.name, blue.school_name
 from matches m
 join match_rounds mr on mr.match_rounds=m.id
-join record_tasks rt on rt.match_round_record_tasks=mr.id
-join media_artifacts ma on ma.record_task_media_artifacts=rt.id
+join teams red on red.id=m.red_team_id
+join teams blue on blue.id=m.blue_team_id
+join record_tasks rec on rec.match_round_record_tasks=mr.id
+join media_artifacts ma on ma.record_task_media_artifacts=rec.id
 where mr.status='ENDED'
-  and rt.role='主视角'
+  and rec.role=$%d
   and ma.kind='source'
   and ma.status='AVAILABLE'
   %s
 order by m.created_at desc, mr.round_no asc
-limit $%d`, where, len(args))
+limit $%d`, roleArg, where, limitArg)
 	result, err := db.QueryContext(ctx, q, args...)
 	if err != nil {
 		return nil, err
@@ -266,7 +280,7 @@ limit $%d`, where, len(args))
 	rows := []row{}
 	for result.Next() {
 		var r row
-		if err := result.Scan(&r.MatchID, &r.RoundID, &r.RoundNo, &r.SourcePath); err != nil {
+		if err := result.Scan(&r.MatchID, &r.RoundID, &r.RoundNo, &r.SourcePath, &r.Event, &r.Zone, &r.MatchType, &r.Order, &r.RedName, &r.RedSchool, &r.BlueName, &r.BlueSchool); err != nil {
 			return nil, err
 		}
 		rows = append(rows, r)
@@ -317,8 +331,9 @@ func recoverRound(ctx context.Context, c toolConfig, r row) (recoverMetric, erro
 		return recoverMetric{WallSeconds: time.Since(started).Seconds()}, os.RemoveAll(audioDir)
 	}
 	var metric recoverMetric
+	prompt := sttPrompt(c.RecordConf, r)
 	for i, segment := range segments {
-		seconds, duration, err := recognizeSegment(ctx, c.WhisperServerUrl, segment, sttPath, i)
+		seconds, duration, err := recognizeSegment(ctx, c.WhisperServerUrl, prompt, segment, sttPath, i)
 		metric.Segments++
 		metric.APISeconds += seconds
 		metric.AudioSeconds += duration
@@ -330,9 +345,9 @@ func recoverRound(ctx context.Context, c toolConfig, r row) (recoverMetric, erro
 	return metric, os.RemoveAll(audioDir)
 }
 
-func recognizeSegment(ctx context.Context, serverURL, wavPath, sttPath string, index int) (float64, float64, error) {
+func recognizeSegment(ctx context.Context, serverURL, prompt, wavPath, sttPath string, index int) (float64, float64, error) {
 	start := float64(index * segmentSeconds)
-	result, seconds, err := recognizeFile(ctx, serverURL, wavPath)
+	result, seconds, err := recognizeFile(ctx, serverURL, prompt, wavPath)
 	duration := result.Duration
 	if duration <= 0 {
 		duration = segmentSeconds
@@ -371,7 +386,7 @@ func recognizeSegment(ctx context.Context, serverURL, wavPath, sttPath string, i
 	return seconds, duration, appendLines(sttPath, lines)
 }
 
-func recognizeFile(ctx context.Context, serverURL, wavPath string) (whisperResult, float64, error) {
+func recognizeFile(ctx context.Context, serverURL, prompt, wavPath string) (whisperResult, float64, error) {
 	var out whisperResult
 	client := resty.New().
 		SetRetryCount(3).
@@ -383,13 +398,17 @@ func recognizeFile(ctx context.Context, serverURL, wavPath string) (whisperResul
 		}).
 		SetTimeout(180 * time.Second)
 	start := time.Now()
+	form := map[string]string{
+		"temperature":     "0.0",
+		"response_format": "verbose_json",
+	}
+	if strings.TrimSpace(prompt) != "" {
+		form["prompt"] = prompt
+	}
 	resp, err := client.R().
 		SetContext(ctx).
 		SetFile("file", wavPath).
-		SetMultipartFormData(map[string]string{
-			"temperature":     "0.0",
-			"response_format": "verbose_json",
-		}).
+		SetMultipartFormData(form).
 		SetResult(&out).
 		Post(strings.TrimRight(serverURL, "/") + "/inference")
 	elapsed := time.Since(start).Seconds()
@@ -419,7 +438,7 @@ func runBenchmark(ctx context.Context, c toolConfig, source string) error {
 	if err := exec.CommandContext(ctx, "ffmpeg", args...).Run(); err != nil {
 		return errors.Wrap(err, "extract benchmark wav")
 	}
-	result, seconds, err := recognizeFile(ctx, c.WhisperServerUrl, wav)
+	result, seconds, err := recognizeFile(ctx, c.WhisperServerUrl, stttext.GenericPrompt, wav)
 	if err != nil {
 		return err
 	}
@@ -447,6 +466,22 @@ func appendLines(path string, lines []sttLine) error {
 		}
 	}
 	return f.Sync()
+}
+
+func sttPrompt(conf common.RecordConf, r row) string {
+	return stttext.BuildPrompt(stttext.PromptData{
+		Event:      r.Event,
+		Zone:       r.Zone,
+		MatchID:    r.MatchID,
+		MatchType:  r.MatchType,
+		Order:      r.Order,
+		RoundNo:    r.RoundNo,
+		Role:       conf.STTRole,
+		RedSchool:  r.RedSchool,
+		RedName:    r.RedName,
+		BlueSchool: r.BlueSchool,
+		BlueName:   r.BlueName,
+	})
 }
 
 func markSTTDone(ctx context.Context, c toolConfig, rows []row) error {

@@ -28,6 +28,7 @@ import (
 	"scutbot.cn/web/rm-monitor/pkg/redisx"
 	"scutbot.cn/web/rm-monitor/pkg/storagepath"
 	"scutbot.cn/web/rm-monitor/pkg/sttcoord"
+	"scutbot.cn/web/rm-monitor/pkg/stttext"
 	"scutbot.cn/web/rm-monitor/pkg/subtitle"
 	jobconfig "scutbot.cn/web/rm-monitor/stt-job/internal/config"
 )
@@ -240,7 +241,7 @@ func runRecognizer(ctx context.Context, client *ent.Client, c jobconfig.Config, 
 		current := segmentPath(info.AudioDir, index)
 		if fileExists(current) {
 			if segmentComplete(info.AudioDir, index) {
-				if err := recognizeSegment(ctx, serverURL, current, info.STTPath, index); err != nil {
+				if err := recognizeSegment(ctx, serverURL, info.Prompt, current, info.STTPath, index); err != nil {
 					return err
 				}
 				index++
@@ -277,6 +278,7 @@ type roundInfo struct {
 	AudioDir     string
 	STTPath      string
 	SubtitleName string
+	Prompt       string
 }
 
 func loadRoundInfo(ctx context.Context, client *ent.Client, conf common.RecordConf, roundID int) (roundInfo, error) {
@@ -323,6 +325,19 @@ func loadRoundInfo(ctx context.Context, client *ent.Client, conf common.RecordCo
 		AudioDir:     filepath.Join(roundDir, "audio"),
 		STTPath:      filepath.Join(roundDir, "stt.jsonl"),
 		SubtitleName: fmt.Sprintf("%s.srt", conf.STTRole),
+		Prompt: stttext.BuildPrompt(stttext.PromptData{
+			Event:      match.Event,
+			Zone:       match.Zone,
+			MatchID:    match.ID,
+			MatchType:  match.MatchType,
+			Order:      match.Order,
+			RoundNo:    round.RoundNo,
+			Role:       conf.STTRole,
+			RedSchool:  red.SchoolName,
+			RedName:    red.Name,
+			BlueSchool: blue.SchoolName,
+			BlueName:   blue.Name,
+		}),
 	}, nil
 }
 
@@ -439,7 +454,7 @@ type sttLine struct {
 	ErrorMessage string  `json:"error_message,omitempty"`
 }
 
-func recognizeSegment(ctx context.Context, serverURL, wavPath, sttPath string, index int) error {
+func recognizeSegment(ctx context.Context, serverURL, prompt, wavPath, sttPath string, index int) error {
 	start := float64(index * segmentSeconds)
 	end := start + float64(segmentSeconds)
 	stat, err := os.Stat(wavPath)
@@ -449,7 +464,7 @@ func recognizeSegment(ctx context.Context, serverURL, wavPath, sttPath string, i
 	if stat.Size() == 0 {
 		return appendLine(sttPath, sttLine{Index: index, Start: start, End: start, Status: "EMPTY"})
 	}
-	result, seconds, err := recognizeFile(ctx, serverURL, wavPath)
+	result, seconds, err := recognizeFile(ctx, serverURL, prompt, wavPath)
 	if err == nil {
 		return appendRecognizedLine(sttPath, index, 0, start, result, seconds)
 	}
@@ -531,7 +546,7 @@ type whisperSegment struct {
 	Text  string  `json:"text"`
 }
 
-func recognizeFile(ctx context.Context, serverURL, wavPath string) (whisperResult, float64, error) {
+func recognizeFile(ctx context.Context, serverURL, prompt, wavPath string) (whisperResult, float64, error) {
 	var out whisperResult
 	client := resty.New().
 		SetRetryCount(3).
@@ -543,13 +558,17 @@ func recognizeFile(ctx context.Context, serverURL, wavPath string) (whisperResul
 		}).
 		SetTimeout(180 * time.Second)
 	start := time.Now()
+	form := map[string]string{
+		"temperature":     "0.0",
+		"response_format": "verbose_json",
+	}
+	if strings.TrimSpace(prompt) != "" {
+		form["prompt"] = prompt
+	}
 	resp, err := client.R().
 		SetContext(ctx).
 		SetFile("file", wavPath).
-		SetMultipartFormData(map[string]string{
-			"temperature":     "0.0",
-			"response_format": "verbose_json",
-		}).
+		SetMultipartFormData(form).
 		SetResult(&out).
 		Post(strings.TrimRight(serverURL, "/") + "/inference")
 	seconds := time.Since(start).Seconds()

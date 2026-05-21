@@ -118,6 +118,9 @@ func TestRecognizeFilePostsWhisperMultipart(t *testing.T) {
 		if got := r.FormValue("temperature"); got != "0.0" {
 			t.Fatalf("temperature = %q", got)
 		}
+		if got := r.FormValue("prompt"); !strings.Contains(got, "简体中文") || !strings.Contains(got, "红方") {
+			t.Fatalf("prompt = %q", got)
+		}
 		file, _, err := r.FormFile("file")
 		if err != nil {
 			t.Fatal(err)
@@ -128,7 +131,7 @@ func TestRecognizeFilePostsWhisperMultipart(t *testing.T) {
 	}))
 	defer server.Close()
 
-	result, _, err := recognizeFile(context.Background(), server.URL+"/", wav)
+	result, _, err := recognizeFile(context.Background(), server.URL+"/", "请使用简体中文输出。红方：A", wav)
 	if err != nil {
 		t.Fatal(err)
 	}

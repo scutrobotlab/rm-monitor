@@ -65,6 +65,8 @@ jobs:
             dockerfile: stt-job/Dockerfile
           - app: stt-recover
             dockerfile: cmd/stt-recover/Dockerfile
+          - app: stt-normalize
+            dockerfile: cmd/stt-normalize/Dockerfile
           - app: stt-subtitle
             dockerfile: cmd/stt-subtitle/Dockerfile
           - app: danmu-job
