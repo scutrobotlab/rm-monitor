@@ -2,6 +2,7 @@ package logic
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	pathpkg "path"
@@ -88,7 +89,7 @@ func (l *DispatchLogic) createHighlightClips(conf common.HighlightConf) error {
 		if !fileExists(storagepath.Resolve(recordConf.BaseDir, pathpkg.Join(roundDir, "stats", "danmu-count.json"))) {
 			continue
 		}
-		if !fileExists(storagepath.Resolve(recordConf.BaseDir, pathpkg.Join(roundDir, "stt.jsonl"))) {
+		if !hasSuccessfulSTT(storagepath.Resolve(recordConf.BaseDir, pathpkg.Join(roundDir, "stt.jsonl"))) {
 			continue
 		}
 		danmuStats, err := highlight.LoadDanmuStats(storagepath.Resolve(recordConf.BaseDir, pathpkg.Join(roundDir, "stats", "danmu-count.json")))
@@ -258,6 +259,31 @@ func (l *DispatchLogic) dispatchPending() error {
 func fileExists(path string) bool {
 	stat, err := os.Stat(path)
 	return err == nil && !stat.IsDir()
+}
+
+type sttStatusLine struct {
+	Status string `json:"status"`
+	Text   string `json:"text"`
+}
+
+func hasSuccessfulSTT(path string) bool {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return false
+	}
+	for _, line := range strings.Split(strings.TrimSpace(string(raw)), "\n") {
+		if strings.TrimSpace(line) == "" {
+			continue
+		}
+		var row sttStatusLine
+		if err := json.Unmarshal([]byte(line), &row); err != nil {
+			continue
+		}
+		if row.Status == "SUCCEEDED" && strings.TrimSpace(row.Text) != "" {
+			return true
+		}
+	}
+	return false
 }
 
 func jobName(prefix string, id int) string {
