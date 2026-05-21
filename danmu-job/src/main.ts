@@ -111,10 +111,13 @@ async function run() {
   writer = new BilibiliXMLWriter(outputPath);
   await writer.open();
 
-  const runtime = await connectLeanCloud(chatRoomID, round);
-  runtimeClient = runtime.client;
-  room = runtime.room;
-  const stopSampling = startOnlineSampler(runtime.room, round);
+  const runtime = await connectLeanCloudWithRetry(chatRoomID, round);
+  let stopSampling = () => {};
+  if (runtime) {
+    runtimeClient = runtime.client;
+    room = runtime.room;
+    stopSampling = startOnlineSampler(runtime.room, round);
+  }
   await waitUntilRoundEnded(round.id);
   stopSampling();
   const finalRound = await loadRound(round.id);
@@ -124,6 +127,31 @@ async function run() {
     startedAt: finalRound.startedAt,
     endedAt: finalRound.endedAt,
   });
+}
+
+async function connectLeanCloudWithRetry(roomID: string, round: RoundInfo) {
+  let attempt = 0;
+  for (;;) {
+    if (shuttingDown) {
+      throw new Error("shutting down");
+    }
+    if (await isRoundEnded(round.id)) {
+      console.error(`round ${round.id} ended before danmu connection was established`);
+      return null;
+    }
+    try {
+      return await connectLeanCloud(roomID, round);
+    } catch (error) {
+      attempt++;
+      const delayMs = Math.min(30000, 2000 * attempt);
+      console.error(
+        `connect leancloud room ${roomID} for round ${round.id} failed, retrying in ${delayMs}ms: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+      await sleep(delayMs);
+    }
+  }
 }
 
 async function connectLeanCloud(roomID: string, round: RoundInfo) {
@@ -324,15 +352,19 @@ async function waitUntilRoundEnded(id: number) {
     if (shuttingDown) {
       throw new Error("shutting down");
     }
-    const result = await pool.query(`SELECT status FROM match_rounds WHERE id = $1`, [id]);
-    if (result.rowCount !== 1) {
-      throw new Error(`match round ${id} not found during watch`);
-    }
-    if (String(result.rows[0].status) === "ENDED") {
+    if (await isRoundEnded(id)) {
       return;
     }
     await sleep(2000);
   }
+}
+
+async function isRoundEnded(id: number): Promise<boolean> {
+  const result = await pool.query(`SELECT status FROM match_rounds WHERE id = $1`, [id]);
+  if (result.rowCount !== 1) {
+    throw new Error(`match round ${id} not found during watch`);
+  }
+  return String(result.rows[0].status) === "ENDED";
 }
 
 function outputRoundDir(round: RoundInfo): string {
