@@ -1,3 +1,6 @@
+imagePullPolicy: Always
+jobImagePullPolicy: IfNotPresent
+
 serviceAccount:
   name: dispatcher
 
@@ -28,8 +31,13 @@ upload:
   retryBackoff: 2
   rateLimitPerMinute: 30
 
+monitor:
+  scheduleURL: ""
+
 record:
   res: middle
+  liveInfoURL: ""
+  baseDir: /records
   audioRoles:
     - "主视角"
   roleBlackList:

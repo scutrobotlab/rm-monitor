@@ -5,6 +5,8 @@ metadata:
   namespace: {{ include "rm-monitor.namespace" . }}
 data:
   config.yml: |
+    MonitorConf:
+      ScheduleURL: {{ .Values.monitor.scheduleURL }}
 {{ include "rm-monitor.postgresConf" . | indent 4 }}
       AutoMigrate: true
 {{ include "rm-monitor.redisConf" . | indent 4 }}

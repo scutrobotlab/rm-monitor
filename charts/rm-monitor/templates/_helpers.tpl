@@ -16,11 +16,11 @@
 {{- end -}}
 
 {{- define "rm-monitor.imagePullPolicy" -}}
-Always
+{{ .Values.imagePullPolicy | default "Always" }}
 {{- end -}}
 
 {{- define "rm-monitor.jobImagePullPolicy" -}}
-IfNotPresent
+{{ .Values.jobImagePullPolicy | default "IfNotPresent" }}
 {{- end -}}
 
 {{- define "rm-monitor.configPath" -}}
@@ -52,6 +52,10 @@ RedisConf:
 {{- define "rm-monitor.recordConf" -}}
 RecordConf:
   Res: {{ .Values.record.res }}
+  BaseDir: {{ .Values.record.baseDir }}
+  {{- if .Values.record.liveInfoURL }}
+  LiveInfoURL: {{ .Values.record.liveInfoURL }}
+  {{- end }}
   AudioRoles:
 {{ toYaml .Values.record.audioRoles | indent 4 }}
   {{- if .Values.stt.enabled }}
