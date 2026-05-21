@@ -76,7 +76,8 @@
       "properties": {
         "enabled": { "type": "boolean" },
         "appId": { "type": "string" },
-        "appKey": { "type": "string" }
+        "appKey": { "type": "string" },
+        "videoOffsetSeconds": { "type": "number" }
       },
       "allOf": [
         {

@@ -10,6 +10,7 @@ import { BilibiliXMLWriter, type DanmuMessage } from "./xml.js";
 const seenMessageLimit = 5000;
 const historyLimit = 80;
 const outputFileName = "主视角.danmuku.xml";
+const recordMetaFileName = "record-meta.json";
 
 type RoundInfo = {
   id: number;
@@ -25,6 +26,19 @@ type RoundInfo = {
   redName: string;
   blueSchool: string;
   blueName: string;
+};
+
+type RecordMeta = {
+  schema: string;
+  record_task_id: number;
+  role: string;
+  source_url: string;
+  output_path: string;
+  record_wall_started_at: string;
+  record_wall_completed_at?: string | null;
+  media_time_zero_wall_at: string;
+  file_size: number;
+  checksum: string;
 };
 
 type LeanMessage = {
@@ -107,6 +121,12 @@ try {
 async function run() {
   const round = await loadRound(roundID);
   const roundDir = outputRoundDir(round);
+  const recordMetaPath = path.join(roundDir, recordMetaFileName);
+  const recordMeta = await waitForRecordMeta(recordMetaPath, round.id);
+  const mediaTimeZeroWallAt = new Date(recordMeta.media_time_zero_wall_at);
+  if (!Number.isFinite(mediaTimeZeroWallAt.getTime())) {
+    throw new Error(`invalid media_time_zero_wall_at in ${recordMetaPath}`);
+  }
   const outputPath = path.join(roundDir, outputFileName);
   writer = new BilibiliXMLWriter(outputPath);
   await writer.open();
@@ -126,6 +146,10 @@ async function run() {
     roundNo: finalRound.roundNo,
     startedAt: finalRound.startedAt,
     endedAt: finalRound.endedAt,
+    timebase: "record-video",
+    recordMetaPath: recordMetaFileName,
+    videoOffsetSeconds: danmuConf.VideoOffsetSeconds,
+    mediaTimeZeroWallAt,
   });
 }
 
@@ -224,7 +248,7 @@ function writeMessageIfValid(message: LeanMessage, round: RoundInfo, seen: Set<s
     return;
   }
   const timestamp = messageTimestamp(message);
-  if (!Number.isFinite(timestamp) || timestamp < round.startedAt.getTime()) {
+  if (!Number.isFinite(timestamp)) {
     return;
   }
   if (round.endedAt && timestamp > round.endedAt.getTime() + 5000) {
@@ -236,9 +260,13 @@ function writeMessageIfValid(message: LeanMessage, round: RoundInfo, seen: Set<s
   }
   rememberSeen(id, seen, seenOrder);
   const attrs = messageAttributes(message);
+  const offsetSeconds = videoOffsetSeconds(timestamp);
+  if (offsetSeconds < 0) {
+    return;
+  }
   const item: DanmuMessage = {
     id,
-    offsetSeconds: (timestamp - round.startedAt.getTime()) / 1000,
+    offsetSeconds,
     timestamp,
     text,
     username: String(attrs.username ?? ""),
@@ -254,7 +282,10 @@ function writeMessageIfValid(message: LeanMessage, round: RoundInfo, seen: Set<s
 function startOnlineSampler(room: { count?: () => Promise<number> }, round: RoundInfo): () => void {
   let stopped = false;
   const sample = async () => {
-    const offsetSeconds = (Date.now() - round.startedAt.getTime()) / 1000;
+    const offsetSeconds = videoOffsetSeconds(Date.now());
+    if (offsetSeconds < 0) {
+      return;
+    }
     try {
       if (typeof room.count !== "function") {
         stats.recordOnline(offsetSeconds, null);
@@ -276,6 +307,45 @@ function startOnlineSampler(room: { count?: () => Promise<number> }, round: Roun
     stopped = true;
     clearInterval(timer);
   };
+}
+
+let mediaTimeZeroWallMs = 0;
+
+function videoOffsetSeconds(timestampMs: number): number {
+  return (timestampMs - mediaTimeZeroWallMs) / 1000 + danmuConf.VideoOffsetSeconds;
+}
+
+async function waitForRecordMeta(recordMetaPath: string, roundID: number): Promise<RecordMeta> {
+  for (;;) {
+    if (shuttingDown) {
+      throw new Error("shutting down");
+    }
+    const meta = await tryReadRecordMeta(recordMetaPath);
+    if (meta) {
+      mediaTimeZeroWallMs = new Date(meta.media_time_zero_wall_at).getTime();
+      return meta;
+    }
+    if (await isRoundEnded(roundID)) {
+      throw new Error(`record metadata not found before round ended: ${recordMetaPath}`);
+    }
+    await sleep(500);
+  }
+}
+
+async function tryReadRecordMeta(recordMetaPath: string): Promise<RecordMeta | null> {
+  try {
+    const raw = await fs.promises.readFile(recordMetaPath, "utf8");
+    const meta = JSON.parse(raw) as RecordMeta;
+    if (meta.schema !== "rm-monitor/record-meta/v1") {
+      throw new Error(`unexpected record metadata schema ${meta.schema}`);
+    }
+    return meta;
+  } catch (error: any) {
+    if (error?.code === "ENOENT") {
+      return null;
+    }
+    throw error;
+  }
 }
 
 function rememberSeen(id: string, seen: Set<string>, seenOrder: string[]) {

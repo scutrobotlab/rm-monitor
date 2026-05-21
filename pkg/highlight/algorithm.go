@@ -12,6 +12,7 @@ import (
 const rollingWindowBuckets = 6
 
 type DanmuStats struct {
+	Timebase      string       `json:"timebase"`
 	BucketSeconds int          `json:"bucket_seconds"`
 	Points        []DanmuPoint `json:"points"`
 }

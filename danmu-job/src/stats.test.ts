@@ -18,11 +18,19 @@ test("DanmuStats buckets danmu counts and writes JSON/PNG outputs", async () => 
     roundNo: 1,
     startedAt: new Date("2026-05-20T10:00:00Z"),
     endedAt: new Date("2026-05-20T10:05:00Z"),
+    timebase: "record-video",
+    recordMetaPath: "record-meta.json",
+    videoOffsetSeconds: -3,
+    mediaTimeZeroWallAt: new Date("2026-05-20T09:59:58Z"),
   });
 
   const danmuRaw = fs.readFileSync(path.join(dir, "stats", "danmu-count.json"), "utf8");
   const danmu = JSON.parse(danmuRaw);
   assert.equal(danmu.schema, "rm-monitor/danmu-count/v1");
+  assert.equal(danmu.timebase, "record-video");
+  assert.equal(danmu.record_meta_path, "record-meta.json");
+  assert.equal(danmu.video_offset_seconds, -3);
+  assert.equal(danmu.media_time_zero_wall_at, "2026-05-20T09:59:58.000Z");
   assert.deepEqual(danmu.points, [
     { t: 0, count: 2, total: 2 },
     { t: 10, count: 1, total: 3 },

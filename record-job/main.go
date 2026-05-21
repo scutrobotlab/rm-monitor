@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -36,6 +37,7 @@ var (
 
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 const maxPrematureExitAttempts = 3
+const recordMetaFile = "record-meta.json"
 
 func init() {
 	logx.MustSetup(logx.LogConf{ServiceName: "record-job", Mode: "console", Encoding: "plain"})
@@ -83,6 +85,25 @@ func run(ctx context.Context, client *ent.Client, c config.Config, taskID int) e
 		return errors.Wrap(err, "mark running")
 	}
 
+	recordStartedAt := time.Now()
+	writeMeta := roleKeepsAudio(conf.AudioRoles, task.Role)
+	if writeMeta {
+		if err := writeRecordMeta(filepath.Dir(fullPath), recordMeta{
+			Schema:                "rm-monitor/record-meta/v1",
+			RecordTaskID:          task.ID,
+			Role:                  task.Role,
+			SourceURL:             task.SourceURL,
+			OutputPath:            task.OutputPath,
+			RecordWallStartedAt:   recordStartedAt,
+			MediaTimeZeroWallAt:   recordStartedAt,
+			RecordWallCompletedAt: nil,
+			FileSize:              0,
+			Checksum:              "",
+		}); err != nil {
+			return errors.Wrap(err, "write initial record metadata")
+		}
+	}
+
 	args := recordFFmpegArgs(task.SourceURL, partPath, roleKeepsAudio(conf.AudioRoles, task.Role))
 	cmd := exec.CommandContext(jobCtx, "ffmpeg", args...)
 	var stderr bytes.Buffer
@@ -98,10 +119,16 @@ func run(ctx context.Context, client *ent.Client, c config.Config, taskID int) e
 	logx.Infof("recording %s to %s", task.SourceURL, path.Clean(task.OutputPath))
 	err = cmd.Run()
 	if jobCtx.Err() != nil && !stopRequested.Load() {
+		if writeMeta {
+			_ = removeRecordMeta(filepath.Dir(fullPath))
+		}
 		_ = client.RecordTask.UpdateOneID(taskID).SetStatus(recordtask.StatusCANCELED).SetErrorMessage(jobCtx.Err().Error()).Exec(ctx)
 		return jobCtx.Err()
 	}
 	if err != nil && !stopRequested.Load() {
+		if writeMeta {
+			_ = removeRecordMeta(filepath.Dir(fullPath))
+		}
 		msg := commandError(err, stderr.String())
 		_ = client.RecordTask.UpdateOneID(taskID).SetStatus(recordtask.StatusFAILED).SetErrorMessage(msg).Exec(ctx)
 		return errors.New(msg)
@@ -109,10 +136,16 @@ func run(ctx context.Context, client *ent.Client, c config.Config, taskID int) e
 	if !stopRequested.Load() {
 		latest, latestErr := loadTask(ctx, client, taskID)
 		if latestErr != nil {
+			if writeMeta {
+				_ = removeRecordMeta(filepath.Dir(fullPath))
+			}
 			_ = client.RecordTask.UpdateOneID(taskID).SetStatus(recordtask.StatusFAILED).SetErrorMessage(latestErr.Error()).Exec(ctx)
 			return errors.Wrap(latestErr, "reload record task after ffmpeg exit")
 		}
 		if latest.Edges.MatchRound != nil && latest.Edges.MatchRound.Status == matchround.StatusSTARTED {
+			if writeMeta {
+				_ = removeRecordMeta(filepath.Dir(fullPath))
+			}
 			msg := "ffmpeg exited before match round ended"
 			update := client.RecordTask.UpdateOneID(taskID).SetErrorMessage(msg)
 			if latest.Attempts < maxPrematureExitAttempts {
@@ -127,22 +160,50 @@ func run(ctx context.Context, client *ent.Client, c config.Config, taskID int) e
 	}
 
 	if err := os.Rename(partPath, fullPath); err != nil {
+		if writeMeta {
+			_ = removeRecordMeta(filepath.Dir(fullPath))
+		}
 		_ = client.RecordTask.UpdateOneID(taskID).SetStatus(recordtask.StatusFAILED).SetErrorMessage(err.Error()).Exec(ctx)
 		return errors.Wrap(err, "commit output")
 	}
 	stat, statErr := os.Stat(fullPath)
 	if statErr != nil {
+		if writeMeta {
+			_ = removeRecordMeta(filepath.Dir(fullPath))
+		}
 		_ = client.RecordTask.UpdateOneID(taskID).SetStatus(recordtask.StatusFAILED).SetErrorMessage(statErr.Error()).Exec(ctx)
 		return errors.Wrap(statErr, "stat output")
 	}
 	sum, err := checksum(fullPath)
 	if err != nil {
+		if writeMeta {
+			_ = removeRecordMeta(filepath.Dir(fullPath))
+		}
 		_ = client.RecordTask.UpdateOneID(taskID).SetStatus(recordtask.StatusFAILED).SetErrorMessage(err.Error()).Exec(ctx)
 		return err
 	}
+	completedAt := time.Now()
+	if writeMeta {
+		if err := writeRecordMeta(filepath.Dir(fullPath), recordMeta{
+			Schema:                "rm-monitor/record-meta/v1",
+			RecordTaskID:          task.ID,
+			Role:                  task.Role,
+			SourceURL:             task.SourceURL,
+			OutputPath:            task.OutputPath,
+			RecordWallStartedAt:   recordStartedAt,
+			RecordWallCompletedAt: &completedAt,
+			MediaTimeZeroWallAt:   recordStartedAt,
+			FileSize:              stat.Size(),
+			Checksum:              sum,
+		}); err != nil {
+			_ = removeRecordMeta(filepath.Dir(fullPath))
+			_ = client.RecordTask.UpdateOneID(taskID).SetStatus(recordtask.StatusFAILED).SetErrorMessage(err.Error()).Exec(ctx)
+			return errors.Wrap(err, "write final record metadata")
+		}
+	}
 	if err := client.RecordTask.UpdateOneID(taskID).
 		SetStatus(recordtask.StatusSUCCEEDED).
-		SetCompletedAt(time.Now()).
+		SetCompletedAt(completedAt).
 		SetFileSize(stat.Size()).
 		SetChecksum(sum).
 		ClearErrorMessage().
@@ -153,6 +214,41 @@ func run(ctx context.Context, client *ent.Client, c config.Config, taskID int) e
 		return errors.Wrap(err, "upsert source artifact")
 	}
 	return db.Notify(ctx, c.PostgresConf.DSN, db.RecordTaskChangedChannel, strconv.Itoa(taskID))
+}
+
+type recordMeta struct {
+	Schema                string     `json:"schema"`
+	RecordTaskID          int        `json:"record_task_id"`
+	Role                  string     `json:"role"`
+	SourceURL             string     `json:"source_url"`
+	OutputPath            string     `json:"output_path"`
+	RecordWallStartedAt   time.Time  `json:"record_wall_started_at"`
+	RecordWallCompletedAt *time.Time `json:"record_wall_completed_at"`
+	MediaTimeZeroWallAt   time.Time  `json:"media_time_zero_wall_at"`
+	FileSize              int64      `json:"file_size"`
+	Checksum              string     `json:"checksum"`
+}
+
+func writeRecordMeta(roundDir string, meta recordMeta) error {
+	raw, err := json.MarshalIndent(meta, "", "  ")
+	if err != nil {
+		return err
+	}
+	path := filepath.Join(roundDir, recordMetaFile)
+	tmp := path + ".part"
+	if err := os.WriteFile(tmp, append(raw, '\n'), 0o644); err != nil {
+		return err
+	}
+	return os.Rename(tmp, path)
+}
+
+func removeRecordMeta(roundDir string) error {
+	_ = os.Remove(filepath.Join(roundDir, recordMetaFile+".part"))
+	err := os.Remove(filepath.Join(roundDir, recordMetaFile))
+	if os.IsNotExist(err) {
+		return nil
+	}
+	return err
 }
 
 func isNetworkSource(source string) bool {

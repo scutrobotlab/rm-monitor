@@ -52,6 +52,7 @@ danmu:
   enabled: false
   appId: ""
   appKey: ""
+  videoOffsetSeconds: -3
 
 highlight:
   enabled: false

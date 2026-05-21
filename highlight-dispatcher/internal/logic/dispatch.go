@@ -97,6 +97,10 @@ func (l *DispatchLogic) createHighlightClips(conf common.HighlightConf) error {
 			l.Errorf("load danmu stats for round %d: %v", round.ID, err)
 			continue
 		}
+		if danmuStats.Timebase != "" && danmuStats.Timebase != "record-video" {
+			l.Errorf("skip highlight for round %d: unsupported danmu stats timebase %q", round.ID, danmuStats.Timebase)
+			continue
+		}
 		var onlineStats highlight.OnlineStats
 		if p := storagepath.Resolve(recordConf.BaseDir, pathpkg.Join(roundDir, "stats", "online-count.json")); fileExists(p) {
 			onlineStats, _ = highlight.LoadOnlineStats(p)

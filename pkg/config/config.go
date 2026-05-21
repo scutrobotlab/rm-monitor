@@ -39,13 +39,18 @@ type RecordConf struct {
 }
 
 type DanmuConf struct {
-	Enabled bool   `json:",optional"`
-	AppID   string `json:",optional"`
-	AppKey  string `json:",optional"`
+	Enabled            bool    `json:",optional"`
+	AppID              string  `json:",optional"`
+	AppKey             string  `json:",optional"`
+	VideoOffsetSeconds float64 `json:",optional"`
 }
 
 func (c *DanmuConf) WithDefaults() DanmuConf {
-	return *c
+	out := *c
+	if out.VideoOffsetSeconds == 0 {
+		out.VideoOffsetSeconds = -3
+	}
+	return out
 }
 
 type LLMConf struct {

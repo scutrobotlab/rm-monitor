@@ -6,3 +6,4 @@ DanmuConf:
   Enabled: false
   AppID: ""
   AppKey: ""
+  VideoOffsetSeconds: -3

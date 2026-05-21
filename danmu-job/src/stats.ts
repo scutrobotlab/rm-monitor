@@ -21,6 +21,10 @@ type StatsMeta = {
   roundNo: number;
   startedAt: Date;
   endedAt: Date | null;
+  timebase?: string;
+  recordMetaPath?: string;
+  videoOffsetSeconds?: number;
+  mediaTimeZeroWallAt?: Date;
 };
 
 export class DanmuStats {
@@ -86,6 +90,10 @@ function statsPayload(meta: StatsMeta, kind: string, points: unknown[]) {
     round_no: meta.roundNo,
     started_at: meta.startedAt.toISOString(),
     ended_at: meta.endedAt?.toISOString() ?? null,
+    timebase: meta.timebase,
+    record_meta_path: meta.recordMetaPath,
+    video_offset_seconds: meta.videoOffsetSeconds,
+    media_time_zero_wall_at: meta.mediaTimeZeroWallAt?.toISOString(),
     bucket_seconds: statsBucketSeconds,
     points,
   };

@@ -64,6 +64,7 @@ DanmuConf:
   Enabled: {{ .Values.danmu.enabled }}
   AppID: {{ .Values.danmu.appId | quote }}
   AppKey: {{ .Values.danmu.appKey | quote }}
+  VideoOffsetSeconds: {{ .Values.danmu.videoOffsetSeconds }}
 {{- end -}}
 
 {{- define "rm-monitor.highlightConf" -}}

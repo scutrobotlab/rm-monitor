@@ -15,6 +15,7 @@ export type DanmuConf = {
   Enabled?: boolean;
   AppID?: string;
   AppKey?: string;
+  VideoOffsetSeconds?: number;
 };
 
 export type Config = {
@@ -41,5 +42,6 @@ export function danmuConfWithDefaults(conf?: DanmuConf): Required<DanmuConf> {
     Enabled: Boolean(conf?.Enabled),
     AppID: conf?.AppID || "",
     AppKey: conf?.AppKey || "",
+    VideoOffsetSeconds: conf?.VideoOffsetSeconds ?? -3,
   };
 }
