@@ -125,6 +125,27 @@ func TestCardEntityDataRendersCardJSON(t *testing.T) {
 	}
 }
 
+func TestCardEntityDataRendersMultipleRoundPanels(t *testing.T) {
+	content := &utils.MatchCardContent{Data: utils.MatchCardData{
+		RedTeam:    "红队",
+		BlueTeam:   "蓝队",
+		Color:      "orange",
+		RedSchool:  "红校",
+		BlueSchool: "蓝校",
+		Rounds: []utils.MatchRoundCard{
+			{PanelID: "elem_round_1", ContentID: "elem_round_1_content", Title: "Round 1", Content: "暂无录制"},
+			{PanelID: "elem_round_2", ContentID: "elem_round_2_content", Title: "Round 2", Content: "[主视角](https://example.com)"},
+		},
+	}}
+	raw, err := cardEntityData(content)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Count(raw, "collapsible_panel") != 2 {
+		t.Fatalf("rendered card should contain two collapsible panels: %s", raw)
+	}
+}
+
 func TestMatchNeedsCardSend(t *testing.T) {
 	if !matchNeedsCardSend(&ent.Match{}) {
 		t.Fatal("match without card should need send")

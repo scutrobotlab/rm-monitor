@@ -108,16 +108,21 @@
                 "margin": "0px 0px 0px 0px"
             },
             {{- range $i, $round := .Rounds }}
-            {{- if $i }},{{ end }}
             {
                 "tag": "collapsible_panel",
                 "element_id": {{json $round.PanelID}},
                 "expanded": {{json $round.Expanded}},
-                "title": {
-                    "tag": "markdown",
-                    "content": {{json $round.Title}},
-                    "text_align": "center",
-                    "text_size": "normal_v2"
+                "header": {
+                    "title": {
+                        "tag": "markdown",
+                        "content": {{json $round.Title}},
+                        "text_align": "center",
+                        "text_size": "normal_v2"
+                    },
+                    "vertical_align": "center",
+                    "padding": "4px 0px 4px 0px",
+                    "position": "top",
+                    "width": "fill"
                 },
                 "elements": [
                     {
