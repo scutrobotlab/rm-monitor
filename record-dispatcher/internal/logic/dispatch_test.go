@@ -2,7 +2,6 @@ package logic
 
 import (
 	"testing"
-	"time"
 
 	"scutbot.cn/web/rm-monitor/ent"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
@@ -30,17 +29,13 @@ func TestFilterBlacklistedRoles(t *testing.T) {
 	}
 }
 
-func TestManifestJobNameStablePerMatchUpdate(t *testing.T) {
-	updatedAt := time.Unix(100, 0)
-	first := manifestJobName("match-1", updatedAt)
-	if first != manifestJobName("match-1", updatedAt) {
-		t.Fatal("manifest job name must be stable for the same match update")
+func TestManifestJobNameStablePerMatch(t *testing.T) {
+	first := manifestJobName("match-1")
+	if first != manifestJobName("match-1") {
+		t.Fatal("manifest job name must be stable for the same match")
 	}
-	if first == manifestJobName("match-2", updatedAt) {
+	if first == manifestJobName("match-2") {
 		t.Fatal("manifest job name should include match id")
-	}
-	if first == manifestJobName("match-1", updatedAt.Add(time.Second)) {
-		t.Fatal("manifest job name should include updated_at so report rebuild can rerun")
 	}
 }
 
