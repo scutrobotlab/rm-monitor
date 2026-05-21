@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/rand"
 	"strconv"
+	"strings"
 	"time"
 
 	larkim "github.com/larksuite/oapi-sdk-go/v3/service/im/v1"
@@ -365,7 +366,7 @@ func (l *NotifyLogic) replyUploadTask(task *ent.UploadTask) error {
 	if err != nil {
 		return err
 	}
-	replied := 0
+	done := 0
 	for _, message := range match.Edges.LarkMessages {
 		req := larkim.NewReplyMessageReqBuilder().
 			Body(larkim.NewReplyMessageReqBodyBuilder().
@@ -389,18 +390,31 @@ func (l *NotifyLogic) replyUploadTask(task *ent.UploadTask) error {
 			return nil
 		})
 		if err != nil {
+			if isTerminalReplyError(err) {
+				l.Infof("skip upload reply for unreachable message: task=%d message_id=%s", task.ID, message.MessageID)
+				done++
+				continue
+			}
 			l.Error(errors.Wrap(err, "reply upload url"))
 			continue
 		}
-		replied++
+		done++
 	}
-	if replied != len(match.Edges.LarkMessages) {
+	if done != len(match.Edges.LarkMessages) {
 		return nil
 	}
 	if err := l.svcCtx.DB.UploadTask.UpdateOneID(task.ID).SetLarkRepliedAt(time.Now()).Exec(l.ctx); err != nil {
 		return errors.Wrap(err, "mark upload replied")
 	}
 	return nil
+}
+
+func isTerminalReplyError(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "code:230002") || strings.Contains(msg, "Bot/User can NOT be out of the chat")
 }
 
 func uploadReplyContent(task *ent.UploadTask) (string, error) {
