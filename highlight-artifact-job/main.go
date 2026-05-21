@@ -37,6 +37,11 @@ var (
 	clipIDFlag = flag.Int("clip", 0, "highlight clip id")
 )
 
+const (
+	highlightVideoFile = "video.mp4"
+	highlightDanmuFile = "video.danmuku.xml"
+)
+
 func init() {
 	logx.MustSetup(logx.LogConf{ServiceName: "highlight-artifact-job", Mode: "console", Encoding: "plain"})
 }
@@ -102,10 +107,10 @@ func run(ctx context.Context, client *ent.Client, c config.Config, clipID int) e
 	if err := os.MkdirAll(outputDir, 0o755); err != nil {
 		return fail(ctx, client, clipID, errors.Wrap(err, "create output dir").Error())
 	}
-	if err := sliceVideo(ctx, sourcePath, filepath.Join(outputDir, "video.mp4"), clip.StartSeconds, clip.EndSeconds); err != nil {
+	if err := sliceVideo(ctx, sourcePath, filepath.Join(outputDir, highlightVideoFile), clip.StartSeconds, clip.EndSeconds); err != nil {
 		return fail(ctx, client, clipID, err.Error())
 	}
-	if err := writeCroppedDanmu(danmuFile, filepath.Join(outputDir, "highlight.danmuku.xml"), clip.StartSeconds, clip.EndSeconds); err != nil {
+	if err := writeCroppedDanmu(danmuFile, filepath.Join(outputDir, highlightDanmuFile), clip.StartSeconds, clip.EndSeconds); err != nil {
 		return fail(ctx, client, clipID, err.Error())
 	}
 	payload := buildHighlightJSON(clip, sourceRel, outputRel, llm)
@@ -525,8 +530,8 @@ func buildHighlightJSON(clip *ent.HighlightClip, sourceRel, outputRel string, ll
 		"explanation":       llm.Explanation,
 		"source_artifact":   sourceRel,
 		"output_dir":        outputRel,
-		"video":             pathpkg.Join(outputRel, "video.mp4"),
-		"danmu":             pathpkg.Join(outputRel, "highlight.danmuku.xml"),
+		"video":             pathpkg.Join(outputRel, highlightVideoFile),
+		"danmu":             pathpkg.Join(outputRel, highlightDanmuFile),
 		"publish":           map[string]string{"status": "disabled"},
 	}
 }
