@@ -2,6 +2,7 @@ package svc
 
 import (
 	"context"
+	"math/rand"
 	"os"
 	"time"
 
@@ -52,4 +53,32 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		RateLimiter: larkrate.New(redisClient),
 		UploadSlots: make(chan struct{}, uploadConcurrency),
 	}
+}
+
+func (s *ServiceContext) RetryLark(ctx context.Context, chatID string, f func() error) error {
+	var last error
+	for attempt := 0; attempt < 3; attempt++ {
+		if err := s.RateLimiter.Wait(ctx, chatID); err != nil {
+			return err
+		}
+		if err := f(); err != nil {
+			last = err
+			if attempt < 2 {
+				select {
+				case <-ctx.Done():
+					return ctx.Err()
+				case <-time.After(larkRetryDelay(attempt)):
+				}
+			}
+			continue
+		}
+		return nil
+	}
+	return last
+}
+
+func larkRetryDelay(attempt int) time.Duration {
+	base := time.Duration(1<<attempt) * time.Second
+	jitter := time.Duration(rand.Int63n(int64(500 * time.Millisecond)))
+	return base + jitter
 }

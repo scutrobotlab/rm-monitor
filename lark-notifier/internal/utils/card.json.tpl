@@ -111,7 +111,11 @@
             {
                 "tag": "collapsible_panel",
                 "element_id": {{json $round.PanelID}},
-                "expanded": {{json $round.Expanded}},
+                "expanded": false,
+                "direction": "vertical",
+                "horizontal_align": "center",
+                "vertical_align": "center",
+                "background_color": "grey-200",
                 "header": {
                     "title": {
                         "tag": "markdown",
@@ -119,10 +123,19 @@
                         "text_align": "center",
                         "text_size": "normal_v2"
                     },
+                    "icon": {
+                        "tag": "standard_icon",
+                        "token": "down-small-ccm_outlined",
+                        "color": "",
+                        "size": "16px 16px"
+                    },
                     "vertical_align": "center",
                     "padding": "4px 0px 4px 0px",
                     "position": "top",
                     "width": "fill"
+                },
+                "border": {
+                    "corner_radius": "5px"
                 },
                 "elements": [
                     {

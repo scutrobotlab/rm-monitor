@@ -8,7 +8,7 @@ import (
 	"time"
 
 	lark "github.com/larksuite/oapi-sdk-go/v3"
-	larkcardkit "github.com/larksuite/oapi-sdk-go/v3/service/cardkit/v1"
+	larkim "github.com/larksuite/oapi-sdk-go/v3/service/im/v1"
 )
 
 func TestCardKitRenderedCardJSONSmoke(t *testing.T) {
@@ -35,49 +35,58 @@ func TestCardKitRenderedCardJSONSmoke(t *testing.T) {
 		Rounds: []MatchRoundCard{{
 			PanelID:   "elem_round_1",
 			ContentID: "elem_round_1_content",
-			Title:     "Round 1 | 进行中 | 0:0",
+			Title:     "<font color=red>**0**</font> : <font color=blue>**0** </font>",
 			Content:   "暂无录制",
-			Expanded:  true,
 		}},
 		Color:     "orange",
 		MatchType: "测试",
 		ZoneTitle: "测试赛区",
 	}}
-	data, err := content.RenderJSON()
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	client := lark.NewClient(appID, appSecret, lark.WithEnableTokenCache(true))
 	ctx := context.Background()
-	createResp, err := client.Cardkit.V1.Card.Create(ctx, larkcardkit.NewCreateCardReqBuilder().
-		Body(larkcardkit.NewCreateCardReqBodyBuilder().Type("card_json").Data(data).Build()).
-		Build())
+	retry := func(_ string, f func() error) error { return f() }
+	cardID, _, err := CreateCardEntity(ctx, client, retry, content)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !createResp.Success() {
-		t.Fatalf("create failed: %d %s", createResp.Code, createResp.Msg)
+	if os.Getenv("LARK_CARDKIT_SMOKE_SEND") == "1" {
+		chats, err := client.Im.Chat.List(ctx, larkim.NewListChatReqBuilder().PageSize(1).Build())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !chats.Success() {
+			t.Fatalf("chat list failed: %d %s", chats.Code, chats.Msg)
+		}
+		if len(chats.Data.Items) == 0 {
+			t.Fatal("no joined chat available for smoke send")
+		}
+		chatID := *chats.Data.Items[0].ChatId
+		if err := SendCardReferenceMessage(ctx, client, retry, chatID, cardID, fmt.Sprintf("card-smoke:%d", time.Now().UnixNano()%1_000_000_000)); err != nil {
+			t.Fatal(err)
+		}
 	}
-	cardID := *createResp.Data.CardId
 
-	content.Data.MatchProgress = "更新成功"
-	updated, err := content.RenderJSON()
-	if err != nil {
+	content.Data.MatchProgress = "Round 1 已结束"
+	content.Data.Rounds = []MatchRoundCard{{
+		PanelID:   "elem_round_1",
+		ContentID: "elem_round_1_content",
+		Title:     "<font color=red>**1**</font> : <font color=blue>**0** </font>",
+		Content:   "[主视角](https://example.com/round1-main)",
+	}}
+	sequence := time.Now().Unix()
+	if _, err := UpdateCardEntity(ctx, client, retry, cardID, fmt.Sprintf("card-smoke-up1:%d", time.Now().UnixNano()%1_000_000_000), sequence, content); err != nil {
 		t.Fatal(err)
 	}
-	updateResp, err := client.Cardkit.V1.Card.Update(ctx, larkcardkit.NewUpdateCardReqBuilder().
-		CardId(cardID).
-		Body(larkcardkit.NewUpdateCardReqBodyBuilder().
-			Card(larkcardkit.NewCardBuilder().Type("card_json").Data(updated).Build()).
-			Uuid(fmt.Sprintf("rm-monitor-card-json-smoke:%d", time.Now().UnixNano())).
-			Sequence(int(time.Now().Unix())).
-			Build()).
-		Build())
-	if err != nil {
+
+	content.Data.MatchProgress = "Round 2 已结束"
+	content.Data.Report = "Smoke report：Round 1 和 Round 2 录制链接均已写入卡片。"
+	content.Data.Rounds = append(content.Data.Rounds, MatchRoundCard{
+		PanelID:   "elem_round_2",
+		ContentID: "elem_round_2_content",
+		Title:     "<font color=red>**1**</font> : <font color=blue>**1** </font>",
+		Content:   "[主视角](https://example.com/round2-main)\n[蓝方视角](https://example.com/round2-blue)",
+	})
+	if _, err := UpdateCardEntity(ctx, client, retry, cardID, fmt.Sprintf("card-smoke-up2:%d", time.Now().UnixNano()%1_000_000_000), sequence+1, content); err != nil {
 		t.Fatal(err)
-	}
-	if !updateResp.Success() {
-		t.Fatalf("update failed: %d %s", updateResp.Code, updateResp.Msg)
 	}
 }

@@ -30,7 +30,6 @@ type MatchRoundCard struct {
 	ContentID string
 	Title     string
 	Content   string
-	Expanded  bool
 }
 
 type MatchCardData struct {

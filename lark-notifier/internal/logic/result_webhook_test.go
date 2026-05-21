@@ -73,9 +73,8 @@ func TestCardEntityDataRendersCardJSON(t *testing.T) {
 	content.Data.Rounds = []utils.MatchRoundCard{{
 		PanelID:   "elem_round_1",
 		ContentID: "elem_round_1_content",
-		Title:     "Round 1 | 红方胜 | 1:0",
+		Title:     "<font color=red>**1**</font> : <font color=blue>**0** </font>",
 		Content:   "[主视角](https://example.com/record)",
-		Expanded:  true,
 	}}
 	raw, err := cardEntityData(content)
 	if err != nil {
@@ -103,6 +102,34 @@ func TestCardEntityDataRendersCardJSON(t *testing.T) {
 			foundPanel = true
 			if m["element_id"] != "elem_round_1" {
 				t.Fatalf("panel element_id = %v, want elem_round_1", m["element_id"])
+			}
+			if m["direction"] != "vertical" || m["horizontal_align"] != "center" || m["vertical_align"] != "center" {
+				t.Fatalf("unexpected panel alignment: %#v", m)
+			}
+			if m["expanded"] != false || m["background_color"] != "grey-200" {
+				t.Fatalf("unexpected panel display settings: %#v", m)
+			}
+			header := m["header"].(map[string]any)
+			if _, ok := header["background_color"]; ok {
+				t.Fatalf("header background_color should not be set: %#v", header)
+			}
+			if header["width"] != "fill" || header["vertical_align"] != "center" {
+				t.Fatalf("unexpected panel header: %#v", header)
+			}
+			icon := header["icon"].(map[string]any)
+			if icon["tag"] != "standard_icon" || icon["token"] != "down-small-ccm_outlined" || icon["color"] != "" || icon["size"] != "16px 16px" {
+				t.Fatalf("unexpected panel icon: %#v", icon)
+			}
+			title := header["title"].(map[string]any)
+			if title["tag"] != "markdown" || title["content"] != "<font color=red>**1**</font> : <font color=blue>**0** </font>" {
+				t.Fatalf("unexpected panel title: %#v", title)
+			}
+			border := m["border"].(map[string]any)
+			if _, ok := border["color"]; ok {
+				t.Fatalf("border color should not be set: %#v", border)
+			}
+			if border["corner_radius"] != "5px" {
+				t.Fatalf("unexpected panel border: %#v", border)
 			}
 			children := m["elements"].([]any)
 			content := children[0].(map[string]any)
@@ -133,8 +160,8 @@ func TestCardEntityDataRendersMultipleRoundPanels(t *testing.T) {
 		RedSchool:  "红校",
 		BlueSchool: "蓝校",
 		Rounds: []utils.MatchRoundCard{
-			{PanelID: "elem_round_1", ContentID: "elem_round_1_content", Title: "Round 1", Content: "暂无录制"},
-			{PanelID: "elem_round_2", ContentID: "elem_round_2_content", Title: "Round 2", Content: "[主视角](https://example.com)"},
+			{PanelID: "elem_round_1", ContentID: "elem_round_1_content", Title: "<font color=red>**0**</font> : <font color=blue>**0** </font>", Content: "暂无录制"},
+			{PanelID: "elem_round_2", ContentID: "elem_round_2_content", Title: "<font color=red>**1**</font> : <font color=blue>**0** </font>", Content: "[主视角](https://example.com)"},
 		},
 	}}
 	raw, err := cardEntityData(content)
@@ -183,7 +210,7 @@ func TestRoundCardsIncludeUploadLinks(t *testing.T) {
 	if got[0].PanelID != "elem_round_1" || got[0].ContentID != "elem_round_1_content" {
 		t.Fatalf("unexpected element ids: %#v", got[0])
 	}
-	if !strings.Contains(got[0].Title, "红方胜") || !strings.Contains(got[0].Title, "1:0") {
+	if got[0].Title != "<font color=red>**1**</font> : <font color=blue>**0** </font>" {
 		t.Fatalf("unexpected title: %s", got[0].Title)
 	}
 	if got[0].Content != "[主视角](https://example.com/record)" {

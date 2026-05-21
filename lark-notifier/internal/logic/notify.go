@@ -2,17 +2,13 @@ package logic
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"math/rand"
 	"reflect"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 
-	larkcardkit "github.com/larksuite/oapi-sdk-go/v3/service/cardkit/v1"
-	larkim "github.com/larksuite/oapi-sdk-go/v3/service/im/v1"
 	"github.com/pkg/errors"
 	"github.com/samber/lo"
 	"scutbot.cn/web/rm-monitor/ent"
@@ -166,37 +162,14 @@ func (l *NotifyLogic) ensureMatchCard(m *ent.Match) (*ent.LarkMessage, error) {
 	if err != nil {
 		return nil, err
 	}
-	contentData, err := cardEntityData(content)
+	cardID, payload, err := utils.CreateCardEntity(l.ctx, l.svcCtx.LarkClient, l.retryLark, content)
 	if err != nil {
 		return nil, err
 	}
-	var resp *larkcardkit.CreateCardResp
-	err = l.withLarkRetry("", func() error {
-		var callErr error
-		resp, callErr = l.svcCtx.LarkClient.Cardkit.V1.Card.Create(l.ctx, larkcardkit.NewCreateCardReqBuilder().
-			Body(larkcardkit.NewCreateCardReqBodyBuilder().
-				Type("card_json").
-				Data(contentData).
-				Build()).
-			Build())
-		if callErr != nil {
-			return callErr
-		}
-		if !resp.Success() {
-			return resp
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, errors.Wrap(err, "create cardkit card")
-	}
-	if resp.Data == nil || resp.Data.CardId == nil || *resp.Data.CardId == "" {
-		return nil, errors.New("create cardkit card returned empty card_id")
-	}
 	card, err := l.svcCtx.DB.LarkMessage.Create().
 		SetMatchID(m.ID).
-		SetCardID(*resp.Data.CardId).
-		SetCardPayload(toMap(content)).
+		SetCardID(cardID).
+		SetCardPayload(payload).
 		Save(l.ctx)
 	if err != nil && !ent.IsConstraintError(err) {
 		return nil, errors.Wrap(err, "save lark card")
@@ -221,38 +194,9 @@ func (l *NotifyLogic) sendCardReferencesToChats(m *ent.Match, card *ent.LarkMess
 	if strings.HasPrefix(card.CardID, "legacy:") {
 		return nil
 	}
-	contentData, err := cardMessageContent(card.CardID)
-	if err != nil {
-		return err
-	}
 	for _, chatID := range chatIDs {
-		req := larkim.NewCreateMessageReqBuilder().
-			ReceiveIdType(larkim.ReceiveIdTypeChatId).
-			Body(larkim.NewCreateMessageReqBodyBuilder().
-				ReceiveId(chatID).
-				MsgType(larkim.MsgTypeInteractive).
-				Content(contentData).
-				Uuid(utils.MatchCardUUID(m.ID, chatID)).
-				Build()).
-			Build()
-		var resp *larkim.CreateMessageResp
-		err := l.withLarkRetry(chatID, func() error {
-			var callErr error
-			resp, callErr = l.svcCtx.LarkClient.Im.V1.Message.Create(l.ctx, req)
-			if callErr != nil {
-				return callErr
-			}
-			if !resp.Success() {
-				return resp
-			}
-			return nil
-		})
-		if err != nil {
+		if err := utils.SendCardReferenceMessage(l.ctx, l.svcCtx.LarkClient, l.retryLark, chatID, card.CardID, utils.MatchCardUUID(m.ID, chatID)); err != nil {
 			l.Error(errors.Wrap(err, "create lark message"))
-			continue
-		}
-		if resp.Data == nil || resp.Data.MessageId == nil || *resp.Data.MessageId == "" {
-			l.Error(errors.New("create lark message returned empty message_id"))
 			continue
 		}
 	}
@@ -338,11 +282,7 @@ func (l *NotifyLogic) patchMatchCards(m *ent.Match) error {
 	if err != nil {
 		return err
 	}
-	contentMap := toMap(content)
-	contentData, err := cardEntityData(content)
-	if err != nil {
-		return err
-	}
+	contentMap := utils.ToMap(content)
 	for _, card := range m.Edges.LarkMessages {
 		if strings.HasPrefix(card.CardID, "legacy:") {
 			continue
@@ -351,34 +291,12 @@ func (l *NotifyLogic) patchMatchCards(m *ent.Match) error {
 			continue
 		}
 		sequence := time.Now().Unix()
-		req := larkcardkit.NewUpdateCardReqBuilder().
-			CardId(card.CardID).
-			Body(larkcardkit.NewUpdateCardReqBodyBuilder().
-				Card(larkcardkit.NewCardBuilder().
-					Type("card_json").
-					Data(contentData).
-					Build()).
-				Uuid(utils.MatchCardUpdateUUID(m.ID, card.CardID, sequence)).
-				Sequence(int(sequence)).
-				Build()).
-			Build()
-		var resp *larkcardkit.UpdateCardResp
-		err := l.withLarkRetry("", func() error {
-			var callErr error
-			resp, callErr = l.svcCtx.LarkClient.Cardkit.V1.Card.Update(l.ctx, req)
-			if callErr != nil {
-				return callErr
-			}
-			if !resp.Success() {
-				return resp
-			}
-			return nil
-		})
+		payload, err := utils.UpdateCardEntity(l.ctx, l.svcCtx.LarkClient, l.retryLark, card.CardID, utils.MatchCardUpdateUUID(m.ID, card.CardID, sequence), sequence, content)
 		if err != nil {
 			l.Error(errors.Wrap(err, "update cardkit card"))
 			continue
 		}
-		if err := l.svcCtx.DB.LarkMessage.UpdateOneID(card.ID).SetCardPayload(contentMap).Exec(l.ctx); err != nil {
+		if err := l.svcCtx.DB.LarkMessage.UpdateOneID(card.ID).SetCardPayload(payload).Exec(l.ctx); err != nil {
 			l.Error(errors.Wrap(err, "update lark card payload"))
 			continue
 		}
@@ -440,33 +358,8 @@ func (l *NotifyLogic) uploadTaskForCard(id int) (*ent.UploadTask, error) {
 		Only(l.ctx)
 }
 
-func (l *NotifyLogic) withLarkRetry(chatID string, f func() error) error {
-	var last error
-	for attempt := 0; attempt < 3; attempt++ {
-		if err := l.svcCtx.RateLimiter.Wait(l.ctx, chatID); err != nil {
-			return err
-		}
-		if err := f(); err != nil {
-			last = err
-			if attempt < 2 {
-				wait := retryDelay(attempt)
-				select {
-				case <-l.ctx.Done():
-					return l.ctx.Err()
-				case <-time.After(wait):
-				}
-			}
-			continue
-		}
-		return nil
-	}
-	return last
-}
-
-func retryDelay(attempt int) time.Duration {
-	base := time.Duration(1<<attempt) * time.Second
-	jitter := time.Duration(rand.Int63n(int64(500 * time.Millisecond)))
-	return base + jitter
+func (l *NotifyLogic) retryLark(chatID string, f func() error) error {
+	return l.svcCtx.RetryLark(l.ctx, chatID, f)
 }
 
 func (l *NotifyLogic) cardContent(m *ent.Match) (*utils.MatchCardContent, error) {
@@ -528,20 +421,12 @@ func matchNeedsCardSend(m *ent.Match) bool {
 }
 
 func cardEntityData(content *utils.MatchCardContent) (string, error) {
-	return content.RenderJSON()
+	data, _, err := utils.CardEntityData(content)
+	return data, err
 }
 
 func cardMessageContent(cardID string) (string, error) {
-	b, err := json.Marshal(map[string]any{
-		"type": "card",
-		"data": map[string]any{
-			"card_id": cardID,
-		},
-	})
-	if err != nil {
-		return "", errors.Wrap(err, "marshal cardkit message content")
-	}
-	return string(b), nil
+	return utils.CardReferenceMessageContent(cardID)
 }
 
 func completedCardColor(result match.Result) string {
@@ -565,32 +450,27 @@ func (l *NotifyLogic) roundCards(m *ent.Match) []utils.MatchRoundCard {
 	blueWins := 0
 	cards := make([]utils.MatchRoundCard, 0, len(m.Edges.Rounds))
 	for _, r := range m.Edges.Rounds {
-		roundTitle := fmt.Sprintf("Round %d", r.RoundNo)
 		if r.Status == matchround.StatusENDED && r.Winner != nil {
 			switch *r.Winner {
 			case matchround.WinnerRed:
 				redWins++
-				roundTitle = fmt.Sprintf("Round %d | 红方胜 | %d:%d", r.RoundNo, redWins, blueWins)
 			case matchround.WinnerBlue:
 				blueWins++
-				roundTitle = fmt.Sprintf("Round %d | 蓝方胜 | %d:%d", r.RoundNo, redWins, blueWins)
 			case matchround.WinnerDraw:
-				roundTitle = fmt.Sprintf("Round %d | 平局 | %d:%d", r.RoundNo, redWins, blueWins)
 			}
-		} else if r.Status == matchround.StatusSTARTED {
-			roundTitle = fmt.Sprintf("Round %d | 进行中 | %d:%d", r.RoundNo, redWins, blueWins)
-		} else {
-			roundTitle = fmt.Sprintf("Round %d | %d:%d", r.RoundNo, redWins, blueWins)
 		}
 		cards = append(cards, utils.MatchRoundCard{
 			PanelID:   fmt.Sprintf("elem_round_%d", r.RoundNo),
 			ContentID: fmt.Sprintf("elem_round_%d_content", r.RoundNo),
-			Title:     roundTitle,
+			Title:     roundScoreTitle(redWins, blueWins),
 			Content:   roundRecordLinks(r),
-			Expanded:  r.Status == matchround.StatusSTARTED || r.RoundNo == len(m.Edges.Rounds),
 		})
 	}
 	return cards
+}
+
+func roundScoreTitle(redWins, blueWins int) string {
+	return fmt.Sprintf("<font color=red>**%d**</font> : <font color=blue>**%d** </font>", redWins, blueWins)
 }
 
 func roundRecordLinks(r *ent.MatchRound) string {
@@ -651,11 +531,4 @@ func matchCardCompleted(m *ent.Match) bool {
 	return lo.EveryBy(m.Edges.Rounds, func(item *ent.MatchRound) bool {
 		return item.Status == matchround.StatusENDED
 	})
-}
-
-func toMap(v any) map[string]any {
-	var out map[string]any
-	b, _ := json.Marshal(v)
-	_ = json.Unmarshal(b, &out)
-	return out
 }
