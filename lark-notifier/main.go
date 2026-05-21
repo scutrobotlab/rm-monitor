@@ -20,6 +20,7 @@ const (
 	compensationStartupLookback = 30 * time.Minute
 	compensationOverlap         = 5 * time.Second
 	notifyBufferSize            = 1024
+	syncTimeout                 = 120 * time.Second
 )
 
 func init() {
@@ -48,7 +49,7 @@ func main() {
 	for {
 		select {
 		case event := <-events:
-			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), syncTimeout)
 			if err := logic.NewNotifyLogic(ctx, svcCtx).SyncEvent(event.Channel, event.Payload); err != nil {
 				logx.Errorf("lark notifier event sync failed: %v", err)
 			}
@@ -56,7 +57,7 @@ func main() {
 		case <-ticker.C:
 			scanSince := lastCompensationScan.Add(-compensationOverlap)
 			scanStartedAt := time.Now()
-			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), syncTimeout)
 			if err := logic.NewNotifyLogic(ctx, svcCtx).Sync(scanSince); err != nil {
 				logx.Errorf("lark notifier sync failed: %v", err)
 			} else {
