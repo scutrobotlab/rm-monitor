@@ -58,6 +58,7 @@ highlight:
   role: "主视角"
   algorithmVersion: "danmu-zscore-v1"
   maxHighlightsPerRound: 5
+  maxConcurrentJobs: 3
   minClipSeconds: 20
   maxClipSeconds: 90
   preSeconds: 15

@@ -237,6 +237,7 @@ func readSTT(path string, start, end float64) ([]sttLine, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "read stt jsonl")
 	}
+	var all []sttLine
 	var out []sttLine
 	for _, line := range strings.Split(strings.TrimSpace(string(raw)), "\n") {
 		if strings.TrimSpace(line) == "" {
@@ -246,14 +247,56 @@ func readSTT(path string, start, end float64) ([]sttLine, error) {
 		if err := json.Unmarshal([]byte(line), &row); err != nil {
 			continue
 		}
-		if row.Status == "SUCCEEDED" && row.Text != "" && row.End >= start && row.Start <= end {
+		if row.Status != "SUCCEEDED" || strings.TrimSpace(row.Text) == "" {
+			continue
+		}
+		all = append(all, row)
+		if row.End >= start && row.Start <= end {
 			out = append(out, row)
 		}
 	}
-	if len(out) == 0 {
-		return nil, errors.New("no stt text in highlight range")
+	if len(out) > 0 {
+		return out, nil
 	}
-	return out, nil
+	if len(all) == 0 {
+		return nil, errors.New("no stt text available")
+	}
+	const contextSeconds = 60.0
+	for _, row := range all {
+		if row.End >= start-contextSeconds && row.Start <= end+contextSeconds {
+			out = append(out, row)
+		}
+	}
+	if len(out) > 0 {
+		return out, nil
+	}
+	return nearestSTT(all, start, end), nil
+}
+
+func nearestSTT(lines []sttLine, start, end float64) []sttLine {
+	center := (start + end) / 2
+	best := make([]sttLine, 0, 6)
+	for _, line := range lines {
+		d := math.Abs(((line.Start + line.End) / 2) - center)
+		inserted := false
+		for i, existing := range best {
+			existingD := math.Abs(((existing.Start + existing.End) / 2) - center)
+			if d < existingD {
+				best = append(best, sttLine{})
+				copy(best[i+1:], best[i:])
+				best[i] = line
+				inserted = true
+				break
+			}
+		}
+		if !inserted {
+			best = append(best, line)
+		}
+		if len(best) > 6 {
+			best = best[:6]
+		}
+	}
+	return best
 }
 
 type danmuText struct {

@@ -70,6 +70,7 @@ type HighlightConf struct {
 	Role                  string                 `json:",optional"`
 	AlgorithmVersion      string                 `json:",optional"`
 	MaxHighlightsPerRound int                    `json:",optional"`
+	MaxConcurrentJobs     int                    `json:",optional"`
 	MinClipSeconds        int                    `json:",optional"`
 	MaxClipSeconds        int                    `json:",optional"`
 	PreSeconds            int                    `json:",optional"`
@@ -88,6 +89,9 @@ func (c *HighlightConf) WithDefaults() HighlightConf {
 	}
 	if out.MaxHighlightsPerRound <= 0 {
 		out.MaxHighlightsPerRound = 5
+	}
+	if out.MaxConcurrentJobs <= 0 {
+		out.MaxConcurrentJobs = 3
 	}
 	if out.MinClipSeconds <= 0 {
 		out.MinClipSeconds = 20

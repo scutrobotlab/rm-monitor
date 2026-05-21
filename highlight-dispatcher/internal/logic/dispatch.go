@@ -195,15 +195,27 @@ func (l *DispatchLogic) recoverLostRunning() error {
 }
 
 func (l *DispatchLogic) dispatchPending() error {
+	jobConf := l.svcCtx.Config.K8sJobConf.WithDefaults()
+	limit := l.svcCtx.Config.HighlightConf.WithDefaults().MaxConcurrentJobs
+	if l.svcCtx.K8s != nil {
+		active, err := l.svcCtx.K8s.CountUnfinishedJobs(l.ctx, jobConf.Namespace, "rm-monitor/job=highlight-artifact-job")
+		if err != nil {
+			return err
+		}
+		remaining := limit - active
+		if remaining <= 0 {
+			return nil
+		}
+		limit = remaining
+	}
 	clips, err := l.svcCtx.DB.HighlightClip.Query().
 		Where(highlightclip.StatusEQ(highlightclip.StatusPENDING)).
 		Order(highlightclip.ByPriority(sql.OrderDesc()), highlightclip.ByCreatedAt()).
-		Limit(20).
+		Limit(limit).
 		All(l.ctx)
 	if err != nil {
 		return errors.Wrap(err, "query pending highlight clips")
 	}
-	jobConf := l.svcCtx.Config.K8sJobConf.WithDefaults()
 	for _, clip := range clips {
 		jobName := jobName("highlight", clip.ID)
 		claimed, err := l.svcCtx.DB.HighlightClip.Update().

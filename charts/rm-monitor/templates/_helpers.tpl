@@ -72,6 +72,7 @@ HighlightConf:
   Role: {{ .Values.highlight.role | quote }}
   AlgorithmVersion: {{ .Values.highlight.algorithmVersion | quote }}
   MaxHighlightsPerRound: {{ .Values.highlight.maxHighlightsPerRound }}
+  MaxConcurrentJobs: {{ .Values.highlight.maxConcurrentJobs }}
   MinClipSeconds: {{ .Values.highlight.minClipSeconds }}
   MaxClipSeconds: {{ .Values.highlight.maxClipSeconds }}
   PreSeconds: {{ .Values.highlight.preSeconds }}
