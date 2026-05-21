@@ -59,9 +59,12 @@ dump_debug() {
   fi
   log "debug dump after failure"
   "$KUBECTL" -n "$NS" get pods,pvc,jobs,events --sort-by=.metadata.creationTimestamp || true
-  for name in monitor record-dispatcher; do
+  for name in monitor record-dispatcher e2e-media; do
     "$KUBECTL" -n "$NS" describe deploy/"$name" || true
     "$KUBECTL" -n "$NS" logs deploy/"$name" --tail=120 || true
+  done
+  for pod in $("$KUBECTL" -n "$NS" get pods -o name | grep -E 'record-|manifest-' || true); do
+    "$KUBECTL" -n "$NS" logs "$pod" --tail=120 || true
   done
 }
 trap dump_debug ERR
@@ -230,12 +233,13 @@ spec:
     spec:
       containers:
         - name: media
-          image: ghcr.io/scutrobotlab/rm-monitor/record-job:dev
+          image: python:3.12-alpine
           imagePullPolicy: IfNotPresent
           command: ["/bin/sh", "-lc"]
           args:
             - |
               set -eu
+              apk add --no-cache ffmpeg
               mkdir -p /tmp/hls
               ffmpeg -hide_banner -loglevel error -re \
                 -f lavfi -i testsrc2=size=320x180:rate=15 \
@@ -243,7 +247,7 @@ spec:
                 -c:v libx264 -preset ultrafast -pix_fmt yuv420p -g 30 \
                 -c:a aac -f hls -hls_time 1 -hls_list_size 6 \
                 -hls_flags delete_segments+append_list /tmp/hls/main.m3u8 &
-              busybox httpd -f -p 8080 -h /tmp/hls
+              python -m http.server 8080 --directory /tmp/hls
           ports:
             - {containerPort: 8080}
 ---
