@@ -4,6 +4,7 @@ import * as Canvas from "canvas";
 import { writeFileAtomic } from "./atomic.js";
 
 export const statsBucketSeconds = 10;
+const chartFontFamily = "Noto Sans CJK SC, Noto Sans CJK, Noto Sans SC, sans-serif";
 
 export type DanmuCountPoint = {
   t: number;
@@ -101,7 +102,7 @@ async function renderLineChart(input: { title: string; yName: string; seriesName
       text: input.title,
       orient: "top",
       align: "left",
-      textStyle: { fill: "#111827", fontSize: 20, fontWeight: 700 },
+      textStyle: { fill: "#111827", fontSize: 20, fontWeight: 700, fontFamily: chartFontFamily },
     },
     data: [{ id: "stats", values }],
     xField: "t",
@@ -113,15 +114,15 @@ async function renderLineChart(input: { title: string; yName: string; seriesName
       {
         orient: "bottom",
         type: "linear",
-        title: { visible: true, text: "时间 / 秒" },
-        label: { style: { fill: "#4b5563" } },
+        title: { visible: true, text: "时间 / 秒", style: { fontFamily: chartFontFamily } },
+        label: { style: { fill: "#4b5563", fontFamily: chartFontFamily } },
         grid: { visible: true, style: { stroke: "#e5e7eb" } },
       },
       {
         orient: "left",
         type: "linear",
-        title: { visible: true, text: input.yName },
-        label: { style: { fill: "#4b5563" } },
+        title: { visible: true, text: input.yName, style: { fontFamily: chartFontFamily } },
+        label: { style: { fill: "#4b5563", fontFamily: chartFontFamily } },
         grid: { visible: true, style: { stroke: "#e5e7eb" } },
       },
     ],

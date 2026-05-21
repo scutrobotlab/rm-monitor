@@ -25,6 +25,7 @@ ENV TZ=Asia/Shanghai
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
+    fonts-noto-cjk \
     libcairo2 \
     libgif7 \
     libjpeg62-turbo \
