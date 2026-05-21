@@ -9,6 +9,8 @@
 /data
 /danmu-job/dist
 /danmu-job/node_modules
+/highlight-publish-bilibili-job/target
+/target
 /recorder/data
 *.exe
 *.test

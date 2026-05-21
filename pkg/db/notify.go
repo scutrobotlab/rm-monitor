@@ -13,6 +13,7 @@ const (
 	RecordTaskChangedChannel    = "record_task_changed"
 	UploadTaskChangedChannel    = "upload_task_changed"
 	TranscodeTaskChangedChannel = "transcode_task_changed"
+	HighlightClipChangedChannel = "highlight_clip_changed"
 )
 
 func Notify(ctx context.Context, dsn, channel, payload string) error {

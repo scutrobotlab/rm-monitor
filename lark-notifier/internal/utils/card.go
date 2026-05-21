@@ -1,92 +1,137 @@
 package utils
 
 import (
+	"bytes"
 	"context"
+	_ "embed"
+	"encoding/json"
 	"fmt"
+	"strconv"
+	"strings"
+	"text/template"
 
 	"github.com/pkg/errors"
 	"scutbot.cn/web/rm-monitor/lark-notifier/internal/svc"
 	"scutbot.cn/web/rm-monitor/monitor/types"
 )
 
-const matchCardId = "AAqtDaxtZLomZ"
+//go:embed card.json.tpl
+var matchCardTemplateSource string
+
+var matchCardTemplate = template.Must(template.New("match-card").
+	Funcs(template.FuncMap{
+		"json":     jsonLiteral,
+		"jsonText": jsonStringContent,
+	}).
+	Parse(matchCardTemplateSource))
 
 type MatchScore struct {
 	RedScore  string `json:"red_score"`
 	BlueScore string `json:"blue_score"`
 }
 
-type CardImage struct {
-	ImgKey string `json:"img_key"`
+type MatchCardData struct {
+	RedTeam       string
+	BlueTeam      string
+	MatchProgress string
+	MatchIndex    string
+	TotalRound    string
+	MatchID       string
+	EventTitle    string
+	RedSchool     string
+	BlueSchool    string
+	RedAvatar     string
+	BlueAvatar    string
+	Scores        []MatchScore
+	Color         string
+	MatchType     string
+	ZoneTitle     string
+	Report        string
+	Result        string
+	Winner        string
+	WinnerPlace   string
+	LoserPlace    string
 }
 
 type MatchCardContent struct {
-	Type string `json:"type"`
-	Data struct {
-		TemplateId       string `json:"template_id"`
-		TemplateVariable struct {
-			RedTeam       string       `json:"red_team"`
-			BlueTeam      string       `json:"blue_team"`
-			MatchProgress string       `json:"match_progress"`
-			MatchIndex    string       `json:"match_index"`
-			TotalRound    string       `json:"total_round"`
-			MatchId       string       `json:"match_id"`
-			EventTitle    string       `json:"event_title"`
-			RedSchool     string       `json:"red_school"`
-			BlueSchool    string       `json:"blue_school"`
-			RedAvatar     CardImage    `json:"red_avatar"`
-			BlueAvatar    CardImage    `json:"blue_avatar"`
-			Scores        []MatchScore `json:"scores"`
-			Color         string       `json:"color"`
-			MatchType     string       `json:"match_type"`
-			ZoneTitle     string       `json:"zone_title"`
-			Report        string       `json:"report"`
-			Result        string       `json:"result"`
-			Winner        string       `json:"winner"`
-			WinnerPlace   string       `json:"winner_placeholder_name"`
-			LoserPlace    string       `json:"loser_placeholder_name"`
-		} `json:"template_variable"`
-	} `json:"data"`
+	Data MatchCardData `json:"-"`
 }
 
 func NewMatchCardContent(ctx context.Context, svcCtx *svc.ServiceContext, m *types.Match) (*MatchCardContent, error) {
 	var content MatchCardContent
 	var err error
-	content.Type = "template"
-	content.Data.TemplateId = matchCardId
-	content.Data.TemplateVariable.RedTeam = m.RedTeam.Name
-	content.Data.TemplateVariable.BlueTeam = m.BlueTeam.Name
-	content.Data.TemplateVariable.MatchProgress = "进行中"
-	content.Data.TemplateVariable.MatchIndex = fmt.Sprintf("%d", m.Order)
-	content.Data.TemplateVariable.TotalRound = fmt.Sprintf("%d", m.TotalRounds)
-	content.Data.TemplateVariable.MatchId = m.Id
-	content.Data.TemplateVariable.EventTitle = m.EventName
-	content.Data.TemplateVariable.RedSchool = m.RedTeam.SchoolName
-	content.Data.TemplateVariable.BlueSchool = m.BlueTeam.SchoolName
-	redAvatar, err := GetImageKey(ctx, svcCtx, m.RedTeam.SchoolLogo)
+	content.Data.RedTeam = m.RedTeam.Name
+	content.Data.BlueTeam = m.BlueTeam.Name
+	content.Data.MatchProgress = "进行中"
+	content.Data.MatchIndex = fmt.Sprintf("%d", m.Order)
+	content.Data.TotalRound = fmt.Sprintf("%d", m.TotalRounds)
+	content.Data.MatchID = m.Id
+	content.Data.EventTitle = m.EventName
+	content.Data.RedSchool = m.RedTeam.SchoolName
+	content.Data.BlueSchool = m.BlueTeam.SchoolName
+	content.Data.RedAvatar, err = GetImageKey(ctx, svcCtx, m.RedTeam.SchoolLogo)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get red avatar")
 	}
-	content.Data.TemplateVariable.RedAvatar = CardImage{ImgKey: redAvatar}
-	blueAvatar, err := GetImageKey(ctx, svcCtx, m.BlueTeam.SchoolLogo)
+	content.Data.BlueAvatar, err = GetImageKey(ctx, svcCtx, m.BlueTeam.SchoolLogo)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get blue avatar")
 	}
-	content.Data.TemplateVariable.BlueAvatar = CardImage{ImgKey: blueAvatar}
-	content.Data.TemplateVariable.Scores = []MatchScore{
+	content.Data.Scores = []MatchScore{
 		{"0", "0"},
 	}
-	content.Data.TemplateVariable.Color = "orange"
-	content.Data.TemplateVariable.MatchType = m.MatchType
-	content.Data.TemplateVariable.ZoneTitle = m.ZoneName
-	content.Data.TemplateVariable.Report = m.Report
-	content.Data.TemplateVariable.Result = m.Result
-	content.Data.TemplateVariable.Winner = m.WinnerText
-	content.Data.TemplateVariable.WinnerPlace = m.WinnerPlacehold
-	content.Data.TemplateVariable.LoserPlace = m.LoserPlacehold
+	content.Data.Color = "orange"
+	content.Data.MatchType = m.MatchType
+	content.Data.ZoneTitle = m.ZoneName
+	content.Data.Report = m.Report
+	content.Data.Result = m.Result
+	content.Data.Winner = m.WinnerText
+	content.Data.WinnerPlace = m.WinnerPlacehold
+	content.Data.LoserPlace = m.LoserPlacehold
 	if m.MatchSlug != "" {
-		content.Data.TemplateVariable.MatchType = m.MatchSlug
+		content.Data.MatchType = m.MatchSlug
 	}
 
 	return &content, nil
+}
+
+func (c *MatchCardContent) MarshalJSON() ([]byte, error) {
+	raw, err := c.RenderJSON()
+	if err != nil {
+		return nil, err
+	}
+	return []byte(raw), nil
+}
+
+func (c *MatchCardContent) RenderJSON() (string, error) {
+	var buf bytes.Buffer
+	if err := matchCardTemplate.Execute(&buf, c.Data); err != nil {
+		return "", errors.Wrap(err, "render match card template")
+	}
+	var compact bytes.Buffer
+	if err := json.Compact(&compact, buf.Bytes()); err != nil {
+		return "", errors.Wrap(err, "compact rendered match card json")
+	}
+	return compact.String(), nil
+}
+
+func jsonLiteral(v any) (string, error) {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
+}
+
+func jsonStringContent(v any) (string, error) {
+	s, ok := v.(string)
+	if !ok {
+		b, err := json.Marshal(v)
+		if err != nil {
+			return "", err
+		}
+		s = string(b)
+	}
+	quoted := strconv.Quote(s)
+	return strings.TrimSuffix(strings.TrimPrefix(quoted, `"`), `"`), nil
 }

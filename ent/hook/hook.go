@@ -21,6 +21,30 @@ func (f HighlightClipFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Valu
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.HighlightClipMutation", m)
 }
 
+// The HighlightPublishTaskFunc type is an adapter to allow the use of ordinary
+// function as HighlightPublishTask mutator.
+type HighlightPublishTaskFunc func(context.Context, *ent.HighlightPublishTaskMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f HighlightPublishTaskFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.HighlightPublishTaskMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.HighlightPublishTaskMutation", m)
+}
+
+// The LarkCardMessageFunc type is an adapter to allow the use of ordinary
+// function as LarkCardMessage mutator.
+type LarkCardMessageFunc func(context.Context, *ent.LarkCardMessageMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f LarkCardMessageFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.LarkCardMessageMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.LarkCardMessageMutation", m)
+}
+
 // The LarkMessageFunc type is an adapter to allow the use of ordinary
 // function as LarkMessage mutator.
 type LarkMessageFunc func(context.Context, *ent.LarkMessageMutation) (ent.Value, error)

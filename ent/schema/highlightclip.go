@@ -43,6 +43,7 @@ func (HighlightClip) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("match_round", MatchRound.Type).Ref("highlight_clips").Unique().Required(),
 		edge.From("source_artifact", MediaArtifact.Type).Ref("highlight_clips").Unique().Required(),
+		edge.To("publish_tasks", HighlightPublishTask.Type),
 	}
 }
 

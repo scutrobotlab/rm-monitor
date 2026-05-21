@@ -12,6 +12,8 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"scutbot.cn/web/rm-monitor/ent/highlightclip"
+	"scutbot.cn/web/rm-monitor/ent/highlightpublishtask"
+	"scutbot.cn/web/rm-monitor/ent/larkcardmessage"
 	"scutbot.cn/web/rm-monitor/ent/larkmessage"
 	"scutbot.cn/web/rm-monitor/ent/match"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
@@ -32,15 +34,17 @@ const (
 	OpUpdateOne = ent.OpUpdateOne
 
 	// Node types.
-	TypeHighlightClip = "HighlightClip"
-	TypeLarkMessage   = "LarkMessage"
-	TypeMatch         = "Match"
-	TypeMatchRound    = "MatchRound"
-	TypeMediaArtifact = "MediaArtifact"
-	TypeRecordTask    = "RecordTask"
-	TypeTeam          = "Team"
-	TypeTranscodeTask = "TranscodeTask"
-	TypeUploadTask    = "UploadTask"
+	TypeHighlightClip        = "HighlightClip"
+	TypeHighlightPublishTask = "HighlightPublishTask"
+	TypeLarkCardMessage      = "LarkCardMessage"
+	TypeLarkMessage          = "LarkMessage"
+	TypeMatch                = "Match"
+	TypeMatchRound           = "MatchRound"
+	TypeMediaArtifact        = "MediaArtifact"
+	TypeRecordTask           = "RecordTask"
+	TypeTeam                 = "Team"
+	TypeTranscodeTask        = "TranscodeTask"
+	TypeUploadTask           = "UploadTask"
 )
 
 // HighlightClipMutation represents an operation that mutates the HighlightClip nodes in the graph.
@@ -83,6 +87,9 @@ type HighlightClipMutation struct {
 	clearedmatch_round     bool
 	source_artifact        *int
 	clearedsource_artifact bool
+	publish_tasks          map[int]struct{}
+	removedpublish_tasks   map[int]struct{}
+	clearedpublish_tasks   bool
 	done                   bool
 	oldValue               func(context.Context) (*HighlightClip, error)
 	predicates             []predicate.HighlightClip
@@ -1280,6 +1287,60 @@ func (m *HighlightClipMutation) ResetSourceArtifact() {
 	m.clearedsource_artifact = false
 }
 
+// AddPublishTaskIDs adds the "publish_tasks" edge to the HighlightPublishTask entity by ids.
+func (m *HighlightClipMutation) AddPublishTaskIDs(ids ...int) {
+	if m.publish_tasks == nil {
+		m.publish_tasks = make(map[int]struct{})
+	}
+	for i := range ids {
+		m.publish_tasks[ids[i]] = struct{}{}
+	}
+}
+
+// ClearPublishTasks clears the "publish_tasks" edge to the HighlightPublishTask entity.
+func (m *HighlightClipMutation) ClearPublishTasks() {
+	m.clearedpublish_tasks = true
+}
+
+// PublishTasksCleared reports if the "publish_tasks" edge to the HighlightPublishTask entity was cleared.
+func (m *HighlightClipMutation) PublishTasksCleared() bool {
+	return m.clearedpublish_tasks
+}
+
+// RemovePublishTaskIDs removes the "publish_tasks" edge to the HighlightPublishTask entity by IDs.
+func (m *HighlightClipMutation) RemovePublishTaskIDs(ids ...int) {
+	if m.removedpublish_tasks == nil {
+		m.removedpublish_tasks = make(map[int]struct{})
+	}
+	for i := range ids {
+		delete(m.publish_tasks, ids[i])
+		m.removedpublish_tasks[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedPublishTasks returns the removed IDs of the "publish_tasks" edge to the HighlightPublishTask entity.
+func (m *HighlightClipMutation) RemovedPublishTasksIDs() (ids []int) {
+	for id := range m.removedpublish_tasks {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// PublishTasksIDs returns the "publish_tasks" edge IDs in the mutation.
+func (m *HighlightClipMutation) PublishTasksIDs() (ids []int) {
+	for id := range m.publish_tasks {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetPublishTasks resets all changes to the "publish_tasks" edge.
+func (m *HighlightClipMutation) ResetPublishTasks() {
+	m.publish_tasks = nil
+	m.clearedpublish_tasks = false
+	m.removedpublish_tasks = nil
+}
+
 // Where appends a list predicates to the HighlightClipMutation builder.
 func (m *HighlightClipMutation) Where(ps ...predicate.HighlightClip) {
 	m.predicates = append(m.predicates, ps...)
@@ -1891,12 +1952,15 @@ func (m *HighlightClipMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *HighlightClipMutation) AddedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.match_round != nil {
 		edges = append(edges, highlightclip.EdgeMatchRound)
 	}
 	if m.source_artifact != nil {
 		edges = append(edges, highlightclip.EdgeSourceArtifact)
+	}
+	if m.publish_tasks != nil {
+		edges = append(edges, highlightclip.EdgePublishTasks)
 	}
 	return edges
 }
@@ -1913,30 +1977,50 @@ func (m *HighlightClipMutation) AddedIDs(name string) []ent.Value {
 		if id := m.source_artifact; id != nil {
 			return []ent.Value{*id}
 		}
+	case highlightclip.EdgePublishTasks:
+		ids := make([]ent.Value, 0, len(m.publish_tasks))
+		for id := range m.publish_tasks {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *HighlightClipMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
+	if m.removedpublish_tasks != nil {
+		edges = append(edges, highlightclip.EdgePublishTasks)
+	}
 	return edges
 }
 
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *HighlightClipMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case highlightclip.EdgePublishTasks:
+		ids := make([]ent.Value, 0, len(m.removedpublish_tasks))
+		for id := range m.removedpublish_tasks {
+			ids = append(ids, id)
+		}
+		return ids
+	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *HighlightClipMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.clearedmatch_round {
 		edges = append(edges, highlightclip.EdgeMatchRound)
 	}
 	if m.clearedsource_artifact {
 		edges = append(edges, highlightclip.EdgeSourceArtifact)
+	}
+	if m.clearedpublish_tasks {
+		edges = append(edges, highlightclip.EdgePublishTasks)
 	}
 	return edges
 }
@@ -1949,6 +2033,8 @@ func (m *HighlightClipMutation) EdgeCleared(name string) bool {
 		return m.clearedmatch_round
 	case highlightclip.EdgeSourceArtifact:
 		return m.clearedsource_artifact
+	case highlightclip.EdgePublishTasks:
+		return m.clearedpublish_tasks
 	}
 	return false
 }
@@ -1977,26 +2063,1706 @@ func (m *HighlightClipMutation) ResetEdge(name string) error {
 	case highlightclip.EdgeSourceArtifact:
 		m.ResetSourceArtifact()
 		return nil
+	case highlightclip.EdgePublishTasks:
+		m.ResetPublishTasks()
+		return nil
 	}
 	return fmt.Errorf("unknown HighlightClip edge %s", name)
 }
 
-// LarkMessageMutation represents an operation that mutates the LarkMessage nodes in the graph.
-type LarkMessageMutation struct {
+// HighlightPublishTaskMutation represents an operation that mutates the HighlightPublishTask nodes in the graph.
+type HighlightPublishTaskMutation struct {
+	config
+	op                    Op
+	typ                   string
+	id                    *int
+	platform              *highlightpublishtask.Platform
+	status                *highlightpublishtask.Status
+	priority              *int
+	addpriority           *int
+	k8s_job_name          *string
+	attempts              *int
+	addattempts           *int
+	publish_url           *string
+	external_id           *string
+	error_message         *string
+	started_at            *time.Time
+	completed_at          *time.Time
+	created_at            *time.Time
+	updated_at            *time.Time
+	clearedFields         map[string]struct{}
+	highlight_clip        *int
+	clearedhighlight_clip bool
+	done                  bool
+	oldValue              func(context.Context) (*HighlightPublishTask, error)
+	predicates            []predicate.HighlightPublishTask
+}
+
+var _ ent.Mutation = (*HighlightPublishTaskMutation)(nil)
+
+// highlightpublishtaskOption allows management of the mutation configuration using functional options.
+type highlightpublishtaskOption func(*HighlightPublishTaskMutation)
+
+// newHighlightPublishTaskMutation creates new mutation for the HighlightPublishTask entity.
+func newHighlightPublishTaskMutation(c config, op Op, opts ...highlightpublishtaskOption) *HighlightPublishTaskMutation {
+	m := &HighlightPublishTaskMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeHighlightPublishTask,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withHighlightPublishTaskID sets the ID field of the mutation.
+func withHighlightPublishTaskID(id int) highlightpublishtaskOption {
+	return func(m *HighlightPublishTaskMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *HighlightPublishTask
+		)
+		m.oldValue = func(ctx context.Context) (*HighlightPublishTask, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().HighlightPublishTask.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withHighlightPublishTask sets the old HighlightPublishTask of the mutation.
+func withHighlightPublishTask(node *HighlightPublishTask) highlightpublishtaskOption {
+	return func(m *HighlightPublishTaskMutation) {
+		m.oldValue = func(context.Context) (*HighlightPublishTask, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m HighlightPublishTaskMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m HighlightPublishTaskMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *HighlightPublishTaskMutation) ID() (id int, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *HighlightPublishTaskMutation) IDs(ctx context.Context) ([]int, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []int{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().HighlightPublishTask.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetPlatform sets the "platform" field.
+func (m *HighlightPublishTaskMutation) SetPlatform(h highlightpublishtask.Platform) {
+	m.platform = &h
+}
+
+// Platform returns the value of the "platform" field in the mutation.
+func (m *HighlightPublishTaskMutation) Platform() (r highlightpublishtask.Platform, exists bool) {
+	v := m.platform
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPlatform returns the old "platform" field's value of the HighlightPublishTask entity.
+// If the HighlightPublishTask object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *HighlightPublishTaskMutation) OldPlatform(ctx context.Context) (v highlightpublishtask.Platform, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPlatform is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPlatform requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPlatform: %w", err)
+	}
+	return oldValue.Platform, nil
+}
+
+// ResetPlatform resets all changes to the "platform" field.
+func (m *HighlightPublishTaskMutation) ResetPlatform() {
+	m.platform = nil
+}
+
+// SetStatus sets the "status" field.
+func (m *HighlightPublishTaskMutation) SetStatus(h highlightpublishtask.Status) {
+	m.status = &h
+}
+
+// Status returns the value of the "status" field in the mutation.
+func (m *HighlightPublishTaskMutation) Status() (r highlightpublishtask.Status, exists bool) {
+	v := m.status
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStatus returns the old "status" field's value of the HighlightPublishTask entity.
+// If the HighlightPublishTask object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *HighlightPublishTaskMutation) OldStatus(ctx context.Context) (v highlightpublishtask.Status, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStatus requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStatus: %w", err)
+	}
+	return oldValue.Status, nil
+}
+
+// ResetStatus resets all changes to the "status" field.
+func (m *HighlightPublishTaskMutation) ResetStatus() {
+	m.status = nil
+}
+
+// SetPriority sets the "priority" field.
+func (m *HighlightPublishTaskMutation) SetPriority(i int) {
+	m.priority = &i
+	m.addpriority = nil
+}
+
+// Priority returns the value of the "priority" field in the mutation.
+func (m *HighlightPublishTaskMutation) Priority() (r int, exists bool) {
+	v := m.priority
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPriority returns the old "priority" field's value of the HighlightPublishTask entity.
+// If the HighlightPublishTask object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *HighlightPublishTaskMutation) OldPriority(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPriority is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPriority requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPriority: %w", err)
+	}
+	return oldValue.Priority, nil
+}
+
+// AddPriority adds i to the "priority" field.
+func (m *HighlightPublishTaskMutation) AddPriority(i int) {
+	if m.addpriority != nil {
+		*m.addpriority += i
+	} else {
+		m.addpriority = &i
+	}
+}
+
+// AddedPriority returns the value that was added to the "priority" field in this mutation.
+func (m *HighlightPublishTaskMutation) AddedPriority() (r int, exists bool) {
+	v := m.addpriority
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetPriority resets all changes to the "priority" field.
+func (m *HighlightPublishTaskMutation) ResetPriority() {
+	m.priority = nil
+	m.addpriority = nil
+}
+
+// SetK8sJobName sets the "k8s_job_name" field.
+func (m *HighlightPublishTaskMutation) SetK8sJobName(s string) {
+	m.k8s_job_name = &s
+}
+
+// K8sJobName returns the value of the "k8s_job_name" field in the mutation.
+func (m *HighlightPublishTaskMutation) K8sJobName() (r string, exists bool) {
+	v := m.k8s_job_name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldK8sJobName returns the old "k8s_job_name" field's value of the HighlightPublishTask entity.
+// If the HighlightPublishTask object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *HighlightPublishTaskMutation) OldK8sJobName(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldK8sJobName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldK8sJobName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldK8sJobName: %w", err)
+	}
+	return oldValue.K8sJobName, nil
+}
+
+// ClearK8sJobName clears the value of the "k8s_job_name" field.
+func (m *HighlightPublishTaskMutation) ClearK8sJobName() {
+	m.k8s_job_name = nil
+	m.clearedFields[highlightpublishtask.FieldK8sJobName] = struct{}{}
+}
+
+// K8sJobNameCleared returns if the "k8s_job_name" field was cleared in this mutation.
+func (m *HighlightPublishTaskMutation) K8sJobNameCleared() bool {
+	_, ok := m.clearedFields[highlightpublishtask.FieldK8sJobName]
+	return ok
+}
+
+// ResetK8sJobName resets all changes to the "k8s_job_name" field.
+func (m *HighlightPublishTaskMutation) ResetK8sJobName() {
+	m.k8s_job_name = nil
+	delete(m.clearedFields, highlightpublishtask.FieldK8sJobName)
+}
+
+// SetAttempts sets the "attempts" field.
+func (m *HighlightPublishTaskMutation) SetAttempts(i int) {
+	m.attempts = &i
+	m.addattempts = nil
+}
+
+// Attempts returns the value of the "attempts" field in the mutation.
+func (m *HighlightPublishTaskMutation) Attempts() (r int, exists bool) {
+	v := m.attempts
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAttempts returns the old "attempts" field's value of the HighlightPublishTask entity.
+// If the HighlightPublishTask object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *HighlightPublishTaskMutation) OldAttempts(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAttempts is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAttempts requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAttempts: %w", err)
+	}
+	return oldValue.Attempts, nil
+}
+
+// AddAttempts adds i to the "attempts" field.
+func (m *HighlightPublishTaskMutation) AddAttempts(i int) {
+	if m.addattempts != nil {
+		*m.addattempts += i
+	} else {
+		m.addattempts = &i
+	}
+}
+
+// AddedAttempts returns the value that was added to the "attempts" field in this mutation.
+func (m *HighlightPublishTaskMutation) AddedAttempts() (r int, exists bool) {
+	v := m.addattempts
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetAttempts resets all changes to the "attempts" field.
+func (m *HighlightPublishTaskMutation) ResetAttempts() {
+	m.attempts = nil
+	m.addattempts = nil
+}
+
+// SetPublishURL sets the "publish_url" field.
+func (m *HighlightPublishTaskMutation) SetPublishURL(s string) {
+	m.publish_url = &s
+}
+
+// PublishURL returns the value of the "publish_url" field in the mutation.
+func (m *HighlightPublishTaskMutation) PublishURL() (r string, exists bool) {
+	v := m.publish_url
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPublishURL returns the old "publish_url" field's value of the HighlightPublishTask entity.
+// If the HighlightPublishTask object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *HighlightPublishTaskMutation) OldPublishURL(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPublishURL is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPublishURL requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPublishURL: %w", err)
+	}
+	return oldValue.PublishURL, nil
+}
+
+// ClearPublishURL clears the value of the "publish_url" field.
+func (m *HighlightPublishTaskMutation) ClearPublishURL() {
+	m.publish_url = nil
+	m.clearedFields[highlightpublishtask.FieldPublishURL] = struct{}{}
+}
+
+// PublishURLCleared returns if the "publish_url" field was cleared in this mutation.
+func (m *HighlightPublishTaskMutation) PublishURLCleared() bool {
+	_, ok := m.clearedFields[highlightpublishtask.FieldPublishURL]
+	return ok
+}
+
+// ResetPublishURL resets all changes to the "publish_url" field.
+func (m *HighlightPublishTaskMutation) ResetPublishURL() {
+	m.publish_url = nil
+	delete(m.clearedFields, highlightpublishtask.FieldPublishURL)
+}
+
+// SetExternalID sets the "external_id" field.
+func (m *HighlightPublishTaskMutation) SetExternalID(s string) {
+	m.external_id = &s
+}
+
+// ExternalID returns the value of the "external_id" field in the mutation.
+func (m *HighlightPublishTaskMutation) ExternalID() (r string, exists bool) {
+	v := m.external_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldExternalID returns the old "external_id" field's value of the HighlightPublishTask entity.
+// If the HighlightPublishTask object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *HighlightPublishTaskMutation) OldExternalID(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldExternalID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldExternalID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldExternalID: %w", err)
+	}
+	return oldValue.ExternalID, nil
+}
+
+// ClearExternalID clears the value of the "external_id" field.
+func (m *HighlightPublishTaskMutation) ClearExternalID() {
+	m.external_id = nil
+	m.clearedFields[highlightpublishtask.FieldExternalID] = struct{}{}
+}
+
+// ExternalIDCleared returns if the "external_id" field was cleared in this mutation.
+func (m *HighlightPublishTaskMutation) ExternalIDCleared() bool {
+	_, ok := m.clearedFields[highlightpublishtask.FieldExternalID]
+	return ok
+}
+
+// ResetExternalID resets all changes to the "external_id" field.
+func (m *HighlightPublishTaskMutation) ResetExternalID() {
+	m.external_id = nil
+	delete(m.clearedFields, highlightpublishtask.FieldExternalID)
+}
+
+// SetErrorMessage sets the "error_message" field.
+func (m *HighlightPublishTaskMutation) SetErrorMessage(s string) {
+	m.error_message = &s
+}
+
+// ErrorMessage returns the value of the "error_message" field in the mutation.
+func (m *HighlightPublishTaskMutation) ErrorMessage() (r string, exists bool) {
+	v := m.error_message
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldErrorMessage returns the old "error_message" field's value of the HighlightPublishTask entity.
+// If the HighlightPublishTask object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *HighlightPublishTaskMutation) OldErrorMessage(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldErrorMessage is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldErrorMessage requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldErrorMessage: %w", err)
+	}
+	return oldValue.ErrorMessage, nil
+}
+
+// ClearErrorMessage clears the value of the "error_message" field.
+func (m *HighlightPublishTaskMutation) ClearErrorMessage() {
+	m.error_message = nil
+	m.clearedFields[highlightpublishtask.FieldErrorMessage] = struct{}{}
+}
+
+// ErrorMessageCleared returns if the "error_message" field was cleared in this mutation.
+func (m *HighlightPublishTaskMutation) ErrorMessageCleared() bool {
+	_, ok := m.clearedFields[highlightpublishtask.FieldErrorMessage]
+	return ok
+}
+
+// ResetErrorMessage resets all changes to the "error_message" field.
+func (m *HighlightPublishTaskMutation) ResetErrorMessage() {
+	m.error_message = nil
+	delete(m.clearedFields, highlightpublishtask.FieldErrorMessage)
+}
+
+// SetStartedAt sets the "started_at" field.
+func (m *HighlightPublishTaskMutation) SetStartedAt(t time.Time) {
+	m.started_at = &t
+}
+
+// StartedAt returns the value of the "started_at" field in the mutation.
+func (m *HighlightPublishTaskMutation) StartedAt() (r time.Time, exists bool) {
+	v := m.started_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStartedAt returns the old "started_at" field's value of the HighlightPublishTask entity.
+// If the HighlightPublishTask object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *HighlightPublishTaskMutation) OldStartedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStartedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStartedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStartedAt: %w", err)
+	}
+	return oldValue.StartedAt, nil
+}
+
+// ClearStartedAt clears the value of the "started_at" field.
+func (m *HighlightPublishTaskMutation) ClearStartedAt() {
+	m.started_at = nil
+	m.clearedFields[highlightpublishtask.FieldStartedAt] = struct{}{}
+}
+
+// StartedAtCleared returns if the "started_at" field was cleared in this mutation.
+func (m *HighlightPublishTaskMutation) StartedAtCleared() bool {
+	_, ok := m.clearedFields[highlightpublishtask.FieldStartedAt]
+	return ok
+}
+
+// ResetStartedAt resets all changes to the "started_at" field.
+func (m *HighlightPublishTaskMutation) ResetStartedAt() {
+	m.started_at = nil
+	delete(m.clearedFields, highlightpublishtask.FieldStartedAt)
+}
+
+// SetCompletedAt sets the "completed_at" field.
+func (m *HighlightPublishTaskMutation) SetCompletedAt(t time.Time) {
+	m.completed_at = &t
+}
+
+// CompletedAt returns the value of the "completed_at" field in the mutation.
+func (m *HighlightPublishTaskMutation) CompletedAt() (r time.Time, exists bool) {
+	v := m.completed_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCompletedAt returns the old "completed_at" field's value of the HighlightPublishTask entity.
+// If the HighlightPublishTask object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *HighlightPublishTaskMutation) OldCompletedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCompletedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCompletedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCompletedAt: %w", err)
+	}
+	return oldValue.CompletedAt, nil
+}
+
+// ClearCompletedAt clears the value of the "completed_at" field.
+func (m *HighlightPublishTaskMutation) ClearCompletedAt() {
+	m.completed_at = nil
+	m.clearedFields[highlightpublishtask.FieldCompletedAt] = struct{}{}
+}
+
+// CompletedAtCleared returns if the "completed_at" field was cleared in this mutation.
+func (m *HighlightPublishTaskMutation) CompletedAtCleared() bool {
+	_, ok := m.clearedFields[highlightpublishtask.FieldCompletedAt]
+	return ok
+}
+
+// ResetCompletedAt resets all changes to the "completed_at" field.
+func (m *HighlightPublishTaskMutation) ResetCompletedAt() {
+	m.completed_at = nil
+	delete(m.clearedFields, highlightpublishtask.FieldCompletedAt)
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *HighlightPublishTaskMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *HighlightPublishTaskMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the HighlightPublishTask entity.
+// If the HighlightPublishTask object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *HighlightPublishTaskMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *HighlightPublishTaskMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *HighlightPublishTaskMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *HighlightPublishTaskMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the HighlightPublishTask entity.
+// If the HighlightPublishTask object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *HighlightPublishTaskMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *HighlightPublishTaskMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetHighlightClipID sets the "highlight_clip" edge to the HighlightClip entity by id.
+func (m *HighlightPublishTaskMutation) SetHighlightClipID(id int) {
+	m.highlight_clip = &id
+}
+
+// ClearHighlightClip clears the "highlight_clip" edge to the HighlightClip entity.
+func (m *HighlightPublishTaskMutation) ClearHighlightClip() {
+	m.clearedhighlight_clip = true
+}
+
+// HighlightClipCleared reports if the "highlight_clip" edge to the HighlightClip entity was cleared.
+func (m *HighlightPublishTaskMutation) HighlightClipCleared() bool {
+	return m.clearedhighlight_clip
+}
+
+// HighlightClipID returns the "highlight_clip" edge ID in the mutation.
+func (m *HighlightPublishTaskMutation) HighlightClipID() (id int, exists bool) {
+	if m.highlight_clip != nil {
+		return *m.highlight_clip, true
+	}
+	return
+}
+
+// HighlightClipIDs returns the "highlight_clip" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// HighlightClipID instead. It exists only for internal usage by the builders.
+func (m *HighlightPublishTaskMutation) HighlightClipIDs() (ids []int) {
+	if id := m.highlight_clip; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetHighlightClip resets all changes to the "highlight_clip" edge.
+func (m *HighlightPublishTaskMutation) ResetHighlightClip() {
+	m.highlight_clip = nil
+	m.clearedhighlight_clip = false
+}
+
+// Where appends a list predicates to the HighlightPublishTaskMutation builder.
+func (m *HighlightPublishTaskMutation) Where(ps ...predicate.HighlightPublishTask) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the HighlightPublishTaskMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *HighlightPublishTaskMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.HighlightPublishTask, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *HighlightPublishTaskMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *HighlightPublishTaskMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (HighlightPublishTask).
+func (m *HighlightPublishTaskMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *HighlightPublishTaskMutation) Fields() []string {
+	fields := make([]string, 0, 12)
+	if m.platform != nil {
+		fields = append(fields, highlightpublishtask.FieldPlatform)
+	}
+	if m.status != nil {
+		fields = append(fields, highlightpublishtask.FieldStatus)
+	}
+	if m.priority != nil {
+		fields = append(fields, highlightpublishtask.FieldPriority)
+	}
+	if m.k8s_job_name != nil {
+		fields = append(fields, highlightpublishtask.FieldK8sJobName)
+	}
+	if m.attempts != nil {
+		fields = append(fields, highlightpublishtask.FieldAttempts)
+	}
+	if m.publish_url != nil {
+		fields = append(fields, highlightpublishtask.FieldPublishURL)
+	}
+	if m.external_id != nil {
+		fields = append(fields, highlightpublishtask.FieldExternalID)
+	}
+	if m.error_message != nil {
+		fields = append(fields, highlightpublishtask.FieldErrorMessage)
+	}
+	if m.started_at != nil {
+		fields = append(fields, highlightpublishtask.FieldStartedAt)
+	}
+	if m.completed_at != nil {
+		fields = append(fields, highlightpublishtask.FieldCompletedAt)
+	}
+	if m.created_at != nil {
+		fields = append(fields, highlightpublishtask.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, highlightpublishtask.FieldUpdatedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *HighlightPublishTaskMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case highlightpublishtask.FieldPlatform:
+		return m.Platform()
+	case highlightpublishtask.FieldStatus:
+		return m.Status()
+	case highlightpublishtask.FieldPriority:
+		return m.Priority()
+	case highlightpublishtask.FieldK8sJobName:
+		return m.K8sJobName()
+	case highlightpublishtask.FieldAttempts:
+		return m.Attempts()
+	case highlightpublishtask.FieldPublishURL:
+		return m.PublishURL()
+	case highlightpublishtask.FieldExternalID:
+		return m.ExternalID()
+	case highlightpublishtask.FieldErrorMessage:
+		return m.ErrorMessage()
+	case highlightpublishtask.FieldStartedAt:
+		return m.StartedAt()
+	case highlightpublishtask.FieldCompletedAt:
+		return m.CompletedAt()
+	case highlightpublishtask.FieldCreatedAt:
+		return m.CreatedAt()
+	case highlightpublishtask.FieldUpdatedAt:
+		return m.UpdatedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *HighlightPublishTaskMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case highlightpublishtask.FieldPlatform:
+		return m.OldPlatform(ctx)
+	case highlightpublishtask.FieldStatus:
+		return m.OldStatus(ctx)
+	case highlightpublishtask.FieldPriority:
+		return m.OldPriority(ctx)
+	case highlightpublishtask.FieldK8sJobName:
+		return m.OldK8sJobName(ctx)
+	case highlightpublishtask.FieldAttempts:
+		return m.OldAttempts(ctx)
+	case highlightpublishtask.FieldPublishURL:
+		return m.OldPublishURL(ctx)
+	case highlightpublishtask.FieldExternalID:
+		return m.OldExternalID(ctx)
+	case highlightpublishtask.FieldErrorMessage:
+		return m.OldErrorMessage(ctx)
+	case highlightpublishtask.FieldStartedAt:
+		return m.OldStartedAt(ctx)
+	case highlightpublishtask.FieldCompletedAt:
+		return m.OldCompletedAt(ctx)
+	case highlightpublishtask.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case highlightpublishtask.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown HighlightPublishTask field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *HighlightPublishTaskMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case highlightpublishtask.FieldPlatform:
+		v, ok := value.(highlightpublishtask.Platform)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPlatform(v)
+		return nil
+	case highlightpublishtask.FieldStatus:
+		v, ok := value.(highlightpublishtask.Status)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStatus(v)
+		return nil
+	case highlightpublishtask.FieldPriority:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPriority(v)
+		return nil
+	case highlightpublishtask.FieldK8sJobName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetK8sJobName(v)
+		return nil
+	case highlightpublishtask.FieldAttempts:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAttempts(v)
+		return nil
+	case highlightpublishtask.FieldPublishURL:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPublishURL(v)
+		return nil
+	case highlightpublishtask.FieldExternalID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetExternalID(v)
+		return nil
+	case highlightpublishtask.FieldErrorMessage:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetErrorMessage(v)
+		return nil
+	case highlightpublishtask.FieldStartedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStartedAt(v)
+		return nil
+	case highlightpublishtask.FieldCompletedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCompletedAt(v)
+		return nil
+	case highlightpublishtask.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case highlightpublishtask.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown HighlightPublishTask field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *HighlightPublishTaskMutation) AddedFields() []string {
+	var fields []string
+	if m.addpriority != nil {
+		fields = append(fields, highlightpublishtask.FieldPriority)
+	}
+	if m.addattempts != nil {
+		fields = append(fields, highlightpublishtask.FieldAttempts)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *HighlightPublishTaskMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case highlightpublishtask.FieldPriority:
+		return m.AddedPriority()
+	case highlightpublishtask.FieldAttempts:
+		return m.AddedAttempts()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *HighlightPublishTaskMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case highlightpublishtask.FieldPriority:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddPriority(v)
+		return nil
+	case highlightpublishtask.FieldAttempts:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddAttempts(v)
+		return nil
+	}
+	return fmt.Errorf("unknown HighlightPublishTask numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *HighlightPublishTaskMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(highlightpublishtask.FieldK8sJobName) {
+		fields = append(fields, highlightpublishtask.FieldK8sJobName)
+	}
+	if m.FieldCleared(highlightpublishtask.FieldPublishURL) {
+		fields = append(fields, highlightpublishtask.FieldPublishURL)
+	}
+	if m.FieldCleared(highlightpublishtask.FieldExternalID) {
+		fields = append(fields, highlightpublishtask.FieldExternalID)
+	}
+	if m.FieldCleared(highlightpublishtask.FieldErrorMessage) {
+		fields = append(fields, highlightpublishtask.FieldErrorMessage)
+	}
+	if m.FieldCleared(highlightpublishtask.FieldStartedAt) {
+		fields = append(fields, highlightpublishtask.FieldStartedAt)
+	}
+	if m.FieldCleared(highlightpublishtask.FieldCompletedAt) {
+		fields = append(fields, highlightpublishtask.FieldCompletedAt)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *HighlightPublishTaskMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *HighlightPublishTaskMutation) ClearField(name string) error {
+	switch name {
+	case highlightpublishtask.FieldK8sJobName:
+		m.ClearK8sJobName()
+		return nil
+	case highlightpublishtask.FieldPublishURL:
+		m.ClearPublishURL()
+		return nil
+	case highlightpublishtask.FieldExternalID:
+		m.ClearExternalID()
+		return nil
+	case highlightpublishtask.FieldErrorMessage:
+		m.ClearErrorMessage()
+		return nil
+	case highlightpublishtask.FieldStartedAt:
+		m.ClearStartedAt()
+		return nil
+	case highlightpublishtask.FieldCompletedAt:
+		m.ClearCompletedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown HighlightPublishTask nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *HighlightPublishTaskMutation) ResetField(name string) error {
+	switch name {
+	case highlightpublishtask.FieldPlatform:
+		m.ResetPlatform()
+		return nil
+	case highlightpublishtask.FieldStatus:
+		m.ResetStatus()
+		return nil
+	case highlightpublishtask.FieldPriority:
+		m.ResetPriority()
+		return nil
+	case highlightpublishtask.FieldK8sJobName:
+		m.ResetK8sJobName()
+		return nil
+	case highlightpublishtask.FieldAttempts:
+		m.ResetAttempts()
+		return nil
+	case highlightpublishtask.FieldPublishURL:
+		m.ResetPublishURL()
+		return nil
+	case highlightpublishtask.FieldExternalID:
+		m.ResetExternalID()
+		return nil
+	case highlightpublishtask.FieldErrorMessage:
+		m.ResetErrorMessage()
+		return nil
+	case highlightpublishtask.FieldStartedAt:
+		m.ResetStartedAt()
+		return nil
+	case highlightpublishtask.FieldCompletedAt:
+		m.ResetCompletedAt()
+		return nil
+	case highlightpublishtask.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case highlightpublishtask.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown HighlightPublishTask field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *HighlightPublishTaskMutation) AddedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.highlight_clip != nil {
+		edges = append(edges, highlightpublishtask.EdgeHighlightClip)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *HighlightPublishTaskMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case highlightpublishtask.EdgeHighlightClip:
+		if id := m.highlight_clip; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *HighlightPublishTaskMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 1)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *HighlightPublishTaskMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *HighlightPublishTaskMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.clearedhighlight_clip {
+		edges = append(edges, highlightpublishtask.EdgeHighlightClip)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *HighlightPublishTaskMutation) EdgeCleared(name string) bool {
+	switch name {
+	case highlightpublishtask.EdgeHighlightClip:
+		return m.clearedhighlight_clip
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *HighlightPublishTaskMutation) ClearEdge(name string) error {
+	switch name {
+	case highlightpublishtask.EdgeHighlightClip:
+		m.ClearHighlightClip()
+		return nil
+	}
+	return fmt.Errorf("unknown HighlightPublishTask unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *HighlightPublishTaskMutation) ResetEdge(name string) error {
+	switch name {
+	case highlightpublishtask.EdgeHighlightClip:
+		m.ResetHighlightClip()
+		return nil
+	}
+	return fmt.Errorf("unknown HighlightPublishTask edge %s", name)
+}
+
+// LarkCardMessageMutation represents an operation that mutates the LarkCardMessage nodes in the graph.
+type LarkCardMessageMutation struct {
 	config
 	op            Op
 	typ           string
 	id            *int
 	message_id    *string
-	card_payload  *map[string]interface{}
 	created_at    *time.Time
 	updated_at    *time.Time
 	clearedFields map[string]struct{}
-	match         *string
-	clearedmatch  bool
+	card          *int
+	clearedcard   bool
 	done          bool
-	oldValue      func(context.Context) (*LarkMessage, error)
-	predicates    []predicate.LarkMessage
+	oldValue      func(context.Context) (*LarkCardMessage, error)
+	predicates    []predicate.LarkCardMessage
+}
+
+var _ ent.Mutation = (*LarkCardMessageMutation)(nil)
+
+// larkcardmessageOption allows management of the mutation configuration using functional options.
+type larkcardmessageOption func(*LarkCardMessageMutation)
+
+// newLarkCardMessageMutation creates new mutation for the LarkCardMessage entity.
+func newLarkCardMessageMutation(c config, op Op, opts ...larkcardmessageOption) *LarkCardMessageMutation {
+	m := &LarkCardMessageMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeLarkCardMessage,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withLarkCardMessageID sets the ID field of the mutation.
+func withLarkCardMessageID(id int) larkcardmessageOption {
+	return func(m *LarkCardMessageMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *LarkCardMessage
+		)
+		m.oldValue = func(ctx context.Context) (*LarkCardMessage, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().LarkCardMessage.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withLarkCardMessage sets the old LarkCardMessage of the mutation.
+func withLarkCardMessage(node *LarkCardMessage) larkcardmessageOption {
+	return func(m *LarkCardMessageMutation) {
+		m.oldValue = func(context.Context) (*LarkCardMessage, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m LarkCardMessageMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m LarkCardMessageMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *LarkCardMessageMutation) ID() (id int, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *LarkCardMessageMutation) IDs(ctx context.Context) ([]int, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []int{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().LarkCardMessage.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetMessageID sets the "message_id" field.
+func (m *LarkCardMessageMutation) SetMessageID(s string) {
+	m.message_id = &s
+}
+
+// MessageID returns the value of the "message_id" field in the mutation.
+func (m *LarkCardMessageMutation) MessageID() (r string, exists bool) {
+	v := m.message_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMessageID returns the old "message_id" field's value of the LarkCardMessage entity.
+// If the LarkCardMessage object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LarkCardMessageMutation) OldMessageID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMessageID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMessageID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMessageID: %w", err)
+	}
+	return oldValue.MessageID, nil
+}
+
+// ResetMessageID resets all changes to the "message_id" field.
+func (m *LarkCardMessageMutation) ResetMessageID() {
+	m.message_id = nil
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *LarkCardMessageMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *LarkCardMessageMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the LarkCardMessage entity.
+// If the LarkCardMessage object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LarkCardMessageMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *LarkCardMessageMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *LarkCardMessageMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *LarkCardMessageMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the LarkCardMessage entity.
+// If the LarkCardMessage object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LarkCardMessageMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *LarkCardMessageMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetCardID sets the "card" edge to the LarkMessage entity by id.
+func (m *LarkCardMessageMutation) SetCardID(id int) {
+	m.card = &id
+}
+
+// ClearCard clears the "card" edge to the LarkMessage entity.
+func (m *LarkCardMessageMutation) ClearCard() {
+	m.clearedcard = true
+}
+
+// CardCleared reports if the "card" edge to the LarkMessage entity was cleared.
+func (m *LarkCardMessageMutation) CardCleared() bool {
+	return m.clearedcard
+}
+
+// CardID returns the "card" edge ID in the mutation.
+func (m *LarkCardMessageMutation) CardID() (id int, exists bool) {
+	if m.card != nil {
+		return *m.card, true
+	}
+	return
+}
+
+// CardIDs returns the "card" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// CardID instead. It exists only for internal usage by the builders.
+func (m *LarkCardMessageMutation) CardIDs() (ids []int) {
+	if id := m.card; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetCard resets all changes to the "card" edge.
+func (m *LarkCardMessageMutation) ResetCard() {
+	m.card = nil
+	m.clearedcard = false
+}
+
+// Where appends a list predicates to the LarkCardMessageMutation builder.
+func (m *LarkCardMessageMutation) Where(ps ...predicate.LarkCardMessage) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the LarkCardMessageMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *LarkCardMessageMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.LarkCardMessage, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *LarkCardMessageMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *LarkCardMessageMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (LarkCardMessage).
+func (m *LarkCardMessageMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *LarkCardMessageMutation) Fields() []string {
+	fields := make([]string, 0, 3)
+	if m.message_id != nil {
+		fields = append(fields, larkcardmessage.FieldMessageID)
+	}
+	if m.created_at != nil {
+		fields = append(fields, larkcardmessage.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, larkcardmessage.FieldUpdatedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *LarkCardMessageMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case larkcardmessage.FieldMessageID:
+		return m.MessageID()
+	case larkcardmessage.FieldCreatedAt:
+		return m.CreatedAt()
+	case larkcardmessage.FieldUpdatedAt:
+		return m.UpdatedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *LarkCardMessageMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case larkcardmessage.FieldMessageID:
+		return m.OldMessageID(ctx)
+	case larkcardmessage.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case larkcardmessage.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown LarkCardMessage field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *LarkCardMessageMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case larkcardmessage.FieldMessageID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMessageID(v)
+		return nil
+	case larkcardmessage.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case larkcardmessage.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown LarkCardMessage field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *LarkCardMessageMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *LarkCardMessageMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *LarkCardMessageMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown LarkCardMessage numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *LarkCardMessageMutation) ClearedFields() []string {
+	return nil
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *LarkCardMessageMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *LarkCardMessageMutation) ClearField(name string) error {
+	return fmt.Errorf("unknown LarkCardMessage nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *LarkCardMessageMutation) ResetField(name string) error {
+	switch name {
+	case larkcardmessage.FieldMessageID:
+		m.ResetMessageID()
+		return nil
+	case larkcardmessage.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case larkcardmessage.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown LarkCardMessage field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *LarkCardMessageMutation) AddedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.card != nil {
+		edges = append(edges, larkcardmessage.EdgeCard)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *LarkCardMessageMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case larkcardmessage.EdgeCard:
+		if id := m.card; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *LarkCardMessageMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 1)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *LarkCardMessageMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *LarkCardMessageMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.clearedcard {
+		edges = append(edges, larkcardmessage.EdgeCard)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *LarkCardMessageMutation) EdgeCleared(name string) bool {
+	switch name {
+	case larkcardmessage.EdgeCard:
+		return m.clearedcard
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *LarkCardMessageMutation) ClearEdge(name string) error {
+	switch name {
+	case larkcardmessage.EdgeCard:
+		m.ClearCard()
+		return nil
+	}
+	return fmt.Errorf("unknown LarkCardMessage unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *LarkCardMessageMutation) ResetEdge(name string) error {
+	switch name {
+	case larkcardmessage.EdgeCard:
+		m.ResetCard()
+		return nil
+	}
+	return fmt.Errorf("unknown LarkCardMessage edge %s", name)
+}
+
+// LarkMessageMutation represents an operation that mutates the LarkMessage nodes in the graph.
+type LarkMessageMutation struct {
+	config
+	op                   Op
+	typ                  string
+	id                   *int
+	card_id              *string
+	card_payload         *map[string]interface{}
+	created_at           *time.Time
+	updated_at           *time.Time
+	clearedFields        map[string]struct{}
+	match                *string
+	clearedmatch         bool
+	card_messages        map[int]struct{}
+	removedcard_messages map[int]struct{}
+	clearedcard_messages bool
+	done                 bool
+	oldValue             func(context.Context) (*LarkMessage, error)
+	predicates           []predicate.LarkMessage
 }
 
 var _ ent.Mutation = (*LarkMessageMutation)(nil)
@@ -2097,40 +3863,40 @@ func (m *LarkMessageMutation) IDs(ctx context.Context) ([]int, error) {
 	}
 }
 
-// SetMessageID sets the "message_id" field.
-func (m *LarkMessageMutation) SetMessageID(s string) {
-	m.message_id = &s
+// SetCardID sets the "card_id" field.
+func (m *LarkMessageMutation) SetCardID(s string) {
+	m.card_id = &s
 }
 
-// MessageID returns the value of the "message_id" field in the mutation.
-func (m *LarkMessageMutation) MessageID() (r string, exists bool) {
-	v := m.message_id
+// CardID returns the value of the "card_id" field in the mutation.
+func (m *LarkMessageMutation) CardID() (r string, exists bool) {
+	v := m.card_id
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// OldMessageID returns the old "message_id" field's value of the LarkMessage entity.
+// OldCardID returns the old "card_id" field's value of the LarkMessage entity.
 // If the LarkMessage object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *LarkMessageMutation) OldMessageID(ctx context.Context) (v string, err error) {
+func (m *LarkMessageMutation) OldCardID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldMessageID is only allowed on UpdateOne operations")
+		return v, errors.New("OldCardID is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldMessageID requires an ID field in the mutation")
+		return v, errors.New("OldCardID requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldMessageID: %w", err)
+		return v, fmt.Errorf("querying old value for OldCardID: %w", err)
 	}
-	return oldValue.MessageID, nil
+	return oldValue.CardID, nil
 }
 
-// ResetMessageID resets all changes to the "message_id" field.
-func (m *LarkMessageMutation) ResetMessageID() {
-	m.message_id = nil
+// ResetCardID resets all changes to the "card_id" field.
+func (m *LarkMessageMutation) ResetCardID() {
+	m.card_id = nil
 }
 
 // SetCardPayload sets the "card_payload" field.
@@ -2293,6 +4059,60 @@ func (m *LarkMessageMutation) ResetMatch() {
 	m.clearedmatch = false
 }
 
+// AddCardMessageIDs adds the "card_messages" edge to the LarkCardMessage entity by ids.
+func (m *LarkMessageMutation) AddCardMessageIDs(ids ...int) {
+	if m.card_messages == nil {
+		m.card_messages = make(map[int]struct{})
+	}
+	for i := range ids {
+		m.card_messages[ids[i]] = struct{}{}
+	}
+}
+
+// ClearCardMessages clears the "card_messages" edge to the LarkCardMessage entity.
+func (m *LarkMessageMutation) ClearCardMessages() {
+	m.clearedcard_messages = true
+}
+
+// CardMessagesCleared reports if the "card_messages" edge to the LarkCardMessage entity was cleared.
+func (m *LarkMessageMutation) CardMessagesCleared() bool {
+	return m.clearedcard_messages
+}
+
+// RemoveCardMessageIDs removes the "card_messages" edge to the LarkCardMessage entity by IDs.
+func (m *LarkMessageMutation) RemoveCardMessageIDs(ids ...int) {
+	if m.removedcard_messages == nil {
+		m.removedcard_messages = make(map[int]struct{})
+	}
+	for i := range ids {
+		delete(m.card_messages, ids[i])
+		m.removedcard_messages[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedCardMessages returns the removed IDs of the "card_messages" edge to the LarkCardMessage entity.
+func (m *LarkMessageMutation) RemovedCardMessagesIDs() (ids []int) {
+	for id := range m.removedcard_messages {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// CardMessagesIDs returns the "card_messages" edge IDs in the mutation.
+func (m *LarkMessageMutation) CardMessagesIDs() (ids []int) {
+	for id := range m.card_messages {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetCardMessages resets all changes to the "card_messages" edge.
+func (m *LarkMessageMutation) ResetCardMessages() {
+	m.card_messages = nil
+	m.clearedcard_messages = false
+	m.removedcard_messages = nil
+}
+
 // Where appends a list predicates to the LarkMessageMutation builder.
 func (m *LarkMessageMutation) Where(ps ...predicate.LarkMessage) {
 	m.predicates = append(m.predicates, ps...)
@@ -2328,8 +4148,8 @@ func (m *LarkMessageMutation) Type() string {
 // AddedFields().
 func (m *LarkMessageMutation) Fields() []string {
 	fields := make([]string, 0, 4)
-	if m.message_id != nil {
-		fields = append(fields, larkmessage.FieldMessageID)
+	if m.card_id != nil {
+		fields = append(fields, larkmessage.FieldCardID)
 	}
 	if m.card_payload != nil {
 		fields = append(fields, larkmessage.FieldCardPayload)
@@ -2348,8 +4168,8 @@ func (m *LarkMessageMutation) Fields() []string {
 // schema.
 func (m *LarkMessageMutation) Field(name string) (ent.Value, bool) {
 	switch name {
-	case larkmessage.FieldMessageID:
-		return m.MessageID()
+	case larkmessage.FieldCardID:
+		return m.CardID()
 	case larkmessage.FieldCardPayload:
 		return m.CardPayload()
 	case larkmessage.FieldCreatedAt:
@@ -2365,8 +4185,8 @@ func (m *LarkMessageMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *LarkMessageMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
-	case larkmessage.FieldMessageID:
-		return m.OldMessageID(ctx)
+	case larkmessage.FieldCardID:
+		return m.OldCardID(ctx)
 	case larkmessage.FieldCardPayload:
 		return m.OldCardPayload(ctx)
 	case larkmessage.FieldCreatedAt:
@@ -2382,12 +4202,12 @@ func (m *LarkMessageMutation) OldField(ctx context.Context, name string) (ent.Va
 // type.
 func (m *LarkMessageMutation) SetField(name string, value ent.Value) error {
 	switch name {
-	case larkmessage.FieldMessageID:
+	case larkmessage.FieldCardID:
 		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetMessageID(v)
+		m.SetCardID(v)
 		return nil
 	case larkmessage.FieldCardPayload:
 		v, ok := value.(map[string]interface{})
@@ -2468,8 +4288,8 @@ func (m *LarkMessageMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *LarkMessageMutation) ResetField(name string) error {
 	switch name {
-	case larkmessage.FieldMessageID:
-		m.ResetMessageID()
+	case larkmessage.FieldCardID:
+		m.ResetCardID()
 		return nil
 	case larkmessage.FieldCardPayload:
 		m.ResetCardPayload()
@@ -2486,9 +4306,12 @@ func (m *LarkMessageMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *LarkMessageMutation) AddedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
 	if m.match != nil {
 		edges = append(edges, larkmessage.EdgeMatch)
+	}
+	if m.card_messages != nil {
+		edges = append(edges, larkmessage.EdgeCardMessages)
 	}
 	return edges
 }
@@ -2501,27 +4324,47 @@ func (m *LarkMessageMutation) AddedIDs(name string) []ent.Value {
 		if id := m.match; id != nil {
 			return []ent.Value{*id}
 		}
+	case larkmessage.EdgeCardMessages:
+		ids := make([]ent.Value, 0, len(m.card_messages))
+		for id := range m.card_messages {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *LarkMessageMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
+	if m.removedcard_messages != nil {
+		edges = append(edges, larkmessage.EdgeCardMessages)
+	}
 	return edges
 }
 
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *LarkMessageMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case larkmessage.EdgeCardMessages:
+		ids := make([]ent.Value, 0, len(m.removedcard_messages))
+		for id := range m.removedcard_messages {
+			ids = append(ids, id)
+		}
+		return ids
+	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *LarkMessageMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
 	if m.clearedmatch {
 		edges = append(edges, larkmessage.EdgeMatch)
+	}
+	if m.clearedcard_messages {
+		edges = append(edges, larkmessage.EdgeCardMessages)
 	}
 	return edges
 }
@@ -2532,6 +4375,8 @@ func (m *LarkMessageMutation) EdgeCleared(name string) bool {
 	switch name {
 	case larkmessage.EdgeMatch:
 		return m.clearedmatch
+	case larkmessage.EdgeCardMessages:
+		return m.clearedcard_messages
 	}
 	return false
 }
@@ -2553,6 +4398,9 @@ func (m *LarkMessageMutation) ResetEdge(name string) error {
 	switch name {
 	case larkmessage.EdgeMatch:
 		m.ResetMatch()
+		return nil
+	case larkmessage.EdgeCardMessages:
+		m.ResetCardMessages()
 		return nil
 	}
 	return fmt.Errorf("unknown LarkMessage edge %s", name)

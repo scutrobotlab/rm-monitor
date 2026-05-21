@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"scutbot.cn/web/rm-monitor/ent/highlightclip"
+	"scutbot.cn/web/rm-monitor/ent/highlightpublishtask"
+	"scutbot.cn/web/rm-monitor/ent/larkcardmessage"
 	"scutbot.cn/web/rm-monitor/ent/larkmessage"
 	"scutbot.cn/web/rm-monitor/ent/match"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
@@ -45,6 +47,38 @@ func init() {
 	highlightclip.DefaultUpdatedAt = highlightclipDescUpdatedAt.Default.(func() time.Time)
 	// highlightclip.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	highlightclip.UpdateDefaultUpdatedAt = highlightclipDescUpdatedAt.UpdateDefault.(func() time.Time)
+	highlightpublishtaskFields := schema.HighlightPublishTask{}.Fields()
+	_ = highlightpublishtaskFields
+	// highlightpublishtaskDescPriority is the schema descriptor for priority field.
+	highlightpublishtaskDescPriority := highlightpublishtaskFields[2].Descriptor()
+	// highlightpublishtask.DefaultPriority holds the default value on creation for the priority field.
+	highlightpublishtask.DefaultPriority = highlightpublishtaskDescPriority.Default.(int)
+	// highlightpublishtaskDescAttempts is the schema descriptor for attempts field.
+	highlightpublishtaskDescAttempts := highlightpublishtaskFields[4].Descriptor()
+	// highlightpublishtask.DefaultAttempts holds the default value on creation for the attempts field.
+	highlightpublishtask.DefaultAttempts = highlightpublishtaskDescAttempts.Default.(int)
+	// highlightpublishtaskDescCreatedAt is the schema descriptor for created_at field.
+	highlightpublishtaskDescCreatedAt := highlightpublishtaskFields[10].Descriptor()
+	// highlightpublishtask.DefaultCreatedAt holds the default value on creation for the created_at field.
+	highlightpublishtask.DefaultCreatedAt = highlightpublishtaskDescCreatedAt.Default.(func() time.Time)
+	// highlightpublishtaskDescUpdatedAt is the schema descriptor for updated_at field.
+	highlightpublishtaskDescUpdatedAt := highlightpublishtaskFields[11].Descriptor()
+	// highlightpublishtask.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	highlightpublishtask.DefaultUpdatedAt = highlightpublishtaskDescUpdatedAt.Default.(func() time.Time)
+	// highlightpublishtask.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	highlightpublishtask.UpdateDefaultUpdatedAt = highlightpublishtaskDescUpdatedAt.UpdateDefault.(func() time.Time)
+	larkcardmessageFields := schema.LarkCardMessage{}.Fields()
+	_ = larkcardmessageFields
+	// larkcardmessageDescCreatedAt is the schema descriptor for created_at field.
+	larkcardmessageDescCreatedAt := larkcardmessageFields[1].Descriptor()
+	// larkcardmessage.DefaultCreatedAt holds the default value on creation for the created_at field.
+	larkcardmessage.DefaultCreatedAt = larkcardmessageDescCreatedAt.Default.(func() time.Time)
+	// larkcardmessageDescUpdatedAt is the schema descriptor for updated_at field.
+	larkcardmessageDescUpdatedAt := larkcardmessageFields[2].Descriptor()
+	// larkcardmessage.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	larkcardmessage.DefaultUpdatedAt = larkcardmessageDescUpdatedAt.Default.(func() time.Time)
+	// larkcardmessage.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	larkcardmessage.UpdateDefaultUpdatedAt = larkcardmessageDescUpdatedAt.UpdateDefault.(func() time.Time)
 	larkmessageFields := schema.LarkMessage{}.Fields()
 	_ = larkmessageFields
 	// larkmessageDescCreatedAt is the schema descriptor for created_at field.

@@ -67,6 +67,33 @@ highlight:
   mergeGapSeconds: 20
   publish: {}
 
+publish:
+  bilibili:
+    enabled: false
+    cookieSecretName: biliup-cookie
+    cookieSecretKey: cookies.json
+    tid: 232
+    copyright: 2
+    source: "RoboMaster机甲大师"
+    titleTemplate: "{{.LLMTitle}} {{.Event}}-{{.Zone}} 高光时刻"
+    descTemplate: |
+      {{.Description}}
+
+      {{.Event}} {{.Zone}}
+      {{.MatchName}} Round {{.RoundNo}}
+    dynamicTemplate: "{{.Title}}"
+    tags:
+      - RoboMaster
+      - 机甲大师
+      - 机器人
+      - 赛事高光
+    noReprint: false
+    openElec: true
+    maxConcurrentJobs: 1
+    cover:
+      enabled: true
+      at: peak
+
 transcode:
   sourceRetentionDays: 7
   maxConcurrent: 6

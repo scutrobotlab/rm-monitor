@@ -76,9 +76,11 @@ type HighlightClipEdges struct {
 	MatchRound *MatchRound `json:"match_round,omitempty"`
 	// SourceArtifact holds the value of the source_artifact edge.
 	SourceArtifact *MediaArtifact `json:"source_artifact,omitempty"`
+	// PublishTasks holds the value of the publish_tasks edge.
+	PublishTasks []*HighlightPublishTask `json:"publish_tasks,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [2]bool
+	loadedTypes [3]bool
 }
 
 // MatchRoundOrErr returns the MatchRound value or an error if the edge
@@ -101,6 +103,15 @@ func (e HighlightClipEdges) SourceArtifactOrErr() (*MediaArtifact, error) {
 		return nil, &NotFoundError{label: mediaartifact.Label}
 	}
 	return nil, &NotLoadedError{edge: "source_artifact"}
+}
+
+// PublishTasksOrErr returns the PublishTasks value or an error if the edge
+// was not loaded in eager-loading.
+func (e HighlightClipEdges) PublishTasksOrErr() ([]*HighlightPublishTask, error) {
+	if e.loadedTypes[2] {
+		return e.PublishTasks, nil
+	}
+	return nil, &NotLoadedError{edge: "publish_tasks"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -313,6 +324,11 @@ func (_m *HighlightClip) QueryMatchRound() *MatchRoundQuery {
 // QuerySourceArtifact queries the "source_artifact" edge of the HighlightClip entity.
 func (_m *HighlightClip) QuerySourceArtifact() *MediaArtifactQuery {
 	return NewHighlightClipClient(_m.config).QuerySourceArtifact(_m)
+}
+
+// QueryPublishTasks queries the "publish_tasks" edge of the HighlightClip entity.
+func (_m *HighlightClip) QueryPublishTasks() *HighlightPublishTaskQuery {
+	return NewHighlightClipClient(_m.config).QueryPublishTasks(_m)
 }
 
 // Update returns a builder for updating this HighlightClip.

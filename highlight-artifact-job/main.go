@@ -140,6 +140,9 @@ func run(ctx context.Context, client *ent.Client, c config.Config, clipID int) e
 	if err != nil {
 		return errors.Wrap(err, "mark highlight succeeded")
 	}
+	if c.PostgresConf.DSN != "" {
+		_ = db.Notify(ctx, c.PostgresConf.DSN, db.HighlightClipChangedChannel, strconv.Itoa(clipID))
+	}
 	return nil
 }
 

@@ -1256,6 +1256,29 @@ func HasSourceArtifactWith(preds ...predicate.MediaArtifact) predicate.Highlight
 	})
 }
 
+// HasPublishTasks applies the HasEdge predicate on the "publish_tasks" edge.
+func HasPublishTasks() predicate.HighlightClip {
+	return predicate.HighlightClip(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, PublishTasksTable, PublishTasksColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasPublishTasksWith applies the HasEdge predicate on the "publish_tasks" edge with a given conditions (other predicates).
+func HasPublishTasksWith(preds ...predicate.HighlightPublishTask) predicate.HighlightClip {
+	return predicate.HighlightClip(func(s *sql.Selector) {
+		step := newPublishTasksStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.HighlightClip) predicate.HighlightClip {
 	return predicate.HighlightClip(sql.AndPredicates(predicates...))

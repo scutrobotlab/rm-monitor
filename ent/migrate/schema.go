@@ -72,10 +72,80 @@ var (
 			},
 		},
 	}
+	// HighlightPublishTasksColumns holds the columns for the "highlight_publish_tasks" table.
+	HighlightPublishTasksColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "platform", Type: field.TypeEnum, Enums: []string{"bilibili"}},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"PENDING", "DISPATCHING", "RUNNING", "SUCCEEDED", "FAILED"}, Default: "PENDING"},
+		{Name: "priority", Type: field.TypeInt, Default: 0},
+		{Name: "k8s_job_name", Type: field.TypeString, Nullable: true},
+		{Name: "attempts", Type: field.TypeInt, Default: 0},
+		{Name: "publish_url", Type: field.TypeString, Nullable: true},
+		{Name: "external_id", Type: field.TypeString, Nullable: true},
+		{Name: "error_message", Type: field.TypeString, Nullable: true},
+		{Name: "started_at", Type: field.TypeTime, Nullable: true},
+		{Name: "completed_at", Type: field.TypeTime, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "highlight_clip_publish_tasks", Type: field.TypeInt},
+	}
+	// HighlightPublishTasksTable holds the schema information for the "highlight_publish_tasks" table.
+	HighlightPublishTasksTable = &schema.Table{
+		Name:       "highlight_publish_tasks",
+		Columns:    HighlightPublishTasksColumns,
+		PrimaryKey: []*schema.Column{HighlightPublishTasksColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "highlight_publish_tasks_highlight_clips_publish_tasks",
+				Columns:    []*schema.Column{HighlightPublishTasksColumns[13]},
+				RefColumns: []*schema.Column{HighlightClipsColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "highlightpublishtask_platform_highlight_clip_publish_tasks",
+				Unique:  true,
+				Columns: []*schema.Column{HighlightPublishTasksColumns[1], HighlightPublishTasksColumns[13]},
+			},
+			{
+				Name:    "highlightpublishtask_status",
+				Unique:  false,
+				Columns: []*schema.Column{HighlightPublishTasksColumns[2]},
+			},
+			{
+				Name:    "highlightpublishtask_status_priority_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{HighlightPublishTasksColumns[2], HighlightPublishTasksColumns[3], HighlightPublishTasksColumns[11]},
+			},
+		},
+	}
+	// LarkCardMessagesColumns holds the columns for the "lark_card_messages" table.
+	LarkCardMessagesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "message_id", Type: field.TypeString, Unique: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "lark_message_card_messages", Type: field.TypeInt},
+	}
+	// LarkCardMessagesTable holds the schema information for the "lark_card_messages" table.
+	LarkCardMessagesTable = &schema.Table{
+		Name:       "lark_card_messages",
+		Columns:    LarkCardMessagesColumns,
+		PrimaryKey: []*schema.Column{LarkCardMessagesColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "lark_card_messages_lark_messages_card_messages",
+				Columns:    []*schema.Column{LarkCardMessagesColumns[4]},
+				RefColumns: []*schema.Column{LarkMessagesColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+	}
 	// LarkMessagesColumns holds the columns for the "lark_messages" table.
 	LarkMessagesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
-		{Name: "message_id", Type: field.TypeString, Unique: true},
+		{Name: "card_id", Type: field.TypeString, Unique: true},
 		{Name: "card_payload", Type: field.TypeJSON, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
@@ -92,6 +162,13 @@ var (
 				Columns:    []*schema.Column{LarkMessagesColumns[5]},
 				RefColumns: []*schema.Column{MatchesColumns[0]},
 				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "larkmessage_match_lark_messages",
+				Unique:  true,
+				Columns: []*schema.Column{LarkMessagesColumns[5]},
 			},
 		},
 	}
@@ -404,6 +481,8 @@ var (
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
 		HighlightClipsTable,
+		HighlightPublishTasksTable,
+		LarkCardMessagesTable,
 		LarkMessagesTable,
 		MatchesTable,
 		MatchRoundsTable,
@@ -418,6 +497,8 @@ var (
 func init() {
 	HighlightClipsTable.ForeignKeys[0].RefTable = MatchRoundsTable
 	HighlightClipsTable.ForeignKeys[1].RefTable = MediaArtifactsTable
+	HighlightPublishTasksTable.ForeignKeys[0].RefTable = HighlightClipsTable
+	LarkCardMessagesTable.ForeignKeys[0].RefTable = LarkMessagesTable
 	LarkMessagesTable.ForeignKeys[0].RefTable = MatchesTable
 	MatchesTable.ForeignKeys[0].RefTable = TeamsTable
 	MatchesTable.ForeignKeys[1].RefTable = TeamsTable

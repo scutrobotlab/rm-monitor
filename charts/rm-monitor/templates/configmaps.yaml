@@ -123,8 +123,11 @@ data:
       AutoMigrate: true
 {{ include "rm-monitor.recordConf" . | indent 4 }}
 {{ include "rm-monitor.highlightConf" . | indent 4 }}
+{{ include "rm-monitor.publishConf" . | indent 4 }}
     K8sJobConf:
 {{ include "rm-monitor.jobConf" (dict "root" . "component" "highlight-artifact-job" "configMapName" "highlight-artifact-job-config" "recordsPVC" .Values.storage.shared.pvcName) | indent 6 }}
+    BilibiliJobConf:
+{{ include "rm-monitor.jobConf" (dict "root" . "component" "highlight-publish-bilibili-job" "configMapName" "highlight-publish-bilibili-job-config" "recordsPVC" .Values.storage.shared.pvcName) | indent 6 }}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -138,6 +141,18 @@ data:
 {{ include "rm-monitor.recordConf" . | indent 4 }}
 {{ include "rm-monitor.highlightConf" . | indent 4 }}
 {{ include "rm-monitor.llmConf" . | indent 4 }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: highlight-publish-bilibili-job-config
+  namespace: {{ include "rm-monitor.namespace" . }}
+data:
+  config.yml: |
+{{ include "rm-monitor.postgresConf" . | indent 4 }}
+      AutoMigrate: false
+{{ include "rm-monitor.recordConf" . | indent 4 }}
+{{ include "rm-monitor.publishConf" . | indent 4 }}
 ---
 apiVersion: v1
 kind: ConfigMap

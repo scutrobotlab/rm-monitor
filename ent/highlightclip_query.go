@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"database/sql/driver"
 	"fmt"
 	"math"
 
@@ -12,6 +13,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"scutbot.cn/web/rm-monitor/ent/highlightclip"
+	"scutbot.cn/web/rm-monitor/ent/highlightpublishtask"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
 	"scutbot.cn/web/rm-monitor/ent/mediaartifact"
 	"scutbot.cn/web/rm-monitor/ent/predicate"
@@ -26,6 +28,7 @@ type HighlightClipQuery struct {
 	predicates         []predicate.HighlightClip
 	withMatchRound     *MatchRoundQuery
 	withSourceArtifact *MediaArtifactQuery
+	withPublishTasks   *HighlightPublishTaskQuery
 	withFKs            bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
@@ -100,6 +103,28 @@ func (_q *HighlightClipQuery) QuerySourceArtifact() *MediaArtifactQuery {
 			sqlgraph.From(highlightclip.Table, highlightclip.FieldID, selector),
 			sqlgraph.To(mediaartifact.Table, mediaartifact.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, highlightclip.SourceArtifactTable, highlightclip.SourceArtifactColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryPublishTasks chains the current query on the "publish_tasks" edge.
+func (_q *HighlightClipQuery) QueryPublishTasks() *HighlightPublishTaskQuery {
+	query := (&HighlightPublishTaskClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(highlightclip.Table, highlightclip.FieldID, selector),
+			sqlgraph.To(highlightpublishtask.Table, highlightpublishtask.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, highlightclip.PublishTasksTable, highlightclip.PublishTasksColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -301,6 +326,7 @@ func (_q *HighlightClipQuery) Clone() *HighlightClipQuery {
 		predicates:         append([]predicate.HighlightClip{}, _q.predicates...),
 		withMatchRound:     _q.withMatchRound.Clone(),
 		withSourceArtifact: _q.withSourceArtifact.Clone(),
+		withPublishTasks:   _q.withPublishTasks.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
@@ -326,6 +352,17 @@ func (_q *HighlightClipQuery) WithSourceArtifact(opts ...func(*MediaArtifactQuer
 		opt(query)
 	}
 	_q.withSourceArtifact = query
+	return _q
+}
+
+// WithPublishTasks tells the query-builder to eager-load the nodes that are connected to
+// the "publish_tasks" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *HighlightClipQuery) WithPublishTasks(opts ...func(*HighlightPublishTaskQuery)) *HighlightClipQuery {
+	query := (&HighlightPublishTaskClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withPublishTasks = query
 	return _q
 }
 
@@ -408,9 +445,10 @@ func (_q *HighlightClipQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([
 		nodes       = []*HighlightClip{}
 		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
-		loadedTypes = [2]bool{
+		loadedTypes = [3]bool{
 			_q.withMatchRound != nil,
 			_q.withSourceArtifact != nil,
+			_q.withPublishTasks != nil,
 		}
 	)
 	if _q.withMatchRound != nil || _q.withSourceArtifact != nil {
@@ -446,6 +484,15 @@ func (_q *HighlightClipQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([
 	if query := _q.withSourceArtifact; query != nil {
 		if err := _q.loadSourceArtifact(ctx, query, nodes, nil,
 			func(n *HighlightClip, e *MediaArtifact) { n.Edges.SourceArtifact = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withPublishTasks; query != nil {
+		if err := _q.loadPublishTasks(ctx, query, nodes,
+			func(n *HighlightClip) { n.Edges.PublishTasks = []*HighlightPublishTask{} },
+			func(n *HighlightClip, e *HighlightPublishTask) {
+				n.Edges.PublishTasks = append(n.Edges.PublishTasks, e)
+			}); err != nil {
 			return nil, err
 		}
 	}
@@ -513,6 +560,37 @@ func (_q *HighlightClipQuery) loadSourceArtifact(ctx context.Context, query *Med
 		for i := range nodes {
 			assign(nodes[i], n)
 		}
+	}
+	return nil
+}
+func (_q *HighlightClipQuery) loadPublishTasks(ctx context.Context, query *HighlightPublishTaskQuery, nodes []*HighlightClip, init func(*HighlightClip), assign func(*HighlightClip, *HighlightPublishTask)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[int]*HighlightClip)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.HighlightPublishTask(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(highlightclip.PublishTasksColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.highlight_clip_publish_tasks
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "highlight_clip_publish_tasks" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "highlight_clip_publish_tasks" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
 	}
 	return nil
 }

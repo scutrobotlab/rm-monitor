@@ -86,6 +86,7 @@ const stats = new DanmuStats();
 let runtimeClient = null as { close?: () => Promise<void> } | null;
 let room = null as { count?: () => Promise<number>; leave?: () => Promise<void> } | null;
 let shuttingDown = false;
+let mediaTimeZeroWallMs = 0;
 
 process.on("SIGTERM", () => {
   shuttingDown = true;
@@ -308,8 +309,6 @@ function startOnlineSampler(room: { count?: () => Promise<number> }, round: Roun
     clearInterval(timer);
   };
 }
-
-let mediaTimeZeroWallMs = 0;
 
 function videoOffsetSeconds(timestampMs: number): number {
   return (timestampMs - mediaTimeZeroWallMs) / 1000 + danmuConf.VideoOffsetSeconds;

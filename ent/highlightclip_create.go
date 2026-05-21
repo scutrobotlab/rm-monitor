@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"scutbot.cn/web/rm-monitor/ent/highlightclip"
+	"scutbot.cn/web/rm-monitor/ent/highlightpublishtask"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
 	"scutbot.cn/web/rm-monitor/ent/mediaartifact"
 )
@@ -276,6 +277,21 @@ func (_c *HighlightClipCreate) SetSourceArtifact(v *MediaArtifact) *HighlightCli
 	return _c.SetSourceArtifactID(v.ID)
 }
 
+// AddPublishTaskIDs adds the "publish_tasks" edge to the HighlightPublishTask entity by IDs.
+func (_c *HighlightClipCreate) AddPublishTaskIDs(ids ...int) *HighlightClipCreate {
+	_c.mutation.AddPublishTaskIDs(ids...)
+	return _c
+}
+
+// AddPublishTasks adds the "publish_tasks" edges to the HighlightPublishTask entity.
+func (_c *HighlightClipCreate) AddPublishTasks(v ...*HighlightPublishTask) *HighlightClipCreate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddPublishTaskIDs(ids...)
+}
+
 // Mutation returns the HighlightClipMutation object of the builder.
 func (_c *HighlightClipCreate) Mutation() *HighlightClipMutation {
 	return _c.mutation
@@ -532,6 +548,22 @@ func (_c *HighlightClipCreate) createSpec() (*HighlightClip, *sqlgraph.CreateSpe
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_node.media_artifact_highlight_clips = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.PublishTasksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   highlightclip.PublishTasksTable,
+			Columns: []string{highlightclip.PublishTasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(highlightpublishtask.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

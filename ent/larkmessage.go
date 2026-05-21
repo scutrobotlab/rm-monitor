@@ -19,8 +19,8 @@ type LarkMessage struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID int `json:"id,omitempty"`
-	// MessageID holds the value of the "message_id" field.
-	MessageID string `json:"message_id,omitempty"`
+	// CardID holds the value of the "card_id" field.
+	CardID string `json:"card_id,omitempty"`
 	// CardPayload holds the value of the "card_payload" field.
 	CardPayload map[string]interface{} `json:"card_payload,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
@@ -38,9 +38,11 @@ type LarkMessage struct {
 type LarkMessageEdges struct {
 	// Match holds the value of the match edge.
 	Match *Match `json:"match,omitempty"`
+	// CardMessages holds the value of the card_messages edge.
+	CardMessages []*LarkCardMessage `json:"card_messages,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [1]bool
+	loadedTypes [2]bool
 }
 
 // MatchOrErr returns the Match value or an error if the edge
@@ -54,6 +56,15 @@ func (e LarkMessageEdges) MatchOrErr() (*Match, error) {
 	return nil, &NotLoadedError{edge: "match"}
 }
 
+// CardMessagesOrErr returns the CardMessages value or an error if the edge
+// was not loaded in eager-loading.
+func (e LarkMessageEdges) CardMessagesOrErr() ([]*LarkCardMessage, error) {
+	if e.loadedTypes[1] {
+		return e.CardMessages, nil
+	}
+	return nil, &NotLoadedError{edge: "card_messages"}
+}
+
 // scanValues returns the types for scanning values from sql.Rows.
 func (*LarkMessage) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
@@ -63,7 +74,7 @@ func (*LarkMessage) scanValues(columns []string) ([]any, error) {
 			values[i] = new([]byte)
 		case larkmessage.FieldID:
 			values[i] = new(sql.NullInt64)
-		case larkmessage.FieldMessageID:
+		case larkmessage.FieldCardID:
 			values[i] = new(sql.NullString)
 		case larkmessage.FieldCreatedAt, larkmessage.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -90,11 +101,11 @@ func (_m *LarkMessage) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field id", value)
 			}
 			_m.ID = int(value.Int64)
-		case larkmessage.FieldMessageID:
+		case larkmessage.FieldCardID:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field message_id", values[i])
+				return fmt.Errorf("unexpected type %T for field card_id", values[i])
 			} else if value.Valid {
-				_m.MessageID = value.String
+				_m.CardID = value.String
 			}
 		case larkmessage.FieldCardPayload:
 			if value, ok := values[i].(*[]byte); !ok {
@@ -141,6 +152,11 @@ func (_m *LarkMessage) QueryMatch() *MatchQuery {
 	return NewLarkMessageClient(_m.config).QueryMatch(_m)
 }
 
+// QueryCardMessages queries the "card_messages" edge of the LarkMessage entity.
+func (_m *LarkMessage) QueryCardMessages() *LarkCardMessageQuery {
+	return NewLarkMessageClient(_m.config).QueryCardMessages(_m)
+}
+
 // Update returns a builder for updating this LarkMessage.
 // Note that you need to call LarkMessage.Unwrap() before calling this method if this LarkMessage
 // was returned from a transaction, and the transaction was committed or rolled back.
@@ -164,8 +180,8 @@ func (_m *LarkMessage) String() string {
 	var builder strings.Builder
 	builder.WriteString("LarkMessage(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
-	builder.WriteString("message_id=")
-	builder.WriteString(_m.MessageID)
+	builder.WriteString("card_id=")
+	builder.WriteString(_m.CardID)
 	builder.WriteString(", ")
 	builder.WriteString("card_payload=")
 	builder.WriteString(fmt.Sprintf("%v", _m.CardPayload))

@@ -104,6 +104,36 @@
         "timeoutSeconds": { "type": "integer", "minimum": 1 }
       }
     },
+    "publish": {
+      "type": "object",
+      "properties": {
+        "bilibili": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "cookieSecretName": { "type": "string" },
+            "cookieSecretKey": { "type": "string" },
+            "tid": { "type": "integer", "minimum": 1 },
+            "copyright": { "type": "integer", "enum": [1, 2] },
+            "source": { "type": "string" },
+            "titleTemplate": { "type": "string" },
+            "descTemplate": { "type": "string" },
+            "dynamicTemplate": { "type": "string" },
+            "tags": { "type": "array", "items": { "type": "string" } },
+            "noReprint": { "type": "boolean" },
+            "openElec": { "type": "boolean" },
+            "maxConcurrentJobs": { "type": "integer", "minimum": 1 },
+            "cover": {
+              "type": "object",
+              "properties": {
+                "enabled": { "type": "boolean" },
+                "at": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
     "jobs": {
       "type": "object",
       "required": ["ttlSecondsAfterFinished", "backoffLimit", "recordsMountPath", "artifactCleaner"],

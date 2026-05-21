@@ -27,3 +27,16 @@ func TestUploadReplyUUID(t *testing.T) {
 		t.Fatalf("UploadReplyUUID() length = %d, want <= 50", len(got))
 	}
 }
+
+func TestMatchCardUpdateUUID(t *testing.T) {
+	got := MatchCardUpdateUUID("match-1", "card-1", 100)
+	if got != MatchCardUpdateUUID("match-1", "card-1", 100) {
+		t.Fatalf("MatchCardUpdateUUID() is not stable")
+	}
+	if got == MatchCardUpdateUUID("match-1", "card-1", 101) {
+		t.Fatalf("MatchCardUpdateUUID() should include sequence")
+	}
+	if len(got) > 50 {
+		t.Fatalf("MatchCardUpdateUUID() length = %d, want <= 50", len(got))
+	}
+}

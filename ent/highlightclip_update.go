@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqljson"
 	"entgo.io/ent/schema/field"
 	"scutbot.cn/web/rm-monitor/ent/highlightclip"
+	"scutbot.cn/web/rm-monitor/ent/highlightpublishtask"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
 	"scutbot.cn/web/rm-monitor/ent/mediaartifact"
 	"scutbot.cn/web/rm-monitor/ent/predicate"
@@ -420,6 +421,21 @@ func (_u *HighlightClipUpdate) SetSourceArtifact(v *MediaArtifact) *HighlightCli
 	return _u.SetSourceArtifactID(v.ID)
 }
 
+// AddPublishTaskIDs adds the "publish_tasks" edge to the HighlightPublishTask entity by IDs.
+func (_u *HighlightClipUpdate) AddPublishTaskIDs(ids ...int) *HighlightClipUpdate {
+	_u.mutation.AddPublishTaskIDs(ids...)
+	return _u
+}
+
+// AddPublishTasks adds the "publish_tasks" edges to the HighlightPublishTask entity.
+func (_u *HighlightClipUpdate) AddPublishTasks(v ...*HighlightPublishTask) *HighlightClipUpdate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddPublishTaskIDs(ids...)
+}
+
 // Mutation returns the HighlightClipMutation object of the builder.
 func (_u *HighlightClipUpdate) Mutation() *HighlightClipMutation {
 	return _u.mutation
@@ -435,6 +451,27 @@ func (_u *HighlightClipUpdate) ClearMatchRound() *HighlightClipUpdate {
 func (_u *HighlightClipUpdate) ClearSourceArtifact() *HighlightClipUpdate {
 	_u.mutation.ClearSourceArtifact()
 	return _u
+}
+
+// ClearPublishTasks clears all "publish_tasks" edges to the HighlightPublishTask entity.
+func (_u *HighlightClipUpdate) ClearPublishTasks() *HighlightClipUpdate {
+	_u.mutation.ClearPublishTasks()
+	return _u
+}
+
+// RemovePublishTaskIDs removes the "publish_tasks" edge to HighlightPublishTask entities by IDs.
+func (_u *HighlightClipUpdate) RemovePublishTaskIDs(ids ...int) *HighlightClipUpdate {
+	_u.mutation.RemovePublishTaskIDs(ids...)
+	return _u
+}
+
+// RemovePublishTasks removes "publish_tasks" edges to HighlightPublishTask entities.
+func (_u *HighlightClipUpdate) RemovePublishTasks(v ...*HighlightPublishTask) *HighlightClipUpdate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemovePublishTaskIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -662,6 +699,51 @@ func (_u *HighlightClipUpdate) sqlSave(ctx context.Context) (_node int, err erro
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(mediaartifact.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.PublishTasksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   highlightclip.PublishTasksTable,
+			Columns: []string{highlightclip.PublishTasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(highlightpublishtask.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedPublishTasksIDs(); len(nodes) > 0 && !_u.mutation.PublishTasksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   highlightclip.PublishTasksTable,
+			Columns: []string{highlightclip.PublishTasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(highlightpublishtask.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.PublishTasksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   highlightclip.PublishTasksTable,
+			Columns: []string{highlightclip.PublishTasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(highlightpublishtask.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -1078,6 +1160,21 @@ func (_u *HighlightClipUpdateOne) SetSourceArtifact(v *MediaArtifact) *Highlight
 	return _u.SetSourceArtifactID(v.ID)
 }
 
+// AddPublishTaskIDs adds the "publish_tasks" edge to the HighlightPublishTask entity by IDs.
+func (_u *HighlightClipUpdateOne) AddPublishTaskIDs(ids ...int) *HighlightClipUpdateOne {
+	_u.mutation.AddPublishTaskIDs(ids...)
+	return _u
+}
+
+// AddPublishTasks adds the "publish_tasks" edges to the HighlightPublishTask entity.
+func (_u *HighlightClipUpdateOne) AddPublishTasks(v ...*HighlightPublishTask) *HighlightClipUpdateOne {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddPublishTaskIDs(ids...)
+}
+
 // Mutation returns the HighlightClipMutation object of the builder.
 func (_u *HighlightClipUpdateOne) Mutation() *HighlightClipMutation {
 	return _u.mutation
@@ -1093,6 +1190,27 @@ func (_u *HighlightClipUpdateOne) ClearMatchRound() *HighlightClipUpdateOne {
 func (_u *HighlightClipUpdateOne) ClearSourceArtifact() *HighlightClipUpdateOne {
 	_u.mutation.ClearSourceArtifact()
 	return _u
+}
+
+// ClearPublishTasks clears all "publish_tasks" edges to the HighlightPublishTask entity.
+func (_u *HighlightClipUpdateOne) ClearPublishTasks() *HighlightClipUpdateOne {
+	_u.mutation.ClearPublishTasks()
+	return _u
+}
+
+// RemovePublishTaskIDs removes the "publish_tasks" edge to HighlightPublishTask entities by IDs.
+func (_u *HighlightClipUpdateOne) RemovePublishTaskIDs(ids ...int) *HighlightClipUpdateOne {
+	_u.mutation.RemovePublishTaskIDs(ids...)
+	return _u
+}
+
+// RemovePublishTasks removes "publish_tasks" edges to HighlightPublishTask entities.
+func (_u *HighlightClipUpdateOne) RemovePublishTasks(v ...*HighlightPublishTask) *HighlightClipUpdateOne {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemovePublishTaskIDs(ids...)
 }
 
 // Where appends a list predicates to the HighlightClipUpdate builder.
@@ -1350,6 +1468,51 @@ func (_u *HighlightClipUpdateOne) sqlSave(ctx context.Context) (_node *Highlight
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(mediaartifact.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.PublishTasksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   highlightclip.PublishTasksTable,
+			Columns: []string{highlightclip.PublishTasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(highlightpublishtask.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedPublishTasksIDs(); len(nodes) > 0 && !_u.mutation.PublishTasksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   highlightclip.PublishTasksTable,
+			Columns: []string{highlightclip.PublishTasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(highlightpublishtask.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.PublishTasksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   highlightclip.PublishTasksTable,
+			Columns: []string{highlightclip.PublishTasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(highlightpublishtask.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

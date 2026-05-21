@@ -9,11 +9,11 @@ import (
 	"strings"
 	"time"
 
+	larkcardkit "github.com/larksuite/oapi-sdk-go/v3/service/cardkit/v1"
 	larkim "github.com/larksuite/oapi-sdk-go/v3/service/im/v1"
 	"github.com/pkg/errors"
 	"github.com/samber/lo"
 	"scutbot.cn/web/rm-monitor/ent"
-	"scutbot.cn/web/rm-monitor/ent/larkmessage"
 	"scutbot.cn/web/rm-monitor/ent/match"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
 	"scutbot.cn/web/rm-monitor/ent/uploadtask"
@@ -79,7 +79,9 @@ func (l *NotifyLogic) syncMatchRound(id int) error {
 		WithMatch(func(q *ent.MatchQuery) {
 			q.WithRedTeam().
 				WithBlueTeam().
-				WithLarkMessages().
+				WithLarkMessages(func(q *ent.LarkMessageQuery) {
+					q.WithCardMessages()
+				}).
 				WithRounds(func(q *ent.MatchRoundQuery) {
 					q.Order(matchround.ByRoundNo())
 				})
@@ -95,7 +97,7 @@ func (l *NotifyLogic) syncMatchRound(id int) error {
 	if m == nil {
 		return nil
 	}
-	if r.Status == matchround.StatusSTARTED && len(m.Edges.LarkMessages) == 0 {
+	if r.Status == matchround.StatusSTARTED && matchNeedsCardSend(m) {
 		if err := l.createMatchMessages(m); err != nil {
 			return err
 		}
@@ -118,7 +120,9 @@ func (l *NotifyLogic) ensureStartedMessages() error {
 	rounds, err := l.svcCtx.DB.MatchRound.Query().
 		Where(matchround.StatusEQ(matchround.StatusSTARTED)).
 		WithMatch(func(q *ent.MatchQuery) {
-			q.WithRedTeam().WithBlueTeam().WithLarkMessages()
+			q.WithRedTeam().WithBlueTeam().WithLarkMessages(func(q *ent.LarkMessageQuery) {
+				q.WithCardMessages()
+			})
 		}).
 		Limit(100).
 		All(l.ctx)
@@ -128,7 +132,7 @@ func (l *NotifyLogic) ensureStartedMessages() error {
 
 	for _, r := range rounds {
 		m := r.Edges.Match
-		if m == nil || len(m.Edges.LarkMessages) > 0 {
+		if m == nil || !matchNeedsCardSend(m) {
 			continue
 		}
 		if err := l.createMatchMessages(m); err != nil {
@@ -139,17 +143,90 @@ func (l *NotifyLogic) ensureStartedMessages() error {
 }
 
 func (l *NotifyLogic) createMatchMessages(m *ent.Match) error {
-	content, err := l.cardContent(m)
+	chatIDs, err := utils.JoinedChatIDs(l.ctx, l.svcCtx)
 	if err != nil {
 		return err
 	}
-	contentBytes, err := json.Marshal(content)
-	if err != nil {
-		return errors.Wrap(err, "marshal card content")
+	if len(chatIDs) == 0 {
+		return nil
 	}
-	contentData := string(contentBytes)
+	if len(m.Edges.LarkMessages) > 0 {
+		card := m.Edges.LarkMessages[0]
+		if len(card.Edges.CardMessages) > 0 {
+			return nil
+		}
+		return l.sendCardReferencesToChats(m, card, chatIDs)
+	}
+	card, err := l.ensureMatchCard(m)
+	if err != nil {
+		return err
+	}
+	return l.sendCardReferencesToChats(m, card, chatIDs)
+}
 
-	chatIDs, err := utils.JoinedChatIDs(l.ctx, l.svcCtx)
+func (l *NotifyLogic) ensureMatchCard(m *ent.Match) (*ent.LarkMessage, error) {
+	content, err := l.cardContent(m)
+	if err != nil {
+		return nil, err
+	}
+	contentData, err := cardEntityData(content)
+	if err != nil {
+		return nil, err
+	}
+	var resp *larkcardkit.CreateCardResp
+	err = l.withLarkRetry("", func() error {
+		var callErr error
+		resp, callErr = l.svcCtx.LarkClient.Cardkit.V1.Card.Create(l.ctx, larkcardkit.NewCreateCardReqBuilder().
+			Body(larkcardkit.NewCreateCardReqBodyBuilder().
+				Type("card_json").
+				Data(contentData).
+				Build()).
+			Build())
+		if callErr != nil {
+			return callErr
+		}
+		if !resp.Success() {
+			return resp
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "create cardkit card")
+	}
+	if resp.Data == nil || resp.Data.CardId == nil || *resp.Data.CardId == "" {
+		return nil, errors.New("create cardkit card returned empty card_id")
+	}
+	card, err := l.svcCtx.DB.LarkMessage.Create().
+		SetMatchID(m.ID).
+		SetCardID(*resp.Data.CardId).
+		SetCardPayload(toMap(content)).
+		Save(l.ctx)
+	if err != nil && !ent.IsConstraintError(err) {
+		return nil, errors.Wrap(err, "save lark card")
+	}
+	if ent.IsConstraintError(err) {
+		current, queryErr := l.svcCtx.DB.Match.Query().
+			Where(match.ID(m.ID)).
+			WithLarkMessages(func(q *ent.LarkMessageQuery) {
+				q.WithCardMessages()
+			}).
+			Only(l.ctx)
+		if queryErr != nil {
+			return nil, errors.Wrap(queryErr, "query existing lark card after conflict")
+		}
+		if len(current.Edges.LarkMessages) == 0 {
+			return nil, errors.Wrap(err, "save lark card conflict without existing card")
+		}
+		card = current.Edges.LarkMessages[0]
+	}
+	return card, nil
+}
+
+func (l *NotifyLogic) sendCardReferencesToChats(m *ent.Match, card *ent.LarkMessage, chatIDs []string) error {
+	if strings.HasPrefix(card.CardID, "legacy:") {
+		return nil
+	}
+	contentData, err := cardMessageContent(card.CardID)
 	if err != nil {
 		return err
 	}
@@ -179,17 +256,26 @@ func (l *NotifyLogic) createMatchMessages(m *ent.Match) error {
 			l.Error(errors.Wrap(err, "create lark message"))
 			continue
 		}
-		if _, err := l.svcCtx.DB.LarkMessage.Create().
-			SetMatchID(m.ID).
-			SetMessageID(*resp.Data.MessageId).
-			SetCardPayload(toMap(content)).
-			OnConflictColumns(larkmessage.FieldMessageID).
-			UpdateNewValues().
-			ID(l.ctx); err != nil {
-			l.Error(errors.Wrap(err, "save lark message"))
+		if resp.Data == nil || resp.Data.MessageId == nil || *resp.Data.MessageId == "" {
+			l.Error(errors.New("create lark message returned empty message_id"))
+			continue
+		}
+		if err := l.saveCardMessage(card.ID, *resp.Data.MessageId); err != nil {
+			l.Error(errors.Wrap(err, "save lark card message"))
 		}
 	}
 	return nil
+}
+
+func (l *NotifyLogic) saveCardMessage(cardID int, messageID string) error {
+	_, err := l.svcCtx.DB.LarkCardMessage.Create().
+		SetCardID(cardID).
+		SetMessageID(messageID).
+		Save(l.ctx)
+	if ent.IsConstraintError(err) {
+		return nil
+	}
+	return err
 }
 
 func (l *NotifyLogic) patchChangedCardsSince(since time.Time) error {
@@ -253,7 +339,9 @@ func (l *NotifyLogic) matchForPatch(matchID string) (*ent.Match, error) {
 		Where(match.ID(matchID)).
 		WithRedTeam().
 		WithBlueTeam().
-		WithLarkMessages().
+		WithLarkMessages(func(q *ent.LarkMessageQuery) {
+			q.WithCardMessages()
+		}).
 		WithRounds(func(q *ent.MatchRoundQuery) {
 			q.Order(matchround.ByRoundNo())
 		}).
@@ -269,23 +357,34 @@ func (l *NotifyLogic) patchMatchCards(m *ent.Match) error {
 		return err
 	}
 	contentMap := toMap(content)
-	contentBytes, err := json.Marshal(content)
+	contentData, err := cardEntityData(content)
 	if err != nil {
-		return errors.Wrap(err, "marshal card content")
+		return err
 	}
-	contentData := string(contentBytes)
 	dataUpdatedAt := cardDataUpdatedAt(m)
-	for _, message := range m.Edges.LarkMessages {
-		if !message.UpdatedAt.Before(dataUpdatedAt) {
+	for _, card := range m.Edges.LarkMessages {
+		if strings.HasPrefix(card.CardID, "legacy:") {
 			continue
 		}
-		req := larkim.NewPatchMessageReqBuilder().MessageId(message.MessageID).
-			Body(larkim.NewPatchMessageReqBodyBuilder().Content(contentData).Build()).
+		if !card.UpdatedAt.Before(dataUpdatedAt) {
+			continue
+		}
+		sequence := time.Now().Unix()
+		req := larkcardkit.NewUpdateCardReqBuilder().
+			CardId(card.CardID).
+			Body(larkcardkit.NewUpdateCardReqBodyBuilder().
+				Card(larkcardkit.NewCardBuilder().
+					Type("card_json").
+					Data(contentData).
+					Build()).
+				Uuid(utils.MatchCardUpdateUUID(m.ID, card.CardID, sequence)).
+				Sequence(int(sequence)).
+				Build()).
 			Build()
-		var resp *larkim.PatchMessageResp
+		var resp *larkcardkit.UpdateCardResp
 		err := l.withLarkRetry("", func() error {
 			var callErr error
-			resp, callErr = l.svcCtx.LarkClient.Im.V1.Message.Patch(l.ctx, req)
+			resp, callErr = l.svcCtx.LarkClient.Cardkit.V1.Card.Update(l.ctx, req)
 			if callErr != nil {
 				return callErr
 			}
@@ -295,10 +394,10 @@ func (l *NotifyLogic) patchMatchCards(m *ent.Match) error {
 			return nil
 		})
 		if err != nil {
-			l.Error(errors.Wrap(err, "patch lark message"))
+			l.Error(errors.Wrap(err, "update cardkit card"))
 			continue
 		}
-		if err := l.svcCtx.DB.LarkMessage.UpdateOneID(message.ID).SetCardPayload(contentMap).Exec(l.ctx); err != nil {
+		if err := l.svcCtx.DB.LarkMessage.UpdateOneID(card.ID).SetCardPayload(contentMap).Exec(l.ctx); err != nil {
 			l.Error(errors.Wrap(err, "update lark card payload"))
 			continue
 		}
@@ -325,7 +424,9 @@ func (l *NotifyLogic) replyCompletedUploads() error {
 		WithRecordTask(func(q *ent.RecordTaskQuery) {
 			q.WithMatchRound(func(q *ent.MatchRoundQuery) {
 				q.WithMatch(func(q *ent.MatchQuery) {
-					q.WithLarkMessages()
+					q.WithLarkMessages(func(q *ent.LarkMessageQuery) {
+						q.WithCardMessages()
+					})
 				})
 			})
 		}).Limit(100).
@@ -347,7 +448,9 @@ func (l *NotifyLogic) uploadTaskForReply(id int) (*ent.UploadTask, error) {
 		WithRecordTask(func(q *ent.RecordTaskQuery) {
 			q.WithMatchRound(func(q *ent.MatchRoundQuery) {
 				q.WithMatch(func(q *ent.MatchQuery) {
-					q.WithLarkMessages()
+					q.WithLarkMessages(func(q *ent.LarkMessageQuery) {
+						q.WithCardMessages()
+					})
 				})
 			})
 		}).
@@ -362,20 +465,24 @@ func (l *NotifyLogic) replyUploadTask(task *ent.UploadTask) error {
 	if len(match.Edges.LarkMessages) == 0 {
 		return nil
 	}
+	messageIDs := larkMessageIDs(match.Edges.LarkMessages)
+	if len(messageIDs) == 0 {
+		return nil
+	}
 	replyContent, err := uploadReplyContent(task)
 	if err != nil {
 		return err
 	}
 	done := 0
-	for _, message := range match.Edges.LarkMessages {
+	for _, messageID := range messageIDs {
 		req := larkim.NewReplyMessageReqBuilder().
 			Body(larkim.NewReplyMessageReqBodyBuilder().
 				Content(replyContent).
 				MsgType(larkim.MsgTypePost).
 				ReplyInThread(true).
-				Uuid(utils.UploadReplyUUID(task.ID, message.MessageID)).
+				Uuid(utils.UploadReplyUUID(task.ID, messageID)).
 				Build()).
-			MessageId(message.MessageID).
+			MessageId(messageID).
 			Build()
 		var resp *larkim.ReplyMessageResp
 		err := l.withLarkRetry("", func() error {
@@ -391,7 +498,7 @@ func (l *NotifyLogic) replyUploadTask(task *ent.UploadTask) error {
 		})
 		if err != nil {
 			if isTerminalReplyError(err) {
-				l.Infof("skip upload reply for unreachable message: task=%d message_id=%s", task.ID, message.MessageID)
+				l.Infof("skip upload reply for unreachable message: task=%d message_id=%s", task.ID, messageID)
 				done++
 				continue
 			}
@@ -400,7 +507,7 @@ func (l *NotifyLogic) replyUploadTask(task *ent.UploadTask) error {
 		}
 		done++
 	}
-	if done != len(match.Edges.LarkMessages) {
+	if done != len(messageIDs) {
 		return nil
 	}
 	if err := l.svcCtx.DB.UploadTask.UpdateOneID(task.ID).SetLarkRepliedAt(time.Now()).Exec(l.ctx); err != nil {
@@ -526,17 +633,58 @@ func (l *NotifyLogic) cardContent(m *ent.Match) (*utils.MatchCardContent, error)
 		case matchround.WinnerBlue:
 			msg.BlueWinGameCount++
 		}
-		content.Data.TemplateVariable.Scores = append(content.Data.TemplateVariable.Scores, utils.MatchScore{
+		content.Data.Scores = append(content.Data.Scores, utils.MatchScore{
 			RedScore:  fmt.Sprintf("%d", msg.RedWinGameCount),
 			BlueScore: fmt.Sprintf("%d", msg.BlueWinGameCount),
 		})
 	}
 	if matchCardCompleted(m) {
-		content.Data.TemplateVariable.MatchProgress = ""
-		content.Data.TemplateVariable.Color = completedCardColor(m.Result)
+		content.Data.MatchProgress = ""
+		content.Data.Color = completedCardColor(m.Result)
 	}
-	content.Data.TemplateVariable.Scores = lo.Uniq(content.Data.TemplateVariable.Scores)
+	content.Data.Scores = lo.Uniq(content.Data.Scores)
 	return content, nil
+}
+
+func matchNeedsCardSend(m *ent.Match) bool {
+	if m == nil || len(m.Edges.LarkMessages) == 0 {
+		return true
+	}
+	for _, card := range m.Edges.LarkMessages {
+		if len(card.Edges.CardMessages) > 0 {
+			return false
+		}
+	}
+	return true
+}
+
+func cardEntityData(content *utils.MatchCardContent) (string, error) {
+	return content.RenderJSON()
+}
+
+func cardMessageContent(cardID string) (string, error) {
+	b, err := json.Marshal(map[string]any{
+		"type": "card",
+		"data": map[string]any{
+			"card_id": cardID,
+		},
+	})
+	if err != nil {
+		return "", errors.Wrap(err, "marshal cardkit message content")
+	}
+	return string(b), nil
+}
+
+func larkMessageIDs(cards []*ent.LarkMessage) []string {
+	ids := make([]string, 0)
+	for _, card := range cards {
+		for _, msg := range card.Edges.CardMessages {
+			if msg.MessageID != "" {
+				ids = append(ids, msg.MessageID)
+			}
+		}
+	}
+	return ids
 }
 
 func completedCardColor(result match.Result) string {

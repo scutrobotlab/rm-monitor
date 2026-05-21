@@ -14,8 +14,8 @@ const (
 	Label = "lark_message"
 	// FieldID holds the string denoting the id field in the database.
 	FieldID = "id"
-	// FieldMessageID holds the string denoting the message_id field in the database.
-	FieldMessageID = "message_id"
+	// FieldCardID holds the string denoting the card_id field in the database.
+	FieldCardID = "card_id"
 	// FieldCardPayload holds the string denoting the card_payload field in the database.
 	FieldCardPayload = "card_payload"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
@@ -24,6 +24,8 @@ const (
 	FieldUpdatedAt = "updated_at"
 	// EdgeMatch holds the string denoting the match edge name in mutations.
 	EdgeMatch = "match"
+	// EdgeCardMessages holds the string denoting the card_messages edge name in mutations.
+	EdgeCardMessages = "card_messages"
 	// Table holds the table name of the larkmessage in the database.
 	Table = "lark_messages"
 	// MatchTable is the table that holds the match relation/edge.
@@ -33,12 +35,19 @@ const (
 	MatchInverseTable = "matches"
 	// MatchColumn is the table column denoting the match relation/edge.
 	MatchColumn = "match_lark_messages"
+	// CardMessagesTable is the table that holds the card_messages relation/edge.
+	CardMessagesTable = "lark_card_messages"
+	// CardMessagesInverseTable is the table name for the LarkCardMessage entity.
+	// It exists in this package in order to avoid circular dependency with the "larkcardmessage" package.
+	CardMessagesInverseTable = "lark_card_messages"
+	// CardMessagesColumn is the table column denoting the card_messages relation/edge.
+	CardMessagesColumn = "lark_message_card_messages"
 )
 
 // Columns holds all SQL columns for larkmessage fields.
 var Columns = []string{
 	FieldID,
-	FieldMessageID,
+	FieldCardID,
 	FieldCardPayload,
 	FieldCreatedAt,
 	FieldUpdatedAt,
@@ -82,9 +91,9 @@ func ByID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldID, opts...).ToFunc()
 }
 
-// ByMessageID orders the results by the message_id field.
-func ByMessageID(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldMessageID, opts...).ToFunc()
+// ByCardID orders the results by the card_id field.
+func ByCardID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCardID, opts...).ToFunc()
 }
 
 // ByCreatedAt orders the results by the created_at field.
@@ -103,10 +112,31 @@ func ByMatchField(field string, opts ...sql.OrderTermOption) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newMatchStep(), sql.OrderByField(field, opts...))
 	}
 }
+
+// ByCardMessagesCount orders the results by card_messages count.
+func ByCardMessagesCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newCardMessagesStep(), opts...)
+	}
+}
+
+// ByCardMessages orders the results by card_messages terms.
+func ByCardMessages(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newCardMessagesStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newMatchStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(MatchInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.M2O, true, MatchTable, MatchColumn),
+	)
+}
+func newCardMessagesStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(CardMessagesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, CardMessagesTable, CardMessagesColumn),
 	)
 }

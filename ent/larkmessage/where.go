@@ -55,9 +55,9 @@ func IDLTE(id int) predicate.LarkMessage {
 	return predicate.LarkMessage(sql.FieldLTE(FieldID, id))
 }
 
-// MessageID applies equality check predicate on the "message_id" field. It's identical to MessageIDEQ.
-func MessageID(v string) predicate.LarkMessage {
-	return predicate.LarkMessage(sql.FieldEQ(FieldMessageID, v))
+// CardID applies equality check predicate on the "card_id" field. It's identical to CardIDEQ.
+func CardID(v string) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldEQ(FieldCardID, v))
 }
 
 // CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
@@ -70,69 +70,69 @@ func UpdatedAt(v time.Time) predicate.LarkMessage {
 	return predicate.LarkMessage(sql.FieldEQ(FieldUpdatedAt, v))
 }
 
-// MessageIDEQ applies the EQ predicate on the "message_id" field.
-func MessageIDEQ(v string) predicate.LarkMessage {
-	return predicate.LarkMessage(sql.FieldEQ(FieldMessageID, v))
+// CardIDEQ applies the EQ predicate on the "card_id" field.
+func CardIDEQ(v string) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldEQ(FieldCardID, v))
 }
 
-// MessageIDNEQ applies the NEQ predicate on the "message_id" field.
-func MessageIDNEQ(v string) predicate.LarkMessage {
-	return predicate.LarkMessage(sql.FieldNEQ(FieldMessageID, v))
+// CardIDNEQ applies the NEQ predicate on the "card_id" field.
+func CardIDNEQ(v string) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldNEQ(FieldCardID, v))
 }
 
-// MessageIDIn applies the In predicate on the "message_id" field.
-func MessageIDIn(vs ...string) predicate.LarkMessage {
-	return predicate.LarkMessage(sql.FieldIn(FieldMessageID, vs...))
+// CardIDIn applies the In predicate on the "card_id" field.
+func CardIDIn(vs ...string) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldIn(FieldCardID, vs...))
 }
 
-// MessageIDNotIn applies the NotIn predicate on the "message_id" field.
-func MessageIDNotIn(vs ...string) predicate.LarkMessage {
-	return predicate.LarkMessage(sql.FieldNotIn(FieldMessageID, vs...))
+// CardIDNotIn applies the NotIn predicate on the "card_id" field.
+func CardIDNotIn(vs ...string) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldNotIn(FieldCardID, vs...))
 }
 
-// MessageIDGT applies the GT predicate on the "message_id" field.
-func MessageIDGT(v string) predicate.LarkMessage {
-	return predicate.LarkMessage(sql.FieldGT(FieldMessageID, v))
+// CardIDGT applies the GT predicate on the "card_id" field.
+func CardIDGT(v string) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldGT(FieldCardID, v))
 }
 
-// MessageIDGTE applies the GTE predicate on the "message_id" field.
-func MessageIDGTE(v string) predicate.LarkMessage {
-	return predicate.LarkMessage(sql.FieldGTE(FieldMessageID, v))
+// CardIDGTE applies the GTE predicate on the "card_id" field.
+func CardIDGTE(v string) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldGTE(FieldCardID, v))
 }
 
-// MessageIDLT applies the LT predicate on the "message_id" field.
-func MessageIDLT(v string) predicate.LarkMessage {
-	return predicate.LarkMessage(sql.FieldLT(FieldMessageID, v))
+// CardIDLT applies the LT predicate on the "card_id" field.
+func CardIDLT(v string) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldLT(FieldCardID, v))
 }
 
-// MessageIDLTE applies the LTE predicate on the "message_id" field.
-func MessageIDLTE(v string) predicate.LarkMessage {
-	return predicate.LarkMessage(sql.FieldLTE(FieldMessageID, v))
+// CardIDLTE applies the LTE predicate on the "card_id" field.
+func CardIDLTE(v string) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldLTE(FieldCardID, v))
 }
 
-// MessageIDContains applies the Contains predicate on the "message_id" field.
-func MessageIDContains(v string) predicate.LarkMessage {
-	return predicate.LarkMessage(sql.FieldContains(FieldMessageID, v))
+// CardIDContains applies the Contains predicate on the "card_id" field.
+func CardIDContains(v string) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldContains(FieldCardID, v))
 }
 
-// MessageIDHasPrefix applies the HasPrefix predicate on the "message_id" field.
-func MessageIDHasPrefix(v string) predicate.LarkMessage {
-	return predicate.LarkMessage(sql.FieldHasPrefix(FieldMessageID, v))
+// CardIDHasPrefix applies the HasPrefix predicate on the "card_id" field.
+func CardIDHasPrefix(v string) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldHasPrefix(FieldCardID, v))
 }
 
-// MessageIDHasSuffix applies the HasSuffix predicate on the "message_id" field.
-func MessageIDHasSuffix(v string) predicate.LarkMessage {
-	return predicate.LarkMessage(sql.FieldHasSuffix(FieldMessageID, v))
+// CardIDHasSuffix applies the HasSuffix predicate on the "card_id" field.
+func CardIDHasSuffix(v string) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldHasSuffix(FieldCardID, v))
 }
 
-// MessageIDEqualFold applies the EqualFold predicate on the "message_id" field.
-func MessageIDEqualFold(v string) predicate.LarkMessage {
-	return predicate.LarkMessage(sql.FieldEqualFold(FieldMessageID, v))
+// CardIDEqualFold applies the EqualFold predicate on the "card_id" field.
+func CardIDEqualFold(v string) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldEqualFold(FieldCardID, v))
 }
 
-// MessageIDContainsFold applies the ContainsFold predicate on the "message_id" field.
-func MessageIDContainsFold(v string) predicate.LarkMessage {
-	return predicate.LarkMessage(sql.FieldContainsFold(FieldMessageID, v))
+// CardIDContainsFold applies the ContainsFold predicate on the "card_id" field.
+func CardIDContainsFold(v string) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldContainsFold(FieldCardID, v))
 }
 
 // CardPayloadIsNil applies the IsNil predicate on the "card_payload" field.
@@ -240,6 +240,29 @@ func HasMatch() predicate.LarkMessage {
 func HasMatchWith(preds ...predicate.Match) predicate.LarkMessage {
 	return predicate.LarkMessage(func(s *sql.Selector) {
 		step := newMatchStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasCardMessages applies the HasEdge predicate on the "card_messages" edge.
+func HasCardMessages() predicate.LarkMessage {
+	return predicate.LarkMessage(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, CardMessagesTable, CardMessagesColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasCardMessagesWith applies the HasEdge predicate on the "card_messages" edge with a given conditions (other predicates).
+func HasCardMessagesWith(preds ...predicate.LarkCardMessage) predicate.LarkMessage {
+	return predicate.LarkMessage(func(s *sql.Selector) {
+		step := newCardMessagesStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

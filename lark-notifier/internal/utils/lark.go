@@ -97,6 +97,10 @@ func MatchCardUUID(matchID, chatID string) string {
 	return shortUUID("rm-match-card", matchID, chatID)
 }
 
+func MatchCardUpdateUUID(matchID, cardID string, sequence int64) string {
+	return shortUUID("rm-card-update", matchID, cardID, fmt.Sprintf("%d", sequence))
+}
+
 func UploadReplyUUID(uploadTaskID int, messageID string) string {
 	return shortUUID("rm-upload-reply", fmt.Sprintf("%d", uploadTaskID), messageID)
 }

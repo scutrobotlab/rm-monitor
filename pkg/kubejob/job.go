@@ -77,6 +77,43 @@ func (c *Client) JobExists(ctx context.Context, namespace, name string) (bool, e
 	return true, nil
 }
 
+type JobState string
+
+const (
+	JobStateMissing   JobState = "MISSING"
+	JobStateRunning   JobState = "RUNNING"
+	JobStateSucceeded JobState = "SUCCEEDED"
+	JobStateFailed    JobState = "FAILED"
+)
+
+func (c *Client) JobState(ctx context.Context, namespace, name string) (JobState, error) {
+	var job batchv1.Job
+	err := c.rest.Get().
+		Namespace(namespace).
+		Resource("jobs").
+		Name(name).
+		Do(ctx).
+		Into(&job)
+	if apierrors.IsNotFound(err) {
+		return JobStateMissing, nil
+	}
+	if err != nil {
+		return "", errors.Wrap(err, "get k8s job")
+	}
+	for _, cond := range job.Status.Conditions {
+		if cond.Status != corev1.ConditionTrue {
+			continue
+		}
+		switch cond.Type {
+		case batchv1.JobComplete:
+			return JobStateSucceeded, nil
+		case batchv1.JobFailed:
+			return JobStateFailed, nil
+		}
+	}
+	return JobStateRunning, nil
+}
+
 func (c *Client) CountUnfinishedJobs(ctx context.Context, namespace, labelSelector string) (int, error) {
 	var jobs batchv1.JobList
 	err := c.rest.Get().
@@ -156,7 +193,15 @@ type JobSpec struct {
 	PriorityClassName       string
 	SpreadByHostname        bool
 	PreferAvoidNodeLabelKey string
+	SecretMounts            []SecretMountSpec
 	ExtraContainers         []ContainerSpec
+}
+
+type SecretMountSpec struct {
+	Name       string
+	SecretName string
+	MountPath  string
+	ReadOnly   bool
 }
 
 type ContainerSpec struct {
@@ -207,6 +252,24 @@ func Build(conf config.K8sJobConf, spec JobSpec) *batchv1.Job {
 			Name: "records",
 			VolumeSource: corev1.VolumeSource{
 				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: conf.RecordsPVC},
+			},
+		})
+	}
+	for _, mount := range spec.SecretMounts {
+		if mount.Name == "" || mount.SecretName == "" || mount.MountPath == "" {
+			continue
+		}
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      mount.Name,
+			MountPath: filepath.ToSlash(mount.MountPath),
+			ReadOnly:  mount.ReadOnly,
+		})
+		volumes = append(volumes, corev1.Volume{
+			Name: mount.Name,
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: mount.SecretName,
+				},
 			},
 		})
 	}

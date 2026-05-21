@@ -61,6 +61,8 @@ const (
 	EdgeMatchRound = "match_round"
 	// EdgeSourceArtifact holds the string denoting the source_artifact edge name in mutations.
 	EdgeSourceArtifact = "source_artifact"
+	// EdgePublishTasks holds the string denoting the publish_tasks edge name in mutations.
+	EdgePublishTasks = "publish_tasks"
 	// Table holds the table name of the highlightclip in the database.
 	Table = "highlight_clips"
 	// MatchRoundTable is the table that holds the match_round relation/edge.
@@ -77,6 +79,13 @@ const (
 	SourceArtifactInverseTable = "media_artifacts"
 	// SourceArtifactColumn is the table column denoting the source_artifact relation/edge.
 	SourceArtifactColumn = "media_artifact_highlight_clips"
+	// PublishTasksTable is the table that holds the publish_tasks relation/edge.
+	PublishTasksTable = "highlight_publish_tasks"
+	// PublishTasksInverseTable is the table name for the HighlightPublishTask entity.
+	// It exists in this package in order to avoid circular dependency with the "highlightpublishtask" package.
+	PublishTasksInverseTable = "highlight_publish_tasks"
+	// PublishTasksColumn is the table column denoting the publish_tasks relation/edge.
+	PublishTasksColumn = "highlight_clip_publish_tasks"
 )
 
 // Columns holds all SQL columns for highlightclip fields.
@@ -292,6 +301,20 @@ func BySourceArtifactField(field string, opts ...sql.OrderTermOption) OrderOptio
 		sqlgraph.OrderByNeighborTerms(s, newSourceArtifactStep(), sql.OrderByField(field, opts...))
 	}
 }
+
+// ByPublishTasksCount orders the results by publish_tasks count.
+func ByPublishTasksCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newPublishTasksStep(), opts...)
+	}
+}
+
+// ByPublishTasks orders the results by publish_tasks terms.
+func ByPublishTasks(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newPublishTasksStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newMatchRoundStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -304,5 +327,12 @@ func newSourceArtifactStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(SourceArtifactInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.M2O, true, SourceArtifactTable, SourceArtifactColumn),
+	)
+}
+func newPublishTasksStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(PublishTasksInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, PublishTasksTable, PublishTasksColumn),
 	)
 }

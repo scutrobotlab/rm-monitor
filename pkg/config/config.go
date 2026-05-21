@@ -84,6 +84,77 @@ type HighlightConf struct {
 	Publish               map[string]interface{} `json:",optional"`
 }
 
+type PublishConf struct {
+	Bilibili BilibiliPublishConf `json:",optional"`
+}
+
+type BilibiliPublishConf struct {
+	Enabled           bool              `json:",optional"`
+	CookieSecretName  string            `json:",optional"`
+	CookieSecretKey   string            `json:",optional"`
+	CookiePath        string            `json:",optional"`
+	TID               int               `json:",optional"`
+	Copyright         int               `json:",optional"`
+	Source            string            `json:",optional"`
+	TitleTemplate     string            `json:",optional"`
+	DescTemplate      string            `json:",optional"`
+	DynamicTemplate   string            `json:",optional"`
+	Tags              []string          `json:",optional"`
+	NoReprint         bool              `json:",optional"`
+	OpenElec          bool              `json:",optional"`
+	MaxConcurrentJobs int               `json:",optional"`
+	Cover             BilibiliCoverConf `json:",optional"`
+}
+
+type BilibiliCoverConf struct {
+	Enabled bool   `json:",optional"`
+	At      string `json:",optional"`
+}
+
+func (c *PublishConf) WithDefaults() PublishConf {
+	out := *c
+	out.Bilibili = out.Bilibili.WithDefaults()
+	return out
+}
+
+func (c *BilibiliPublishConf) WithDefaults() BilibiliPublishConf {
+	out := *c
+	if out.CookieSecretKey == "" {
+		out.CookieSecretKey = "cookies.json"
+	}
+	if out.CookiePath == "" {
+		out.CookiePath = "/etc/biliup/cookies.json"
+	}
+	if out.TID <= 0 {
+		out.TID = 232
+	}
+	if out.Copyright <= 0 {
+		out.Copyright = 2
+	}
+	if out.Source == "" {
+		out.Source = "RoboMaster机甲大师"
+	}
+	if out.TitleTemplate == "" {
+		out.TitleTemplate = "{{.LLMTitle}} {{.Event}}-{{.Zone}} 高光时刻"
+	}
+	if out.DescTemplate == "" {
+		out.DescTemplate = "{{.Description}}\n\n{{.Event}} {{.Zone}}\n{{.MatchName}} Round {{.RoundNo}}"
+	}
+	if out.DynamicTemplate == "" {
+		out.DynamicTemplate = "{{.Title}}"
+	}
+	if len(out.Tags) == 0 {
+		out.Tags = []string{"RoboMaster", "机甲大师", "机器人", "赛事高光"}
+	}
+	if out.MaxConcurrentJobs <= 0 {
+		out.MaxConcurrentJobs = 1
+	}
+	if out.Cover.At == "" {
+		out.Cover.At = "peak"
+	}
+	return out
+}
+
 func (c *HighlightConf) WithDefaults() HighlightConf {
 	out := *c
 	if out.Role == "" {
