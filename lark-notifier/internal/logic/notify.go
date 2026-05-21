@@ -208,6 +208,16 @@ func (l *NotifyLogic) patchChangedCardsSince(since time.Time) error {
 		}
 		seen[m.ID] = struct{}{}
 	}
+	matches, err := l.svcCtx.DB.Match.Query().
+		Where(match.UpdatedAtGTE(since)).
+		Limit(100).
+		All(l.ctx)
+	if err != nil {
+		return errors.Wrap(err, "query recently changed matches")
+	}
+	for _, m := range matches {
+		seen[m.ID] = struct{}{}
+	}
 	for id := range seen {
 		if l.ctx.Err() != nil {
 			return nil

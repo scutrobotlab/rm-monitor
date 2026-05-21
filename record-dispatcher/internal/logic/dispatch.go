@@ -341,7 +341,7 @@ func (l *DispatchLogic) dispatchCompletedManifestJobs() error {
 		if !completedMatch(m) {
 			continue
 		}
-		name := manifestJobName(m.ID)
+		name := manifestJobName(m.ID, m.UpdatedAt)
 		job := kubejob.Build(l.svcCtx.Config.ManifestJobConf, kubejob.JobSpec{
 			Name:   name,
 			App:    "manifest-job",
@@ -374,7 +374,7 @@ func jobName(prefix string, id int) string {
 	return strings.ToLower(fmt.Sprintf("%s-%d", prefix, id))
 }
 
-func manifestJobName(matchID string) string {
-	h := sha1.Sum([]byte(matchID))
+func manifestJobName(matchID string, updatedAt time.Time) string {
+	h := sha1.Sum([]byte(fmt.Sprintf("%s:%d", matchID, updatedAt.Unix())))
 	return "manifest-" + hex.EncodeToString(h[:])[:16]
 }

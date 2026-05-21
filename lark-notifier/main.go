@@ -19,7 +19,7 @@ var configFile = flag.String("f", "etc/config.yml", "the config file")
 const (
 	compensationStartupLookback = 30 * time.Minute
 	compensationOverlap         = 5 * time.Second
-	notifyBufferSize            = 32
+	notifyBufferSize            = 1024
 )
 
 func init() {
