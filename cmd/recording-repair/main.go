@@ -255,6 +255,7 @@ func resetRecoverableHighlights(ctx context.Context, c config, client *ent.Clien
 			name = *clip.K8sJobName
 		}
 		fmt.Printf("%s highlight clip=%d job=%s error=%s\n", action(apply), clip.ID, name, ptrString(clip.ErrorMessage))
+		jobDir := storagepath.Resolve(c.RecordConf.BaseDir, pathpkg.Join(clip.OutputDir, ".job", name))
 		if apply && k8s != nil {
 			if err := k8s.DeleteJob(ctx, namespace, name); err != nil {
 				return errors.Wrapf(err, "delete highlight job %s", name)
@@ -262,6 +263,9 @@ func resetRecoverableHighlights(ctx context.Context, c config, client *ent.Clien
 			s.HighlightJobsGone++
 		}
 		if apply {
+			if err := os.RemoveAll(jobDir); err != nil {
+				return errors.Wrapf(err, "remove highlight job dir %s", jobDir)
+			}
 			if err := client.HighlightClip.UpdateOneID(clip.ID).
 				SetStatus(highlightclip.StatusPENDING).
 				ClearK8sJobName().

@@ -128,6 +128,7 @@ async fn main() -> Result<()> {
         std::env::var("RM_MONITOR_JOB_CONTEXT").context("RM_MONITOR_JOB_CONTEXT is required")?;
     let ctx: HighlightContext =
         serde_json::from_str(&raw_context).context("parse highlight context")?;
+    let _ = reset_job_dir(&config, &ctx);
     let _ = write_context(&config, &ctx, &raw_context);
     if let Err(err) = run(&config, &ctx).await {
         let _ = write_error(&config, &ctx, &err.to_string());
@@ -745,6 +746,16 @@ fn write_error(config: &Config, ctx: &HighlightContext, msg: &str) -> Result<()>
             "completed_at": Utc::now(),
         }),
     )
+}
+
+fn reset_job_dir(config: &Config, ctx: &HighlightContext) -> Result<()> {
+    let base_dir = Path::new(&config.record.base_dir);
+    let dir = job_dir(base_dir, ctx)?;
+    if dir.exists() {
+        fs::remove_dir_all(&dir)?;
+    }
+    fs::create_dir_all(&dir)?;
+    Ok(())
 }
 
 fn write_context(config: &Config, ctx: &HighlightContext, raw_context: &str) -> Result<()> {
