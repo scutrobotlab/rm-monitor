@@ -101,8 +101,8 @@ func (l *NotifyLogic) syncMatchRound(id int) error {
 	if m == nil {
 		return nil
 	}
-	if r.Status == matchround.StatusSTARTED && matchNeedsCardSend(m) {
-		if err := l.createMatchMessages(m); err != nil {
+	if r.Status == matchround.StatusSTARTED {
+		if err := l.ensureMatchMessages(m); err != nil {
 			return err
 		}
 	}
@@ -140,17 +140,17 @@ func (l *NotifyLogic) ensureStartedMessages() error {
 
 	for _, r := range rounds {
 		m := r.Edges.Match
-		if m == nil || !matchNeedsCardSend(m) {
+		if m == nil {
 			continue
 		}
-		if err := l.createMatchMessages(m); err != nil {
+		if err := l.ensureMatchMessages(m); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (l *NotifyLogic) createMatchMessages(m *ent.Match) error {
+func (l *NotifyLogic) ensureMatchMessages(m *ent.Match) error {
 	chatIDs, err := utils.JoinedChatIDs(l.ctx, l.svcCtx)
 	if err != nil {
 		return err
@@ -158,7 +158,13 @@ func (l *NotifyLogic) createMatchMessages(m *ent.Match) error {
 	if len(chatIDs) == 0 {
 		return nil
 	}
-	if len(m.Edges.LarkMessages) > 0 {
+	realMessages := 0
+	for _, message := range m.Edges.LarkMessages {
+		if !strings.HasPrefix(message.MessageID, "legacy:") {
+			realMessages++
+		}
+	}
+	if realMessages >= len(chatIDs) {
 		return nil
 	}
 	content, err := l.cardContent(m)
@@ -166,10 +172,13 @@ func (l *NotifyLogic) createMatchMessages(m *ent.Match) error {
 		return err
 	}
 	payload := utils.ToMap(content)
+	successes := 0
+	failures := 0
 	for _, chatID := range chatIDs {
 		messageID, err := utils.SendInteractiveCardMessage(l.ctx, l.svcCtx.LarkClient, l.retryLark, chatID, utils.MatchCardUUID(m.ID, chatID), content)
 		if err != nil {
-			l.Error(errors.Wrap(err, "create lark message"))
+			failures++
+			l.Error(errors.Wrapf(err, "create lark message match=%s chat=%s", m.ID, chatID))
 			continue
 		}
 		if _, err := l.svcCtx.DB.LarkMessage.Create().
@@ -177,10 +186,13 @@ func (l *NotifyLogic) createMatchMessages(m *ent.Match) error {
 			SetMessageID(messageID).
 			SetCardPayload(payload).
 			Save(l.ctx); err != nil && !ent.IsConstraintError(err) {
-			l.Error(errors.Wrap(err, "save lark message"))
+			failures++
+			l.Error(errors.Wrapf(err, "save lark message match=%s chat=%s message_id=%s", m.ID, chatID, messageID))
 			continue
 		}
+		successes++
 	}
+	l.Infof("ensured lark match messages match=%s chats=%d existing_real=%d success=%d failure=%d", m.ID, len(chatIDs), realMessages, successes, failures)
 	return nil
 }
 
@@ -373,12 +385,17 @@ func (l *NotifyLogic) replyUploadTask(task *ent.UploadTask) error {
 	if err != nil {
 		return err
 	}
-	done := 0
+	realMessages := make([]*ent.LarkMessage, 0, len(m.Edges.LarkMessages))
 	for _, message := range m.Edges.LarkMessages {
-		if strings.HasPrefix(message.MessageID, "legacy:") {
-			done++
-			continue
+		if !strings.HasPrefix(message.MessageID, "legacy:") {
+			realMessages = append(realMessages, message)
 		}
+	}
+	if len(realMessages) == 0 {
+		return nil
+	}
+	done := 0
+	for _, message := range realMessages {
 		req := larkim.NewReplyMessageReqBuilder().
 			Body(larkim.NewReplyMessageReqBodyBuilder().
 				Content(replyContent).
@@ -411,7 +428,7 @@ func (l *NotifyLogic) replyUploadTask(task *ent.UploadTask) error {
 		}
 		done++
 	}
-	if done != len(m.Edges.LarkMessages) {
+	if done != len(realMessages) {
 		return nil
 	}
 	if err := l.svcCtx.DB.UploadTask.UpdateOneID(task.ID).SetLarkRepliedAt(time.Now()).Exec(l.ctx); err != nil {

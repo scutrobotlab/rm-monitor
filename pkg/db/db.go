@@ -64,6 +64,7 @@ func migrateLegacyLarkMessages(ctx context.Context, db *stdsql.DB) error {
 				RETURN;
 			END IF;
 			ALTER TABLE lark_messages ADD COLUMN IF NOT EXISTS message_id text;
+			DROP INDEX IF EXISTS larkmessage_match_lark_messages;
 			IF EXISTS (
 				SELECT 1 FROM information_schema.columns
 				WHERE table_schema = current_schema()
@@ -81,7 +82,7 @@ func migrateLegacyLarkMessages(ctx context.Context, db *stdsql.DB) error {
 				  AND column_name = 'match_lark_messages'
 			) THEN
 				UPDATE lark_messages
-				SET message_id = match_lark_messages
+				SET message_id = 'legacy:' || match_lark_messages
 				WHERE message_id IS NULL;
 			END IF;
 		END $$`,
