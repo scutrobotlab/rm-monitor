@@ -564,7 +564,7 @@ async fn burn_video(video: &Path, ass: &Path, srt: &Path, output: &Path) -> Resu
 }
 
 async fn extract_cover(video: &Path, cover: &Path, seconds: f64) -> Result<()> {
-    let tmp = cover.with_extension("jpg.part");
+    let tmp = cover.with_extension("part.jpg");
     let status = Command::new("ffmpeg")
         .args([
             "-hide_banner",

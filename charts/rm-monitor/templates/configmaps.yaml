@@ -43,6 +43,7 @@ data:
 {{ include "rm-monitor.recordConf" . | indent 4 }}
       RoleBlackList:
 {{ toYaml .Values.record.roleBlackList | indent 8 }}
+    WhisperServerUrl: {{ .Values.stt.whisperServerUrl }}
     K8sJobConf:
 {{ include "rm-monitor.jobConf" (dict "root" . "component" "record-job" "configMapName" "record-job-config" "recordsPVC" .Values.storage.record.pvcName) | indent 6 }}
     ManifestJobConf:

@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	common "scutbot.cn/web/rm-monitor/pkg/config"
+	"scutbot.cn/web/rm-monitor/pkg/jobcontract"
 	"scutbot.cn/web/rm-monitor/pkg/subtitle"
 )
 
@@ -170,5 +171,42 @@ func TestRunSubtitleBackfill(t *testing.T) {
 	}
 	if !strings.Contains(string(raw), "00:00:02,000 --> 00:00:05,000") || !strings.Contains(string(raw), "高光") {
 		t.Fatalf("unexpected highlight srt:\n%s", raw)
+	}
+}
+
+func TestFinishSTTWritesSubtitleRemovesAudioAndWritesResult(t *testing.T) {
+	dir := t.TempDir()
+	roundDir := filepath.Join(dir, "Round-1")
+	audioDir := filepath.Join(roundDir, "audio")
+	if err := os.MkdirAll(audioDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(audioDir, "part-00000.wav"), []byte("wav"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	sttPath := filepath.Join(roundDir, "stt.jsonl")
+	if err := os.WriteFile(sttPath, []byte(`{"start":1,"end":2,"status":"SUCCEEDED","text":"测试字幕"}`+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	sttCtx := jobcontract.STTContext{
+		MatchRoundID: 42,
+		RoundDir:     roundDir,
+		AudioDir:     audioDir,
+		STTPath:      sttPath,
+		SubtitleName: "主视角.srt",
+	}
+	if err := finishSTT(sttCtx, roundInfoFromContext(sttCtx)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(audioDir); !os.IsNotExist(err) {
+		t.Fatalf("audio dir should be removed, stat err=%v", err)
+	}
+	if raw, err := os.ReadFile(filepath.Join(roundDir, "主视角.srt")); err != nil {
+		t.Fatal(err)
+	} else if !strings.Contains(string(raw), "测试字幕") {
+		t.Fatalf("subtitle missing text:\n%s", raw)
+	}
+	if _, err := os.Stat(filepath.Join(roundDir, ".job", "stt-42", "result.json")); err != nil {
+		t.Fatal(err)
 	}
 }

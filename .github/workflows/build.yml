@@ -69,6 +69,8 @@ jobs:
             dockerfile: cmd/stt-normalize/Dockerfile
           - app: stt-subtitle
             dockerfile: cmd/stt-subtitle/Dockerfile
+          - app: recording-repair
+            dockerfile: cmd/recording-repair/Dockerfile
           - app: danmu-job
             dockerfile: danmu-job/Dockerfile
           - app: highlight-dispatcher

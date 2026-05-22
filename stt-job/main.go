@@ -183,6 +183,10 @@ func runRecognizer(ctx context.Context, sttCtx jobcontract.STTContext) error {
 	if err := waitForDir(ctx, info.AudioDir); err != nil {
 		return err
 	}
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGTERM, syscall.SIGINT)
+	defer signal.Stop(sigCh)
+
 	for index := 0; ; {
 		if markerExists(info.AudioDir, ".ffmpeg.no_audio") {
 			if index == 0 {
@@ -207,6 +211,8 @@ func runRecognizer(ctx context.Context, sttCtx jobcontract.STTContext) error {
 			return errors.New(readMarker(info.AudioDir, ".ffmpeg.failed"))
 		}
 		select {
+		case sig := <-sigCh:
+			logx.Infof("stt recognizer received %s; waiting for ffmpeg marker and finishing generated segments", sig)
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-time.After(time.Second):
