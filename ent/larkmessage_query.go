@@ -299,12 +299,12 @@ func (_q *LarkMessageQuery) WithMatch(opts ...func(*MatchQuery)) *LarkMessageQue
 // Example:
 //
 //	var v []struct {
-//		CardID string `json:"card_id,omitempty"`
+//		MessageID string `json:"message_id,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.LarkMessage.Query().
-//		GroupBy(larkmessage.FieldCardID).
+//		GroupBy(larkmessage.FieldMessageID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (_q *LarkMessageQuery) GroupBy(field string, fields ...string) *LarkMessageGroupBy {
@@ -322,11 +322,11 @@ func (_q *LarkMessageQuery) GroupBy(field string, fields ...string) *LarkMessage
 // Example:
 //
 //	var v []struct {
-//		CardID string `json:"card_id,omitempty"`
+//		MessageID string `json:"message_id,omitempty"`
 //	}
 //
 //	client.LarkMessage.Query().
-//		Select(larkmessage.FieldCardID).
+//		Select(larkmessage.FieldMessageID).
 //		Scan(ctx, &v)
 func (_q *LarkMessageQuery) Select(fields ...string) *LarkMessageSelect {
 	_q.ctx.Fields = append(_q.ctx.Fields, fields...)

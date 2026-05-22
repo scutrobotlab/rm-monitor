@@ -23,9 +23,9 @@ type LarkMessageCreate struct {
 	conflict []sql.ConflictOption
 }
 
-// SetCardID sets the "card_id" field.
-func (_c *LarkMessageCreate) SetCardID(v string) *LarkMessageCreate {
-	_c.mutation.SetCardID(v)
+// SetMessageID sets the "message_id" field.
+func (_c *LarkMessageCreate) SetMessageID(v string) *LarkMessageCreate {
+	_c.mutation.SetMessageID(v)
 	return _c
 }
 
@@ -121,8 +121,8 @@ func (_c *LarkMessageCreate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (_c *LarkMessageCreate) check() error {
-	if _, ok := _c.mutation.CardID(); !ok {
-		return &ValidationError{Name: "card_id", err: errors.New(`ent: missing required field "LarkMessage.card_id"`)}
+	if _, ok := _c.mutation.MessageID(); !ok {
+		return &ValidationError{Name: "message_id", err: errors.New(`ent: missing required field "LarkMessage.message_id"`)}
 	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "LarkMessage.created_at"`)}
@@ -160,9 +160,9 @@ func (_c *LarkMessageCreate) createSpec() (*LarkMessage, *sqlgraph.CreateSpec) {
 		_spec = sqlgraph.NewCreateSpec(larkmessage.Table, sqlgraph.NewFieldSpec(larkmessage.FieldID, field.TypeInt))
 	)
 	_spec.OnConflict = _c.conflict
-	if value, ok := _c.mutation.CardID(); ok {
-		_spec.SetField(larkmessage.FieldCardID, field.TypeString, value)
-		_node.CardID = value
+	if value, ok := _c.mutation.MessageID(); ok {
+		_spec.SetField(larkmessage.FieldMessageID, field.TypeString, value)
+		_node.MessageID = value
 	}
 	if value, ok := _c.mutation.CardPayload(); ok {
 		_spec.SetField(larkmessage.FieldCardPayload, field.TypeJSON, value)
@@ -200,7 +200,7 @@ func (_c *LarkMessageCreate) createSpec() (*LarkMessage, *sqlgraph.CreateSpec) {
 // of the `INSERT` statement. For example:
 //
 //	client.LarkMessage.Create().
-//		SetCardID(v).
+//		SetMessageID(v).
 //		OnConflict(
 //			// Update the row with the new values
 //			// the was proposed for insertion.
@@ -209,7 +209,7 @@ func (_c *LarkMessageCreate) createSpec() (*LarkMessage, *sqlgraph.CreateSpec) {
 //		// Override some of the fields with custom
 //		// update values.
 //		Update(func(u *ent.LarkMessageUpsert) {
-//			SetCardID(v+v).
+//			SetMessageID(v+v).
 //		}).
 //		Exec(ctx)
 func (_c *LarkMessageCreate) OnConflict(opts ...sql.ConflictOption) *LarkMessageUpsertOne {
@@ -245,15 +245,15 @@ type (
 	}
 )
 
-// SetCardID sets the "card_id" field.
-func (u *LarkMessageUpsert) SetCardID(v string) *LarkMessageUpsert {
-	u.Set(larkmessage.FieldCardID, v)
+// SetMessageID sets the "message_id" field.
+func (u *LarkMessageUpsert) SetMessageID(v string) *LarkMessageUpsert {
+	u.Set(larkmessage.FieldMessageID, v)
 	return u
 }
 
-// UpdateCardID sets the "card_id" field to the value that was provided on create.
-func (u *LarkMessageUpsert) UpdateCardID() *LarkMessageUpsert {
-	u.SetExcluded(larkmessage.FieldCardID)
+// UpdateMessageID sets the "message_id" field to the value that was provided on create.
+func (u *LarkMessageUpsert) UpdateMessageID() *LarkMessageUpsert {
+	u.SetExcluded(larkmessage.FieldMessageID)
 	return u
 }
 
@@ -332,17 +332,17 @@ func (u *LarkMessageUpsertOne) Update(set func(*LarkMessageUpsert)) *LarkMessage
 	return u
 }
 
-// SetCardID sets the "card_id" field.
-func (u *LarkMessageUpsertOne) SetCardID(v string) *LarkMessageUpsertOne {
+// SetMessageID sets the "message_id" field.
+func (u *LarkMessageUpsertOne) SetMessageID(v string) *LarkMessageUpsertOne {
 	return u.Update(func(s *LarkMessageUpsert) {
-		s.SetCardID(v)
+		s.SetMessageID(v)
 	})
 }
 
-// UpdateCardID sets the "card_id" field to the value that was provided on create.
-func (u *LarkMessageUpsertOne) UpdateCardID() *LarkMessageUpsertOne {
+// UpdateMessageID sets the "message_id" field to the value that was provided on create.
+func (u *LarkMessageUpsertOne) UpdateMessageID() *LarkMessageUpsertOne {
 	return u.Update(func(s *LarkMessageUpsert) {
-		s.UpdateCardID()
+		s.UpdateMessageID()
 	})
 }
 
@@ -516,7 +516,7 @@ func (_c *LarkMessageCreateBulk) ExecX(ctx context.Context) {
 //		// Override some of the fields with custom
 //		// update values.
 //		Update(func(u *ent.LarkMessageUpsert) {
-//			SetCardID(v+v).
+//			SetMessageID(v+v).
 //		}).
 //		Exec(ctx)
 func (_c *LarkMessageCreateBulk) OnConflict(opts ...sql.ConflictOption) *LarkMessageUpsertBulk {
@@ -592,17 +592,17 @@ func (u *LarkMessageUpsertBulk) Update(set func(*LarkMessageUpsert)) *LarkMessag
 	return u
 }
 
-// SetCardID sets the "card_id" field.
-func (u *LarkMessageUpsertBulk) SetCardID(v string) *LarkMessageUpsertBulk {
+// SetMessageID sets the "message_id" field.
+func (u *LarkMessageUpsertBulk) SetMessageID(v string) *LarkMessageUpsertBulk {
 	return u.Update(func(s *LarkMessageUpsert) {
-		s.SetCardID(v)
+		s.SetMessageID(v)
 	})
 }
 
-// UpdateCardID sets the "card_id" field to the value that was provided on create.
-func (u *LarkMessageUpsertBulk) UpdateCardID() *LarkMessageUpsertBulk {
+// UpdateMessageID sets the "message_id" field to the value that was provided on create.
+func (u *LarkMessageUpsertBulk) UpdateMessageID() *LarkMessageUpsertBulk {
 	return u.Update(func(s *LarkMessageUpsert) {
-		s.UpdateCardID()
+		s.UpdateMessageID()
 	})
 }
 

@@ -106,6 +106,64 @@ func SendCardReferenceMessage(ctx context.Context, client *lark.Client, retry La
 	})
 }
 
+func SendInteractiveCardMessage(ctx context.Context, client *lark.Client, retry LarkRetryFunc, chatID, uuid string, content *MatchCardContent) (string, error) {
+	contentData, err := content.RenderJSON()
+	if err != nil {
+		return "", err
+	}
+	req := larkim.NewCreateMessageReqBuilder().
+		ReceiveIdType(larkim.ReceiveIdTypeChatId).
+		Body(larkim.NewCreateMessageReqBodyBuilder().
+			ReceiveId(chatID).
+			MsgType(larkim.MsgTypeInteractive).
+			Content(contentData).
+			Uuid(uuid).
+			Build()).
+		Build()
+	var resp *larkim.CreateMessageResp
+	err = retry(chatID, func() error {
+		var callErr error
+		resp, callErr = client.Im.V1.Message.Create(ctx, req)
+		if callErr != nil {
+			return callErr
+		}
+		if !resp.Success() {
+			return resp
+		}
+		return nil
+	})
+	if err != nil {
+		return "", err
+	}
+	if resp.Data == nil || resp.Data.MessageId == nil || *resp.Data.MessageId == "" {
+		return "", errors.New("create lark message returned empty message_id")
+	}
+	return *resp.Data.MessageId, nil
+}
+
+func PatchInteractiveCardMessage(ctx context.Context, client *lark.Client, retry LarkRetryFunc, messageID string, content *MatchCardContent) error {
+	contentData, err := content.RenderJSON()
+	if err != nil {
+		return err
+	}
+	req := larkim.NewPatchMessageReqBuilder().
+		MessageId(messageID).
+		Body(larkim.NewPatchMessageReqBodyBuilder().Content(contentData).Build()).
+		Build()
+	var resp *larkim.PatchMessageResp
+	return retry("", func() error {
+		var callErr error
+		resp, callErr = client.Im.V1.Message.Patch(ctx, req)
+		if callErr != nil {
+			return callErr
+		}
+		if !resp.Success() {
+			return resp
+		}
+		return nil
+	})
+}
+
 func CardEntityData(content *MatchCardContent) (string, map[string]any, error) {
 	contentData, err := content.RenderJSON()
 	if err != nil {

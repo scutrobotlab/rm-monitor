@@ -14,8 +14,8 @@ const (
 	Label = "lark_message"
 	// FieldID holds the string denoting the id field in the database.
 	FieldID = "id"
-	// FieldCardID holds the string denoting the card_id field in the database.
-	FieldCardID = "card_id"
+	// FieldMessageID holds the string denoting the message_id field in the database.
+	FieldMessageID = "message_id"
 	// FieldCardPayload holds the string denoting the card_payload field in the database.
 	FieldCardPayload = "card_payload"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
@@ -38,7 +38,7 @@ const (
 // Columns holds all SQL columns for larkmessage fields.
 var Columns = []string{
 	FieldID,
-	FieldCardID,
+	FieldMessageID,
 	FieldCardPayload,
 	FieldCreatedAt,
 	FieldUpdatedAt,
@@ -82,9 +82,9 @@ func ByID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldID, opts...).ToFunc()
 }
 
-// ByCardID orders the results by the card_id field.
-func ByCardID(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldCardID, opts...).ToFunc()
+// ByMessageID orders the results by the message_id field.
+func ByMessageID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldMessageID, opts...).ToFunc()
 }
 
 // ByCreatedAt orders the results by the created_at field.

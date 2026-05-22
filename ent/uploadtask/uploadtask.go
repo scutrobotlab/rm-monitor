@@ -41,6 +41,8 @@ const (
 	FieldStartedAt = "started_at"
 	// FieldCompletedAt holds the string denoting the completed_at field in the database.
 	FieldCompletedAt = "completed_at"
+	// FieldLarkRepliedAt holds the string denoting the lark_replied_at field in the database.
+	FieldLarkRepliedAt = "lark_replied_at"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
@@ -83,6 +85,7 @@ var Columns = []string{
 	FieldErrorMessage,
 	FieldStartedAt,
 	FieldCompletedAt,
+	FieldLarkRepliedAt,
 	FieldCreatedAt,
 	FieldUpdatedAt,
 }
@@ -222,6 +225,11 @@ func ByStartedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByCompletedAt orders the results by the completed_at field.
 func ByCompletedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCompletedAt, opts...).ToFunc()
+}
+
+// ByLarkRepliedAt orders the results by the lark_replied_at field.
+func ByLarkRepliedAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldLarkRepliedAt, opts...).ToFunc()
 }
 
 // ByCreatedAt orders the results by the created_at field.

@@ -280,6 +280,26 @@ func (_u *UploadTaskUpdate) ClearCompletedAt() *UploadTaskUpdate {
 	return _u
 }
 
+// SetLarkRepliedAt sets the "lark_replied_at" field.
+func (_u *UploadTaskUpdate) SetLarkRepliedAt(v time.Time) *UploadTaskUpdate {
+	_u.mutation.SetLarkRepliedAt(v)
+	return _u
+}
+
+// SetNillableLarkRepliedAt sets the "lark_replied_at" field if the given value is not nil.
+func (_u *UploadTaskUpdate) SetNillableLarkRepliedAt(v *time.Time) *UploadTaskUpdate {
+	if v != nil {
+		_u.SetLarkRepliedAt(*v)
+	}
+	return _u
+}
+
+// ClearLarkRepliedAt clears the value of the "lark_replied_at" field.
+func (_u *UploadTaskUpdate) ClearLarkRepliedAt() *UploadTaskUpdate {
+	_u.mutation.ClearLarkRepliedAt()
+	return _u
+}
+
 // SetUpdatedAt sets the "updated_at" field.
 func (_u *UploadTaskUpdate) SetUpdatedAt(v time.Time) *UploadTaskUpdate {
 	_u.mutation.SetUpdatedAt(v)
@@ -465,6 +485,12 @@ func (_u *UploadTaskUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	}
 	if _u.mutation.CompletedAtCleared() {
 		_spec.ClearField(uploadtask.FieldCompletedAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.LarkRepliedAt(); ok {
+		_spec.SetField(uploadtask.FieldLarkRepliedAt, field.TypeTime, value)
+	}
+	if _u.mutation.LarkRepliedAtCleared() {
+		_spec.ClearField(uploadtask.FieldLarkRepliedAt, field.TypeTime)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(uploadtask.FieldUpdatedAt, field.TypeTime, value)
@@ -797,6 +823,26 @@ func (_u *UploadTaskUpdateOne) ClearCompletedAt() *UploadTaskUpdateOne {
 	return _u
 }
 
+// SetLarkRepliedAt sets the "lark_replied_at" field.
+func (_u *UploadTaskUpdateOne) SetLarkRepliedAt(v time.Time) *UploadTaskUpdateOne {
+	_u.mutation.SetLarkRepliedAt(v)
+	return _u
+}
+
+// SetNillableLarkRepliedAt sets the "lark_replied_at" field if the given value is not nil.
+func (_u *UploadTaskUpdateOne) SetNillableLarkRepliedAt(v *time.Time) *UploadTaskUpdateOne {
+	if v != nil {
+		_u.SetLarkRepliedAt(*v)
+	}
+	return _u
+}
+
+// ClearLarkRepliedAt clears the value of the "lark_replied_at" field.
+func (_u *UploadTaskUpdateOne) ClearLarkRepliedAt() *UploadTaskUpdateOne {
+	_u.mutation.ClearLarkRepliedAt()
+	return _u
+}
+
 // SetUpdatedAt sets the "updated_at" field.
 func (_u *UploadTaskUpdateOne) SetUpdatedAt(v time.Time) *UploadTaskUpdateOne {
 	_u.mutation.SetUpdatedAt(v)
@@ -1012,6 +1058,12 @@ func (_u *UploadTaskUpdateOne) sqlSave(ctx context.Context) (_node *UploadTask, 
 	}
 	if _u.mutation.CompletedAtCleared() {
 		_spec.ClearField(uploadtask.FieldCompletedAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.LarkRepliedAt(); ok {
+		_spec.SetField(uploadtask.FieldLarkRepliedAt, field.TypeTime, value)
+	}
+	if _u.mutation.LarkRepliedAtCleared() {
+		_spec.ClearField(uploadtask.FieldLarkRepliedAt, field.TypeTime)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(uploadtask.FieldUpdatedAt, field.TypeTime, value)

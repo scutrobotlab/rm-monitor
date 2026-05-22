@@ -49,22 +49,6 @@ func migrateLegacyLarkMessages(ctx context.Context, db *stdsql.DB) error {
 		return errors.Wrap(err, "drop lark_card_messages")
 	}
 
-	var exists bool
-	if err := db.QueryRowContext(ctx, `
-		SELECT EXISTS (
-			SELECT 1
-			FROM information_schema.columns
-			WHERE table_schema = current_schema()
-			  AND table_name = 'lark_messages'
-			  AND column_name = 'message_id'
-		)
-	`).Scan(&exists); err != nil {
-		return errors.Wrap(err, "check legacy lark_messages.message_id")
-	}
-	if !exists {
-		return nil
-	}
-
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return errors.Wrap(err, "begin legacy lark message migration")
@@ -74,24 +58,33 @@ func migrateLegacyLarkMessages(ctx context.Context, db *stdsql.DB) error {
 	}()
 
 	stmts := []string{
-		`ALTER TABLE lark_messages ADD COLUMN IF NOT EXISTS card_id text`,
-		`WITH keepers AS (
-			SELECT match_lark_messages, min(id) AS keep_id
-			FROM lark_messages
-			GROUP BY match_lark_messages
-		)
-		UPDATE lark_messages lm
-		SET card_id = 'legacy:' || lm.match_lark_messages
-		FROM keepers k
-		WHERE lm.id = k.keep_id`,
-		`DELETE FROM lark_messages lm
-		USING (
-			SELECT match_lark_messages, min(id) AS keep_id
-			FROM lark_messages
-			GROUP BY match_lark_messages
-		) k
-		WHERE lm.match_lark_messages = k.match_lark_messages
-		  AND lm.id <> k.keep_id`,
+		`DO $$
+		BEGIN
+			IF to_regclass('lark_messages') IS NULL THEN
+				RETURN;
+			END IF;
+			ALTER TABLE lark_messages ADD COLUMN IF NOT EXISTS message_id text;
+			IF EXISTS (
+				SELECT 1 FROM information_schema.columns
+				WHERE table_schema = current_schema()
+				  AND table_name = 'lark_messages'
+				  AND column_name = 'card_id'
+			) THEN
+				UPDATE lark_messages
+				SET message_id = 'legacy:' || card_id
+				WHERE message_id IS NULL;
+			END IF;
+			IF EXISTS (
+				SELECT 1 FROM information_schema.columns
+				WHERE table_schema = current_schema()
+				  AND table_name = 'lark_messages'
+				  AND column_name = 'match_lark_messages'
+			) THEN
+				UPDATE lark_messages
+				SET message_id = match_lark_messages
+				WHERE message_id IS NULL;
+			END IF;
+		END $$`,
 	}
 	for _, stmt := range stmts {
 		if _, err := tx.ExecContext(ctx, stmt); err != nil {

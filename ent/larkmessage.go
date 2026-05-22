@@ -19,8 +19,8 @@ type LarkMessage struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID int `json:"id,omitempty"`
-	// CardID holds the value of the "card_id" field.
-	CardID string `json:"card_id,omitempty"`
+	// MessageID holds the value of the "message_id" field.
+	MessageID string `json:"message_id,omitempty"`
 	// CardPayload holds the value of the "card_payload" field.
 	CardPayload map[string]interface{} `json:"card_payload,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
@@ -63,7 +63,7 @@ func (*LarkMessage) scanValues(columns []string) ([]any, error) {
 			values[i] = new([]byte)
 		case larkmessage.FieldID:
 			values[i] = new(sql.NullInt64)
-		case larkmessage.FieldCardID:
+		case larkmessage.FieldMessageID:
 			values[i] = new(sql.NullString)
 		case larkmessage.FieldCreatedAt, larkmessage.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -90,11 +90,11 @@ func (_m *LarkMessage) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field id", value)
 			}
 			_m.ID = int(value.Int64)
-		case larkmessage.FieldCardID:
+		case larkmessage.FieldMessageID:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field card_id", values[i])
+				return fmt.Errorf("unexpected type %T for field message_id", values[i])
 			} else if value.Valid {
-				_m.CardID = value.String
+				_m.MessageID = value.String
 			}
 		case larkmessage.FieldCardPayload:
 			if value, ok := values[i].(*[]byte); !ok {
@@ -164,8 +164,8 @@ func (_m *LarkMessage) String() string {
 	var builder strings.Builder
 	builder.WriteString("LarkMessage(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
-	builder.WriteString("card_id=")
-	builder.WriteString(_m.CardID)
+	builder.WriteString("message_id=")
+	builder.WriteString(_m.MessageID)
 	builder.WriteString(", ")
 	builder.WriteString("card_payload=")
 	builder.WriteString(fmt.Sprintf("%v", _m.CardPayload))

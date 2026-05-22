@@ -2,6 +2,7 @@ package logic
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"sort"
@@ -9,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	larkim "github.com/larksuite/oapi-sdk-go/v3/service/im/v1"
 	"github.com/pkg/errors"
 	"github.com/samber/lo"
 	"scutbot.cn/web/rm-monitor/ent"
@@ -47,6 +49,12 @@ func (l *NotifyLogic) Sync(since time.Time) error {
 		}
 		return err
 	}
+	if err := l.replyCompletedUploads(); err != nil {
+		if isContextDone(err) {
+			return nil
+		}
+		return err
+	}
 	return nil
 }
 
@@ -65,7 +73,7 @@ func (l *NotifyLogic) SyncEvent(channel, payload string) error {
 		if err != nil {
 			return errors.Wrapf(err, "parse notify payload %q", payload)
 		}
-		return l.syncUploadTaskCard(id)
+		return l.syncUploadTask(id)
 	default:
 		return nil
 	}
@@ -101,7 +109,7 @@ func (l *NotifyLogic) syncMatchRound(id int) error {
 	return l.patchMatchCardsByID(m.ID)
 }
 
-func (l *NotifyLogic) syncUploadTaskCard(id int) error {
+func (l *NotifyLogic) syncUploadTask(id int) error {
 	task, err := l.uploadTaskForCard(id)
 	if err != nil {
 		if ent.IsNotFound(err) {
@@ -112,7 +120,10 @@ func (l *NotifyLogic) syncUploadTaskCard(id int) error {
 	if task.Edges.RecordTask == nil || task.Edges.RecordTask.Edges.MatchRound == nil || task.Edges.RecordTask.Edges.MatchRound.Edges.Match == nil {
 		return nil
 	}
-	return l.patchMatchCardsByID(task.Edges.RecordTask.Edges.MatchRound.Edges.Match.ID)
+	if err := l.patchMatchCardsByID(task.Edges.RecordTask.Edges.MatchRound.Edges.Match.ID); err != nil {
+		return err
+	}
+	return l.replyUploadTask(task)
 }
 
 func (l *NotifyLogic) ensureStartedMessages() error {
@@ -150,53 +161,23 @@ func (l *NotifyLogic) createMatchMessages(m *ent.Match) error {
 	if len(m.Edges.LarkMessages) > 0 {
 		return nil
 	}
-	card, err := l.ensureMatchCard(m)
+	content, err := l.cardContent(m)
 	if err != nil {
 		return err
 	}
-	return l.sendCardReferencesToChats(m, card, chatIDs)
-}
-
-func (l *NotifyLogic) ensureMatchCard(m *ent.Match) (*ent.LarkMessage, error) {
-	content, err := l.cardContent(m)
-	if err != nil {
-		return nil, err
-	}
-	cardID, payload, err := utils.CreateCardEntity(l.ctx, l.svcCtx.LarkClient, l.retryLark, content)
-	if err != nil {
-		return nil, err
-	}
-	card, err := l.svcCtx.DB.LarkMessage.Create().
-		SetMatchID(m.ID).
-		SetCardID(cardID).
-		SetCardPayload(payload).
-		Save(l.ctx)
-	if err != nil && !ent.IsConstraintError(err) {
-		return nil, errors.Wrap(err, "save lark card")
-	}
-	if ent.IsConstraintError(err) {
-		current, queryErr := l.svcCtx.DB.Match.Query().
-			Where(match.ID(m.ID)).
-			WithLarkMessages().
-			Only(l.ctx)
-		if queryErr != nil {
-			return nil, errors.Wrap(queryErr, "query existing lark card after conflict")
-		}
-		if len(current.Edges.LarkMessages) == 0 {
-			return nil, errors.Wrap(err, "save lark card conflict without existing card")
-		}
-		card = current.Edges.LarkMessages[0]
-	}
-	return card, nil
-}
-
-func (l *NotifyLogic) sendCardReferencesToChats(m *ent.Match, card *ent.LarkMessage, chatIDs []string) error {
-	if strings.HasPrefix(card.CardID, "legacy:") {
-		return nil
-	}
+	payload := utils.ToMap(content)
 	for _, chatID := range chatIDs {
-		if err := utils.SendCardReferenceMessage(l.ctx, l.svcCtx.LarkClient, l.retryLark, chatID, card.CardID, utils.MatchCardUUID(m.ID, chatID)); err != nil {
+		messageID, err := utils.SendInteractiveCardMessage(l.ctx, l.svcCtx.LarkClient, l.retryLark, chatID, utils.MatchCardUUID(m.ID, chatID), content)
+		if err != nil {
 			l.Error(errors.Wrap(err, "create lark message"))
+			continue
+		}
+		if _, err := l.svcCtx.DB.LarkMessage.Create().
+			SetMatchID(m.ID).
+			SetMessageID(messageID).
+			SetCardPayload(payload).
+			Save(l.ctx); err != nil && !ent.IsConstraintError(err) {
+			l.Error(errors.Wrap(err, "save lark message"))
 			continue
 		}
 	}
@@ -284,19 +265,17 @@ func (l *NotifyLogic) patchMatchCards(m *ent.Match) error {
 	}
 	contentMap := utils.ToMap(content)
 	for _, card := range m.Edges.LarkMessages {
-		if strings.HasPrefix(card.CardID, "legacy:") {
+		if strings.HasPrefix(card.MessageID, "legacy:") {
 			continue
 		}
 		if reflect.DeepEqual(card.CardPayload, contentMap) {
 			continue
 		}
-		sequence := time.Now().Unix()
-		payload, err := utils.UpdateCardEntity(l.ctx, l.svcCtx.LarkClient, l.retryLark, card.CardID, utils.MatchCardUpdateUUID(m.ID, card.CardID, sequence), sequence, content)
-		if err != nil {
-			l.Error(errors.Wrap(err, "update cardkit card"))
+		if err := utils.PatchInteractiveCardMessage(l.ctx, l.svcCtx.LarkClient, l.retryLark, card.MessageID, content); err != nil {
+			l.Error(errors.Wrap(err, "patch lark message"))
 			continue
 		}
-		if err := l.svcCtx.DB.LarkMessage.UpdateOneID(card.ID).SetCardPayload(payload).Exec(l.ctx); err != nil {
+		if err := l.svcCtx.DB.LarkMessage.UpdateOneID(card.ID).SetCardPayload(contentMap).Exec(l.ctx); err != nil {
 			l.Error(errors.Wrap(err, "update lark card payload"))
 			continue
 		}
@@ -352,10 +331,124 @@ func (l *NotifyLogic) uploadTaskForCard(id int) (*ent.UploadTask, error) {
 		Where(uploadtask.ID(id), uploadtask.StatusEQ(uploadtask.StatusSUCCEEDED), uploadtask.BitableRecordURLNotNil()).
 		WithRecordTask(func(q *ent.RecordTaskQuery) {
 			q.WithMatchRound(func(q *ent.MatchRoundQuery) {
-				q.WithMatch()
+				q.WithMatch(func(q *ent.MatchQuery) {
+					q.WithLarkMessages()
+				})
 			})
 		}).
 		Only(l.ctx)
+}
+
+func (l *NotifyLogic) replyCompletedUploads() error {
+	tasks, err := l.svcCtx.DB.UploadTask.Query().
+		Where(uploadtask.StatusEQ(uploadtask.StatusSUCCEEDED), uploadtask.LarkRepliedAtIsNil(), uploadtask.BitableRecordURLNotNil()).
+		WithRecordTask(func(q *ent.RecordTaskQuery) {
+			q.WithMatchRound(func(q *ent.MatchRoundQuery) {
+				q.WithMatch(func(q *ent.MatchQuery) {
+					q.WithLarkMessages()
+				})
+			})
+		}).Limit(100).
+		All(l.ctx)
+	if err != nil {
+		return errors.Wrap(err, "query completed uploads")
+	}
+	for _, task := range tasks {
+		if err := l.replyUploadTask(task); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (l *NotifyLogic) replyUploadTask(task *ent.UploadTask) error {
+	if task == nil || task.BitableRecordURL == nil || task.Edges.RecordTask == nil || task.Edges.RecordTask.Edges.MatchRound == nil || task.Edges.RecordTask.Edges.MatchRound.Edges.Match == nil {
+		return nil
+	}
+	m := task.Edges.RecordTask.Edges.MatchRound.Edges.Match
+	if len(m.Edges.LarkMessages) == 0 {
+		return nil
+	}
+	replyContent, err := uploadReplyContent(task)
+	if err != nil {
+		return err
+	}
+	done := 0
+	for _, message := range m.Edges.LarkMessages {
+		if strings.HasPrefix(message.MessageID, "legacy:") {
+			done++
+			continue
+		}
+		req := larkim.NewReplyMessageReqBuilder().
+			Body(larkim.NewReplyMessageReqBodyBuilder().
+				Content(replyContent).
+				MsgType(larkim.MsgTypePost).
+				ReplyInThread(true).
+				Uuid(utils.UploadReplyUUID(task.ID, message.MessageID)).
+				Build()).
+			MessageId(message.MessageID).
+			Build()
+		var resp *larkim.ReplyMessageResp
+		err := l.retryLark("", func() error {
+			var callErr error
+			resp, callErr = l.svcCtx.LarkClient.Im.V1.Message.Reply(l.ctx, req)
+			if callErr != nil {
+				return callErr
+			}
+			if !resp.Success() {
+				return resp
+			}
+			return nil
+		})
+		if err != nil {
+			if isTerminalReplyError(err) {
+				l.Infof("skip upload reply for unreachable message: task=%d message_id=%s", task.ID, message.MessageID)
+				done++
+				continue
+			}
+			l.Error(errors.Wrap(err, "reply upload url"))
+			continue
+		}
+		done++
+	}
+	if done != len(m.Edges.LarkMessages) {
+		return nil
+	}
+	if err := l.svcCtx.DB.UploadTask.UpdateOneID(task.ID).SetLarkRepliedAt(time.Now()).Exec(l.ctx); err != nil {
+		return errors.Wrap(err, "mark upload replied")
+	}
+	return nil
+}
+
+func isTerminalReplyError(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "code:230002") || strings.Contains(msg, "Bot/User can NOT be out of the chat")
+}
+
+func uploadReplyContent(task *ent.UploadTask) (string, error) {
+	round := task.Edges.RecordTask.Edges.MatchRound
+	title := fmt.Sprintf("Round%d-%s", round.RoundNo, task.Edges.RecordTask.Role)
+	content := map[string]any{
+		"zh_cn": map[string]any{
+			"title": title,
+			"content": [][]map[string]string{
+				{
+					{
+						"tag":  "text",
+						"text": *task.BitableRecordURL,
+					},
+				},
+			},
+		},
+	}
+	b, err := json.Marshal(content)
+	if err != nil {
+		return "", errors.Wrap(err, "marshal upload reply content")
+	}
+	return string(b), nil
 }
 
 func (l *NotifyLogic) retryLark(chatID string, f func() error) error {

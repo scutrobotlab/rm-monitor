@@ -3247,7 +3247,7 @@ type LarkMessageMutation struct {
 	op            Op
 	typ           string
 	id            *int
-	card_id       *string
+	message_id    *string
 	card_payload  *map[string]interface{}
 	created_at    *time.Time
 	updated_at    *time.Time
@@ -3357,40 +3357,40 @@ func (m *LarkMessageMutation) IDs(ctx context.Context) ([]int, error) {
 	}
 }
 
-// SetCardID sets the "card_id" field.
-func (m *LarkMessageMutation) SetCardID(s string) {
-	m.card_id = &s
+// SetMessageID sets the "message_id" field.
+func (m *LarkMessageMutation) SetMessageID(s string) {
+	m.message_id = &s
 }
 
-// CardID returns the value of the "card_id" field in the mutation.
-func (m *LarkMessageMutation) CardID() (r string, exists bool) {
-	v := m.card_id
+// MessageID returns the value of the "message_id" field in the mutation.
+func (m *LarkMessageMutation) MessageID() (r string, exists bool) {
+	v := m.message_id
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// OldCardID returns the old "card_id" field's value of the LarkMessage entity.
+// OldMessageID returns the old "message_id" field's value of the LarkMessage entity.
 // If the LarkMessage object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *LarkMessageMutation) OldCardID(ctx context.Context) (v string, err error) {
+func (m *LarkMessageMutation) OldMessageID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldCardID is only allowed on UpdateOne operations")
+		return v, errors.New("OldMessageID is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldCardID requires an ID field in the mutation")
+		return v, errors.New("OldMessageID requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldCardID: %w", err)
+		return v, fmt.Errorf("querying old value for OldMessageID: %w", err)
 	}
-	return oldValue.CardID, nil
+	return oldValue.MessageID, nil
 }
 
-// ResetCardID resets all changes to the "card_id" field.
-func (m *LarkMessageMutation) ResetCardID() {
-	m.card_id = nil
+// ResetMessageID resets all changes to the "message_id" field.
+func (m *LarkMessageMutation) ResetMessageID() {
+	m.message_id = nil
 }
 
 // SetCardPayload sets the "card_payload" field.
@@ -3588,8 +3588,8 @@ func (m *LarkMessageMutation) Type() string {
 // AddedFields().
 func (m *LarkMessageMutation) Fields() []string {
 	fields := make([]string, 0, 4)
-	if m.card_id != nil {
-		fields = append(fields, larkmessage.FieldCardID)
+	if m.message_id != nil {
+		fields = append(fields, larkmessage.FieldMessageID)
 	}
 	if m.card_payload != nil {
 		fields = append(fields, larkmessage.FieldCardPayload)
@@ -3608,8 +3608,8 @@ func (m *LarkMessageMutation) Fields() []string {
 // schema.
 func (m *LarkMessageMutation) Field(name string) (ent.Value, bool) {
 	switch name {
-	case larkmessage.FieldCardID:
-		return m.CardID()
+	case larkmessage.FieldMessageID:
+		return m.MessageID()
 	case larkmessage.FieldCardPayload:
 		return m.CardPayload()
 	case larkmessage.FieldCreatedAt:
@@ -3625,8 +3625,8 @@ func (m *LarkMessageMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *LarkMessageMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
-	case larkmessage.FieldCardID:
-		return m.OldCardID(ctx)
+	case larkmessage.FieldMessageID:
+		return m.OldMessageID(ctx)
 	case larkmessage.FieldCardPayload:
 		return m.OldCardPayload(ctx)
 	case larkmessage.FieldCreatedAt:
@@ -3642,12 +3642,12 @@ func (m *LarkMessageMutation) OldField(ctx context.Context, name string) (ent.Va
 // type.
 func (m *LarkMessageMutation) SetField(name string, value ent.Value) error {
 	switch name {
-	case larkmessage.FieldCardID:
+	case larkmessage.FieldMessageID:
 		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetCardID(v)
+		m.SetMessageID(v)
 		return nil
 	case larkmessage.FieldCardPayload:
 		v, ok := value.(map[string]interface{})
@@ -3728,8 +3728,8 @@ func (m *LarkMessageMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *LarkMessageMutation) ResetField(name string) error {
 	switch name {
-	case larkmessage.FieldCardID:
-		m.ResetCardID()
+	case larkmessage.FieldMessageID:
+		m.ResetMessageID()
 		return nil
 	case larkmessage.FieldCardPayload:
 		m.ResetCardPayload()
@@ -10836,6 +10836,7 @@ type UploadTaskMutation struct {
 	error_message          *string
 	started_at             *time.Time
 	completed_at           *time.Time
+	lark_replied_at        *time.Time
 	created_at             *time.Time
 	updated_at             *time.Time
 	clearedFields          map[string]struct{}
@@ -11571,6 +11572,55 @@ func (m *UploadTaskMutation) ResetCompletedAt() {
 	delete(m.clearedFields, uploadtask.FieldCompletedAt)
 }
 
+// SetLarkRepliedAt sets the "lark_replied_at" field.
+func (m *UploadTaskMutation) SetLarkRepliedAt(t time.Time) {
+	m.lark_replied_at = &t
+}
+
+// LarkRepliedAt returns the value of the "lark_replied_at" field in the mutation.
+func (m *UploadTaskMutation) LarkRepliedAt() (r time.Time, exists bool) {
+	v := m.lark_replied_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLarkRepliedAt returns the old "lark_replied_at" field's value of the UploadTask entity.
+// If the UploadTask object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UploadTaskMutation) OldLarkRepliedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLarkRepliedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLarkRepliedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLarkRepliedAt: %w", err)
+	}
+	return oldValue.LarkRepliedAt, nil
+}
+
+// ClearLarkRepliedAt clears the value of the "lark_replied_at" field.
+func (m *UploadTaskMutation) ClearLarkRepliedAt() {
+	m.lark_replied_at = nil
+	m.clearedFields[uploadtask.FieldLarkRepliedAt] = struct{}{}
+}
+
+// LarkRepliedAtCleared returns if the "lark_replied_at" field was cleared in this mutation.
+func (m *UploadTaskMutation) LarkRepliedAtCleared() bool {
+	_, ok := m.clearedFields[uploadtask.FieldLarkRepliedAt]
+	return ok
+}
+
+// ResetLarkRepliedAt resets all changes to the "lark_replied_at" field.
+func (m *UploadTaskMutation) ResetLarkRepliedAt() {
+	m.lark_replied_at = nil
+	delete(m.clearedFields, uploadtask.FieldLarkRepliedAt)
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (m *UploadTaskMutation) SetCreatedAt(t time.Time) {
 	m.created_at = &t
@@ -11755,7 +11805,7 @@ func (m *UploadTaskMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *UploadTaskMutation) Fields() []string {
-	fields := make([]string, 0, 15)
+	fields := make([]string, 0, 16)
 	if m.source_path != nil {
 		fields = append(fields, uploadtask.FieldSourcePath)
 	}
@@ -11794,6 +11844,9 @@ func (m *UploadTaskMutation) Fields() []string {
 	}
 	if m.completed_at != nil {
 		fields = append(fields, uploadtask.FieldCompletedAt)
+	}
+	if m.lark_replied_at != nil {
+		fields = append(fields, uploadtask.FieldLarkRepliedAt)
 	}
 	if m.created_at != nil {
 		fields = append(fields, uploadtask.FieldCreatedAt)
@@ -11835,6 +11888,8 @@ func (m *UploadTaskMutation) Field(name string) (ent.Value, bool) {
 		return m.StartedAt()
 	case uploadtask.FieldCompletedAt:
 		return m.CompletedAt()
+	case uploadtask.FieldLarkRepliedAt:
+		return m.LarkRepliedAt()
 	case uploadtask.FieldCreatedAt:
 		return m.CreatedAt()
 	case uploadtask.FieldUpdatedAt:
@@ -11874,6 +11929,8 @@ func (m *UploadTaskMutation) OldField(ctx context.Context, name string) (ent.Val
 		return m.OldStartedAt(ctx)
 	case uploadtask.FieldCompletedAt:
 		return m.OldCompletedAt(ctx)
+	case uploadtask.FieldLarkRepliedAt:
+		return m.OldLarkRepliedAt(ctx)
 	case uploadtask.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	case uploadtask.FieldUpdatedAt:
@@ -11978,6 +12035,13 @@ func (m *UploadTaskMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetCompletedAt(v)
 		return nil
+	case uploadtask.FieldLarkRepliedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLarkRepliedAt(v)
+		return nil
 	case uploadtask.FieldCreatedAt:
 		v, ok := value.(time.Time)
 		if !ok {
@@ -12076,6 +12140,9 @@ func (m *UploadTaskMutation) ClearedFields() []string {
 	if m.FieldCleared(uploadtask.FieldCompletedAt) {
 		fields = append(fields, uploadtask.FieldCompletedAt)
 	}
+	if m.FieldCleared(uploadtask.FieldLarkRepliedAt) {
+		fields = append(fields, uploadtask.FieldLarkRepliedAt)
+	}
 	return fields
 }
 
@@ -12116,6 +12183,9 @@ func (m *UploadTaskMutation) ClearField(name string) error {
 		return nil
 	case uploadtask.FieldCompletedAt:
 		m.ClearCompletedAt()
+		return nil
+	case uploadtask.FieldLarkRepliedAt:
+		m.ClearLarkRepliedAt()
 		return nil
 	}
 	return fmt.Errorf("unknown UploadTask nullable field %s", name)
@@ -12163,6 +12233,9 @@ func (m *UploadTaskMutation) ResetField(name string) error {
 		return nil
 	case uploadtask.FieldCompletedAt:
 		m.ResetCompletedAt()
+		return nil
+	case uploadtask.FieldLarkRepliedAt:
+		m.ResetLarkRepliedAt()
 		return nil
 	case uploadtask.FieldCreatedAt:
 		m.ResetCreatedAt()

@@ -11,7 +11,7 @@ import (
 	larkim "github.com/larksuite/oapi-sdk-go/v3/service/im/v1"
 )
 
-func TestCardKitRenderedCardJSONSmoke(t *testing.T) {
+func TestMessageIDFanoutRenderedCardJSONSmoke(t *testing.T) {
 	if os.Getenv("LARK_CARDKIT_SMOKE") != "1" {
 		t.Skip("set LARK_CARDKIT_SMOKE=1 to run")
 	}
@@ -45,12 +45,9 @@ func TestCardKitRenderedCardJSONSmoke(t *testing.T) {
 	client := lark.NewClient(appID, appSecret, lark.WithEnableTokenCache(true))
 	ctx := context.Background()
 	retry := func(_ string, f func() error) error { return f() }
-	cardID, _, err := CreateCardEntity(ctx, client, retry, content)
-	if err != nil {
-		t.Fatal(err)
-	}
+	messageIDs := make([]string, 0, 2)
 	if os.Getenv("LARK_CARDKIT_SMOKE_SEND") == "1" {
-		chats, err := client.Im.Chat.List(ctx, larkim.NewListChatReqBuilder().PageSize(1).Build())
+		chats, err := client.Im.Chat.List(ctx, larkim.NewListChatReqBuilder().PageSize(2).Build())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -60,9 +57,17 @@ func TestCardKitRenderedCardJSONSmoke(t *testing.T) {
 		if len(chats.Data.Items) == 0 {
 			t.Fatal("no joined chat available for smoke send")
 		}
-		chatID := *chats.Data.Items[0].ChatId
-		if err := SendCardReferenceMessage(ctx, client, retry, chatID, cardID, fmt.Sprintf("card-smoke:%d", time.Now().UnixNano()%1_000_000_000)); err != nil {
-			t.Fatal(err)
+		sendCount := min(2, len(chats.Data.Items))
+		if sendCount < 2 {
+			t.Logf("only %d joined chat available for live smoke; multi-chat behavior is covered by unit tests", sendCount)
+		}
+		for i, chat := range chats.Data.Items[:sendCount] {
+			chatID := *chat.ChatId
+			messageID, err := SendInteractiveCardMessage(ctx, client, retry, chatID, fmt.Sprintf("card-smoke:%d:%d", i, time.Now().UnixNano()%1_000_000_000), content)
+			if err != nil {
+				t.Fatalf("send card reference to chat %d failed: %v", i, err)
+			}
+			messageIDs = append(messageIDs, messageID)
 		}
 	}
 
@@ -73,9 +78,10 @@ func TestCardKitRenderedCardJSONSmoke(t *testing.T) {
 		Title:     "<font color=red>**1**</font> : <font color=blue>**0** </font>",
 		Content:   "[主视角](https://example.com/round1-main)",
 	}}
-	sequence := time.Now().Unix()
-	if _, err := UpdateCardEntity(ctx, client, retry, cardID, fmt.Sprintf("card-smoke-up1:%d", time.Now().UnixNano()%1_000_000_000), sequence, content); err != nil {
-		t.Fatal(err)
+	for _, messageID := range messageIDs {
+		if err := PatchInteractiveCardMessage(ctx, client, retry, messageID, content); err != nil {
+			t.Fatalf("patch message %s failed: %v", messageID, err)
+		}
 	}
 
 	content.Data.MatchProgress = "Round 2 已结束"
@@ -86,7 +92,9 @@ func TestCardKitRenderedCardJSONSmoke(t *testing.T) {
 		Title:     "<font color=red>**1**</font> : <font color=blue>**1** </font>",
 		Content:   "[主视角](https://example.com/round2-main)\n[蓝方视角](https://example.com/round2-blue)",
 	})
-	if _, err := UpdateCardEntity(ctx, client, retry, cardID, fmt.Sprintf("card-smoke-up2:%d", time.Now().UnixNano()%1_000_000_000), sequence+1, content); err != nil {
-		t.Fatal(err)
+	for _, messageID := range messageIDs {
+		if err := PatchInteractiveCardMessage(ctx, client, retry, messageID, content); err != nil {
+			t.Fatalf("patch message %s second time failed: %v", messageID, err)
+		}
 	}
 }

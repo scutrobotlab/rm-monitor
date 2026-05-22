@@ -101,6 +101,10 @@ func MatchCardUpdateUUID(matchID, cardID string, sequence int64) string {
 	return shortUUID("rm-card-update", matchID, cardID, fmt.Sprintf("%d", sequence))
 }
 
+func UploadReplyUUID(uploadTaskID int, messageID string) string {
+	return shortUUID("rm-upload-reply", fmt.Sprintf("%d", uploadTaskID), messageID)
+}
+
 func shortUUID(prefix string, parts ...string) string {
 	h := sha256.New()
 	for _, part := range parts {

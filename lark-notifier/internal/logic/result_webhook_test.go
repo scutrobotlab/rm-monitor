@@ -84,6 +84,19 @@ func TestCardEntityDataRendersCardJSON(t *testing.T) {
 	if err := json.Unmarshal([]byte(raw), &got); err != nil {
 		t.Fatal(err)
 	}
+	config := got["config"].(map[string]any)
+	if config["enable_forward"] != true {
+		t.Fatalf("enable_forward = %v, want true", config["enable_forward"])
+	}
+	if config["update_multi"] != true {
+		t.Fatalf("update_multi = %v, want true", config["update_multi"])
+	}
+	if config["width_mode"] != "fill" {
+		t.Fatalf("width_mode = %v, want fill", config["width_mode"])
+	}
+	if config["enable_forward_interaction"] != false {
+		t.Fatalf("enable_forward_interaction = %v, want false", config["enable_forward_interaction"])
+	}
 	if got["schema"] != "2.0" {
 		t.Fatalf("schema = %v, want 2.0", got["schema"])
 	}
@@ -178,7 +191,7 @@ func TestMatchNeedsCardSend(t *testing.T) {
 		t.Fatal("match without card should need send")
 	}
 	m := &ent.Match{Edges: ent.MatchEdges{LarkMessages: []*ent.LarkMessage{
-		{CardID: "card_1"},
+		{MessageID: "om_1"},
 	}}}
 	if matchNeedsCardSend(m) {
 		t.Fatal("card presence should stop persistent send compensation")
