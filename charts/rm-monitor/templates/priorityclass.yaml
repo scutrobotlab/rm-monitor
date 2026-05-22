@@ -1,0 +1,15 @@
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: {{ .Values.priorityClasses.recordCritical.name }}
+value: {{ .Values.priorityClasses.recordCritical.value }}
+globalDefault: false
+description: "High priority for rm-monitor recording jobs."
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: {{ .Values.priorityClasses.background.name }}
+value: {{ .Values.priorityClasses.background.value }}
+globalDefault: false
+description: "Low priority for rm-monitor background jobs."

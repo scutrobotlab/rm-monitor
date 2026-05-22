@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.storage.record.pvcName }}
+  namespace: {{ include "rm-monitor.namespace" . }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: {{ .Values.storage.record.storageClassName }}
+  resources:
+    requests:
+      storage: {{ .Values.storage.record.size }}
+  volumeName: {{ .Values.storage.record.volumeName }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.storage.shared.pvcName }}
+  namespace: {{ include "rm-monitor.namespace" . }}
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: {{ .Values.storage.shared.storageClassName }}
+  resources:
+    requests:
+      storage: {{ .Values.storage.shared.size }}
+  volumeName: {{ .Values.storage.shared.volumeName }}

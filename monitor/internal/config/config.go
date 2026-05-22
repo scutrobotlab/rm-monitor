@@ -1,23 +1,12 @@
 package config
 
 import (
-	"github.com/zeromicro/go-queue/natsq"
-	"github.com/zeromicro/go-zero/core/stores/redis"
+	common "scutbot.cn/web/rm-monitor/pkg/config"
 )
 
-type NatsConf struct {
-	ServerUri  string
-	ClientName string
-}
-
-func (n *NatsConf) Conf() *natsq.NatsConfig {
-	return &natsq.NatsConfig{
-		ServerUri:  n.ServerUri,
-		ClientName: n.ClientName,
-	}
-}
-
 type Config struct {
-	NatsConf  NatsConf
-	RedisConf redis.RedisConf
+	MonitorConf  common.MonitorConf
+	PostgresConf common.PostgresConf
+	RedisConf    common.RedisConf
+	Priority     []common.PriorityItem `json:",optional"`
 }

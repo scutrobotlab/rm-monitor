@@ -1,0 +1,130 @@
+name: Build images
+
+on:
+  push:
+    branches:
+      - "**"
+  pull_request:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  helm:
+    name: validate helm chart
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: azure/setup-helm@v4
+
+      - name: Helm lint
+        run: helm lint charts/rm-monitor
+
+      - name: Helm template
+        run: helm template rm-monitor charts/rm-monitor --namespace rm-monitor --values charts/rm-monitor/values.yaml
+
+      - name: Login to GHCR for Helm
+        if: github.event_name == 'push'
+        shell: bash
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io --username "${{ github.actor }}" --password-stdin
+
+      - name: Package Helm chart
+        if: github.event_name == 'push'
+        shell: bash
+        run: |
+          helm package charts/rm-monitor \
+            --version "0.1.${{ github.run_number }}" \
+            --app-version "${{ github.sha }}" \
+            --destination .helm-package
+
+      - name: Push Helm chart to GHCR
+        if: github.event_name == 'push'
+        shell: bash
+        run: |
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          helm push .helm-package/rm-monitor-*.tgz "oci://ghcr.io/${owner}/charts"
+
+  docker:
+    name: build ${{ matrix.app }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - app: lark-notifier
+            dockerfile: lark-notifier/Dockerfile
+          - app: monitor
+            dockerfile: monitor/Dockerfile
+          - app: record-job
+            dockerfile: record-job/Dockerfile
+          - app: record-dispatcher
+            dockerfile: record-dispatcher/Dockerfile
+          - app: stt-job
+            dockerfile: stt-job/Dockerfile
+          - app: stt-recover
+            dockerfile: cmd/stt-recover/Dockerfile
+          - app: stt-normalize
+            dockerfile: cmd/stt-normalize/Dockerfile
+          - app: stt-subtitle
+            dockerfile: cmd/stt-subtitle/Dockerfile
+          - app: danmu-job
+            dockerfile: danmu-job/Dockerfile
+          - app: highlight-dispatcher
+            dockerfile: highlight-dispatcher/Dockerfile
+          - app: highlight-artifact-job
+            dockerfile: highlight-artifact-job/Dockerfile
+          - app: highlight-publish-bilibili-job
+            dockerfile: highlight-publish-bilibili-job/Dockerfile
+          - app: manifest-job
+            dockerfile: manifest-job/Dockerfile
+          - app: artifact-cleaner
+            dockerfile: artifact-cleaner/Dockerfile
+          - app: health-checker
+            dockerfile: health-checker/Dockerfile
+          - app: uploader-dispatcher
+            dockerfile: uploader-dispatcher/Dockerfile
+          - app: uploader-job
+            dockerfile: uploader-job/Dockerfile
+          - app: transcode-dispatcher
+            dockerfile: transcode-dispatcher/Dockerfile
+          - app: transcode-job
+            dockerfile: transcode-job/Dockerfile
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: docker/setup-buildx-action@v4
+
+      - name: Resolve image name
+        id: image
+        shell: bash
+        run: echo "name=ghcr.io/${GITHUB_REPOSITORY,,}/${{ matrix.app }}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/metadata-action@v6
+        id: meta
+        with:
+          images: ${{ steps.image.outputs.name }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix=sha-
+
+      - uses: docker/login-action@v4
+        if: github.event_name == 'push'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: ${{ github.event_name == 'push' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.app }}
+          cache-to: type=gha,scope=${{ matrix.app }},mode=max

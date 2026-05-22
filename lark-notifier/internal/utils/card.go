@@ -1,142 +1,140 @@
 package utils
 
 import (
+	"bytes"
 	"context"
+	_ "embed"
+	"encoding/json"
 	"fmt"
+	"strconv"
+	"strings"
+	"text/template"
 
 	"github.com/pkg/errors"
-	"github.com/zeromicro/go-zero/core/jsonx"
 	"scutbot.cn/web/rm-monitor/lark-notifier/internal/svc"
 	"scutbot.cn/web/rm-monitor/monitor/types"
 )
 
-const matchCardId = "AAqkpd7LuaV0s"
+//go:embed card.json.tpl
+var matchCardTemplateSource string
 
-type MatchScore struct {
-	RedScore  string `json:"red_score"`
-	BlueScore string `json:"blue_score"`
+var matchCardTemplate = template.Must(template.New("match-card").
+	Funcs(template.FuncMap{
+		"json":     jsonLiteral,
+		"jsonText": jsonStringContent,
+	}).
+	Parse(matchCardTemplateSource))
+
+type MatchRoundCard struct {
+	PanelID   string
+	ContentID string
+	Title     string
+	Content   string
+}
+
+type MatchCardData struct {
+	RedTeam       string
+	BlueTeam      string
+	MatchProgress string
+	MatchIndex    string
+	TotalRound    string
+	MatchID       string
+	EventTitle    string
+	RedSchool     string
+	BlueSchool    string
+	RedAvatar     string
+	BlueAvatar    string
+	Rounds        []MatchRoundCard
+	Color         string
+	MatchType     string
+	ZoneTitle     string
+	Report        string
+	Result        string
+	Winner        string
+	WinnerPlace   string
+	LoserPlace    string
 }
 
 type MatchCardContent struct {
-	Type string `json:"type"`
-	Data struct {
-		TemplateId       string `json:"template_id"`
-		TemplateVariable struct {
-			RedTeam       string       `json:"red_team"`
-			BlueTeam      string       `json:"blue_team"`
-			MatchProgress string       `json:"match_progress"`
-			MatchIndex    string       `json:"match_index"`
-			TotalRound    string       `json:"total_round"`
-			MatchId       string       `json:"match_id"`
-			EventTitle    string       `json:"event_title"`
-			RedSchool     string       `json:"red_school"`
-			BlueSchool    string       `json:"blue_school"`
-			RedAvatar     string       `json:"red_avatar"`
-			BlueAvatar    string       `json:"blue_avatar"`
-			Scores        []MatchScore `json:"scores"`
-			Color         string       `json:"color"`
-			MatchType     string       `json:"match_type"`
-			ZoneTitle     string       `json:"zone_title"`
-		} `json:"template_variable"`
-	} `json:"data"`
+	Data MatchCardData `json:"-"`
 }
 
 func NewMatchCardContent(ctx context.Context, svcCtx *svc.ServiceContext, m *types.Match) (*MatchCardContent, error) {
 	var content MatchCardContent
 	var err error
-	content.Type = "template"
-	content.Data.TemplateId = matchCardId
-	content.Data.TemplateVariable.RedTeam = m.RedTeam.Name
-	content.Data.TemplateVariable.BlueTeam = m.BlueTeam.Name
-	content.Data.TemplateVariable.MatchProgress = "进行中"
-	content.Data.TemplateVariable.MatchIndex = fmt.Sprintf("%d", m.Order)
-	content.Data.TemplateVariable.TotalRound = fmt.Sprintf("%d", m.TotalRounds)
-	content.Data.TemplateVariable.MatchId = m.Id
-	content.Data.TemplateVariable.EventTitle = m.EventName
-	content.Data.TemplateVariable.RedSchool = m.RedTeam.SchoolName
-	content.Data.TemplateVariable.BlueSchool = m.BlueTeam.SchoolName
-	content.Data.TemplateVariable.RedAvatar, err = GetImageKey(ctx, svcCtx, m.RedTeam.SchoolLogo)
+	content.Data.RedTeam = m.RedTeam.Name
+	content.Data.BlueTeam = m.BlueTeam.Name
+	content.Data.MatchProgress = "进行中"
+	content.Data.MatchIndex = fmt.Sprintf("%d", m.Order)
+	content.Data.TotalRound = fmt.Sprintf("%d", m.TotalRounds)
+	content.Data.MatchID = m.Id
+	content.Data.EventTitle = m.EventName
+	content.Data.RedSchool = m.RedTeam.SchoolName
+	content.Data.BlueSchool = m.BlueTeam.SchoolName
+	content.Data.RedAvatar, err = GetImageKey(ctx, svcCtx, m.RedTeam.SchoolLogo)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get red avatar")
 	}
-	content.Data.TemplateVariable.BlueAvatar, err = GetImageKey(ctx, svcCtx, m.BlueTeam.SchoolLogo)
+	content.Data.BlueAvatar, err = GetImageKey(ctx, svcCtx, m.BlueTeam.SchoolLogo)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get blue avatar")
 	}
-	content.Data.TemplateVariable.Scores = []MatchScore{
-		{"0", "0"},
-	}
-	content.Data.TemplateVariable.Color = "blue"
-	content.Data.TemplateVariable.MatchType = m.MatchType
-	content.Data.TemplateVariable.ZoneTitle = m.ZoneName
+	content.Data.Color = "orange"
+	content.Data.MatchType = m.MatchType
+	content.Data.ZoneTitle = m.ZoneName
+	content.Data.Report = m.Report
+	content.Data.Result = m.Result
+	content.Data.Winner = m.WinnerText
+	content.Data.WinnerPlace = m.WinnerPlacehold
+	content.Data.LoserPlace = m.LoserPlacehold
 	if m.MatchSlug != "" {
-		content.Data.TemplateVariable.MatchType = m.MatchSlug
+		content.Data.MatchType = m.MatchSlug
 	}
 
 	return &content, nil
 }
 
-func SaveMatchMessageCard(ctx context.Context, svcCtx *svc.ServiceContext, matchId string, content *MatchCardContent) error {
-	contentData, err := jsonx.MarshalToString(content)
+func (c *MatchCardContent) MarshalJSON() ([]byte, error) {
+	raw, err := c.RenderJSON()
 	if err != nil {
-		return errors.Wrap(err, "failed to marshal content")
+		return nil, err
 	}
-
-	messagePayloadKey := fmt.Sprintf("rm_monitor:message_payload:%s", matchId)
-	if err := svcCtx.RedisClient.SetexCtx(ctx, messagePayloadKey, contentData, 6*60*60); err != nil {
-		return errors.Wrapf(err, "failed to set message payload key %s", messagePayloadKey)
-	}
-
-	return nil
+	return []byte(raw), nil
 }
 
-func GetMatchMessageCard(ctx context.Context, svcCtx *svc.ServiceContext, matchId string) (*MatchCardContent, error) {
-	messagePayloadKey := fmt.Sprintf("rm_monitor:message_payload:%s", matchId)
-	contentData, err := svcCtx.RedisClient.GetCtx(ctx, messagePayloadKey)
+func (c *MatchCardContent) RenderJSON() (string, error) {
+	var buf bytes.Buffer
+	if err := matchCardTemplate.Execute(&buf, c.Data); err != nil {
+		return "", errors.Wrap(err, "render match card template")
+	}
+	var decoded any
+	if err := json.Unmarshal(buf.Bytes(), &decoded); err != nil {
+		return "", errors.Wrap(err, "validate rendered match card json")
+	}
+	compact, err := json.Marshal(decoded)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get message payload key %s", messagePayloadKey)
+		return "", errors.Wrap(err, "compact rendered match card json")
 	}
-
-	if contentData == "" {
-		return nil, errors.New("message payload not found")
-	}
-
-	var content MatchCardContent
-	if err := jsonx.UnmarshalFromString(contentData, &content); err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal content")
-	}
-
-	return &content, nil
+	return string(compact), nil
 }
 
-func SaveMatchMessageIds(ctx context.Context, svcCtx *svc.ServiceContext, matchId string, messageIds map[string]string) error {
-	messageKey := fmt.Sprintf("rm-monitor:message_id:%s", matchId)
-	val, err := jsonx.MarshalToString(messageIds)
+func jsonLiteral(v any) (string, error) {
+	b, err := json.Marshal(v)
 	if err != nil {
-		return errors.Wrap(err, "failed to marshal message ids")
+		return "", err
 	}
-	if err := svcCtx.RedisClient.SetexCtx(ctx, messageKey, val, 6*60*60); err != nil {
-		return errors.Wrapf(err, "failed to set message key %s", messageKey)
-	}
-
-	return nil
+	return string(b), nil
 }
 
-func GetMatchMessageIds(ctx context.Context, svcCtx *svc.ServiceContext, matchId string) (map[string]string, error) {
-	messageKey := fmt.Sprintf("rm-monitor:message_id:%s", matchId)
-	val, err := svcCtx.RedisClient.GetCtx(ctx, messageKey)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get message key %s", messageKey)
+func jsonStringContent(v any) (string, error) {
+	s, ok := v.(string)
+	if !ok {
+		b, err := json.Marshal(v)
+		if err != nil {
+			return "", err
+		}
+		s = string(b)
 	}
-
-	if val == "" {
-		return nil, errors.New("message id not found")
-	}
-
-	var messageIds map[string]string
-	if err := jsonx.UnmarshalFromString(val, &messageIds); err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal message ids")
-	}
-
-	return messageIds, nil
+	quoted := strconv.Quote(s)
+	return strings.TrimSuffix(strings.TrimPrefix(quoted, `"`), `"`), nil
 }

@@ -1,0 +1,196 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["postgres", "redis", "record", "stt", "storage", "jobs", "components"],
+  "properties": {
+    "postgres": {
+      "type": "object",
+      "required": ["dsn"],
+      "properties": {
+        "dsn": { "type": "string", "minLength": 1 }
+      }
+    },
+    "redis": {
+      "type": "object",
+      "required": ["host"],
+      "properties": {
+        "host": { "type": "string", "minLength": 1 },
+        "pass": { "type": "string" },
+        "type": { "type": "string" }
+      }
+    },
+    "lark": {
+      "type": "object",
+      "required": ["appId", "appSecret"],
+      "additionalProperties": false,
+      "properties": {
+        "appId": { "type": "string" },
+        "appSecret": { "type": "string" }
+      }
+    },
+    "upload": {
+      "type": "object",
+      "required": ["bitableAppToken", "concurrency", "partRetries", "retryBackoff", "rateLimitPerMinute"],
+      "properties": {
+        "bitableAppToken": { "type": "string" },
+        "concurrency": { "type": "integer", "minimum": 1 },
+        "partRetries": { "type": "integer", "minimum": 1 },
+        "retryBackoff": { "type": "integer", "minimum": 1 },
+        "rateLimitPerMinute": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "record": {
+      "type": "object",
+      "properties": {
+        "res": { "type": "string" },
+        "roleBlackList": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "stt": {
+      "type": "object",
+      "required": ["enabled"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "role": { "type": "string" },
+        "whisperServerUrl": { "type": "string" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "enabled": { "const": true } },
+            "required": ["enabled"]
+          },
+          "then": {
+            "required": ["role", "whisperServerUrl"],
+            "properties": {
+              "role": { "minLength": 1 },
+              "whisperServerUrl": { "minLength": 1 }
+            }
+          }
+        }
+      ]
+    },
+    "danmu": {
+      "type": "object",
+      "required": ["enabled"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "appId": { "type": "string" },
+        "appKey": { "type": "string" },
+        "videoOffsetSeconds": { "type": "number" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "enabled": { "const": true } },
+            "required": ["enabled"]
+          },
+          "then": {
+            "required": ["appId", "appKey"],
+            "properties": {
+              "appId": { "minLength": 1 },
+              "appKey": { "minLength": 1 }
+            }
+          }
+        }
+      ]
+    },
+    "llm": {
+      "type": "object",
+      "properties": {
+        "baseURL": { "type": "string" },
+        "apiKey": { "type": "string" },
+        "model": { "type": "string" },
+        "timeoutSeconds": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "publish": {
+      "type": "object",
+      "properties": {
+        "bilibili": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "cookieSecretName": { "type": "string" },
+            "cookieSecretKey": { "type": "string" },
+            "tid": { "type": "integer", "minimum": 1 },
+            "copyright": { "type": "integer", "enum": [1, 2] },
+            "source": { "type": "string" },
+            "titleTemplate": { "type": "string" },
+            "descTemplate": { "type": "string" },
+            "dynamicTemplate": { "type": "string" },
+            "tags": { "type": "array", "items": { "type": "string" } },
+            "noReprint": { "type": "boolean" },
+            "openElec": { "type": "boolean" },
+            "maxConcurrentJobs": { "type": "integer", "minimum": 1 },
+            "cover": {
+              "type": "object",
+              "properties": {
+                "enabled": { "type": "boolean" },
+                "at": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "jobs": {
+      "type": "object",
+      "required": ["ttlSecondsAfterFinished", "backoffLimit", "recordsMountPath", "artifactCleaner"],
+      "properties": {
+        "ttlSecondsAfterFinished": { "type": "integer", "minimum": 1 },
+        "backoffLimit": { "type": "integer", "minimum": 0 },
+        "recordsMountPath": { "type": "string", "minLength": 1 },
+        "artifactCleaner": {
+          "type": "object",
+          "required": ["schedule", "successfulJobsHistoryLimit", "failedJobsHistoryLimit"],
+          "properties": {
+            "schedule": { "type": "string", "minLength": 1 },
+            "successfulJobsHistoryLimit": { "type": "integer", "minimum": 0 },
+            "failedJobsHistoryLimit": { "type": "integer", "minimum": 0 }
+          }
+        }
+      }
+    },
+    "components": {
+      "type": "object",
+      "required": ["monitor", "larkNotifier", "recordDispatcher", "uploaderDispatcher", "transcodeDispatcher", "artifactCleaner", "healthChecker"],
+      "properties": {
+        "healthChecker": {
+          "type": "object",
+          "required": ["schedule", "successfulJobsHistoryLimit", "failedJobsHistoryLimit", "resources"],
+          "properties": {
+            "schedule": { "type": "string", "minLength": 1 },
+            "successfulJobsHistoryLimit": { "type": "integer", "minimum": 0 },
+            "failedJobsHistoryLimit": { "type": "integer", "minimum": 0 },
+            "resources": { "type": "object" }
+          }
+        }
+      }
+    },
+    "storage": {
+      "type": "object",
+      "required": ["record", "shared"],
+      "properties": {
+        "record": {
+          "$ref": "#/definitions/boundPVC"
+        },
+        "shared": {
+          "$ref": "#/definitions/boundPVC"
+        }
+      }
+    }
+  },
+  "definitions": {
+    "boundPVC": {
+      "type": "object",
+      "required": ["volumeName", "pvcName", "storageClassName", "size"],
+      "properties": {
+        "volumeName": { "type": "string", "minLength": 1 },
+        "pvcName": { "type": "string", "minLength": 1 },
+        "storageClassName": { "type": "string", "minLength": 1 },
+        "size": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

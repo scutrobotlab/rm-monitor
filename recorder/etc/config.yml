@@ -1,9 +1,0 @@
-RedisConf:
-  Host: master0.scutbot.cn:6379
-  Pass: QaRYYoZ1mwK973upLRTtbZjZX056PdvD
-RecordConf:
-  Res: middle
-  BaseDir: ./data
-NatsConfig:
-  ServerUri: 127.0.0.1:4222
-  ClientName: recorder

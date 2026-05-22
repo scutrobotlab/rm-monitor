@@ -1,10 +1,6 @@
+PostgresConf:
+  DSN: postgres://rm_monitor:rm_monitor@127.0.0.1:5432/rm_monitor?sslmode=disable
+  AutoMigrate: true
 RedisConf:
-  Host: master0.scutbot.cn:6379
-  Pass: QaRYYoZ1mwK973upLRTtbZjZX056PdvD
-KqPusherConf:
-  Brokers:
-    - master.scutbot.cn:9092
-  Topic: rm-monitor
-NatsConfig:
-  ServerUri: 127.0.0.1:4222
-  ClientName: monitor
+  Host: 127.0.0.1:6379
+  Type: node

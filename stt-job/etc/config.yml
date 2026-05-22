@@ -1,0 +1,8 @@
+WhisperServerUrl: http://172.30.162.40:48088
+RecordConf:
+  Res: middle
+  BaseDir: /records
+  STTRole: "主视角"
+  PathTemplate: "{{.Event}}/{{.Zone}}/{{.MatchName}}/Round-{{.RoundNo}}/{{.Role}}.flv"
+  MatchDirTemplate: "{{.Event}}/{{.Zone}}/{{.MatchName}}"
+  MatchNameTemplate: "{{.Order}}. {{.RedSchool}}-{{.RedName}} VS {{.BlueSchool}}-{{.BlueName}}"

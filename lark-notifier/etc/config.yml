@@ -1,12 +1,15 @@
 LarkConf:
-  AppId: cli_a6a438471df8900d
-  AppSecret: eG5j2WxExZcWAwrWajh1MfBBtnpJeDaM
+  AppId: ""
+  AppSecret: ""
 RedisConf:
-  Host: master0.scutbot.cn:6379
-  Pass: QaRYYoZ1mwK973upLRTtbZjZX056PdvD
-NatsConf:
-  ServerUri: 127.0.0.1:4222
-  ClientName: lark-notifier
+  Host: 127.0.0.1:6379
+  Pass: ""
+PostgresConf:
+  DSN: postgres://rm_monitor:rm_monitor@127.0.0.1:5432/rm_monitor?sslmode=disable
+  AutoMigrate: true
 RecordConf:
   BaseDir: ""
-  RootNode: "S1WbfH2QKlvNBmdz3BPcoompnnB"
+UploadConf:
+  Concurrency: 1
+  PartRetries: 3
+  RetryBackoff: 2

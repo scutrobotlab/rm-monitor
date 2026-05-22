@@ -1,0 +1,75 @@
+name: E2E
+
+on:
+  pull_request:
+  push:
+    branches:
+      - "**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  integration:
+    name: unit and integration checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: danmu-job/package-lock.json
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: azure/setup-helm@v4
+
+      - name: Go tests
+        run: go test ./...
+
+      - name: Danmu job tests
+        working-directory: danmu-job
+        run: npm ci && npm test
+
+      - name: Highlight artifact job tests
+        run: cargo test --manifest-path highlight-artifact-job/Cargo.toml --locked
+
+      - name: Bilibili publish job tests
+        run: cargo test --manifest-path highlight-publish-bilibili-job/Cargo.toml --locked
+
+      - name: Helm validation
+        run: |
+          helm lint charts/rm-monitor
+          helm template rm-monitor charts/rm-monitor --namespace rm-monitor --values charts/rm-monitor/values.yaml
+
+  kind-core:
+    name: kind core service e2e
+    runs-on: ubuntu-latest
+    needs: integration
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: azure/setup-helm@v4
+
+      - name: Install kind
+        shell: bash
+        run: |
+          curl -fsSL -o kind https://kind.sigs.k8s.io/dl/v0.30.0/kind-linux-amd64
+          chmod +x kind
+          sudo mv kind /usr/local/bin/kind
+
+      - name: Run core cluster e2e
+        shell: bash
+        env:
+          E2E_USE_KIND: "1"
+          E2E_BUILD_IMAGES: "1"
+        run: scripts/e2e/core-cluster.sh

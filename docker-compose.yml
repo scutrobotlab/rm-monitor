@@ -1,5 +1,13 @@
 services:
-  natsq:
-    image: nats:latest
+  redis:
+    image: redis:7-alpine
     ports:
-      - 4222:4222
+      - 6379:6379
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: rm_monitor
+      POSTGRES_PASSWORD: rm_monitor
+      POSTGRES_DB: rm_monitor
+    ports:
+      - 5432:5432
