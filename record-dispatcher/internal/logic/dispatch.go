@@ -505,15 +505,18 @@ func (l *DispatchLogic) reconcileRecordResults() error {
 		if l.svcCtx.K8s == nil || task.K8sJobName == nil || *task.K8sJobName == "" {
 			continue
 		}
-		state, err := l.svcCtx.K8s.JobState(l.ctx, namespace, *task.K8sJobName)
+		status, err := l.svcCtx.K8s.JobStatus(l.ctx, namespace, *task.K8sJobName)
 		if err != nil {
 			return err
 		}
-		if state == kubejob.JobStateMissing && task.UpdatedAt.After(time.Now().Add(-2*time.Minute)) {
+		if status.State == kubejob.JobStateMissing && task.UpdatedAt.After(time.Now().Add(-2*time.Minute)) {
 			continue
 		}
-		if state == kubejob.JobStateFailed || state == kubejob.JobStateSucceeded || state == kubejob.JobStateMissing {
-			msg := fmt.Sprintf("record job %s finished as %s without result.json or error.json", *task.K8sJobName, state)
+		if (status.State == kubejob.JobStateFailed || status.State == kubejob.JobStateSucceeded) && !status.FinishedAt.IsZero() && time.Since(status.FinishedAt) < 2*time.Minute {
+			continue
+		}
+		if status.State == kubejob.JobStateFailed || status.State == kubejob.JobStateSucceeded || status.State == kubejob.JobStateMissing {
+			msg := fmt.Sprintf("record job %s finished as %s without result.json or error.json", *task.K8sJobName, status.State)
 			if err := l.svcCtx.DB.RecordTask.UpdateOneID(task.ID).SetStatus(recordtask.StatusFAILED).SetErrorMessage(msg).SetCompletedAt(time.Now()).Exec(l.ctx); err != nil {
 				return errors.Wrap(err, "mark record missing result failed")
 			}

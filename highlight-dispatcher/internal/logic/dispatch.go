@@ -424,16 +424,19 @@ func (l *DispatchLogic) reconcileHighlightResults() error {
 		if l.svcCtx.K8s == nil || clip.K8sJobName == nil || *clip.K8sJobName == "" {
 			continue
 		}
-		state, err := l.svcCtx.K8s.JobState(l.ctx, namespace, *clip.K8sJobName)
+		status, err := l.svcCtx.K8s.JobStatus(l.ctx, namespace, *clip.K8sJobName)
 		if err != nil {
 			return err
 		}
-		if state == kubejob.JobStateFailed {
+		if (status.State == kubejob.JobStateFailed || status.State == kubejob.JobStateSucceeded) && !status.FinishedAt.IsZero() && time.Since(status.FinishedAt) < 2*time.Minute {
+			continue
+		}
+		if status.State == kubejob.JobStateFailed {
 			if err := l.svcCtx.DB.HighlightClip.UpdateOneID(clip.ID).SetStatus(highlightclip.StatusFAILED).SetErrorMessage("highlight artifact job failed without result file").SetCompletedAt(time.Now()).Exec(l.ctx); err != nil {
 				return errors.Wrap(err, "mark highlight job failed")
 			}
 		}
-		if state == kubejob.JobStateSucceeded {
+		if status.State == kubejob.JobStateSucceeded {
 			if err := l.svcCtx.DB.HighlightClip.UpdateOneID(clip.ID).SetStatus(highlightclip.StatusFAILED).SetErrorMessage("highlight artifact job completed without result file").SetCompletedAt(time.Now()).Exec(l.ctx); err != nil {
 				return errors.Wrap(err, "mark highlight job completed without result")
 			}
@@ -751,16 +754,19 @@ func (l *DispatchLogic) reconcilePublishResults() error {
 		if l.svcCtx.K8s == nil || task.K8sJobName == nil || *task.K8sJobName == "" {
 			continue
 		}
-		state, err := l.svcCtx.K8s.JobState(l.ctx, namespace, *task.K8sJobName)
+		status, err := l.svcCtx.K8s.JobStatus(l.ctx, namespace, *task.K8sJobName)
 		if err != nil {
 			return err
 		}
-		if state == kubejob.JobStateFailed {
+		if (status.State == kubejob.JobStateFailed || status.State == kubejob.JobStateSucceeded) && !status.FinishedAt.IsZero() && time.Since(status.FinishedAt) < 2*time.Minute {
+			continue
+		}
+		if status.State == kubejob.JobStateFailed {
 			if err := l.svcCtx.DB.HighlightPublishTask.UpdateOneID(task.ID).SetStatus(highlightpublishtask.StatusFAILED).SetErrorMessage("publish job failed without result file").SetCompletedAt(time.Now()).Exec(l.ctx); err != nil {
 				return errors.Wrap(err, "mark publish job failed")
 			}
 		}
-		if state == kubejob.JobStateSucceeded {
+		if status.State == kubejob.JobStateSucceeded {
 			if err := l.svcCtx.DB.HighlightPublishTask.UpdateOneID(task.ID).SetStatus(highlightpublishtask.StatusFAILED).SetErrorMessage("publish job completed without result file").SetCompletedAt(time.Now()).Exec(l.ctx); err != nil {
 				return errors.Wrap(err, "mark publish job completed without result")
 			}

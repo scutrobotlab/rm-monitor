@@ -3,6 +3,7 @@ package kubejob
 import (
 	"context"
 	"path/filepath"
+	"time"
 
 	"github.com/pkg/errors"
 	batchv1 "k8s.io/api/batch/v1"
@@ -101,7 +102,17 @@ const (
 	JobStateFailed    JobState = "FAILED"
 )
 
+type JobStatus struct {
+	State      JobState
+	FinishedAt time.Time
+}
+
 func (c *Client) JobState(ctx context.Context, namespace, name string) (JobState, error) {
+	status, err := c.JobStatus(ctx, namespace, name)
+	return status.State, err
+}
+
+func (c *Client) JobStatus(ctx context.Context, namespace, name string) (JobStatus, error) {
 	var job batchv1.Job
 	err := c.rest.Get().
 		Namespace(namespace).
@@ -110,10 +121,10 @@ func (c *Client) JobState(ctx context.Context, namespace, name string) (JobState
 		Do(ctx).
 		Into(&job)
 	if apierrors.IsNotFound(err) {
-		return JobStateMissing, nil
+		return JobStatus{State: JobStateMissing}, nil
 	}
 	if err != nil {
-		return "", errors.Wrap(err, "get k8s job")
+		return JobStatus{}, errors.Wrap(err, "get k8s job")
 	}
 	for _, cond := range job.Status.Conditions {
 		if cond.Status != corev1.ConditionTrue {
@@ -121,12 +132,12 @@ func (c *Client) JobState(ctx context.Context, namespace, name string) (JobState
 		}
 		switch cond.Type {
 		case batchv1.JobComplete:
-			return JobStateSucceeded, nil
+			return JobStatus{State: JobStateSucceeded, FinishedAt: cond.LastTransitionTime.Time}, nil
 		case batchv1.JobFailed:
-			return JobStateFailed, nil
+			return JobStatus{State: JobStateFailed, FinishedAt: cond.LastTransitionTime.Time}, nil
 		}
 	}
-	return JobStateRunning, nil
+	return JobStatus{State: JobStateRunning}, nil
 }
 
 func (c *Client) CountUnfinishedJobs(ctx context.Context, namespace, labelSelector string) (int, error) {

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	stdsql "database/sql"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -17,9 +18,13 @@ import (
 
 	"scutbot.cn/web/rm-monitor/ent"
 	"scutbot.cn/web/rm-monitor/ent/highlightclip"
+	"scutbot.cn/web/rm-monitor/ent/mediaartifact"
+	"scutbot.cn/web/rm-monitor/ent/recordtask"
+	"scutbot.cn/web/rm-monitor/ent/uploadtask"
 	"scutbot.cn/web/rm-monitor/pkg/app"
 	common "scutbot.cn/web/rm-monitor/pkg/config"
 	"scutbot.cn/web/rm-monitor/pkg/db"
+	"scutbot.cn/web/rm-monitor/pkg/jobcontract"
 	"scutbot.cn/web/rm-monitor/pkg/kubejob"
 	"scutbot.cn/web/rm-monitor/pkg/logx"
 	"scutbot.cn/web/rm-monitor/pkg/storagepath"
@@ -29,6 +34,7 @@ import (
 type config struct {
 	PostgresConf common.PostgresConf
 	RecordConf   common.RecordConf
+	UploadConf   common.UploadConf
 	K8sJobConf   common.K8sJobConf `json:",optional"`
 }
 
@@ -50,6 +56,7 @@ type summary struct {
 	AudioKept          int
 	HighlightsReset    int
 	HighlightJobsGone  int
+	RecoveredResults   int
 }
 
 var (
@@ -63,6 +70,7 @@ var (
 	repairSubtitle   = flag.Bool("subtitle", true, "generate missing round subtitle from stt.jsonl")
 	cleanupAudio     = flag.Bool("cleanup-audio", true, "delete audio dir after successful stt and ffmpeg done marker")
 	resetHighlights  = flag.Bool("reset-highlights", true, "reset failed highlight clips caused by known recoverable artifact failures")
+	recoverResults   = flag.Bool("recover-results", true, "recover tasks wrongly marked failed when result.json exists")
 	deleteK8sJobs    = flag.Bool("delete-k8s-jobs", true, "delete existing failed highlight jobs before resetting clips; only works in cluster")
 	highlightErrLike = flag.String("highlight-error-like", "ffmpeg cover failed", "substring used to find recoverable failed highlight clips")
 )
@@ -107,7 +115,12 @@ func main() {
 			fatal(err)
 		}
 	}
-	fmt.Printf("summary dry_run=%t rounds=%d subtitles_generated=%d subtitles_existing=%d subtitles_no_cues=%d audio_removed=%d audio_kept=%d highlights_reset=%d highlight_jobs_deleted=%d\n",
+	if *recoverResults {
+		if err := recoverCompletedResults(ctx, c, entClient, *apply, &s); err != nil {
+			fatal(err)
+		}
+	}
+	fmt.Printf("summary dry_run=%t rounds=%d subtitles_generated=%d subtitles_existing=%d subtitles_no_cues=%d audio_removed=%d audio_kept=%d highlights_reset=%d highlight_jobs_deleted=%d recovered_results=%d\n",
 		!*apply,
 		s.RoundsScanned,
 		s.SubtitlesGenerated,
@@ -117,6 +130,7 @@ func main() {
 		s.AudioKept,
 		s.HighlightsReset,
 		s.HighlightJobsGone,
+		s.RecoveredResults,
 	)
 }
 
@@ -280,6 +294,173 @@ func resetRecoverableHighlights(ctx context.Context, c config, client *ent.Clien
 		s.HighlightsReset++
 	}
 	return nil
+}
+
+func recoverCompletedResults(ctx context.Context, c config, client *ent.Client, apply bool, s *summary) error {
+	if err := recoverUploadResults(ctx, c, client, apply, s); err != nil {
+		return err
+	}
+	if err := recoverHighlightResults(ctx, c, client, apply, s); err != nil {
+		return err
+	}
+	if err := recoverRecordResults(ctx, c, client, apply, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+func recoverUploadResults(ctx context.Context, c config, client *ent.Client, apply bool, s *summary) error {
+	tasks, err := client.UploadTask.Query().
+		Where(uploadtask.StatusEQ(uploadtask.StatusFAILED), uploadtask.ErrorMessageContains("without result")).
+		Limit(limitOrDefault()).
+		All(ctx)
+	if err != nil {
+		return errors.Wrap(err, "query failed upload tasks with missing result")
+	}
+	baseDir := c.UploadConf.WithDefaults().BaseDir
+	for _, task := range tasks {
+		path := filepath.Join(filepath.Dir(storagepath.Resolve(baseDir, task.SourcePath)), jobcontract.DirName, fmt.Sprintf("upload-%d", task.ID), jobcontract.ResultFile)
+		var result jobcontract.UploadResult
+		if !readJSONIfExists(path, &result) {
+			continue
+		}
+		completedAt := result.CompletedAt
+		if completedAt.IsZero() {
+			completedAt = time.Now()
+		}
+		fmt.Printf("%s upload result task=%d path=%s\n", action(apply), task.ID, path)
+		if apply {
+			update := client.UploadTask.UpdateOneID(task.ID).
+				SetStatus(uploadtask.StatusSUCCEEDED).
+				SetCompletedAt(completedAt).
+				SetAttachmentFileToken(result.AttachmentFileToken).
+				ClearErrorMessage()
+			if result.BitableRecordURL != "" {
+				update.SetBitableRecordURL(result.BitableRecordURL)
+			}
+			if err := update.Exec(ctx); err != nil {
+				return errors.Wrapf(err, "recover upload task %d", task.ID)
+			}
+		}
+		s.RecoveredResults++
+	}
+	return nil
+}
+
+func recoverHighlightResults(ctx context.Context, c config, client *ent.Client, apply bool, s *summary) error {
+	clips, err := client.HighlightClip.Query().
+		Where(highlightclip.StatusEQ(highlightclip.StatusFAILED), highlightclip.ErrorMessageContains("without result")).
+		Limit(limitOrDefault()).
+		All(ctx)
+	if err != nil {
+		return errors.Wrap(err, "query failed highlight clips with missing result")
+	}
+	baseDir := c.RecordConf.WithDefaults().BaseDir
+	for _, clip := range clips {
+		job := fmt.Sprintf("highlight-%d", clip.ID)
+		path := storagepath.Resolve(baseDir, pathpkg.Join(clip.OutputDir, jobcontract.DirName, job, jobcontract.ResultFile))
+		var result struct {
+			OutputDir    string          `json:"output_dir"`
+			Title        string          `json:"title"`
+			Description  string          `json:"description"`
+			Tags         []string        `json:"tags"`
+			ModelPayload json.RawMessage `json:"model_payload"`
+			CompletedAt  time.Time       `json:"completed_at"`
+		}
+		if !readJSONIfExists(path, &result) {
+			continue
+		}
+		modelPayload := strings.TrimSpace(string(result.ModelPayload))
+		if modelPayload == "" {
+			modelPayload = "{}"
+		}
+		completedAt := result.CompletedAt
+		if completedAt.IsZero() {
+			completedAt = time.Now()
+		}
+		fmt.Printf("%s highlight result clip=%d path=%s\n", action(apply), clip.ID, path)
+		if apply {
+			if err := client.HighlightClip.UpdateOneID(clip.ID).
+				SetStatus(highlightclip.StatusSUCCEEDED).
+				SetOutputDir(result.OutputDir).
+				SetTitle(result.Title).
+				SetDescription(result.Description).
+				SetTags(result.Tags).
+				SetModelPayload(modelPayload).
+				SetCompletedAt(completedAt).
+				ClearErrorMessage().
+				Exec(ctx); err != nil {
+				return errors.Wrapf(err, "recover highlight clip %d", clip.ID)
+			}
+		}
+		s.RecoveredResults++
+	}
+	return nil
+}
+
+func recoverRecordResults(ctx context.Context, c config, client *ent.Client, apply bool, s *summary) error {
+	tasks, err := client.RecordTask.Query().
+		Where(recordtask.StatusEQ(recordtask.StatusFAILED), recordtask.ErrorMessageContains("without result")).
+		Limit(limitOrDefault()).
+		All(ctx)
+	if err != nil {
+		return errors.Wrap(err, "query failed record tasks with missing result")
+	}
+	baseDir := c.RecordConf.WithDefaults().BaseDir
+	for _, task := range tasks {
+		path := filepath.Join(baseDir, filepath.FromSlash(pathpkg.Dir(filepath.ToSlash(task.OutputPath))), jobcontract.DirName, fmt.Sprintf("record-%d", task.ID), jobcontract.ResultFile)
+		var result jobcontract.RecordResult
+		if !readJSONIfExists(path, &result) {
+			continue
+		}
+		completedAt := result.CompletedAt
+		if completedAt.IsZero() {
+			completedAt = time.Now()
+		}
+		fmt.Printf("%s record result task=%d path=%s\n", action(apply), task.ID, path)
+		if apply {
+			if err := client.RecordTask.UpdateOneID(task.ID).
+				SetStatus(recordtask.StatusSUCCEEDED).
+				SetCompletedAt(completedAt).
+				SetFileSize(result.FileSize).
+				SetChecksum(result.Checksum).
+				ClearErrorMessage().
+				Exec(ctx); err != nil {
+				return errors.Wrapf(err, "recover record task %d", task.ID)
+			}
+			if err := client.MediaArtifact.Create().
+				SetRecordTaskID(result.RecordTaskID).
+				SetKind(mediaartifact.KindSource).
+				SetPath(result.OutputPath).
+				SetFormat(mediaartifact.FormatFlv).
+				SetCodec(mediaartifact.CodecCopy).
+				SetFileSize(result.FileSize).
+				SetChecksum(result.Checksum).
+				SetStatus(mediaartifact.StatusAVAILABLE).
+				OnConflictColumns(mediaartifact.RecordTaskColumn, mediaartifact.FieldKind).
+				UpdateNewValues().
+				Exec(ctx); err != nil {
+				return errors.Wrapf(err, "recover source artifact for record task %d", task.ID)
+			}
+		}
+		s.RecoveredResults++
+	}
+	return nil
+}
+
+func readJSONIfExists(path string, v any) bool {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return false
+	}
+	return json.Unmarshal(data, v) == nil
+}
+
+func limitOrDefault() int {
+	if *limit > 0 {
+		return *limit
+	}
+	return 500
 }
 
 func hasSuccessfulSTT(path string) bool {
