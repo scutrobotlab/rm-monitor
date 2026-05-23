@@ -82,7 +82,7 @@ func TestCardEntityFanoutSmoke(t *testing.T) {
 		Content:   "[主视角](https://example.com/round1-main)",
 	}}
 	for _, cardID := range cardIDs {
-		if _, err := UpdateCardEntity(ctx, client, retry, cardID, SmokeUpdateUUID(), time.Now().UnixNano(), content); err != nil {
+		if _, err := UpdateCardEntity(ctx, client, retry, cardID, SmokeUpdateUUID(), time.Now().Unix(), content); err != nil {
 			t.Fatalf("update card %s failed: %v", cardID, err)
 		}
 	}
@@ -96,7 +96,7 @@ func TestCardEntityFanoutSmoke(t *testing.T) {
 		Content:   "[主视角](https://example.com/round2-main)\n[蓝方视角](https://example.com/round2-blue)",
 	})
 	for _, cardID := range cardIDs {
-		if _, err := UpdateCardEntity(ctx, client, retry, cardID, SmokeUpdateUUID(), time.Now().UnixNano(), content); err != nil {
+		if _, err := UpdateCardEntity(ctx, client, retry, cardID, SmokeUpdateUUID(), time.Now().Unix(), content); err != nil {
 			t.Fatalf("update card %s second time failed: %v", cardID, err)
 		}
 	}

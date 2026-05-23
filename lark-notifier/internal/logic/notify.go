@@ -313,7 +313,7 @@ func (l *NotifyLogic) patchMatchCards(m *ent.Match) error {
 		return err
 	}
 	contentMap := utils.ToMap(content)
-	sequence := cardDataUpdatedAt(m).UnixNano()
+	sequence := cardDataUpdatedAt(m).Unix()
 	for _, card := range m.Edges.LarkMessages {
 		if !cardIDReady(card) {
 			continue
