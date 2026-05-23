@@ -39,3 +39,23 @@ func TestContextFromEnv(t *testing.T) {
 		t.Fatalf("ContextFromEnv() = %+v", ctx)
 	}
 }
+
+func TestClearRemovesStaleFiles(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), DirName, "upload-1")
+	for _, name := range []string{ContextFile, ResultFile, ErrorFile, ResultFile + ".tmp"} {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, name), []byte("{}"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := Clear(dir); err != nil {
+		t.Fatalf("Clear() error = %v", err)
+	}
+	for _, name := range []string{ContextFile, ResultFile, ErrorFile, ResultFile + ".tmp"} {
+		if _, err := os.Stat(filepath.Join(dir, name)); !os.IsNotExist(err) {
+			t.Fatalf("%s still exists: %v", name, err)
+		}
+	}
+}

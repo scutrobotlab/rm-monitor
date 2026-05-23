@@ -569,6 +569,11 @@ func (l *DispatchLogic) dispatchPending() error {
 		if claimed == 0 {
 			continue
 		}
+		jobDir := l.uploadJobDir(task)
+		if err := jobcontract.Clear(jobDir); err != nil {
+			_ = l.svcCtx.DB.UploadTask.UpdateOneID(task.ID).SetStatus(uploadtask.StatusFAILED).SetErrorMessage(err.Error()).Exec(l.ctx)
+			return errors.Wrap(err, "clear stale upload job contract")
+		}
 		jobCtx, err := l.uploadContext(task)
 		if err != nil {
 			_ = l.svcCtx.DB.UploadTask.UpdateOneID(task.ID).SetStatus(uploadtask.StatusFAILED).SetErrorMessage(err.Error()).Exec(l.ctx)
@@ -673,9 +678,13 @@ func (l *DispatchLogic) reconcileUploadResults() error {
 }
 
 func (l *DispatchLogic) uploadResultPaths(task *ent.UploadTask) (string, string) {
-	conf := l.svcCtx.Config.UploadConf.WithDefaults()
-	dir := filepath.Join(filepath.Dir(storagepath.Resolve(conf.BaseDir, task.SourcePath)), jobcontract.DirName, jobName("upload", task.ID))
+	dir := l.uploadJobDir(task)
 	return filepath.Join(dir, jobcontract.ResultFile), filepath.Join(dir, jobcontract.ErrorFile)
+}
+
+func (l *DispatchLogic) uploadJobDir(task *ent.UploadTask) string {
+	conf := l.svcCtx.Config.UploadConf.WithDefaults()
+	return filepath.Join(filepath.Dir(storagepath.Resolve(conf.BaseDir, task.SourcePath)), jobcontract.DirName, jobName("upload", task.ID))
 }
 
 func (l *DispatchLogic) applyUploadResult(result jobcontract.UploadResult) error {

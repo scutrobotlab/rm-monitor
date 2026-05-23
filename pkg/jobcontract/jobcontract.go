@@ -179,6 +179,15 @@ func ReadJSON(path string, v any) (bool, error) {
 	return true, nil
 }
 
+func Clear(dir string) error {
+	for _, name := range []string{ContextFile, ResultFile, ErrorFile, ContextFile + ".tmp", ResultFile + ".tmp", ErrorFile + ".tmp"} {
+		if err := os.Remove(filepath.Join(dir, name)); err != nil && !os.IsNotExist(err) {
+			return errors.Wrapf(err, "remove %s", name)
+		}
+	}
+	return nil
+}
+
 func AtomicWriteJSON(path string, v any) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return errors.Wrap(err, "create json dir")
