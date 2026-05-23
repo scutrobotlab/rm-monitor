@@ -3,9 +3,11 @@ package utils
 import (
 	"context"
 	"encoding/json"
+	stderrors "errors"
 	"time"
 
 	lark "github.com/larksuite/oapi-sdk-go/v3"
+	larkcore "github.com/larksuite/oapi-sdk-go/v3/core"
 	larkcardkit "github.com/larksuite/oapi-sdk-go/v3/service/cardkit/v1"
 	larkim "github.com/larksuite/oapi-sdk-go/v3/service/im/v1"
 	"github.com/pkg/errors"
@@ -76,6 +78,18 @@ func UpdateCardEntity(ctx context.Context, client *lark.Client, retry LarkRetryF
 		return nil, errors.Wrap(err, "update cardkit card")
 	}
 	return payload, nil
+}
+
+func IsCardUpdateAlreadyApplied(err error) bool {
+	var codeErr *larkcore.CodeError
+	if stderrors.As(err, &codeErr) {
+		return codeErr.Code == 200770 || codeErr.Code == 300317
+	}
+	var valueCodeErr larkcore.CodeError
+	if stderrors.As(err, &valueCodeErr) {
+		return valueCodeErr.Code == 200770 || valueCodeErr.Code == 300317
+	}
+	return false
 }
 
 func SendCardReferenceMessage(ctx context.Context, client *lark.Client, retry LarkRetryFunc, chatID, cardID, uuid string) (string, error) {

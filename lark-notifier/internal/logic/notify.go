@@ -323,6 +323,12 @@ func (l *NotifyLogic) patchMatchCards(m *ent.Match) error {
 		}
 		payload, err := utils.UpdateCardEntity(l.ctx, l.svcCtx.LarkClient, l.retryLark, *card.CardID, utils.MatchCardUpdateUUID(m.ID, *card.CardID, sequence), sequence, content)
 		if err != nil {
+			if utils.IsCardUpdateAlreadyApplied(err) {
+				if err := l.svcCtx.DB.LarkMessage.UpdateOneID(card.ID).SetCardPayload(contentMap).Exec(l.ctx); err != nil {
+					l.Error(errors.Wrap(err, "update lark card payload after idempotent card update"))
+				}
+				continue
+			}
 			l.Error(errors.Wrap(err, "update lark card entity"))
 			continue
 		}
