@@ -126,6 +126,13 @@ def ocr_settlement(img: np.ndarray) -> tuple[bool, str]:
     out['red_base'] = r2.get('red_base', '') if not ra else ''
     out['blue_base'] = r2.get('blue_base', '') if not ba else ''
 
+    # 验证: 必须有队名+至少一种血量+胜利条件, 才认为是有效战报
+    has_teams = bool(out.get('red_team_name', '')) and bool(out.get('blue_team_name', ''))
+    has_hp = bool(out.get('red_base', '') or ra) and bool(out.get('blue_base', '') or ba)
+    has_victory = bool(out.get('victory_cond', ''))
+    if not (has_teams and has_hp and has_victory):
+        return False, ''
+
     lines = ['=== 比赛结算数据 ===', '',
              f"红方: {out.get('red_team_name', '')}",
              f"蓝方: {out.get('blue_team_name', '')}", '']
