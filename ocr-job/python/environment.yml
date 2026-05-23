@@ -1,0 +1,11 @@
+name: rm-ocr
+channels:
+  - pytorch
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - pip
+  - opencv-python-headless>=4.8
+  - pip:
+    - easyocr>=1.7
