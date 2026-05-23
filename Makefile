@@ -15,3 +15,4 @@ build-all:
 	go build -trimpath -ldflags "-s -w" -o bin/transcode-job transcode-job/main.go
 	go build -trimpath -ldflags "-s -w" -o bin/uploader-dispatcher uploader-dispatcher/main.go
 	go build -trimpath -ldflags "-s -w" -o bin/uploader-job uploader-job/main.go
+	go build -trimpath -ldflags "-s -w" -o bin/ocr-job ocr-job/main.go

@@ -131,6 +131,28 @@ type DanmuResult struct {
 	CompletedAt  time.Time `json:"completed_at"`
 }
 
+type OCRContext struct {
+	Schema         string  `json:"schema"`
+	MatchRoundID   int     `json:"match_round_id"`
+	MatchID        string  `json:"match_id"`
+	RoundNo        int     `json:"round_no"`
+	Role           string  `json:"role"`
+	SourceURL      string  `json:"source_url"`
+	RoundDir       string  `json:"round_dir"`
+	BaseDir        string  `json:"base_dir"`
+	FrameInterval  int     `json:"frame_interval,omitempty"`
+	SimilarityThr  float64 `json:"similarity_thr,omitempty"`
+}
+
+type OCRResult struct {
+	Schema         string    `json:"schema"`
+	MatchRoundID   int       `json:"match_round_id"`
+	SettlementPath string    `json:"settlement_path,omitempty"`
+	OcrDataPath    string    `json:"ocr_data_path,omitempty"`
+	ReportTextPath string    `json:"report_text_path,omitempty"`
+	CompletedAt    time.Time `json:"completed_at"`
+}
+
 func ContextFromEnv(v any) error {
 	raw := os.Getenv(EnvName)
 	if raw == "" {

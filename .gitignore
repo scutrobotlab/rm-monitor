@@ -37,3 +37,4 @@ danmu-job/dist/
 /highlight-publish-bilibili-job/target
 /highlight-artifact-job/target
 /target
+__pycache__/

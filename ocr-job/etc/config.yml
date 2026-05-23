@@ -1,0 +1,11 @@
+PythonBin: /home/cacid/Documents/anaconda3/envs/wheelbipe/bin/python3
+ScriptDir: /home/cacid/Documents/rm-monitor/ocr-job/python
+CondEnvDir: /home/cacid/Documents/anaconda3/envs/wheelbipe
+FrameInterval: 1
+SimilarityThr: 0.6
+RecordConf:
+  Res: middle
+  BaseDir: /records
+  PathTemplate: "{{.Event}}/{{.Zone}}/{{.MatchName}}/Round-{{.RoundNo}}/{{.Role}}.flv"
+  MatchDirTemplate: "{{.Event}}/{{.Zone}}/{{.MatchName}}"
+  MatchNameTemplate: "{{.Order}}. {{.RedSchool}}-{{.RedName}} VS {{.BlueSchool}}-{{.BlueName}}"
