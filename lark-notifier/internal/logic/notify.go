@@ -343,6 +343,14 @@ func cardDataUpdatedAt(m *ent.Match) time.Time {
 		if r.UpdatedAt.After(updatedAt) {
 			updatedAt = r.UpdatedAt
 		}
+		for _, task := range r.Edges.RecordTasks {
+			if task.UpdatedAt.After(updatedAt) {
+				updatedAt = task.UpdatedAt
+			}
+			if task.Edges.UploadTask != nil && task.Edges.UploadTask.UpdatedAt.After(updatedAt) {
+				updatedAt = task.Edges.UploadTask.UpdatedAt
+			}
+		}
 	}
 	return updatedAt
 }
