@@ -124,14 +124,14 @@ func run(ctx context.Context, redisClient *redisx.Client, larkClient *lark.Clien
 		if err != nil {
 			return errors.Wrap(err, "read part")
 		}
-		req := larkdrive.NewUploadPartMediaReqBuilder().Body(larkdrive.NewUploadPartMediaReqBodyBuilder().
-			UploadId(uploadID).
-			Size(endSize - startSize).
-			File(bytes.NewReader(content)).
-			Checksum(strconv.Itoa(int(adler32.Checksum(content)))).
-			Seq(i).
-			Build()).Build()
-		if err := uploadPartWithRetry(ctx, larkClient, req, uploadConf); err != nil {
+		part := uploadPart{
+			uploadID: uploadID,
+			seq:      i,
+			size:     endSize - startSize,
+			checksum: strconv.Itoa(int(adler32.Checksum(content))),
+			content:  content,
+		}
+		if err := uploadPartWithRetry(ctx, larkClient, part, uploadConf); err != nil {
 			return err
 		}
 	}
@@ -189,12 +189,30 @@ func uploadJobDir(baseDir, sourcePath string, taskID int) string {
 	return filepath.Join(filepath.Dir(storagepath.Resolve(baseDir, sourcePath)), jobcontract.DirName, fmt.Sprintf("upload-%d", taskID))
 }
 
-func uploadPartWithRetry(ctx context.Context, client *lark.Client, req *larkdrive.UploadPartMediaReq, conf common.UploadConf) error {
+type uploadPart struct {
+	uploadID string
+	seq      int
+	size     int
+	checksum string
+	content  []byte
+}
+
+func (p uploadPart) request() *larkdrive.UploadPartMediaReq {
+	return larkdrive.NewUploadPartMediaReqBuilder().Body(larkdrive.NewUploadPartMediaReqBodyBuilder().
+		UploadId(p.uploadID).
+		Size(p.size).
+		File(bytes.NewReader(p.content)).
+		Checksum(p.checksum).
+		Seq(p.seq).
+		Build()).Build()
+}
+
+func uploadPartWithRetry(ctx context.Context, client *lark.Client, part uploadPart, conf common.UploadConf) error {
 	retries := conf.PartRetries
 	backoff := time.Duration(conf.RetryBackoff) * time.Second
 	var lastErr error
 	for attempt := 0; attempt <= retries; attempt++ {
-		resp, err := client.Drive.Media.UploadPart(ctx, req)
+		resp, err := client.Drive.Media.UploadPart(ctx, part.request())
 		if err == nil && resp.Success() {
 			return nil
 		}
