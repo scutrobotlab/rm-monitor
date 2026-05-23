@@ -37,21 +37,12 @@ const tableCacheTTL = 24 * 3600
 const tableLockTTL = 30
 const uploadTaskCreateLockTTL = 120
 const uploadTaskPrepareLockTTL = 120
-const dispatchTickLockTTL = 120
 
 func NewDispatchLogic(ctx context.Context, svcCtx *svc.ServiceContext) *DispatchLogic {
 	return &DispatchLogic{ctx: ctx, svcCtx: svcCtx, Logger: logx.WithContext(ctx)}
 }
 
 func (l *DispatchLogic) Tick() error {
-	locked, err := l.svcCtx.Redis.SetNXCtx(l.ctx, "rm-monitor:uploader-dispatcher:tick", "1", dispatchTickLockTTL)
-	if err != nil {
-		return errors.Wrap(err, "lock uploader dispatch tick")
-	}
-	if !locked {
-		return nil
-	}
-	defer func() { _ = l.svcCtx.Redis.DelCtx(context.Background(), "rm-monitor:uploader-dispatcher:tick") }()
 	if err := l.createUploadTasks(); err != nil {
 		return err
 	}
