@@ -29,6 +29,20 @@ func (_u *LarkMessageUpdate) Where(ps ...predicate.LarkMessage) *LarkMessageUpda
 	return _u
 }
 
+// SetMessageID sets the "message_id" field.
+func (_u *LarkMessageUpdate) SetMessageID(v string) *LarkMessageUpdate {
+	_u.mutation.SetMessageID(v)
+	return _u
+}
+
+// SetNillableMessageID sets the "message_id" field if the given value is not nil.
+func (_u *LarkMessageUpdate) SetNillableMessageID(v *string) *LarkMessageUpdate {
+	if v != nil {
+		_u.SetMessageID(*v)
+	}
+	return _u
+}
+
 // SetCardID sets the "card_id" field.
 func (_u *LarkMessageUpdate) SetCardID(v string) *LarkMessageUpdate {
 	_u.mutation.SetCardID(v)
@@ -40,6 +54,12 @@ func (_u *LarkMessageUpdate) SetNillableCardID(v *string) *LarkMessageUpdate {
 	if v != nil {
 		_u.SetCardID(*v)
 	}
+	return _u
+}
+
+// ClearCardID clears the value of the "card_id" field.
+func (_u *LarkMessageUpdate) ClearCardID() *LarkMessageUpdate {
+	_u.mutation.ClearCardID()
 	return _u
 }
 
@@ -139,8 +159,14 @@ func (_u *LarkMessageUpdate) sqlSave(ctx context.Context) (_node int, err error)
 			}
 		}
 	}
+	if value, ok := _u.mutation.MessageID(); ok {
+		_spec.SetField(larkmessage.FieldMessageID, field.TypeString, value)
+	}
 	if value, ok := _u.mutation.CardID(); ok {
 		_spec.SetField(larkmessage.FieldCardID, field.TypeString, value)
+	}
+	if _u.mutation.CardIDCleared() {
+		_spec.ClearField(larkmessage.FieldCardID, field.TypeString)
 	}
 	if value, ok := _u.mutation.CardPayload(); ok {
 		_spec.SetField(larkmessage.FieldCardPayload, field.TypeJSON, value)
@@ -200,6 +226,20 @@ type LarkMessageUpdateOne struct {
 	mutation *LarkMessageMutation
 }
 
+// SetMessageID sets the "message_id" field.
+func (_u *LarkMessageUpdateOne) SetMessageID(v string) *LarkMessageUpdateOne {
+	_u.mutation.SetMessageID(v)
+	return _u
+}
+
+// SetNillableMessageID sets the "message_id" field if the given value is not nil.
+func (_u *LarkMessageUpdateOne) SetNillableMessageID(v *string) *LarkMessageUpdateOne {
+	if v != nil {
+		_u.SetMessageID(*v)
+	}
+	return _u
+}
+
 // SetCardID sets the "card_id" field.
 func (_u *LarkMessageUpdateOne) SetCardID(v string) *LarkMessageUpdateOne {
 	_u.mutation.SetCardID(v)
@@ -211,6 +251,12 @@ func (_u *LarkMessageUpdateOne) SetNillableCardID(v *string) *LarkMessageUpdateO
 	if v != nil {
 		_u.SetCardID(*v)
 	}
+	return _u
+}
+
+// ClearCardID clears the value of the "card_id" field.
+func (_u *LarkMessageUpdateOne) ClearCardID() *LarkMessageUpdateOne {
+	_u.mutation.ClearCardID()
 	return _u
 }
 
@@ -340,8 +386,14 @@ func (_u *LarkMessageUpdateOne) sqlSave(ctx context.Context) (_node *LarkMessage
 			}
 		}
 	}
+	if value, ok := _u.mutation.MessageID(); ok {
+		_spec.SetField(larkmessage.FieldMessageID, field.TypeString, value)
+	}
 	if value, ok := _u.mutation.CardID(); ok {
 		_spec.SetField(larkmessage.FieldCardID, field.TypeString, value)
+	}
+	if _u.mutation.CardIDCleared() {
+		_spec.ClearField(larkmessage.FieldCardID, field.TypeString)
 	}
 	if value, ok := _u.mutation.CardPayload(); ok {
 		_spec.SetField(larkmessage.FieldCardPayload, field.TypeJSON, value)

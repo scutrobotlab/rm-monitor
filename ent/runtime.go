@@ -69,11 +69,11 @@ func init() {
 	larkmessageFields := schema.LarkMessage{}.Fields()
 	_ = larkmessageFields
 	// larkmessageDescCreatedAt is the schema descriptor for created_at field.
-	larkmessageDescCreatedAt := larkmessageFields[2].Descriptor()
+	larkmessageDescCreatedAt := larkmessageFields[3].Descriptor()
 	// larkmessage.DefaultCreatedAt holds the default value on creation for the created_at field.
 	larkmessage.DefaultCreatedAt = larkmessageDescCreatedAt.Default.(func() time.Time)
 	// larkmessageDescUpdatedAt is the schema descriptor for updated_at field.
-	larkmessageDescUpdatedAt := larkmessageFields[3].Descriptor()
+	larkmessageDescUpdatedAt := larkmessageFields[4].Descriptor()
 	// larkmessage.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	larkmessage.DefaultUpdatedAt = larkmessageDescUpdatedAt.Default.(func() time.Time)
 	// larkmessage.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.

@@ -266,6 +266,18 @@ YAML
 "$KUBECTL" -n "$NS" rollout status deploy/e2e-mock --timeout=120s
 "$KUBECTL" -n "$NS" rollout status deploy/e2e-media --timeout=120s
 
+log "waiting for e2e live media"
+media_deadline=$((SECONDS + 120))
+until "$KUBECTL" -n "$NS" run e2e-media-ready --rm -i --restart=Never --image=curlimages/curl:8.10.1 -- \
+  -fsS "http://e2e-media:8080/main.m3u8" >/dev/null 2>&1; do
+  if (( SECONDS >= media_deadline )); then
+    log "timeout waiting for e2e live media"
+    "$KUBECTL" -n "$NS" logs deploy/e2e-media --tail=120 || true
+    exit 1
+  fi
+  sleep 2
+done
+
 log "installing rm-monitor chart"
 "$HELM" upgrade --install "$RELEASE" "$(host_path "$ROOT/charts/rm-monitor")" \
   --namespace "$NS" \

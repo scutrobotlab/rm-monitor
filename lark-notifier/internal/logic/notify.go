@@ -65,7 +65,7 @@ func (l *NotifyLogic) SyncEvent(channel, payload string) error {
 		if err != nil {
 			return errors.Wrapf(err, "parse notify payload %q", payload)
 		}
-		return l.syncUploadTaskCard(id)
+		return l.syncUploadTask(id)
 	default:
 		return nil
 	}
@@ -93,15 +93,15 @@ func (l *NotifyLogic) syncMatchRound(id int) error {
 	if m == nil {
 		return nil
 	}
-	if r.Status == matchround.StatusSTARTED && matchNeedsCardSend(m) {
-		if err := l.createMatchMessages(m); err != nil {
+	if r.Status == matchround.StatusSTARTED {
+		if err := l.ensureMatchMessages(m); err != nil {
 			return err
 		}
 	}
 	return l.patchMatchCardsByID(m.ID)
 }
 
-func (l *NotifyLogic) syncUploadTaskCard(id int) error {
+func (l *NotifyLogic) syncUploadTask(id int) error {
 	task, err := l.uploadTaskForCard(id)
 	if err != nil {
 		if ent.IsNotFound(err) {
@@ -112,7 +112,10 @@ func (l *NotifyLogic) syncUploadTaskCard(id int) error {
 	if task.Edges.RecordTask == nil || task.Edges.RecordTask.Edges.MatchRound == nil || task.Edges.RecordTask.Edges.MatchRound.Edges.Match == nil {
 		return nil
 	}
-	return l.patchMatchCardsByID(task.Edges.RecordTask.Edges.MatchRound.Edges.Match.ID)
+	if err := l.patchMatchCardsByID(task.Edges.RecordTask.Edges.MatchRound.Edges.Match.ID); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (l *NotifyLogic) ensureStartedMessages() error {
@@ -129,17 +132,17 @@ func (l *NotifyLogic) ensureStartedMessages() error {
 
 	for _, r := range rounds {
 		m := r.Edges.Match
-		if m == nil || !matchNeedsCardSend(m) {
+		if m == nil {
 			continue
 		}
-		if err := l.createMatchMessages(m); err != nil {
+		if err := l.ensureMatchMessages(m); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (l *NotifyLogic) createMatchMessages(m *ent.Match) error {
+func (l *NotifyLogic) ensureMatchMessages(m *ent.Match) error {
 	chatIDs, err := utils.JoinedChatIDs(l.ctx, l.svcCtx)
 	if err != nil {
 		return err
@@ -147,58 +150,85 @@ func (l *NotifyLogic) createMatchMessages(m *ent.Match) error {
 	if len(chatIDs) == 0 {
 		return nil
 	}
-	if len(m.Edges.LarkMessages) > 0 {
+	realMessages := 0
+	for _, message := range m.Edges.LarkMessages {
+		if cardIDReady(message) {
+			realMessages++
+		}
+	}
+	if realMessages >= len(chatIDs) {
 		return nil
 	}
-	card, err := l.ensureMatchCard(m)
+	content, err := l.cardContent(m)
 	if err != nil {
 		return err
 	}
-	return l.sendCardReferencesToChats(m, card, chatIDs)
-}
-
-func (l *NotifyLogic) ensureMatchCard(m *ent.Match) (*ent.LarkMessage, error) {
-	content, err := l.cardContent(m)
-	if err != nil {
-		return nil, err
+	if err := l.ensureStoredCardIDs(m, content); err != nil {
+		return err
 	}
-	cardID, payload, err := utils.CreateCardEntity(l.ctx, l.svcCtx.LarkClient, l.retryLark, content)
-	if err != nil {
-		return nil, err
-	}
-	card, err := l.svcCtx.DB.LarkMessage.Create().
-		SetMatchID(m.ID).
-		SetCardID(cardID).
-		SetCardPayload(payload).
-		Save(l.ctx)
-	if err != nil && !ent.IsConstraintError(err) {
-		return nil, errors.Wrap(err, "save lark card")
-	}
-	if ent.IsConstraintError(err) {
-		current, queryErr := l.svcCtx.DB.Match.Query().
-			Where(match.ID(m.ID)).
-			WithLarkMessages().
-			Only(l.ctx)
-		if queryErr != nil {
-			return nil, errors.Wrap(queryErr, "query existing lark card after conflict")
+	realMessages = 0
+	for _, message := range m.Edges.LarkMessages {
+		if cardIDReady(message) {
+			realMessages++
 		}
-		if len(current.Edges.LarkMessages) == 0 {
-			return nil, errors.Wrap(err, "save lark card conflict without existing card")
-		}
-		card = current.Edges.LarkMessages[0]
 	}
-	return card, nil
-}
-
-func (l *NotifyLogic) sendCardReferencesToChats(m *ent.Match, card *ent.LarkMessage, chatIDs []string) error {
-	if strings.HasPrefix(card.CardID, "legacy:") {
+	if realMessages >= len(chatIDs) {
 		return nil
 	}
+	successes := 0
+	failures := 0
 	for _, chatID := range chatIDs {
-		if err := utils.SendCardReferenceMessage(l.ctx, l.svcCtx.LarkClient, l.retryLark, chatID, card.CardID, utils.MatchCardUUID(m.ID, chatID)); err != nil {
-			l.Error(errors.Wrap(err, "create lark message"))
+		cardID, payload, err := utils.CreateCardEntity(l.ctx, l.svcCtx.LarkClient, l.retryLark, content)
+		if err != nil {
+			failures++
+			l.Error(errors.Wrapf(err, "create lark card entity match=%s chat=%s", m.ID, chatID))
 			continue
 		}
+		messageID, err := utils.SendCardReferenceMessage(l.ctx, l.svcCtx.LarkClient, l.retryLark, chatID, cardID, utils.MatchCardUUID(m.ID, chatID))
+		if err != nil {
+			failures++
+			l.Error(errors.Wrapf(err, "create lark message match=%s chat=%s", m.ID, chatID))
+			continue
+		}
+		if _, err := l.svcCtx.DB.LarkMessage.Create().
+			SetMatchID(m.ID).
+			SetMessageID(messageID).
+			SetCardID(cardID).
+			SetCardPayload(payload).
+			Save(l.ctx); err != nil && !ent.IsConstraintError(err) {
+			failures++
+			l.Error(errors.Wrapf(err, "save lark message match=%s chat=%s message_id=%s card_id=%s", m.ID, chatID, messageID, cardID))
+			continue
+		}
+		successes++
+	}
+	l.Infof("ensured lark match messages match=%s chats=%d existing_real=%d success=%d failure=%d", m.ID, len(chatIDs), realMessages, successes, failures)
+	return nil
+}
+
+func (l *NotifyLogic) ensureStoredCardIDs(m *ent.Match, content *utils.MatchCardContent) error {
+	if m == nil {
+		return nil
+	}
+	for _, message := range m.Edges.LarkMessages {
+		if message == nil || cardIDReady(message) || strings.HasPrefix(message.MessageID, "legacy:") {
+			continue
+		}
+		cardID, payload, err := utils.CreateCardEntity(l.ctx, l.svcCtx.LarkClient, l.retryLark, content)
+		if err != nil {
+			l.Error(errors.Wrapf(err, "create card entity for existing lark message match=%s message_id=%s", m.ID, message.MessageID))
+			continue
+		}
+		if err := utils.PatchCardReferenceMessage(l.ctx, l.svcCtx.LarkClient, l.retryLark, message.MessageID, cardID); err != nil {
+			l.Error(errors.Wrapf(err, "bind existing lark message to card entity match=%s message_id=%s card_id=%s", m.ID, message.MessageID, cardID))
+			continue
+		}
+		if err := l.svcCtx.DB.LarkMessage.UpdateOneID(message.ID).SetCardID(cardID).SetCardPayload(payload).Exec(l.ctx); err != nil {
+			l.Error(errors.Wrapf(err, "save existing lark message card_id match=%s message_id=%s card_id=%s", m.ID, message.MessageID, cardID))
+			continue
+		}
+		message.CardID = &cardID
+		message.CardPayload = payload
 	}
 	return nil
 }
@@ -283,17 +313,17 @@ func (l *NotifyLogic) patchMatchCards(m *ent.Match) error {
 		return err
 	}
 	contentMap := utils.ToMap(content)
+	sequence := cardDataUpdatedAt(m).UnixNano()
 	for _, card := range m.Edges.LarkMessages {
-		if strings.HasPrefix(card.CardID, "legacy:") {
+		if !cardIDReady(card) {
 			continue
 		}
 		if reflect.DeepEqual(card.CardPayload, contentMap) {
 			continue
 		}
-		sequence := time.Now().Unix()
-		payload, err := utils.UpdateCardEntity(l.ctx, l.svcCtx.LarkClient, l.retryLark, card.CardID, utils.MatchCardUpdateUUID(m.ID, card.CardID, sequence), sequence, content)
+		payload, err := utils.UpdateCardEntity(l.ctx, l.svcCtx.LarkClient, l.retryLark, *card.CardID, utils.MatchCardUpdateUUID(m.ID, *card.CardID, sequence), sequence, content)
 		if err != nil {
-			l.Error(errors.Wrap(err, "update cardkit card"))
+			l.Error(errors.Wrap(err, "update lark card entity"))
 			continue
 		}
 		if err := l.svcCtx.DB.LarkMessage.UpdateOneID(card.ID).SetCardPayload(payload).Exec(l.ctx); err != nil {
@@ -352,7 +382,9 @@ func (l *NotifyLogic) uploadTaskForCard(id int) (*ent.UploadTask, error) {
 		Where(uploadtask.ID(id), uploadtask.StatusEQ(uploadtask.StatusSUCCEEDED), uploadtask.BitableRecordURLNotNil()).
 		WithRecordTask(func(q *ent.RecordTaskQuery) {
 			q.WithMatchRound(func(q *ent.MatchRoundQuery) {
-				q.WithMatch()
+				q.WithMatch(func(q *ent.MatchQuery) {
+					q.WithLarkMessages()
+				})
 			})
 		}).
 		Only(l.ctx)
@@ -416,17 +448,11 @@ func (l *NotifyLogic) cardContent(m *ent.Match) (*utils.MatchCardContent, error)
 	return content, nil
 }
 
-func matchNeedsCardSend(m *ent.Match) bool {
-	return m == nil || len(m.Edges.LarkMessages) == 0
-}
-
-func cardEntityData(content *utils.MatchCardContent) (string, error) {
-	data, _, err := utils.CardEntityData(content)
-	return data, err
-}
-
-func cardMessageContent(cardID string) (string, error) {
-	return utils.CardReferenceMessageContent(cardID)
+func cardIDReady(message *ent.LarkMessage) bool {
+	return message != nil &&
+		!strings.HasPrefix(message.MessageID, "legacy:") &&
+		message.CardID != nil &&
+		*message.CardID != ""
 }
 
 func completedCardColor(result match.Result) string {

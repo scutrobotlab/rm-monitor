@@ -123,7 +123,8 @@ var (
 	// LarkMessagesColumns holds the columns for the "lark_messages" table.
 	LarkMessagesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
-		{Name: "card_id", Type: field.TypeString, Unique: true},
+		{Name: "message_id", Type: field.TypeString, Unique: true},
+		{Name: "card_id", Type: field.TypeString, Unique: true, Nullable: true},
 		{Name: "card_payload", Type: field.TypeJSON, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
@@ -137,16 +138,9 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "lark_messages_matches_lark_messages",
-				Columns:    []*schema.Column{LarkMessagesColumns[5]},
+				Columns:    []*schema.Column{LarkMessagesColumns[6]},
 				RefColumns: []*schema.Column{MatchesColumns[0]},
 				OnDelete:   schema.NoAction,
-			},
-		},
-		Indexes: []*schema.Index{
-			{
-				Name:    "larkmessage_match_lark_messages",
-				Unique:  true,
-				Columns: []*schema.Column{LarkMessagesColumns[5]},
 			},
 		},
 	}

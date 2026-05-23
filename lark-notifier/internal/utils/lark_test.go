@@ -27,3 +27,23 @@ func TestMatchCardUpdateUUID(t *testing.T) {
 		t.Fatalf("MatchCardUpdateUUID() length = %d, want <= 50", len(got))
 	}
 }
+
+func TestCardReferenceContentCanBeReusedAcrossChats(t *testing.T) {
+	contentA, err := CardReferenceMessageContent("card-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	contentB, err := CardReferenceMessageContent("card-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if contentA != `{"data":{"card_id":"card-1"},"type":"card"}` {
+		t.Fatalf("content = %s, want CardKit card reference", contentA)
+	}
+	if contentA != contentB {
+		t.Fatalf("same card_id should render identical content: %s vs %s", contentA, contentB)
+	}
+	if MatchCardUUID("match-1", "chat-a") == MatchCardUUID("match-1", "chat-b") {
+		t.Fatal("different chats must use different message UUIDs while sharing the same card_id content")
+	}
+}

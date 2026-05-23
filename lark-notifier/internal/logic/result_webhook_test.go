@@ -45,7 +45,7 @@ func TestMatchCardCompletedRequiresDoneStatus(t *testing.T) {
 }
 
 func TestCardMessageContentReferencesCardID(t *testing.T) {
-	raw, err := cardMessageContent("card_123")
+	raw, err := utils.CardReferenceMessageContent("card_123")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,13 +76,26 @@ func TestCardEntityDataRendersCardJSON(t *testing.T) {
 		Title:     "<font color=red>**1**</font> : <font color=blue>**0** </font>",
 		Content:   "[主视角](https://example.com/record)",
 	}}
-	raw, err := cardEntityData(content)
+	raw, _, err := utils.CardEntityData(content)
 	if err != nil {
 		t.Fatal(err)
 	}
 	var got map[string]any
 	if err := json.Unmarshal([]byte(raw), &got); err != nil {
 		t.Fatal(err)
+	}
+	config := got["config"].(map[string]any)
+	if config["enable_forward"] != true {
+		t.Fatalf("enable_forward = %v, want true", config["enable_forward"])
+	}
+	if config["update_multi"] != true {
+		t.Fatalf("update_multi = %v, want true", config["update_multi"])
+	}
+	if config["width_mode"] != "fill" {
+		t.Fatalf("width_mode = %v, want fill", config["width_mode"])
+	}
+	if config["enable_forward_interaction"] != false {
+		t.Fatalf("enable_forward_interaction = %v, want false", config["enable_forward_interaction"])
 	}
 	if got["schema"] != "2.0" {
 		t.Fatalf("schema = %v, want 2.0", got["schema"])
@@ -164,7 +177,7 @@ func TestCardEntityDataRendersMultipleRoundPanels(t *testing.T) {
 			{PanelID: "elem_round_2", ContentID: "elem_round_2_content", Title: "<font color=red>**1**</font> : <font color=blue>**0** </font>", Content: "[主视角](https://example.com)"},
 		},
 	}}
-	raw, err := cardEntityData(content)
+	raw, _, err := utils.CardEntityData(content)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -173,15 +186,16 @@ func TestCardEntityDataRendersMultipleRoundPanels(t *testing.T) {
 	}
 }
 
-func TestMatchNeedsCardSend(t *testing.T) {
-	if !matchNeedsCardSend(&ent.Match{}) {
-		t.Fatal("match without card should need send")
+func TestCardIDReady(t *testing.T) {
+	cardID := "card_1"
+	if !cardIDReady(&ent.LarkMessage{MessageID: "om_1", CardID: &cardID}) {
+		t.Fatal("real message with card_id should be ready")
 	}
-	m := &ent.Match{Edges: ent.MatchEdges{LarkMessages: []*ent.LarkMessage{
-		{CardID: "card_1"},
-	}}}
-	if matchNeedsCardSend(m) {
-		t.Fatal("card presence should stop persistent send compensation")
+	if cardIDReady(&ent.LarkMessage{MessageID: "legacy:old", CardID: &cardID}) {
+		t.Fatal("legacy message should not be ready")
+	}
+	if cardIDReady(&ent.LarkMessage{MessageID: "om_1"}) {
+		t.Fatal("message without card_id cannot be updated by card entity")
 	}
 }
 

@@ -1,7 +1,10 @@
 {
     "schema": "2.0",
     "config": {
+        "enable_forward": true,
         "update_multi": true,
+        "width_mode": "fill",
+        "enable_forward_interaction": false,
         "style": {
             "text_size": {
                 "normal_v2": {

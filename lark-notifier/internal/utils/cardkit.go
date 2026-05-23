@@ -78,10 +78,10 @@ func UpdateCardEntity(ctx context.Context, client *lark.Client, retry LarkRetryF
 	return payload, nil
 }
 
-func SendCardReferenceMessage(ctx context.Context, client *lark.Client, retry LarkRetryFunc, chatID, cardID, uuid string) error {
+func SendCardReferenceMessage(ctx context.Context, client *lark.Client, retry LarkRetryFunc, chatID, cardID, uuid string) (string, error) {
 	contentData, err := CardReferenceMessageContent(cardID)
 	if err != nil {
-		return err
+		return "", err
 	}
 	req := larkim.NewCreateMessageReqBuilder().
 		ReceiveIdType(larkim.ReceiveIdTypeChatId).
@@ -93,9 +93,39 @@ func SendCardReferenceMessage(ctx context.Context, client *lark.Client, retry La
 			Build()).
 		Build()
 	var resp *larkim.CreateMessageResp
-	return retry(chatID, func() error {
+	err = retry(chatID, func() error {
 		var callErr error
 		resp, callErr = client.Im.V1.Message.Create(ctx, req)
+		if callErr != nil {
+			return callErr
+		}
+		if !resp.Success() {
+			return resp
+		}
+		return nil
+	})
+	if err != nil {
+		return "", err
+	}
+	if resp.Data == nil || resp.Data.MessageId == nil || *resp.Data.MessageId == "" {
+		return "", errors.New("create lark message returned empty message_id")
+	}
+	return *resp.Data.MessageId, nil
+}
+
+func PatchCardReferenceMessage(ctx context.Context, client *lark.Client, retry LarkRetryFunc, messageID, cardID string) error {
+	contentData, err := CardReferenceMessageContent(cardID)
+	if err != nil {
+		return err
+	}
+	req := larkim.NewPatchMessageReqBuilder().
+		MessageId(messageID).
+		Body(larkim.NewPatchMessageReqBodyBuilder().Content(contentData).Build()).
+		Build()
+	var resp *larkim.PatchMessageResp
+	return retry("", func() error {
+		var callErr error
+		resp, callErr = client.Im.V1.Message.Patch(ctx, req)
 		if callErr != nil {
 			return callErr
 		}
