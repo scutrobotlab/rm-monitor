@@ -59,7 +59,7 @@ func main() {
 	redisClient := redisx.MustNew(c.RedisConf.WithDefaults())
 	defer redisClient.Close()
 	larkClient := lark.NewClient(c.LarkConf.AppId, c.LarkConf.AppSecret,
-		lark.WithHttpClient(resty.New().SetRetryCount(3).SetRetryWaitTime(time.Second).SetTimeout(30*time.Second).Client()),
+		lark.WithHttpClient(resty.New().SetTimeout(30*time.Second).Client()),
 		lark.WithEnableTokenCache(true),
 		lark.WithTokenCache(larkcache.NewLarkCache(redisClient)),
 		lark.WithLogger(larklog.NewLarkLog()))
@@ -95,19 +95,9 @@ func run(ctx context.Context, redisClient *redisx.Client, larkClient *lark.Clien
 		return errors.New("missing bitable upload context")
 	}
 	name := filepath.Base(jobCtx.SourcePath)
-	prepareResp, err := larkClient.Drive.Media.UploadPrepare(ctx, larkdrive.NewUploadPrepareMediaReqBuilder().
-		MediaUploadInfo(larkdrive.NewMediaUploadInfoBuilder().
-			FileName(name).
-			ParentType(larkdrive.ParentTypeUploadPrepareMediaBitableFile).
-			ParentNode(jobCtx.BitableAppToken).
-			Size(int(stat.Size())).
-			Build()).
-		Build())
+	prepareResp, err := uploadPrepareWithRetry(ctx, larkClient, name, jobCtx.BitableAppToken, int(stat.Size()), uploadConf)
 	if err != nil {
-		return errors.Wrap(err, "prepare upload")
-	}
-	if !prepareResp.Success() {
-		return errors.Wrap(prepareResp, "prepare upload")
+		return err
 	}
 	uploadID := *prepareResp.Data.UploadId
 	for i := 0; i < *prepareResp.Data.BlockNum; i++ {
@@ -138,20 +128,12 @@ func run(ctx context.Context, redisClient *redisx.Client, larkClient *lark.Clien
 	if err := waitUploadSlot(ctx, redisClient, uploadConf); err != nil {
 		return err
 	}
-	completeResp, err := larkClient.Drive.Media.UploadFinish(ctx, larkdrive.NewUploadFinishMediaReqBuilder().
-		Body(larkdrive.NewUploadFinishMediaReqBodyBuilder().
-			UploadId(uploadID).
-			BlockNum(*prepareResp.Data.BlockNum).
-			Build()).
-		Build())
+	completeResp, err := uploadFinishWithRetry(ctx, larkClient, uploadID, *prepareResp.Data.BlockNum, uploadConf)
 	if err != nil {
-		return errors.Wrap(err, "finish upload")
-	}
-	if !completeResp.Success() {
-		return errors.Wrap(completeResp, "finish upload")
+		return err
 	}
 	fileToken := *completeResp.Data.FileToken
-	if err := updateBitableAttachment(ctx, larkClient, jobCtx.BitableAppToken, jobCtx.BitableTableID, jobCtx.BitableRecordID, fileToken, name); err != nil {
+	if err := updateBitableAttachmentWithRetry(ctx, larkClient, jobCtx.BitableAppToken, jobCtx.BitableTableID, jobCtx.BitableRecordID, fileToken, name, uploadConf); err != nil {
 		return err
 	}
 	return jobcontract.WriteResult(jobDir, jobcontract.UploadResult{
@@ -189,6 +171,29 @@ func uploadJobDir(baseDir, sourcePath string, taskID int) string {
 	return filepath.Join(filepath.Dir(storagepath.Resolve(baseDir, sourcePath)), jobcontract.DirName, fmt.Sprintf("upload-%d", taskID))
 }
 
+func uploadPrepareWithRetry(ctx context.Context, client *lark.Client, name, appToken string, size int, conf common.UploadConf) (*larkdrive.UploadPrepareMediaResp, error) {
+	var out *larkdrive.UploadPrepareMediaResp
+	err := retryLarkUpload(ctx, conf, func() error {
+		resp, err := client.Drive.Media.UploadPrepare(ctx, larkdrive.NewUploadPrepareMediaReqBuilder().
+			MediaUploadInfo(larkdrive.NewMediaUploadInfoBuilder().
+				FileName(name).
+				ParentType(larkdrive.ParentTypeUploadPrepareMediaBitableFile).
+				ParentNode(appToken).
+				Size(size).
+				Build()).
+			Build())
+		if err != nil {
+			return errors.Wrap(err, "prepare upload")
+		}
+		if !resp.Success() {
+			return errors.Wrap(resp, "prepare upload")
+		}
+		out = resp
+		return nil
+	})
+	return out, err
+}
+
 type uploadPart struct {
 	uploadID string
 	seq      int
@@ -208,24 +213,63 @@ func (p uploadPart) request() *larkdrive.UploadPartMediaReq {
 }
 
 func uploadPartWithRetry(ctx context.Context, client *lark.Client, part uploadPart, conf common.UploadConf) error {
-	retries := conf.PartRetries
-	backoff := time.Duration(conf.RetryBackoff) * time.Second
-	var lastErr error
-	for attempt := 0; attempt <= retries; attempt++ {
+	return retryLarkUpload(ctx, conf, func() error {
 		resp, err := client.Drive.Media.UploadPart(ctx, part.request())
 		if err == nil && resp.Success() {
 			return nil
 		}
 		if err != nil {
-			lastErr = err
-		} else {
-			lastErr = errors.Wrap(resp, "upload part failed")
+			return err
+		}
+		return errors.Wrap(resp, "upload part failed")
+	})
+}
+
+func uploadFinishWithRetry(ctx context.Context, client *lark.Client, uploadID string, blockNum int, conf common.UploadConf) (*larkdrive.UploadFinishMediaResp, error) {
+	var out *larkdrive.UploadFinishMediaResp
+	err := retryLarkUpload(ctx, conf, func() error {
+		resp, err := client.Drive.Media.UploadFinish(ctx, larkdrive.NewUploadFinishMediaReqBuilder().
+			Body(larkdrive.NewUploadFinishMediaReqBodyBuilder().
+				UploadId(uploadID).
+				BlockNum(blockNum).
+				Build()).
+			Build())
+		if err != nil {
+			return errors.Wrap(err, "finish upload")
+		}
+		if !resp.Success() {
+			return errors.Wrap(resp, "finish upload")
+		}
+		out = resp
+		return nil
+	})
+	return out, err
+}
+
+func retryLarkUpload(ctx context.Context, conf common.UploadConf, f func() error) error {
+	retries := conf.PartRetries
+	backoff := time.Duration(conf.RetryBackoff) * time.Second
+	var lastErr error
+	for attempt := 0; attempt <= retries; attempt++ {
+		lastErr = f()
+		if lastErr == nil {
+			return nil
 		}
 		if attempt < retries {
-			time.Sleep(backoff * time.Duration(attempt+1))
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(backoff * time.Duration(attempt+1)):
+			}
 		}
 	}
 	return lastErr
+}
+
+func updateBitableAttachmentWithRetry(ctx context.Context, client *lark.Client, appToken, tableID, recordID, fileToken, name string, conf common.UploadConf) error {
+	return retryLarkUpload(ctx, conf, func() error {
+		return updateBitableAttachment(ctx, client, appToken, tableID, recordID, fileToken, name)
+	})
 }
 
 func updateBitableAttachment(ctx context.Context, client *lark.Client, appToken, tableID, recordID, fileToken, name string) error {
