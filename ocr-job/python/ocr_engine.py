@@ -108,10 +108,12 @@ def _apply(img, phases):
     return r
 
 
-def ocr_settlement(img: np.ndarray) -> str:
-    """识别结算面板, 返回格式化战报字符串"""
+def ocr_settlement(img: np.ndarray) -> tuple[bool, str]:
+    """识别结算面板
+    返回: (是否结算面板, 格式化战报字符串)
+    """
     if not _detect_settlement(img):
-        return ''
+        return False, ''
 
     r1 = _apply(img, ('always', 'outpost'))
     ra = r1.get('red_outpost', '').strip().isdigit()
@@ -158,4 +160,4 @@ def ocr_settlement(img: np.ndarray) -> str:
             bv = f'{ab[0]}大/{ab[1]}小' if ab[1] else bv
         lines.append(f"{label:<12} {rv:<12} {bv:<12}")
 
-    return '\n'.join(lines)
+    return True, '\n'.join(lines)
