@@ -1,6 +1,11 @@
 package utils
 
-import "testing"
+import (
+	"testing"
+
+	larkcardkit "github.com/larksuite/oapi-sdk-go/v3/service/cardkit/v1"
+	"github.com/pkg/errors"
+)
 
 func TestMatchCardUUID(t *testing.T) {
 	got := MatchCardUUID("match-1", "chat-1")
@@ -45,5 +50,20 @@ func TestCardReferenceContentCanBeReusedAcrossChats(t *testing.T) {
 	}
 	if MatchCardUUID("match-1", "chat-a") == MatchCardUUID("match-1", "chat-b") {
 		t.Fatal("different chats must use different message UUIDs while sharing the same card_id content")
+	}
+}
+
+func TestIsCardUpdateAlreadyApplied(t *testing.T) {
+	for _, code := range []int{200770, 300317} {
+		err := &larkcardkit.UpdateCardResp{}
+		err.Code = code
+		if !IsCardUpdateAlreadyApplied(errors.Wrap(err, "wrapped")) {
+			t.Fatalf("code %d should be treated as already applied", code)
+		}
+	}
+	err := &larkcardkit.UpdateCardResp{}
+	err.Code = 9499
+	if IsCardUpdateAlreadyApplied(err) {
+		t.Fatal("9499 should remain a hard card update error")
 	}
 }

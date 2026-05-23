@@ -81,15 +81,23 @@ func UpdateCardEntity(ctx context.Context, client *lark.Client, retry LarkRetryF
 }
 
 func IsCardUpdateAlreadyApplied(err error) bool {
+	var updateResp *larkcardkit.UpdateCardResp
+	if stderrors.As(err, &updateResp) {
+		return isAlreadyAppliedCardCode(updateResp.Code)
+	}
 	var codeErr *larkcore.CodeError
 	if stderrors.As(err, &codeErr) {
-		return codeErr.Code == 200770 || codeErr.Code == 300317
+		return isAlreadyAppliedCardCode(codeErr.Code)
 	}
 	var valueCodeErr larkcore.CodeError
 	if stderrors.As(err, &valueCodeErr) {
-		return valueCodeErr.Code == 200770 || valueCodeErr.Code == 300317
+		return isAlreadyAppliedCardCode(valueCodeErr.Code)
 	}
 	return false
+}
+
+func isAlreadyAppliedCardCode(code int) bool {
+	return code == 200770 || code == 300317
 }
 
 func SendCardReferenceMessage(ctx context.Context, client *lark.Client, retry LarkRetryFunc, chatID, cardID, uuid string) (string, error) {
