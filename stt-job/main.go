@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -22,6 +23,7 @@ import (
 	"scutbot.cn/web/rm-monitor/pkg/app"
 	"scutbot.cn/web/rm-monitor/pkg/jobcontract"
 	"scutbot.cn/web/rm-monitor/pkg/logx"
+	"scutbot.cn/web/rm-monitor/pkg/stttext"
 	"scutbot.cn/web/rm-monitor/pkg/subtitle"
 	jobconfig "scutbot.cn/web/rm-monitor/stt-job/internal/config"
 )
@@ -29,6 +31,10 @@ import (
 var (
 	configFile = flag.String("f", "etc/config.yml", "the config file")
 	modeFlag   = flag.String("mode", "", "audio-recorder, recognizer, or backfill-subtitles")
+
+	simplifierOnce sync.Once
+	simplifier     *stttext.Converter
+	simplifierErr  error
 )
 
 const (
@@ -382,6 +388,10 @@ func appendRecognizedLine(path string, index, part int, start float64, result wh
 		}
 	}
 	if len(result.Segments) == 0 {
+		text, err := simplifyText(result.Text)
+		if err != nil {
+			return err
+		}
 		return appendLine(path, sttLine{
 			Index:      index,
 			Part:       part,
@@ -389,11 +399,15 @@ func appendRecognizedLine(path string, index, part int, start float64, result wh
 			End:        start + duration,
 			Status:     "SUCCEEDED",
 			APISeconds: seconds,
-			Text:       result.Text,
+			Text:       text,
 		})
 	}
 	lines := make([]sttLine, 0, len(result.Segments))
 	for _, segment := range result.Segments {
+		text, err := simplifyText(segment.Text)
+		if err != nil {
+			return err
+		}
 		lines = append(lines, sttLine{
 			Index:      index,
 			Part:       part,
@@ -402,10 +416,24 @@ func appendRecognizedLine(path string, index, part int, start float64, result wh
 			End:        start + segment.End,
 			Status:     "SUCCEEDED",
 			APISeconds: seconds,
-			Text:       segment.Text,
+			Text:       text,
 		})
 	}
 	return appendLines(path, lines)
+}
+
+func simplifyText(text string) (string, error) {
+	simplifierOnce.Do(func() {
+		simplifier, simplifierErr = stttext.NewSimplifier()
+	})
+	if simplifierErr != nil {
+		return "", errors.Wrap(simplifierErr, "init stt t2s converter")
+	}
+	out, err := simplifier.Simplify(text)
+	if err != nil {
+		return "", errors.Wrap(err, "simplify stt text")
+	}
+	return out, nil
 }
 
 func appendLine(path string, line sttLine) error {

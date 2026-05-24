@@ -89,6 +89,32 @@ func TestAppendRecognizedLineWritesOneJSONLRowPerSegment(t *testing.T) {
 	}
 }
 
+func TestAppendRecognizedLineSimplifiesTraditionalChinese(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "stt.jsonl")
+	result := whisperResult{
+		Duration: 30,
+		Text:     "機甲大師開場",
+		Segments: []whisperSegment{
+			{ID: 1, Start: 2, End: 4, Text: "紅方進攻"},
+			{ID: 2, Start: 5, End: 9, Text: "藍方防守"},
+		},
+	}
+	if err := appendRecognizedLine(path, 0, 0, 0, result, 1.5); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(raw)
+	if strings.Contains(text, "紅方") || strings.Contains(text, "藍方") {
+		t.Fatalf("stt text was not simplified:\n%s", text)
+	}
+	if !strings.Contains(text, "红方进攻") || !strings.Contains(text, "蓝方防守") {
+		t.Fatalf("simplified text missing:\n%s", text)
+	}
+}
+
 func splitJSONLLines(raw []byte) [][]byte {
 	raw = raw[:len(raw)-1]
 	out := make([][]byte, 0)
