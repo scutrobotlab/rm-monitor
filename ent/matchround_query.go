@@ -15,6 +15,7 @@ import (
 	"scutbot.cn/web/rm-monitor/ent/highlightclip"
 	"scutbot.cn/web/rm-monitor/ent/match"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
+	"scutbot.cn/web/rm-monitor/ent/ocrtask"
 	"scutbot.cn/web/rm-monitor/ent/predicate"
 	"scutbot.cn/web/rm-monitor/ent/recordtask"
 )
@@ -29,6 +30,7 @@ type MatchRoundQuery struct {
 	withMatch          *MatchQuery
 	withRecordTasks    *RecordTaskQuery
 	withHighlightClips *HighlightClipQuery
+	withOcrTasks       *OCRTaskQuery
 	withFKs            bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
@@ -125,6 +127,28 @@ func (_q *MatchRoundQuery) QueryHighlightClips() *HighlightClipQuery {
 			sqlgraph.From(matchround.Table, matchround.FieldID, selector),
 			sqlgraph.To(highlightclip.Table, highlightclip.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, matchround.HighlightClipsTable, matchround.HighlightClipsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryOcrTasks chains the current query on the "ocr_tasks" edge.
+func (_q *MatchRoundQuery) QueryOcrTasks() *OCRTaskQuery {
+	query := (&OCRTaskClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(matchround.Table, matchround.FieldID, selector),
+			sqlgraph.To(ocrtask.Table, ocrtask.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, matchround.OcrTasksTable, matchround.OcrTasksColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -327,6 +351,7 @@ func (_q *MatchRoundQuery) Clone() *MatchRoundQuery {
 		withMatch:          _q.withMatch.Clone(),
 		withRecordTasks:    _q.withRecordTasks.Clone(),
 		withHighlightClips: _q.withHighlightClips.Clone(),
+		withOcrTasks:       _q.withOcrTasks.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
@@ -363,6 +388,17 @@ func (_q *MatchRoundQuery) WithHighlightClips(opts ...func(*HighlightClipQuery))
 		opt(query)
 	}
 	_q.withHighlightClips = query
+	return _q
+}
+
+// WithOcrTasks tells the query-builder to eager-load the nodes that are connected to
+// the "ocr_tasks" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *MatchRoundQuery) WithOcrTasks(opts ...func(*OCRTaskQuery)) *MatchRoundQuery {
+	query := (&OCRTaskClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withOcrTasks = query
 	return _q
 }
 
@@ -445,10 +481,11 @@ func (_q *MatchRoundQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*M
 		nodes       = []*MatchRound{}
 		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
-		loadedTypes = [3]bool{
+		loadedTypes = [4]bool{
 			_q.withMatch != nil,
 			_q.withRecordTasks != nil,
 			_q.withHighlightClips != nil,
+			_q.withOcrTasks != nil,
 		}
 	)
 	if _q.withMatch != nil {
@@ -492,6 +529,13 @@ func (_q *MatchRoundQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*M
 		if err := _q.loadHighlightClips(ctx, query, nodes,
 			func(n *MatchRound) { n.Edges.HighlightClips = []*HighlightClip{} },
 			func(n *MatchRound, e *HighlightClip) { n.Edges.HighlightClips = append(n.Edges.HighlightClips, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withOcrTasks; query != nil {
+		if err := _q.loadOcrTasks(ctx, query, nodes,
+			func(n *MatchRound) { n.Edges.OcrTasks = []*OCRTask{} },
+			func(n *MatchRound, e *OCRTask) { n.Edges.OcrTasks = append(n.Edges.OcrTasks, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -587,6 +631,37 @@ func (_q *MatchRoundQuery) loadHighlightClips(ctx context.Context, query *Highli
 		node, ok := nodeids[*fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "match_round_highlight_clips" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *MatchRoundQuery) loadOcrTasks(ctx context.Context, query *OCRTaskQuery, nodes []*MatchRound, init func(*MatchRound), assign func(*MatchRound, *OCRTask)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[int]*MatchRound)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.OCRTask(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(matchround.OcrTasksColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.match_round_ocr_tasks
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "match_round_ocr_tasks" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "match_round_ocr_tasks" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

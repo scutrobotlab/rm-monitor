@@ -132,25 +132,28 @@ type DanmuResult struct {
 }
 
 type OCRContext struct {
-	Schema         string  `json:"schema"`
-	MatchRoundID   int     `json:"match_round_id"`
-	MatchID        string  `json:"match_id"`
-	RoundNo        int     `json:"round_no"`
-	Role           string  `json:"role"`
-	SourceURL      string  `json:"source_url"`
-	RoundDir       string  `json:"round_dir"`
-	BaseDir        string  `json:"base_dir"`
-	FrameInterval  int     `json:"frame_interval,omitempty"`
-	SimilarityThr  float64 `json:"similarity_thr,omitempty"`
+	Schema              string  `json:"schema"`
+	TaskID              int     `json:"task_id"`
+	MatchRoundID        int     `json:"match_round_id"`
+	SourceArtifactID    int     `json:"source_artifact_id"`
+	MatchID             string  `json:"match_id"`
+	RoundNo             int     `json:"round_no"`
+	Role                string  `json:"role"`
+	SourcePath          string  `json:"source_path"`
+	RoundDir            string  `json:"round_dir"`
+	BaseDir             string  `json:"base_dir"`
+	FrameInterval       int     `json:"frame_interval,omitempty"`
+	SimilarityThreshold float64 `json:"similarity_threshold,omitempty"`
 }
 
 type OCRResult struct {
-	Schema         string    `json:"schema"`
-	MatchRoundID   int       `json:"match_round_id"`
-	SettlementPath string    `json:"settlement_path,omitempty"`
-	OcrDataPath    string    `json:"ocr_data_path,omitempty"`
-	ReportTextPath string    `json:"report_text_path,omitempty"`
-	CompletedAt    time.Time `json:"completed_at"`
+	Schema           string    `json:"schema"`
+	TaskID           int       `json:"task_id"`
+	MatchRoundID     int       `json:"match_round_id"`
+	SourceArtifactID int       `json:"source_artifact_id"`
+	SettlementPath   string    `json:"settlement_path,omitempty"`
+	SettlementJSON   string    `json:"settlement_json,omitempty"`
+	CompletedAt      time.Time `json:"completed_at"`
 }
 
 func ContextFromEnv(v any) error {

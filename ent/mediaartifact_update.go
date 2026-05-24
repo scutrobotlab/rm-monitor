@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"scutbot.cn/web/rm-monitor/ent/highlightclip"
 	"scutbot.cn/web/rm-monitor/ent/mediaartifact"
+	"scutbot.cn/web/rm-monitor/ent/ocrtask"
 	"scutbot.cn/web/rm-monitor/ent/predicate"
 	"scutbot.cn/web/rm-monitor/ent/recordtask"
 	"scutbot.cn/web/rm-monitor/ent/transcodetask"
@@ -278,6 +279,21 @@ func (_u *MediaArtifactUpdate) AddHighlightClips(v ...*HighlightClip) *MediaArti
 	return _u.AddHighlightClipIDs(ids...)
 }
 
+// AddOcrTaskIDs adds the "ocr_tasks" edge to the OCRTask entity by IDs.
+func (_u *MediaArtifactUpdate) AddOcrTaskIDs(ids ...int) *MediaArtifactUpdate {
+	_u.mutation.AddOcrTaskIDs(ids...)
+	return _u
+}
+
+// AddOcrTasks adds the "ocr_tasks" edges to the OCRTask entity.
+func (_u *MediaArtifactUpdate) AddOcrTasks(v ...*OCRTask) *MediaArtifactUpdate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddOcrTaskIDs(ids...)
+}
+
 // Mutation returns the MediaArtifactMutation object of the builder.
 func (_u *MediaArtifactUpdate) Mutation() *MediaArtifactMutation {
 	return _u.mutation
@@ -326,6 +342,27 @@ func (_u *MediaArtifactUpdate) RemoveHighlightClips(v ...*HighlightClip) *MediaA
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveHighlightClipIDs(ids...)
+}
+
+// ClearOcrTasks clears all "ocr_tasks" edges to the OCRTask entity.
+func (_u *MediaArtifactUpdate) ClearOcrTasks() *MediaArtifactUpdate {
+	_u.mutation.ClearOcrTasks()
+	return _u
+}
+
+// RemoveOcrTaskIDs removes the "ocr_tasks" edge to OCRTask entities by IDs.
+func (_u *MediaArtifactUpdate) RemoveOcrTaskIDs(ids ...int) *MediaArtifactUpdate {
+	_u.mutation.RemoveOcrTaskIDs(ids...)
+	return _u
+}
+
+// RemoveOcrTasks removes "ocr_tasks" edges to OCRTask entities.
+func (_u *MediaArtifactUpdate) RemoveOcrTasks(v ...*OCRTask) *MediaArtifactUpdate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveOcrTaskIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -610,6 +647,51 @@ func (_u *MediaArtifactUpdate) sqlSave(ctx context.Context) (_node int, err erro
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if _u.mutation.OcrTasksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   mediaartifact.OcrTasksTable,
+			Columns: []string{mediaartifact.OcrTasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(ocrtask.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedOcrTasksIDs(); len(nodes) > 0 && !_u.mutation.OcrTasksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   mediaartifact.OcrTasksTable,
+			Columns: []string{mediaartifact.OcrTasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(ocrtask.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.OcrTasksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   mediaartifact.OcrTasksTable,
+			Columns: []string{mediaartifact.OcrTasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(ocrtask.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{mediaartifact.Label}
@@ -876,6 +958,21 @@ func (_u *MediaArtifactUpdateOne) AddHighlightClips(v ...*HighlightClip) *MediaA
 	return _u.AddHighlightClipIDs(ids...)
 }
 
+// AddOcrTaskIDs adds the "ocr_tasks" edge to the OCRTask entity by IDs.
+func (_u *MediaArtifactUpdateOne) AddOcrTaskIDs(ids ...int) *MediaArtifactUpdateOne {
+	_u.mutation.AddOcrTaskIDs(ids...)
+	return _u
+}
+
+// AddOcrTasks adds the "ocr_tasks" edges to the OCRTask entity.
+func (_u *MediaArtifactUpdateOne) AddOcrTasks(v ...*OCRTask) *MediaArtifactUpdateOne {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddOcrTaskIDs(ids...)
+}
+
 // Mutation returns the MediaArtifactMutation object of the builder.
 func (_u *MediaArtifactUpdateOne) Mutation() *MediaArtifactMutation {
 	return _u.mutation
@@ -924,6 +1021,27 @@ func (_u *MediaArtifactUpdateOne) RemoveHighlightClips(v ...*HighlightClip) *Med
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveHighlightClipIDs(ids...)
+}
+
+// ClearOcrTasks clears all "ocr_tasks" edges to the OCRTask entity.
+func (_u *MediaArtifactUpdateOne) ClearOcrTasks() *MediaArtifactUpdateOne {
+	_u.mutation.ClearOcrTasks()
+	return _u
+}
+
+// RemoveOcrTaskIDs removes the "ocr_tasks" edge to OCRTask entities by IDs.
+func (_u *MediaArtifactUpdateOne) RemoveOcrTaskIDs(ids ...int) *MediaArtifactUpdateOne {
+	_u.mutation.RemoveOcrTaskIDs(ids...)
+	return _u
+}
+
+// RemoveOcrTasks removes "ocr_tasks" edges to OCRTask entities.
+func (_u *MediaArtifactUpdateOne) RemoveOcrTasks(v ...*OCRTask) *MediaArtifactUpdateOne {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveOcrTaskIDs(ids...)
 }
 
 // Where appends a list predicates to the MediaArtifactUpdate builder.
@@ -1231,6 +1349,51 @@ func (_u *MediaArtifactUpdateOne) sqlSave(ctx context.Context) (_node *MediaArti
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(highlightclip.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.OcrTasksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   mediaartifact.OcrTasksTable,
+			Columns: []string{mediaartifact.OcrTasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(ocrtask.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedOcrTasksIDs(); len(nodes) > 0 && !_u.mutation.OcrTasksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   mediaartifact.OcrTasksTable,
+			Columns: []string{mediaartifact.OcrTasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(ocrtask.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.OcrTasksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   mediaartifact.OcrTasksTable,
+			Columns: []string{mediaartifact.OcrTasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(ocrtask.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

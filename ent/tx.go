@@ -24,6 +24,8 @@ type Tx struct {
 	MatchRound *MatchRoundClient
 	// MediaArtifact is the client for interacting with the MediaArtifact builders.
 	MediaArtifact *MediaArtifactClient
+	// OCRTask is the client for interacting with the OCRTask builders.
+	OCRTask *OCRTaskClient
 	// RecordTask is the client for interacting with the RecordTask builders.
 	RecordTask *RecordTaskClient
 	// Team is the client for interacting with the Team builders.
@@ -169,6 +171,7 @@ func (tx *Tx) init() {
 	tx.Match = NewMatchClient(tx.config)
 	tx.MatchRound = NewMatchRoundClient(tx.config)
 	tx.MediaArtifact = NewMediaArtifactClient(tx.config)
+	tx.OCRTask = NewOCRTaskClient(tx.config)
 	tx.RecordTask = NewRecordTaskClient(tx.config)
 	tx.Team = NewTeamClient(tx.config)
 	tx.TranscodeTask = NewTranscodeTaskClient(tx.config)

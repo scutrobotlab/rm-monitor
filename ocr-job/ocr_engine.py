@@ -1,4 +1,4 @@
-import json, os, re, sys
+import json, os, re
 import cv2
 import numpy as np
 
@@ -52,7 +52,8 @@ def _init_engine():
                     os.environ.pop(k)
             import urllib.request
             urllib.request.install_opener(urllib.request.build_opener(urllib.request.ProxyHandler({})))
-            reader = easyocr.Reader(['ch_sim', 'en'], gpu=True, verbose=False)
+            gpu = os.environ.get('EASYOCR_GPU', '').lower() in ('1', 'true', 'yes', 'on')
+            reader = easyocr.Reader(['ch_sim', 'en'], gpu=gpu, verbose=False)
             return reader, 'easyocr'
         except Exception:
             pass
@@ -108,12 +109,9 @@ def _apply(img, phases):
     return r
 
 
-def ocr_settlement(img: np.ndarray) -> tuple[bool, str]:
-    """识别结算面板
-    返回: (是否结算面板, 格式化战报字符串)
-    """
+def read_settlement(img: np.ndarray) -> tuple[bool, dict, str]:
     if not _detect_settlement(img):
-        return False, ''
+        return False, {}, ''
 
     r1 = _apply(img, ('always', 'outpost'))
     ra = r1.get('red_outpost', '').strip().isdigit()
@@ -131,7 +129,7 @@ def ocr_settlement(img: np.ndarray) -> tuple[bool, str]:
     has_hp = bool(out.get('red_base', '') or ra) and bool(out.get('blue_base', '') or ba)
     has_victory = bool(out.get('victory_cond', ''))
     if not (has_teams and has_hp and has_victory):
-        return False, ''
+        return False, out, ''
 
     lines = ['=== 比赛结算数据 ===', '',
              f"红方: {out.get('red_team_name', '')}",
@@ -167,4 +165,9 @@ def ocr_settlement(img: np.ndarray) -> tuple[bool, str]:
             bv = f'{ab[0]}大/{ab[1]}小' if ab[1] else bv
         lines.append(f"{label:<12} {rv:<12} {bv:<12}")
 
-    return True, '\n'.join(lines)
+    return True, out, '\n'.join(lines)
+
+
+def ocr_settlement(img: np.ndarray) -> tuple[bool, str]:
+    ok, _, report = read_settlement(img)
+    return ok, report

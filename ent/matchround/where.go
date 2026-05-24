@@ -409,6 +409,29 @@ func HasHighlightClipsWith(preds ...predicate.HighlightClip) predicate.MatchRoun
 	})
 }
 
+// HasOcrTasks applies the HasEdge predicate on the "ocr_tasks" edge.
+func HasOcrTasks() predicate.MatchRound {
+	return predicate.MatchRound(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, OcrTasksTable, OcrTasksColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasOcrTasksWith applies the HasEdge predicate on the "ocr_tasks" edge with a given conditions (other predicates).
+func HasOcrTasksWith(preds ...predicate.OCRTask) predicate.MatchRound {
+	return predicate.MatchRound(func(s *sql.Selector) {
+		step := newOcrTasksStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.MatchRound) predicate.MatchRound {
 	return predicate.MatchRound(sql.AndPredicates(predicates...))
