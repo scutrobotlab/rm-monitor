@@ -21,6 +21,7 @@ import (
 	"scutbot.cn/web/rm-monitor/ent/match"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
 	"scutbot.cn/web/rm-monitor/ent/mediaartifact"
+	"scutbot.cn/web/rm-monitor/ent/ocrtask"
 	"scutbot.cn/web/rm-monitor/ent/recordtask"
 	"scutbot.cn/web/rm-monitor/ent/team"
 	"scutbot.cn/web/rm-monitor/ent/transcodetask"
@@ -44,6 +45,8 @@ type Client struct {
 	MatchRound *MatchRoundClient
 	// MediaArtifact is the client for interacting with the MediaArtifact builders.
 	MediaArtifact *MediaArtifactClient
+	// OCRTask is the client for interacting with the OCRTask builders.
+	OCRTask *OCRTaskClient
 	// RecordTask is the client for interacting with the RecordTask builders.
 	RecordTask *RecordTaskClient
 	// Team is the client for interacting with the Team builders.
@@ -69,6 +72,7 @@ func (c *Client) init() {
 	c.Match = NewMatchClient(c.config)
 	c.MatchRound = NewMatchRoundClient(c.config)
 	c.MediaArtifact = NewMediaArtifactClient(c.config)
+	c.OCRTask = NewOCRTaskClient(c.config)
 	c.RecordTask = NewRecordTaskClient(c.config)
 	c.Team = NewTeamClient(c.config)
 	c.TranscodeTask = NewTranscodeTaskClient(c.config)
@@ -171,6 +175,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		Match:                NewMatchClient(cfg),
 		MatchRound:           NewMatchRoundClient(cfg),
 		MediaArtifact:        NewMediaArtifactClient(cfg),
+		OCRTask:              NewOCRTaskClient(cfg),
 		RecordTask:           NewRecordTaskClient(cfg),
 		Team:                 NewTeamClient(cfg),
 		TranscodeTask:        NewTranscodeTaskClient(cfg),
@@ -200,6 +205,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		Match:                NewMatchClient(cfg),
 		MatchRound:           NewMatchRoundClient(cfg),
 		MediaArtifact:        NewMediaArtifactClient(cfg),
+		OCRTask:              NewOCRTaskClient(cfg),
 		RecordTask:           NewRecordTaskClient(cfg),
 		Team:                 NewTeamClient(cfg),
 		TranscodeTask:        NewTranscodeTaskClient(cfg),
@@ -234,7 +240,8 @@ func (c *Client) Close() error {
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
 		c.HighlightClip, c.HighlightPublishTask, c.LarkMessage, c.Match, c.MatchRound,
-		c.MediaArtifact, c.RecordTask, c.Team, c.TranscodeTask, c.UploadTask,
+		c.MediaArtifact, c.OCRTask, c.RecordTask, c.Team, c.TranscodeTask,
+		c.UploadTask,
 	} {
 		n.Use(hooks...)
 	}
@@ -245,7 +252,8 @@ func (c *Client) Use(hooks ...Hook) {
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
 		c.HighlightClip, c.HighlightPublishTask, c.LarkMessage, c.Match, c.MatchRound,
-		c.MediaArtifact, c.RecordTask, c.Team, c.TranscodeTask, c.UploadTask,
+		c.MediaArtifact, c.OCRTask, c.RecordTask, c.Team, c.TranscodeTask,
+		c.UploadTask,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -266,6 +274,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.MatchRound.mutate(ctx, m)
 	case *MediaArtifactMutation:
 		return c.MediaArtifact.mutate(ctx, m)
+	case *OCRTaskMutation:
+		return c.OCRTask.mutate(ctx, m)
 	case *RecordTaskMutation:
 		return c.RecordTask.mutate(ctx, m)
 	case *TeamMutation:
@@ -1111,6 +1121,22 @@ func (c *MatchRoundClient) QueryHighlightClips(_m *MatchRound) *HighlightClipQue
 	return query
 }
 
+// QueryOcrTasks queries the ocr_tasks edge of a MatchRound.
+func (c *MatchRoundClient) QueryOcrTasks(_m *MatchRound) *OCRTaskQuery {
+	query := (&OCRTaskClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(matchround.Table, matchround.FieldID, id),
+			sqlgraph.To(ocrtask.Table, ocrtask.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, matchround.OcrTasksTable, matchround.OcrTasksColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *MatchRoundClient) Hooks() []Hook {
 	return c.hooks.MatchRound
@@ -1324,6 +1350,22 @@ func (c *MediaArtifactClient) QueryHighlightClips(_m *MediaArtifact) *HighlightC
 	return query
 }
 
+// QueryOcrTasks queries the ocr_tasks edge of a MediaArtifact.
+func (c *MediaArtifactClient) QueryOcrTasks(_m *MediaArtifact) *OCRTaskQuery {
+	query := (&OCRTaskClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(mediaartifact.Table, mediaartifact.FieldID, id),
+			sqlgraph.To(ocrtask.Table, ocrtask.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, mediaartifact.OcrTasksTable, mediaartifact.OcrTasksColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *MediaArtifactClient) Hooks() []Hook {
 	return c.hooks.MediaArtifact
@@ -1346,6 +1388,171 @@ func (c *MediaArtifactClient) mutate(ctx context.Context, m *MediaArtifactMutati
 		return (&MediaArtifactDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown MediaArtifact mutation op: %q", m.Op())
+	}
+}
+
+// OCRTaskClient is a client for the OCRTask schema.
+type OCRTaskClient struct {
+	config
+}
+
+// NewOCRTaskClient returns a client for the OCRTask from the given config.
+func NewOCRTaskClient(c config) *OCRTaskClient {
+	return &OCRTaskClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `ocrtask.Hooks(f(g(h())))`.
+func (c *OCRTaskClient) Use(hooks ...Hook) {
+	c.hooks.OCRTask = append(c.hooks.OCRTask, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `ocrtask.Intercept(f(g(h())))`.
+func (c *OCRTaskClient) Intercept(interceptors ...Interceptor) {
+	c.inters.OCRTask = append(c.inters.OCRTask, interceptors...)
+}
+
+// Create returns a builder for creating a OCRTask entity.
+func (c *OCRTaskClient) Create() *OCRTaskCreate {
+	mutation := newOCRTaskMutation(c.config, OpCreate)
+	return &OCRTaskCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of OCRTask entities.
+func (c *OCRTaskClient) CreateBulk(builders ...*OCRTaskCreate) *OCRTaskCreateBulk {
+	return &OCRTaskCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *OCRTaskClient) MapCreateBulk(slice any, setFunc func(*OCRTaskCreate, int)) *OCRTaskCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &OCRTaskCreateBulk{err: fmt.Errorf("calling to OCRTaskClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*OCRTaskCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &OCRTaskCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for OCRTask.
+func (c *OCRTaskClient) Update() *OCRTaskUpdate {
+	mutation := newOCRTaskMutation(c.config, OpUpdate)
+	return &OCRTaskUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *OCRTaskClient) UpdateOne(_m *OCRTask) *OCRTaskUpdateOne {
+	mutation := newOCRTaskMutation(c.config, OpUpdateOne, withOCRTask(_m))
+	return &OCRTaskUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *OCRTaskClient) UpdateOneID(id int) *OCRTaskUpdateOne {
+	mutation := newOCRTaskMutation(c.config, OpUpdateOne, withOCRTaskID(id))
+	return &OCRTaskUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for OCRTask.
+func (c *OCRTaskClient) Delete() *OCRTaskDelete {
+	mutation := newOCRTaskMutation(c.config, OpDelete)
+	return &OCRTaskDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *OCRTaskClient) DeleteOne(_m *OCRTask) *OCRTaskDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *OCRTaskClient) DeleteOneID(id int) *OCRTaskDeleteOne {
+	builder := c.Delete().Where(ocrtask.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &OCRTaskDeleteOne{builder}
+}
+
+// Query returns a query builder for OCRTask.
+func (c *OCRTaskClient) Query() *OCRTaskQuery {
+	return &OCRTaskQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeOCRTask},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a OCRTask entity by its id.
+func (c *OCRTaskClient) Get(ctx context.Context, id int) (*OCRTask, error) {
+	return c.Query().Where(ocrtask.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *OCRTaskClient) GetX(ctx context.Context, id int) *OCRTask {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryMatchRound queries the match_round edge of a OCRTask.
+func (c *OCRTaskClient) QueryMatchRound(_m *OCRTask) *MatchRoundQuery {
+	query := (&MatchRoundClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(ocrtask.Table, ocrtask.FieldID, id),
+			sqlgraph.To(matchround.Table, matchround.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, ocrtask.MatchRoundTable, ocrtask.MatchRoundColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QuerySourceArtifact queries the source_artifact edge of a OCRTask.
+func (c *OCRTaskClient) QuerySourceArtifact(_m *OCRTask) *MediaArtifactQuery {
+	query := (&MediaArtifactClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(ocrtask.Table, ocrtask.FieldID, id),
+			sqlgraph.To(mediaartifact.Table, mediaartifact.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, ocrtask.SourceArtifactTable, ocrtask.SourceArtifactColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *OCRTaskClient) Hooks() []Hook {
+	return c.hooks.OCRTask
+}
+
+// Interceptors returns the client interceptors.
+func (c *OCRTaskClient) Interceptors() []Interceptor {
+	return c.inters.OCRTask
+}
+
+func (c *OCRTaskClient) mutate(ctx context.Context, m *OCRTaskMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&OCRTaskCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&OCRTaskUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&OCRTaskUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&OCRTaskDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown OCRTask mutation op: %q", m.Op())
 	}
 }
 
@@ -2029,10 +2236,11 @@ func (c *UploadTaskClient) mutate(ctx context.Context, m *UploadTaskMutation) (V
 type (
 	hooks struct {
 		HighlightClip, HighlightPublishTask, LarkMessage, Match, MatchRound,
-		MediaArtifact, RecordTask, Team, TranscodeTask, UploadTask []ent.Hook
+		MediaArtifact, OCRTask, RecordTask, Team, TranscodeTask, UploadTask []ent.Hook
 	}
 	inters struct {
 		HighlightClip, HighlightPublishTask, LarkMessage, Match, MatchRound,
-		MediaArtifact, RecordTask, Team, TranscodeTask, UploadTask []ent.Interceptor
+		MediaArtifact, OCRTask, RecordTask, Team, TranscodeTask,
+		UploadTask []ent.Interceptor
 	}
 )

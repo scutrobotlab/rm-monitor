@@ -71,6 +71,15 @@ DanmuConf:
   VideoOffsetSeconds: {{ .Values.danmu.videoOffsetSeconds }}
 {{- end -}}
 
+{{- define "rm-monitor.ocrConf" -}}
+OCRConf:
+  Enabled: {{ .Values.ocr.enabled }}
+  Role: {{ .Values.ocr.role | quote }}
+  FrameInterval: {{ .Values.ocr.frameInterval }}
+  SimilarityThreshold: {{ .Values.ocr.similarityThreshold }}
+  MaxConcurrentJobs: {{ .Values.ocr.maxConcurrentJobs }}
+{{- end -}}
+
 {{- define "rm-monitor.highlightConf" -}}
 HighlightConf:
   Enabled: {{ .Values.highlight.enabled }}

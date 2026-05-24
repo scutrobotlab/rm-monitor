@@ -95,6 +95,31 @@
         }
       ]
     },
+    "ocr": {
+      "type": "object",
+      "required": ["enabled"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "role": { "type": "string" },
+        "frameInterval": { "type": "integer", "minimum": 1 },
+        "similarityThreshold": { "type": "number", "exclusiveMinimum": 0 },
+        "maxConcurrentJobs": { "type": "integer", "minimum": 1 }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "enabled": { "const": true } },
+            "required": ["enabled"]
+          },
+          "then": {
+            "required": ["role"],
+            "properties": {
+              "role": { "minLength": 1 }
+            }
+          }
+        }
+      ]
+    },
     "llm": {
       "type": "object",
       "properties": {

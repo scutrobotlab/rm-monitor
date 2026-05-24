@@ -53,6 +53,31 @@ func (c *DanmuConf) WithDefaults() DanmuConf {
 	return out
 }
 
+type OCRConf struct {
+	Enabled             bool    `json:",optional"`
+	Role                string  `json:",optional"`
+	FrameInterval       int     `json:",optional"`
+	SimilarityThreshold float64 `json:",optional"`
+	MaxConcurrentJobs   int     `json:",optional"`
+}
+
+func (c *OCRConf) WithDefaults() OCRConf {
+	out := *c
+	if out.Role == "" {
+		out.Role = "主视角"
+	}
+	if out.FrameInterval <= 0 {
+		out.FrameInterval = 1
+	}
+	if out.SimilarityThreshold <= 0 {
+		out.SimilarityThreshold = 0.6
+	}
+	if out.MaxConcurrentJobs <= 0 {
+		out.MaxConcurrentJobs = 1
+	}
+	return out
+}
+
 type LLMConf struct {
 	BaseURL        string `json:",optional"`
 	APIKey         string `json:",optional"`

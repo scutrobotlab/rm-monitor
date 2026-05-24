@@ -47,9 +47,11 @@ type MatchRoundEdges struct {
 	RecordTasks []*RecordTask `json:"record_tasks,omitempty"`
 	// HighlightClips holds the value of the highlight_clips edge.
 	HighlightClips []*HighlightClip `json:"highlight_clips,omitempty"`
+	// OcrTasks holds the value of the ocr_tasks edge.
+	OcrTasks []*OCRTask `json:"ocr_tasks,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [3]bool
+	loadedTypes [4]bool
 }
 
 // MatchOrErr returns the Match value or an error if the edge
@@ -79,6 +81,15 @@ func (e MatchRoundEdges) HighlightClipsOrErr() ([]*HighlightClip, error) {
 		return e.HighlightClips, nil
 	}
 	return nil, &NotLoadedError{edge: "highlight_clips"}
+}
+
+// OcrTasksOrErr returns the OcrTasks value or an error if the edge
+// was not loaded in eager-loading.
+func (e MatchRoundEdges) OcrTasksOrErr() ([]*OCRTask, error) {
+	if e.loadedTypes[3] {
+		return e.OcrTasks, nil
+	}
+	return nil, &NotLoadedError{edge: "ocr_tasks"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -192,6 +203,11 @@ func (_m *MatchRound) QueryRecordTasks() *RecordTaskQuery {
 // QueryHighlightClips queries the "highlight_clips" edge of the MatchRound entity.
 func (_m *MatchRound) QueryHighlightClips() *HighlightClipQuery {
 	return NewMatchRoundClient(_m.config).QueryHighlightClips(_m)
+}
+
+// QueryOcrTasks queries the "ocr_tasks" edge of the MatchRound entity.
+func (_m *MatchRound) QueryOcrTasks() *OCRTaskQuery {
+	return NewMatchRoundClient(_m.config).QueryOcrTasks(_m)
 }
 
 // Update returns a builder for updating this MatchRound.

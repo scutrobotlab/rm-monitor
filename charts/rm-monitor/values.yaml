@@ -62,6 +62,13 @@ danmu:
   appKey: ""
   videoOffsetSeconds: -3
 
+ocr:
+  enabled: false
+  role: "主视角"
+  frameInterval: 1
+  similarityThreshold: 0.6
+  maxConcurrentJobs: 1
+
 highlight:
   enabled: false
   role: "主视角"
@@ -180,6 +187,16 @@ components:
         cpu: 500m
         memory: 256Mi
   highlightDispatcher:
+    replicas: 1
+    annotations: {}
+    resources:
+      requests:
+        cpu: 50m
+        memory: 96Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi
+  ocrDispatcher:
     replicas: 1
     annotations: {}
     resources:

@@ -110,6 +110,29 @@ data:
 apiVersion: v1
 kind: ConfigMap
 metadata:
+  name: ocr-dispatcher-config
+  namespace: {{ include "rm-monitor.namespace" . }}
+data:
+  config.yml: |
+{{ include "rm-monitor.postgresConf" . | indent 4 }}
+      AutoMigrate: true
+{{ include "rm-monitor.ocrConf" . | indent 4 }}
+    K8sJobConf:
+{{ include "rm-monitor.jobConf" (dict "root" . "component" "ocr-job" "configMapName" "ocr-job-config" "recordsPVC" .Values.storage.record.pvcName) | indent 6 }}
+{{ include "rm-monitor.priority" . | indent 4 }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ocr-job-config
+  namespace: {{ include "rm-monitor.namespace" . }}
+data:
+  config.yml: |
+{{ include "rm-monitor.ocrConf" . | indent 4 }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
   name: highlight-dispatcher-config
   namespace: {{ include "rm-monitor.namespace" . }}
 data:

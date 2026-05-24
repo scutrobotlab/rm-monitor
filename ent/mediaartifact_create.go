@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"scutbot.cn/web/rm-monitor/ent/highlightclip"
 	"scutbot.cn/web/rm-monitor/ent/mediaartifact"
+	"scutbot.cn/web/rm-monitor/ent/ocrtask"
 	"scutbot.cn/web/rm-monitor/ent/recordtask"
 	"scutbot.cn/web/rm-monitor/ent/transcodetask"
 	"scutbot.cn/web/rm-monitor/ent/uploadtask"
@@ -229,6 +230,21 @@ func (_c *MediaArtifactCreate) AddHighlightClips(v ...*HighlightClip) *MediaArti
 		ids[i] = v[i].ID
 	}
 	return _c.AddHighlightClipIDs(ids...)
+}
+
+// AddOcrTaskIDs adds the "ocr_tasks" edge to the OCRTask entity by IDs.
+func (_c *MediaArtifactCreate) AddOcrTaskIDs(ids ...int) *MediaArtifactCreate {
+	_c.mutation.AddOcrTaskIDs(ids...)
+	return _c
+}
+
+// AddOcrTasks adds the "ocr_tasks" edges to the OCRTask entity.
+func (_c *MediaArtifactCreate) AddOcrTasks(v ...*OCRTask) *MediaArtifactCreate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddOcrTaskIDs(ids...)
 }
 
 // Mutation returns the MediaArtifactMutation object of the builder.
@@ -471,6 +487,22 @@ func (_c *MediaArtifactCreate) createSpec() (*MediaArtifact, *sqlgraph.CreateSpe
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(highlightclip.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.OcrTasksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   mediaartifact.OcrTasksTable,
+			Columns: []string{mediaartifact.OcrTasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(ocrtask.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

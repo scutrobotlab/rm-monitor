@@ -14,6 +14,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"scutbot.cn/web/rm-monitor/ent/highlightclip"
 	"scutbot.cn/web/rm-monitor/ent/mediaartifact"
+	"scutbot.cn/web/rm-monitor/ent/ocrtask"
 	"scutbot.cn/web/rm-monitor/ent/predicate"
 	"scutbot.cn/web/rm-monitor/ent/recordtask"
 	"scutbot.cn/web/rm-monitor/ent/transcodetask"
@@ -32,6 +33,7 @@ type MediaArtifactQuery struct {
 	withSourceTranscodeTask  *TranscodeTaskQuery
 	withArchiveTranscodeTask *TranscodeTaskQuery
 	withHighlightClips       *HighlightClipQuery
+	withOcrTasks             *OCRTaskQuery
 	withFKs                  bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
@@ -172,6 +174,28 @@ func (_q *MediaArtifactQuery) QueryHighlightClips() *HighlightClipQuery {
 			sqlgraph.From(mediaartifact.Table, mediaartifact.FieldID, selector),
 			sqlgraph.To(highlightclip.Table, highlightclip.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, mediaartifact.HighlightClipsTable, mediaartifact.HighlightClipsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryOcrTasks chains the current query on the "ocr_tasks" edge.
+func (_q *MediaArtifactQuery) QueryOcrTasks() *OCRTaskQuery {
+	query := (&OCRTaskClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(mediaartifact.Table, mediaartifact.FieldID, selector),
+			sqlgraph.To(ocrtask.Table, ocrtask.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, mediaartifact.OcrTasksTable, mediaartifact.OcrTasksColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -376,6 +400,7 @@ func (_q *MediaArtifactQuery) Clone() *MediaArtifactQuery {
 		withSourceTranscodeTask:  _q.withSourceTranscodeTask.Clone(),
 		withArchiveTranscodeTask: _q.withArchiveTranscodeTask.Clone(),
 		withHighlightClips:       _q.withHighlightClips.Clone(),
+		withOcrTasks:             _q.withOcrTasks.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
@@ -434,6 +459,17 @@ func (_q *MediaArtifactQuery) WithHighlightClips(opts ...func(*HighlightClipQuer
 		opt(query)
 	}
 	_q.withHighlightClips = query
+	return _q
+}
+
+// WithOcrTasks tells the query-builder to eager-load the nodes that are connected to
+// the "ocr_tasks" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *MediaArtifactQuery) WithOcrTasks(opts ...func(*OCRTaskQuery)) *MediaArtifactQuery {
+	query := (&OCRTaskClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withOcrTasks = query
 	return _q
 }
 
@@ -516,12 +552,13 @@ func (_q *MediaArtifactQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([
 		nodes       = []*MediaArtifact{}
 		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
-		loadedTypes = [5]bool{
+		loadedTypes = [6]bool{
 			_q.withRecordTask != nil,
 			_q.withUploadTask != nil,
 			_q.withSourceTranscodeTask != nil,
 			_q.withArchiveTranscodeTask != nil,
 			_q.withHighlightClips != nil,
+			_q.withOcrTasks != nil,
 		}
 	)
 	if _q.withRecordTask != nil {
@@ -576,6 +613,13 @@ func (_q *MediaArtifactQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([
 		if err := _q.loadHighlightClips(ctx, query, nodes,
 			func(n *MediaArtifact) { n.Edges.HighlightClips = []*HighlightClip{} },
 			func(n *MediaArtifact, e *HighlightClip) { n.Edges.HighlightClips = append(n.Edges.HighlightClips, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withOcrTasks; query != nil {
+		if err := _q.loadOcrTasks(ctx, query, nodes,
+			func(n *MediaArtifact) { n.Edges.OcrTasks = []*OCRTask{} },
+			func(n *MediaArtifact, e *OCRTask) { n.Edges.OcrTasks = append(n.Edges.OcrTasks, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -724,6 +768,37 @@ func (_q *MediaArtifactQuery) loadHighlightClips(ctx context.Context, query *Hig
 		node, ok := nodeids[*fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "media_artifact_highlight_clips" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *MediaArtifactQuery) loadOcrTasks(ctx context.Context, query *OCRTaskQuery, nodes []*MediaArtifact, init func(*MediaArtifact), assign func(*MediaArtifact, *OCRTask)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[int]*MediaArtifact)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.OCRTask(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(mediaartifact.OcrTasksColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.media_artifact_ocr_tasks
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "media_artifact_ocr_tasks" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "media_artifact_ocr_tasks" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

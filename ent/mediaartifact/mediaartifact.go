@@ -47,6 +47,8 @@ const (
 	EdgeArchiveTranscodeTask = "archive_transcode_task"
 	// EdgeHighlightClips holds the string denoting the highlight_clips edge name in mutations.
 	EdgeHighlightClips = "highlight_clips"
+	// EdgeOcrTasks holds the string denoting the ocr_tasks edge name in mutations.
+	EdgeOcrTasks = "ocr_tasks"
 	// Table holds the table name of the mediaartifact in the database.
 	Table = "media_artifacts"
 	// RecordTaskTable is the table that holds the record_task relation/edge.
@@ -84,6 +86,13 @@ const (
 	HighlightClipsInverseTable = "highlight_clips"
 	// HighlightClipsColumn is the table column denoting the highlight_clips relation/edge.
 	HighlightClipsColumn = "media_artifact_highlight_clips"
+	// OcrTasksTable is the table that holds the ocr_tasks relation/edge.
+	OcrTasksTable = "ocr_tasks"
+	// OcrTasksInverseTable is the table name for the OCRTask entity.
+	// It exists in this package in order to avoid circular dependency with the "ocrtask" package.
+	OcrTasksInverseTable = "ocr_tasks"
+	// OcrTasksColumn is the table column denoting the ocr_tasks relation/edge.
+	OcrTasksColumn = "media_artifact_ocr_tasks"
 )
 
 // Columns holds all SQL columns for mediaartifact fields.
@@ -331,6 +340,20 @@ func ByHighlightClips(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newHighlightClipsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByOcrTasksCount orders the results by ocr_tasks count.
+func ByOcrTasksCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newOcrTasksStep(), opts...)
+	}
+}
+
+// ByOcrTasks orders the results by ocr_tasks terms.
+func ByOcrTasks(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newOcrTasksStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newRecordTaskStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -364,5 +387,12 @@ func newHighlightClipsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(HighlightClipsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, HighlightClipsTable, HighlightClipsColumn),
+	)
+}
+func newOcrTasksStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(OcrTasksInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, OcrTasksTable, OcrTasksColumn),
 	)
 }
