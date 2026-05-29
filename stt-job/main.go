@@ -525,7 +525,7 @@ func recognizeFileOnce(ctx context.Context, serverURL, prompt, wavPath string) (
 		SetFile("file", wavPath).
 		SetMultipartFormData(form).
 		SetResult(&out).
-		Post(strings.TrimRight(serverURL, "/") + "/inference")
+		Post(serverURL)
 	seconds := time.Since(start).Seconds()
 	if err != nil {
 		return whisperResult{}, seconds, err
