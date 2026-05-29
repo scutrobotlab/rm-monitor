@@ -19,7 +19,7 @@ func IsNoRows(err error) bool {
 	return err != nil && (errors.Cause(err) == stdsql.ErrNoRows || strings.Contains(err.Error(), "no rows in result set"))
 }
 
-func Open(ctx context.Context, c config.PostgresConf) (*ent.Client, error) {
+func Open(_ context.Context, c config.PostgresConf) (*ent.Client, error) {
 	if c.DSN == "" {
 		return nil, errors.New("postgres dsn is required")
 	}
@@ -31,17 +31,31 @@ func Open(ctx context.Context, c config.PostgresConf) (*ent.Client, error) {
 	drv := entsql.OpenDB(dialect.Postgres, sqlDB)
 
 	client := ent.NewClient(ent.Driver(drv))
-	if c.AutoMigrate {
-		if err := migrateLegacyLarkMessages(ctx, sqlDB); err != nil {
-			_ = client.Close()
-			return nil, err
-		}
-		if err := client.Schema.Create(ctx, migrate.WithDropColumn(true)); err != nil {
-			_ = client.Close()
-			return nil, errors.Wrap(err, "run ent schema migration")
-		}
-	}
 	return client, nil
+}
+
+func Migrate(ctx context.Context, c config.PostgresConf) error {
+	if c.DSN == "" {
+		return errors.New("postgres dsn is required")
+	}
+
+	sqlDB, err := stdsql.Open("pgx", c.DSN)
+	if err != nil {
+		return errors.Wrap(err, "open postgres")
+	}
+	defer sqlDB.Close()
+
+	drv := entsql.OpenDB(dialect.Postgres, sqlDB)
+	client := ent.NewClient(ent.Driver(drv))
+	defer client.Close()
+
+	if err := migrateLegacyLarkMessages(ctx, sqlDB); err != nil {
+		return err
+	}
+	if err := client.Schema.Create(ctx, migrate.WithDropColumn(true)); err != nil {
+		return errors.Wrap(err, "run ent schema migration")
+	}
+	return nil
 }
 
 func migrateLegacyLarkMessages(ctx context.Context, db *stdsql.DB) error {

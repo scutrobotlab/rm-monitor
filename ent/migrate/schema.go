@@ -70,6 +70,11 @@ var (
 				Unique:  false,
 				Columns: []*schema.Column{HighlightClipsColumns[4], HighlightClipsColumns[5], HighlightClipsColumns[20]},
 			},
+			{
+				Name:    "highlightclip_status_updated_at",
+				Unique:  false,
+				Columns: []*schema.Column{HighlightClipsColumns[4], HighlightClipsColumns[21]},
+			},
 		},
 	}
 	// HighlightPublishTasksColumns holds the columns for the "highlight_publish_tasks" table.
@@ -117,6 +122,11 @@ var (
 				Name:    "highlightpublishtask_status_priority_created_at",
 				Unique:  false,
 				Columns: []*schema.Column{HighlightPublishTasksColumns[2], HighlightPublishTasksColumns[3], HighlightPublishTasksColumns[11]},
+			},
+			{
+				Name:    "highlightpublishtask_status_updated_at",
+				Unique:  false,
+				Columns: []*schema.Column{HighlightPublishTasksColumns[2], HighlightPublishTasksColumns[12]},
 			},
 		},
 	}
@@ -183,6 +193,18 @@ var (
 				OnDelete:   schema.NoAction,
 			},
 		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "match_updated_at",
+				Unique:  false,
+				Columns: []*schema.Column{MatchesColumns[14]},
+			},
+			{
+				Name:    "match_latest_status_updated_at",
+				Unique:  false,
+				Columns: []*schema.Column{MatchesColumns[11], MatchesColumns[14]},
+			},
+		},
 	}
 	// MatchRoundsColumns holds the columns for the "match_rounds" table.
 	MatchRoundsColumns = []*schema.Column{
@@ -219,6 +241,16 @@ var (
 				Name:    "matchround_status",
 				Unique:  false,
 				Columns: []*schema.Column{MatchRoundsColumns[2]},
+			},
+			{
+				Name:    "matchround_updated_at",
+				Unique:  false,
+				Columns: []*schema.Column{MatchRoundsColumns[7]},
+			},
+			{
+				Name:    "matchround_status_updated_at",
+				Unique:  false,
+				Columns: []*schema.Column{MatchRoundsColumns[2], MatchRoundsColumns[7]},
 			},
 		},
 	}
@@ -266,6 +298,16 @@ var (
 				Name:    "mediaartifact_kind_format_codec",
 				Unique:  false,
 				Columns: []*schema.Column{MediaArtifactsColumns[1], MediaArtifactsColumns[3], MediaArtifactsColumns[4]},
+			},
+			{
+				Name:    "mediaartifact_kind_status_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{MediaArtifactsColumns[1], MediaArtifactsColumns[7], MediaArtifactsColumns[10]},
+			},
+			{
+				Name:    "mediaartifact_kind_status_deletable_at",
+				Unique:  false,
+				Columns: []*schema.Column{MediaArtifactsColumns[1], MediaArtifactsColumns[7], MediaArtifactsColumns[8]},
 			},
 		},
 	}
@@ -322,6 +364,11 @@ var (
 				Unique:  false,
 				Columns: []*schema.Column{OcrTasksColumns[2], OcrTasksColumns[3], OcrTasksColumns[11]},
 			},
+			{
+				Name:    "ocrtask_status_updated_at",
+				Unique:  false,
+				Columns: []*schema.Column{OcrTasksColumns[2], OcrTasksColumns[12]},
+			},
 		},
 	}
 	// RecordTasksColumns holds the columns for the "record_tasks" table.
@@ -371,6 +418,11 @@ var (
 				Name:    "recordtask_status_priority_created_at",
 				Unique:  false,
 				Columns: []*schema.Column{RecordTasksColumns[4], RecordTasksColumns[7], RecordTasksColumns[13]},
+			},
+			{
+				Name:    "recordtask_status_updated_at",
+				Unique:  false,
+				Columns: []*schema.Column{RecordTasksColumns[4], RecordTasksColumns[14]},
 			},
 		},
 	}
@@ -439,6 +491,11 @@ var (
 				Unique:  false,
 				Columns: []*schema.Column{TranscodeTasksColumns[1], TranscodeTasksColumns[4], TranscodeTasksColumns[8]},
 			},
+			{
+				Name:    "transcodetask_status_updated_at",
+				Unique:  false,
+				Columns: []*schema.Column{TranscodeTasksColumns[1], TranscodeTasksColumns[9]},
+			},
 		},
 	}
 	// UploadTasksColumns holds the columns for the "upload_tasks" table.
@@ -501,6 +558,11 @@ var (
 				Name:    "uploadtask_status_priority_created_at",
 				Unique:  false,
 				Columns: []*schema.Column{UploadTasksColumns[2], UploadTasksColumns[5], UploadTasksColumns[14]},
+			},
+			{
+				Name:    "uploadtask_status_updated_at",
+				Unique:  false,
+				Columns: []*schema.Column{UploadTasksColumns[2], UploadTasksColumns[15]},
 			},
 		},
 	}

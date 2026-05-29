@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"scutbot.cn/web/rm-monitor/ent"
+	"scutbot.cn/web/rm-monitor/ent/match"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
 	"scutbot.cn/web/rm-monitor/monitor/internal/config"
 	"scutbot.cn/web/rm-monitor/monitor/internal/svc"
@@ -82,5 +83,61 @@ func TestNormalizeMatchResult(t *testing.T) {
 	}
 	if got := normalizeMatchResult("BLUE"); got != "BLUE" {
 		t.Fatalf("normalizeMatchResult(BLUE) = %q", got)
+	}
+}
+
+func TestTeamNeedsUpdateOnlyOnChangedFields(t *testing.T) {
+	existing := &ent.Team{ID: "team-1", Name: "A", SchoolName: "S", SchoolLogo: "logo"}
+	if teamNeedsUpdate(existing, scannedTeam{ID: "team-1", Name: "A", SchoolName: "S", SchoolLogo: "logo"}) {
+		t.Fatal("same team payload should not update")
+	}
+	if !teamNeedsUpdate(existing, scannedTeam{ID: "team-1", Name: "B", SchoolName: "S", SchoolLogo: "logo"}) {
+		t.Fatal("changed team payload should update")
+	}
+}
+
+func TestMatchNeedsUpdateOnlyOnChangedFields(t *testing.T) {
+	slug := "slug-1"
+	winner := "winner"
+	loser := "loser"
+	existing := &ent.Match{
+		ID:                    "match-1",
+		Event:                 "event",
+		Zone:                  "zone",
+		Order:                 1,
+		MatchType:             "BO3",
+		MatchSlug:             &slug,
+		TotalRounds:           3,
+		Priority:              7,
+		Result:                match.ResultUNKNOWN,
+		WinnerPlaceholderName: &winner,
+		LoserPlaceholderName:  &loser,
+		LatestStatus:          "STARTED",
+		Edges: ent.MatchEdges{
+			RedTeam:  &ent.Team{ID: "red"},
+			BlueTeam: &ent.Team{ID: "blue"},
+		},
+	}
+	next := scannedMatch{
+		ID:              "match-1",
+		Event:           "event",
+		Zone:            "zone",
+		Order:           1,
+		Status:          "STARTED",
+		MatchType:       "BO3",
+		MatchSlug:       "slug-1",
+		TotalRounds:     3,
+		Result:          "UNKNOWN",
+		WinnerPlacehold: "winner",
+		LoserPlacehold:  "loser",
+		RedTeam:         scannedTeam{ID: "red"},
+		BlueTeam:        scannedTeam{ID: "blue"},
+	}
+	if matchNeedsUpdate(existing, next, "STARTED", 7) {
+		t.Fatal("same match payload should not update")
+	}
+	next.Result = "RED"
+	if !matchNeedsUpdate(existing, next, "DONE", 7) {
+		t.Fatal("changed match payload should update")
 	}
 }

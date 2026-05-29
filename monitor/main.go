@@ -33,7 +33,7 @@ func main() {
 
 	svcCtx := svc.NewServiceContext(c)
 
-	t := ticker.NewTicker(1 * time.Second)
+	t := ticker.NewTicker(5 * time.Second)
 	defer t.Stop()
 	t.AddJob(func(ctx context.Context) error {
 		logc.Infof(ctx, "starting match scan")

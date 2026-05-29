@@ -6,6 +6,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
+	"entgo.io/ent/schema/index"
 )
 
 type Match struct {
@@ -38,5 +39,12 @@ func (Match) Edges() []ent.Edge {
 		edge.From("blue_team", Team.Type).Ref("blue_matches").Unique().Required(),
 		edge.To("rounds", MatchRound.Type),
 		edge.To("lark_messages", LarkMessage.Type),
+	}
+}
+
+func (Match) Indexes() []ent.Index {
+	return []ent.Index{
+		index.Fields("updated_at"),
+		index.Fields("latest_status", "updated_at"),
 	}
 }

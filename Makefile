@@ -4,6 +4,7 @@ build-all:
 	go build -trimpath -ldflags "-s -w" -o bin/highlight-dispatcher highlight-dispatcher/main.go
 	go build -trimpath -ldflags "-s -w" -o bin/lark-notifier lark-notifier/main.go
 	go build -trimpath -ldflags "-s -w" -o bin/manifest-job manifest-job/main.go
+	go build -trimpath -ldflags "-s -w" -o bin/migrate-job migrate-job/main.go
 	go build -trimpath -ldflags "-s -w" -o bin/monitor monitor/main.go
 	go build -trimpath -ldflags "-s -w" -o bin/ocr-dispatcher ocr-dispatcher/main.go
 	go build -trimpath -ldflags "-s -w" -o bin/record-dispatcher record-dispatcher/main.go

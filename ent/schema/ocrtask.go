@@ -42,5 +42,6 @@ func (OCRTask) Indexes() []ent.Index {
 		index.Edges("match_round").Fields("role").Unique(),
 		index.Fields("status"),
 		index.Fields("status", "priority", "created_at"),
+		index.Fields("status", "updated_at"),
 	}
 }

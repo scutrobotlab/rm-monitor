@@ -1,0 +1,37 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-migrate
+  namespace: {{ include "rm-monitor.namespace" . }}
+  labels:
+{{ include "rm-monitor.commonLabels" . | indent 4 }}
+{{ include "rm-monitor.selectorLabels" (dict "name" "migrate-job") | indent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  backoffLimit: {{ .Values.jobs.migrate.backoffLimit }}
+  ttlSecondsAfterFinished: {{ .Values.jobs.migrate.ttlSecondsAfterFinished }}
+  template:
+    metadata:
+      labels:
+{{ include "rm-monitor.selectorLabels" (dict "name" "migrate-job") | indent 8 }}
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrate-job
+          image: {{ include "rm-monitor.image" (dict "root" . "component" "migrate-job") }}
+          imagePullPolicy: {{ include "rm-monitor.jobImagePullPolicy" . }}
+          args: ["-f", "{{ include "rm-monitor.configPath" . }}"]
+          resources:
+{{ toYaml .Values.components.migrateJob.resources | indent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: {{ include "rm-monitor.configPath" . }}
+              subPath: config.yml
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: migrate-config

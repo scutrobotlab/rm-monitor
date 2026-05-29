@@ -83,14 +83,27 @@ func (l *DispatchLogic) createUploadTasks() error {
 	if err != nil {
 		return errors.Wrap(err, "query source artifacts")
 	}
+	builders := make([]*ent.UploadTaskCreate, 0, len(artifacts))
 	for _, artifact := range artifacts {
-		created, err := l.createUploadTaskForArtifact(conf.BitableAppToken, artifact)
-		if err != nil {
-			return err
-		}
-		if !created {
+		recordTask := artifact.Edges.RecordTask
+		if recordTask == nil || recordTask.Edges.MatchRound == nil || recordTask.Edges.MatchRound.Edges.Match == nil {
 			continue
 		}
+		builders = append(builders, l.svcCtx.DB.UploadTask.Create().
+			SetRecordTaskID(recordTask.ID).
+			SetSourceArtifactID(artifact.ID).
+			SetSourcePath(artifact.Path).
+			SetPriority(recordTask.Priority).
+			SetStatus(uploadtask.StatusPENDING))
+	}
+	if len(builders) == 0 {
+		return nil
+	}
+	if err := l.svcCtx.DB.UploadTask.CreateBulk(builders...).
+		OnConflictColumns(uploadtask.SourceArtifactColumn).
+		DoNothing().
+		Exec(l.ctx); err != nil && !ent.IsConstraintError(err) {
+		return errors.Wrap(err, "bulk create upload tasks")
 	}
 	return nil
 }

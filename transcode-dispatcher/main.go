@@ -28,7 +28,7 @@ func main() {
 
 	wake := make(chan struct{}, 1)
 	go listen(c.PostgresConf.DSN, wake)
-	ticker := time.NewTicker(2 * time.Second)
+	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
 	for {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)

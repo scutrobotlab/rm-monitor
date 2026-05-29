@@ -38,5 +38,7 @@ func (MatchRound) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Edges("match").Fields("round_no").Unique(),
 		index.Fields("status"),
+		index.Fields("updated_at"),
+		index.Fields("status", "updated_at"),
 	}
 }

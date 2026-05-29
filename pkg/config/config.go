@@ -3,8 +3,7 @@ package config
 import "scutbot.cn/web/rm-monitor/pkg/redisx"
 
 type PostgresConf struct {
-	DSN         string
-	AutoMigrate bool `json:",optional"`
+	DSN string
 }
 
 type RedisConf = redisx.Conf

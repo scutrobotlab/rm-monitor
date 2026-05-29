@@ -1,6 +1,19 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
+  name: migrate-config
+  namespace: {{ include "rm-monitor.namespace" . }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-10"
+    "helm.sh/hook-delete-policy": before-hook-creation
+data:
+  config.yml: |
+{{ include "rm-monitor.postgresConf" . | indent 4 }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
   name: monitor-config
   namespace: {{ include "rm-monitor.namespace" . }}
 data:
@@ -8,7 +21,6 @@ data:
     MonitorConf:
       ScheduleURL: {{ .Values.monitor.scheduleURL }}
 {{ include "rm-monitor.postgresConf" . | indent 4 }}
-      AutoMigrate: true
 {{ include "rm-monitor.redisConf" . | indent 4 }}
 {{ include "rm-monitor.priority" . | indent 4 }}
 ---
@@ -24,7 +36,6 @@ data:
       AppSecret: {{ .Values.lark.appSecret }}
 {{ include "rm-monitor.redisConf" . | indent 4 }}
 {{ include "rm-monitor.postgresConf" . | indent 4 }}
-      AutoMigrate: true
     UploadConf:
       Concurrency: {{ .Values.upload.concurrency }}
       PartRetries: {{ .Values.upload.partRetries }}
@@ -38,7 +49,6 @@ metadata:
 data:
   config.yml: |
 {{ include "rm-monitor.postgresConf" . | indent 4 }}
-      AutoMigrate: true
 {{ include "rm-monitor.redisConf" . | indent 4 }}
 {{ include "rm-monitor.recordConf" . | indent 4 }}
       RoleBlackList:
@@ -117,7 +127,6 @@ metadata:
 data:
   config.yml: |
 {{ include "rm-monitor.postgresConf" . | indent 4 }}
-      AutoMigrate: true
 {{ include "rm-monitor.ocrConf" . | indent 4 }}
     K8sJobConf:
 {{ include "rm-monitor.jobConf" (dict "root" . "component" "ocr-job" "configMapName" "ocr-job-config" "recordsPVC" .Values.storage.record.pvcName) | indent 6 }}
@@ -140,7 +149,6 @@ metadata:
 data:
   config.yml: |
 {{ include "rm-monitor.postgresConf" . | indent 4 }}
-      AutoMigrate: true
 {{ include "rm-monitor.recordConf" . | indent 4 }}
 {{ include "rm-monitor.highlightConf" . | indent 4 }}
 {{ include "rm-monitor.publishConf" . | indent 4 }}
@@ -178,7 +186,6 @@ metadata:
 data:
   config.yml: |
 {{ include "rm-monitor.postgresConf" . | indent 4 }}
-      AutoMigrate: false
 {{ include "rm-monitor.redisConf" . | indent 4 }}
 {{ include "rm-monitor.recordConf" . | indent 4 }}
 {{ include "rm-monitor.llmConf" . | indent 4 }}
@@ -191,7 +198,6 @@ metadata:
 data:
   config.yml: |
 {{ include "rm-monitor.postgresConf" . | indent 4 }}
-      AutoMigrate: true
 {{ include "rm-monitor.redisConf" . | indent 4 }}
     LarkConf:
       AppId: {{ .Values.lark.appId }}
@@ -227,7 +233,6 @@ metadata:
 data:
   config.yml: |
 {{ include "rm-monitor.postgresConf" . | indent 4 }}
-      AutoMigrate: true
     TranscodeConf:
       SourceRetentionDays: {{ .Values.transcode.sourceRetentionDays }}
       MaxConcurrent: {{ .Values.transcode.maxConcurrent }}
@@ -247,7 +252,6 @@ metadata:
 data:
   config.yml: |
 {{ include "rm-monitor.postgresConf" . | indent 4 }}
-      AutoMigrate: false
     TranscodeConf:
       SourceRetentionDays: {{ .Values.transcode.sourceRetentionDays }}
 ---
@@ -259,7 +263,6 @@ metadata:
 data:
   config.yml: |
 {{ include "rm-monitor.postgresConf" . | indent 4 }}
-      AutoMigrate: false
 {{ include "rm-monitor.redisConf" . | indent 4 }}
     K8sJobConf:
       Namespace: {{ include "rm-monitor.namespace" . }}
@@ -277,6 +280,5 @@ metadata:
 data:
   config.yml: |
 {{ include "rm-monitor.postgresConf" . | indent 4 }}
-      AutoMigrate: false
     TranscodeConf:
       SourceRetentionDays: {{ .Values.transcode.sourceRetentionDays }}

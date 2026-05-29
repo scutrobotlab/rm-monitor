@@ -65,23 +65,25 @@ func (l *DispatchLogic) createTranscodeTasks() error {
 	if err != nil {
 		return errors.Wrap(err, "query source artifacts")
 	}
+	builders := make([]*ent.TranscodeTaskCreate, 0, len(artifacts))
 	for _, artifact := range artifacts {
 		priority := 0
 		if artifact.Edges.RecordTask != nil {
 			priority = artifact.Edges.RecordTask.Priority
 		}
-		if err := l.svcCtx.DB.TranscodeTask.Create().
+		builders = append(builders, l.svcCtx.DB.TranscodeTask.Create().
 			SetSourceArtifactID(artifact.ID).
 			SetPriority(priority).
-			SetStatus(transcodetask.StatusPENDING).
-			OnConflictColumns(transcodetask.SourceArtifactColumn).
-			DoNothing().
-			Exec(l.ctx); err != nil {
-			if db.IsNoRows(err) {
-				continue
-			}
-			return errors.Wrap(err, "create transcode task")
-		}
+			SetStatus(transcodetask.StatusPENDING))
+	}
+	if len(builders) == 0 {
+		return nil
+	}
+	if err := l.svcCtx.DB.TranscodeTask.CreateBulk(builders...).
+		OnConflictColumns(transcodetask.SourceArtifactColumn).
+		DoNothing().
+		Exec(l.ctx); err != nil && !db.IsNoRows(err) {
+		return errors.Wrap(err, "bulk create transcode tasks")
 	}
 	return nil
 }

@@ -35,7 +35,7 @@ host_path() {
   fi
 }
 
-apps=(monitor record-dispatcher record-job)
+apps=(migrate-job monitor record-dispatcher record-job)
 
 log() { printf '[e2e] %s\n' "$*" >&2; }
 
@@ -299,6 +299,7 @@ log "installing rm-monitor chart"
   --set components.transcodeDispatcher.replicas=0 \
   --set components.highlightDispatcher.replicas=0
 
+"$KUBECTL" -n "$NS" wait --for=condition=complete job/"$RELEASE-migrate" --timeout=240s
 "$KUBECTL" -n "$NS" rollout status deploy/monitor --timeout=120s
 "$KUBECTL" -n "$NS" rollout status deploy/record-dispatcher --timeout=120s
 

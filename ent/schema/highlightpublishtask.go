@@ -41,5 +41,6 @@ func (HighlightPublishTask) Indexes() []ent.Index {
 		index.Edges("highlight_clip").Fields("platform").Unique(),
 		index.Fields("status"),
 		index.Fields("status", "priority", "created_at"),
+		index.Fields("status", "updated_at"),
 	}
 }

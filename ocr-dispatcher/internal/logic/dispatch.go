@@ -76,23 +76,27 @@ func (l *DispatchLogic) createTasks(role string) error {
 	if err != nil {
 		return errors.Wrap(err, "query source artifacts for ocr")
 	}
+	builders := make([]*ent.OCRTaskCreate, 0, len(artifacts))
 	for _, artifact := range artifacts {
 		task := artifact.Edges.RecordTask
 		if task == nil || task.Edges.MatchRound == nil {
 			continue
 		}
-		if err := l.svcCtx.DB.OCRTask.Create().
+		builders = append(builders, l.svcCtx.DB.OCRTask.Create().
 			SetMatchRoundID(task.Edges.MatchRound.ID).
 			SetSourceArtifactID(artifact.ID).
 			SetRole(role).
 			SetPriority(task.Priority).
-			SetStatus(ocrtask.StatusPENDING).
-			Exec(l.ctx); err != nil {
-			if ent.IsConstraintError(err) {
-				continue
-			}
-			return errors.Wrap(err, "create ocr task")
-		}
+			SetStatus(ocrtask.StatusPENDING))
+	}
+	if len(builders) == 0 {
+		return nil
+	}
+	if err := l.svcCtx.DB.OCRTask.CreateBulk(builders...).
+		OnConflictColumns(ocrtask.MatchRoundColumn, ocrtask.FieldRole).
+		DoNothing().
+		Exec(l.ctx); err != nil && !ent.IsConstraintError(err) {
+		return errors.Wrap(err, "bulk create ocr tasks")
 	}
 	return nil
 }

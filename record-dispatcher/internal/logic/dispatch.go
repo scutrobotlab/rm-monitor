@@ -39,38 +39,65 @@ type DispatchLogic struct {
 
 const dispatchingStaleAfter = 5 * time.Minute
 
+type TickStats struct {
+	Source          string
+	Cancelled       int
+	Created         int
+	Recovered       int
+	Dispatched      int
+	ResultApplied   int
+	ManifestCreated int
+}
+
 func NewDispatchLogic(ctx context.Context, svcCtx *svc.ServiceContext) *DispatchLogic {
 	return &DispatchLogic{ctx: ctx, svcCtx: svcCtx, Logger: logx.WithContext(ctx)}
 }
 
-func (l *DispatchLogic) Tick() error {
-	if err := l.cancelEndedRounds(); err != nil {
-		return err
+func (l *DispatchLogic) Tick(source string) (TickStats, error) {
+	stats := TickStats{Source: source}
+	cancelled, err := l.cancelEndedRounds()
+	if err != nil {
+		return stats, err
 	}
-	if err := l.createTasksForStartedRounds(); err != nil {
-		return err
+	stats.Cancelled = cancelled
+	created, err := l.createTasksForStartedRounds()
+	if err != nil {
+		return stats, err
 	}
-	if err := l.reconcileRecordResults(); err != nil {
-		return err
+	stats.Created = created
+	applied, err := l.reconcileRecordResults()
+	if err != nil {
+		return stats, err
 	}
-	if err := l.recoverDispatchingTasks(); err != nil {
-		return err
+	stats.ResultApplied = applied
+	recovered, err := l.recoverDispatchingTasks()
+	if err != nil {
+		return stats, err
 	}
-	if err := l.dispatchPendingTasks(); err != nil {
-		return err
+	stats.Recovered = recovered
+	dispatched, err := l.dispatchPendingTasks()
+	if err != nil {
+		return stats, err
 	}
-	return l.dispatchCompletedManifestJobs()
+	stats.Dispatched = dispatched
+	manifestCreated, err := l.dispatchCompletedManifestJobs()
+	if err != nil {
+		return stats, err
+	}
+	stats.ManifestCreated = manifestCreated
+	return stats, nil
 }
 
-func (l *DispatchLogic) cancelEndedRounds() error {
+func (l *DispatchLogic) cancelEndedRounds() (int, error) {
 	tasks, err := l.svcCtx.DB.RecordTask.Query().
 		Where(recordtask.StatusIn(recordtask.StatusRUNNING, recordtask.StatusDISPATCHING)).
 		WithMatchRound().
 		Limit(200).
 		All(l.ctx)
 	if err != nil {
-		return errors.Wrap(err, "query running record tasks")
+		return 0, errors.Wrap(err, "query running record tasks")
 	}
+	cancelled := 0
 	for _, task := range tasks {
 		if task.Edges.MatchRound != nil && task.Edges.MatchRound.Status == matchround.StatusENDED {
 			name := jobName("record", task.ID)
@@ -79,12 +106,13 @@ func (l *DispatchLogic) cancelEndedRounds() error {
 			}
 			if l.svcCtx.K8s != nil {
 				if err := l.svcCtx.K8s.DeleteJob(l.ctx, l.svcCtx.Config.K8sJobConf.WithDefaults().Namespace, name); err != nil {
-					return err
+					return cancelled, err
 				}
 			}
 			if err := l.svcCtx.DB.RecordTask.UpdateOneID(task.ID).SetStatus(recordtask.StatusCANCEL_REQUESTED).Exec(l.ctx); err != nil {
-				return errors.Wrap(err, "mark record stopping")
+				return cancelled, errors.Wrap(err, "mark record stopping")
 			}
+			cancelled++
 			l.Infof("requested stop record job task=%d round=%d job=%s", task.ID, task.Edges.MatchRound.ID, name)
 			if l.svcCtx.K8s != nil && task.Edges.MatchRound != nil {
 				_ = l.svcCtx.K8s.DeleteJob(l.ctx, l.svcCtx.Config.STTJobConf.WithDefaults().Namespace, jobName("stt", task.Edges.MatchRound.ID))
@@ -93,20 +121,21 @@ func (l *DispatchLogic) cancelEndedRounds() error {
 			}
 		}
 	}
-	return nil
+	return cancelled, nil
 }
 
-func (l *DispatchLogic) recoverDispatchingTasks() error {
+func (l *DispatchLogic) recoverDispatchingTasks() (int, error) {
 	if l.svcCtx.K8s == nil {
-		return nil
+		return 0, nil
 	}
 	tasks, err := l.svcCtx.DB.RecordTask.Query().
 		Where(recordtask.StatusEQ(recordtask.StatusDISPATCHING), recordtask.UpdatedAtLTE(time.Now().Add(-dispatchingStaleAfter))).
 		Limit(100).
 		All(l.ctx)
 	if err != nil {
-		return errors.Wrap(err, "query stale dispatching record tasks")
+		return 0, errors.Wrap(err, "query stale dispatching record tasks")
 	}
+	recovered := 0
 	namespace := l.svcCtx.Config.K8sJobConf.WithDefaults().Namespace
 	for _, task := range tasks {
 		name := jobName("record", task.ID)
@@ -115,33 +144,37 @@ func (l *DispatchLogic) recoverDispatchingTasks() error {
 		}
 		exists, err := l.svcCtx.K8s.JobExists(l.ctx, namespace, name)
 		if err != nil {
-			return err
+			return recovered, err
 		}
 		if exists {
 			if err := l.svcCtx.DB.RecordTask.UpdateOneID(task.ID).SetStatus(recordtask.StatusRUNNING).SetStartedAt(time.Now()).Exec(l.ctx); err != nil {
-				return errors.Wrap(err, "recover running record task")
+				return recovered, errors.Wrap(err, "recover running record task")
 			}
+			recovered++
 			l.Infof("recovered dispatching record task as running task=%d job=%s", task.ID, name)
 			continue
 		}
 		if err := l.svcCtx.DB.RecordTask.UpdateOneID(task.ID).SetStatus(recordtask.StatusPENDING).Exec(l.ctx); err != nil {
-			return errors.Wrap(err, "requeue stale record task")
+			return recovered, errors.Wrap(err, "requeue stale record task")
 		}
+		recovered++
 		l.Infof("requeued stale dispatching record task task=%d job=%s", task.ID, name)
 	}
-	return nil
+	return recovered, nil
 }
 
-func (l *DispatchLogic) createTasksForStartedRounds() error {
+func (l *DispatchLogic) createTasksForStartedRounds() (int, error) {
 	rounds, err := l.svcCtx.DB.MatchRound.Query().
 		Where(matchround.StatusEQ(matchround.StatusSTARTED)).
 		WithMatch(func(q *ent.MatchQuery) { q.WithRedTeam().WithBlueTeam() }).
+		WithRecordTasks().
 		Limit(100).
 		All(l.ctx)
 	if err != nil {
-		return errors.Wrap(err, "query started rounds")
+		return 0, errors.Wrap(err, "query started rounds")
 	}
 	conf := l.svcCtx.Config.RecordConf.WithDefaults()
+	builders := make([]*ent.RecordTaskCreate, 0)
 	for _, r := range rounds {
 		m := r.Edges.Match
 		if m == nil {
@@ -160,30 +193,37 @@ func (l *DispatchLogic) createTasksForStartedRounds() error {
 			l.Errorf("dispatch stt job for round %d: %v", r.ID, err)
 		}
 		urls = filterBlacklistedRoles(urls, conf.RoleBlackList)
+		existingRoles := make(map[string]struct{}, len(r.Edges.RecordTasks))
+		for _, task := range r.Edges.RecordTasks {
+			existingRoles[task.Role] = struct{}{}
+		}
 		for role, url := range urls {
+			if _, ok := existingRoles[role]; ok {
+				continue
+			}
 			output, err := l.outputPath(conf, m, r.RoundNo, role)
 			if err != nil {
-				return err
+				return 0, err
 			}
-			err = l.svcCtx.DB.RecordTask.Create().
+			builders = append(builders, l.svcCtx.DB.RecordTask.Create().
 				SetMatchRoundID(r.ID).
 				SetRole(role).
 				SetSourceURL(url).
 				SetOutputPath(output).
 				SetPriority(m.Priority).
-				SetStatus(recordtask.StatusPENDING).
-				OnConflictColumns(recordtask.MatchRoundColumn, recordtask.FieldRole).
-				DoNothing().
-				Exec(l.ctx)
-			if err != nil {
-				if db.IsNoRows(err) {
-					continue
-				}
-				return errors.Wrap(err, "create record task")
-			}
+				SetStatus(recordtask.StatusPENDING))
 		}
 	}
-	return nil
+	if len(builders) == 0 {
+		return 0, nil
+	}
+	if err := l.svcCtx.DB.RecordTask.CreateBulk(builders...).
+		OnConflictColumns(recordtask.MatchRoundColumn, recordtask.FieldRole).
+		DoNothing().
+		Exec(l.ctx); err != nil && !db.IsNoRows(err) {
+		return 0, errors.Wrap(err, "bulk create record tasks")
+	}
+	return len(builders), nil
 }
 
 func (l *DispatchLogic) dispatchDanmuJob(r *ent.MatchRound, chatRoomID string) error {
@@ -455,7 +495,7 @@ func (l *DispatchLogic) outputPath(conf common.RecordConf, m *ent.Match, roundNo
 	})
 }
 
-func (l *DispatchLogic) dispatchPendingTasks() error {
+func (l *DispatchLogic) dispatchPendingTasks() (int, error) {
 	tasks, err := l.svcCtx.DB.RecordTask.Query().
 		Where(recordtask.StatusEQ(recordtask.StatusPENDING)).
 		WithMatchRound().
@@ -463,8 +503,9 @@ func (l *DispatchLogic) dispatchPendingTasks() error {
 		Limit(20).
 		All(l.ctx)
 	if err != nil {
-		return errors.Wrap(err, "query pending record tasks")
+		return 0, errors.Wrap(err, "query pending record tasks")
 	}
+	dispatched := 0
 	for _, task := range tasks {
 		jobName := jobName("record", task.ID)
 		claimed, err := l.svcCtx.DB.RecordTask.Update().
@@ -474,7 +515,7 @@ func (l *DispatchLogic) dispatchPendingTasks() error {
 			SetK8sJobName(jobName).
 			Save(l.ctx)
 		if err != nil {
-			return errors.Wrap(err, "mark record dispatching")
+			return dispatched, errors.Wrap(err, "mark record dispatching")
 		}
 		if claimed == 0 {
 			continue
@@ -482,7 +523,7 @@ func (l *DispatchLogic) dispatchPendingTasks() error {
 		jobCtx := l.recordContext(task)
 		rawCtx, err := json.Marshal(jobCtx)
 		if err != nil {
-			return errors.Wrap(err, "encode record job context")
+			return dispatched, errors.Wrap(err, "encode record job context")
 		}
 		if l.svcCtx.K8s != nil {
 			job := kubejob.Build(l.svcCtx.Config.K8sJobConf, kubejob.JobSpec{
@@ -499,12 +540,13 @@ func (l *DispatchLogic) dispatchPendingTasks() error {
 			})
 			if err := l.svcCtx.K8s.CreateJob(l.ctx, l.svcCtx.Config.K8sJobConf.WithDefaults().Namespace, job); err != nil {
 				_ = l.svcCtx.DB.RecordTask.UpdateOneID(task.ID).SetStatus(recordtask.StatusFAILED).SetErrorMessage(err.Error()).Exec(l.ctx)
-				return err
+				return dispatched, err
 			}
 		}
 		if err := l.svcCtx.DB.RecordTask.UpdateOneID(task.ID).SetStatus(recordtask.StatusRUNNING).SetStartedAt(time.Now()).Exec(l.ctx); err != nil {
-			return errors.Wrap(err, "mark record running")
+			return dispatched, errors.Wrap(err, "mark record running")
 		}
+		dispatched++
 		roundID := 0
 		if task.Edges.MatchRound != nil {
 			roundID = task.Edges.MatchRound.ID
@@ -512,7 +554,7 @@ func (l *DispatchLogic) dispatchPendingTasks() error {
 		l.Infof("dispatched record job task=%d round=%d role=%s job=%s output=%s", task.ID, roundID, task.Role, jobName, task.OutputPath)
 		_ = db.Notify(l.ctx, l.svcCtx.Config.PostgresConf.DSN, db.RecordTaskChangedChannel, strconv.Itoa(task.ID))
 	}
-	return nil
+	return dispatched, nil
 }
 
 func (l *DispatchLogic) recordContext(task *ent.RecordTask) jobcontract.RecordContext {
@@ -533,33 +575,36 @@ func (l *DispatchLogic) recordContext(task *ent.RecordTask) jobcontract.RecordCo
 	}
 }
 
-func (l *DispatchLogic) reconcileRecordResults() error {
+func (l *DispatchLogic) reconcileRecordResults() (int, error) {
 	tasks, err := l.svcCtx.DB.RecordTask.Query().
 		Where(recordtask.StatusIn(recordtask.StatusRUNNING, recordtask.StatusCANCEL_REQUESTED)).
 		Limit(200).
 		All(l.ctx)
 	if err != nil {
-		return errors.Wrap(err, "query running record tasks for results")
+		return 0, errors.Wrap(err, "query running record tasks for results")
 	}
+	applied := 0
 	namespace := l.svcCtx.Config.K8sJobConf.WithDefaults().Namespace
 	for _, task := range tasks {
 		resultPath, errorPath := l.recordResultPaths(task)
 		var result jobcontract.RecordResult
 		if ok, err := jobcontract.ReadJSON(resultPath, &result); err != nil {
-			return err
+			return applied, err
 		} else if ok {
 			if err := l.applyRecordResult(result); err != nil {
-				return err
+				return applied, err
 			}
+			applied++
 			continue
 		}
 		var jobErr jobcontract.ErrorResult
 		if ok, err := jobcontract.ReadJSON(errorPath, &jobErr); err != nil {
-			return err
+			return applied, err
 		} else if ok {
 			if err := l.svcCtx.DB.RecordTask.UpdateOneID(task.ID).SetStatus(recordtask.StatusFAILED).SetErrorMessage(jobErr.ErrorMessage).SetCompletedAt(time.Now()).Exec(l.ctx); err != nil {
-				return errors.Wrap(err, "mark record failed")
+				return applied, errors.Wrap(err, "mark record failed")
 			}
+			applied++
 			continue
 		}
 		if l.svcCtx.K8s == nil || task.K8sJobName == nil || *task.K8sJobName == "" {
@@ -567,7 +612,7 @@ func (l *DispatchLogic) reconcileRecordResults() error {
 		}
 		status, err := l.svcCtx.K8s.JobStatus(l.ctx, namespace, *task.K8sJobName)
 		if err != nil {
-			return err
+			return applied, err
 		}
 		if status.State == kubejob.JobStateMissing && task.UpdatedAt.After(time.Now().Add(-2*time.Minute)) {
 			continue
@@ -578,12 +623,13 @@ func (l *DispatchLogic) reconcileRecordResults() error {
 		if status.State == kubejob.JobStateFailed || status.State == kubejob.JobStateSucceeded || status.State == kubejob.JobStateMissing {
 			msg := fmt.Sprintf("record job %s finished as %s without result.json or error.json", *task.K8sJobName, status.State)
 			if err := l.svcCtx.DB.RecordTask.UpdateOneID(task.ID).SetStatus(recordtask.StatusFAILED).SetErrorMessage(msg).SetCompletedAt(time.Now()).Exec(l.ctx); err != nil {
-				return errors.Wrap(err, "mark record missing result failed")
+				return applied, errors.Wrap(err, "mark record missing result failed")
 			}
+			applied++
 			l.Errorf("record job missing result task=%d job=%s state=%s", task.ID, *task.K8sJobName, status.State)
 		}
 	}
-	return nil
+	return applied, nil
 }
 
 func (l *DispatchLogic) recordResultPaths(task *ent.RecordTask) (string, string) {
@@ -624,19 +670,19 @@ func (l *DispatchLogic) applyRecordResult(result jobcontract.RecordResult) error
 	return db.Notify(l.ctx, l.svcCtx.Config.PostgresConf.DSN, db.RecordTaskChangedChannel, strconv.Itoa(result.RecordTaskID))
 }
 
-func (l *DispatchLogic) dispatchCompletedManifestJobs() error {
+func (l *DispatchLogic) dispatchCompletedManifestJobs() (int, error) {
 	if l.svcCtx.K8s == nil || strings.TrimSpace(l.svcCtx.Config.ManifestJobConf.Image) == "" {
-		return nil
+		return 0, nil
 	}
 	const maxManifestJobs = 2
 	conf := l.svcCtx.Config.ManifestJobConf.WithDefaults()
 	active, err := l.svcCtx.K8s.CountUnfinishedJobs(l.ctx, conf.Namespace, "rm-monitor/job=manifest-job")
 	if err != nil {
-		return err
+		return 0, err
 	}
 	available := maxManifestJobs - active
 	if available <= 0 {
-		return nil
+		return 0, nil
 	}
 	matches, err := l.svcCtx.DB.Match.Query().
 		Where(match.LatestStatusEQ("DONE"), match.ReportIsNil()).
@@ -645,7 +691,7 @@ func (l *DispatchLogic) dispatchCompletedManifestJobs() error {
 		Limit(50).
 		All(l.ctx)
 	if err != nil {
-		return errors.Wrap(err, "query completed matches for manifest")
+		return 0, errors.Wrap(err, "query completed matches for manifest")
 	}
 	created := 0
 	for _, m := range matches {
@@ -665,12 +711,12 @@ func (l *DispatchLogic) dispatchCompletedManifestJobs() error {
 			Memory: "128Mi",
 		})
 		if err := l.svcCtx.K8s.CreateJob(l.ctx, conf.Namespace, job); err != nil {
-			return errors.Wrap(err, "create manifest job")
+			return created, errors.Wrap(err, "create manifest job")
 		}
 		l.Infof("dispatched manifest job match=%s job=%s", m.ID, name)
 		created++
 	}
-	return nil
+	return created, nil
 }
 
 func completedMatch(m *ent.Match) bool {

@@ -134,12 +134,23 @@ jobs:
   ttlSecondsAfterFinished: 86400
   backoffLimit: 1
   recordsMountPath: /records
+  migrate:
+    backoffLimit: 1
+    ttlSecondsAfterFinished: 86400
   artifactCleaner:
     schedule: "0 0 * * *"
     successfulJobsHistoryLimit: 3
     failedJobsHistoryLimit: 3
 
 components:
+  migrateJob:
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi
   monitor:
     replicas: 1
     resources:

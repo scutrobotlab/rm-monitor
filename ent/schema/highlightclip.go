@@ -52,5 +52,6 @@ func (HighlightClip) Indexes() []ent.Index {
 		index.Edges("match_round").Fields("role", "algorithm_version", "highlight_index").Unique(),
 		index.Fields("status"),
 		index.Fields("status", "priority", "created_at"),
+		index.Fields("status", "updated_at"),
 	}
 }

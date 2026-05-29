@@ -88,6 +88,8 @@ jobs:
             dockerfile: highlight-publish-bilibili-job/Dockerfile
           - app: manifest-job
             dockerfile: manifest-job/Dockerfile
+          - app: migrate-job
+            dockerfile: migrate-job/Dockerfile
           - app: artifact-cleaner
             dockerfile: artifact-cleaner/Dockerfile
           - app: health-checker

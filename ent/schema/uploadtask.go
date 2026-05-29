@@ -46,5 +46,6 @@ func (UploadTask) Indexes() []ent.Index {
 		index.Edges("source_artifact").Unique(),
 		index.Fields("status"),
 		index.Fields("status", "priority", "created_at"),
+		index.Fields("status", "updated_at"),
 	}
 }

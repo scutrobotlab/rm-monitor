@@ -1,6 +1,5 @@
 PostgresConf:
   DSN: postgres://rm_monitor:rm_monitor@postgres:5432/rm_monitor?sslmode=disable
-  AutoMigrate: true
 OCRConf:
   Enabled: false
   Role: "主视角"

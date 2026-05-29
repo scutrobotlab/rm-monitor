@@ -43,7 +43,7 @@ func main() {
 	logx.Info("starting lark notifier")
 	events := make(chan notifyEvent, notifyBufferSize)
 	go listen(c.PostgresConf.DSN, events)
-	ticker := time.NewTicker(2 * time.Second)
+	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
 	lastCompensationScan := time.Now().Add(-compensationStartupLookback)
 	for {

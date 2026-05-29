@@ -92,12 +92,16 @@ func (l *DispatchLogic) createHighlightClips(conf common.HighlightConf) error {
 				q.WithMatch()
 			})
 		}).
+		WithHighlightClips(func(q *ent.HighlightClipQuery) {
+			q.Where(highlightclip.RoleEQ(conf.Role), highlightclip.AlgorithmVersionEQ(conf.AlgorithmVersion))
+		}).
 		Order(mediaartifact.ByRecordTaskField(recordtask.FieldPriority, sql.OrderDesc()), mediaartifact.ByCreatedAt(sql.OrderDesc())).
 		Limit(100).
 		All(l.ctx)
 	if err != nil {
 		return errors.Wrap(err, "query highlight source artifacts")
 	}
+	builders := make([]*ent.HighlightClipCreate, 0)
 	for _, artifact := range artifacts {
 		task := artifact.Edges.RecordTask
 		if task == nil || task.Edges.MatchRound == nil {
@@ -125,9 +129,18 @@ func (l *DispatchLogic) createHighlightClips(conf common.HighlightConf) error {
 			onlineStats, _ = highlight.LoadOnlineStats(p)
 		}
 		candidates := highlight.FindCandidates(danmuStats, onlineStats, conf)
+		existing := make(map[int]struct{}, len(artifact.Edges.HighlightClips))
+		for _, clip := range artifact.Edges.HighlightClips {
+			if clip.Role == conf.Role && clip.AlgorithmVersion == conf.AlgorithmVersion {
+				existing[clip.HighlightIndex] = struct{}{}
+			}
+		}
 		for _, c := range candidates {
+			if _, ok := existing[c.Index]; ok {
+				continue
+			}
 			outputDir := pathpkg.Join(roundDir, "highlights", fmt.Sprintf("Highlight-%02d", c.Index))
-			if err := l.svcCtx.DB.HighlightClip.Create().
+			builders = append(builders, l.svcCtx.DB.HighlightClip.Create().
 				SetMatchRoundID(round.ID).
 				SetSourceArtifactID(artifact.ID).
 				SetHighlightIndex(c.Index).
@@ -139,16 +152,17 @@ func (l *DispatchLogic) createHighlightClips(conf common.HighlightConf) error {
 				SetEndSeconds(c.End).
 				SetPeakSeconds(c.Peak).
 				SetOutputDir(outputDir).
-				SetScore(c.Score).
-				OnConflictColumns(highlightclip.MatchRoundColumn, highlightclip.FieldRole, highlightclip.FieldAlgorithmVersion, highlightclip.FieldHighlightIndex).
-				DoNothing().
-				Exec(l.ctx); err != nil {
-				if db.IsNoRows(err) {
-					continue
-				}
-				return errors.Wrap(err, "create highlight clip")
-			}
+				SetScore(c.Score))
 		}
+	}
+	if len(builders) == 0 {
+		return nil
+	}
+	if err := l.svcCtx.DB.HighlightClip.CreateBulk(builders...).
+		OnConflictColumns(highlightclip.MatchRoundColumn, highlightclip.FieldRole, highlightclip.FieldAlgorithmVersion, highlightclip.FieldHighlightIndex).
+		DoNothing().
+		Exec(l.ctx); err != nil && !db.IsNoRows(err) {
+		return errors.Wrap(err, "bulk create highlight clips")
 	}
 	return nil
 }
@@ -451,27 +465,32 @@ func (l *DispatchLogic) createPublishTasks() error {
 		return nil
 	}
 	clips, err := l.svcCtx.DB.HighlightClip.Query().
-		Where(highlightclip.StatusEQ(highlightclip.StatusSUCCEEDED)).
+		Where(
+			highlightclip.StatusEQ(highlightclip.StatusSUCCEEDED),
+			highlightclip.Not(highlightclip.HasPublishTasksWith(highlightpublishtask.PlatformEQ(highlightpublishtask.PlatformBilibili))),
+		).
 		Order(highlightclip.ByPriority(sql.OrderDesc()), highlightclip.ByCreatedAt()).
 		Limit(100).
 		All(l.ctx)
 	if err != nil {
 		return errors.Wrap(err, "query succeeded highlight clips for publish")
 	}
+	builders := make([]*ent.HighlightPublishTaskCreate, 0, len(clips))
 	for _, clip := range clips {
-		if err := l.svcCtx.DB.HighlightPublishTask.Create().
+		builders = append(builders, l.svcCtx.DB.HighlightPublishTask.Create().
 			SetHighlightClipID(clip.ID).
 			SetPlatform(highlightpublishtask.PlatformBilibili).
 			SetStatus(highlightpublishtask.StatusPENDING).
-			SetPriority(clip.Priority).
-			OnConflictColumns(highlightpublishtask.HighlightClipColumn, highlightpublishtask.FieldPlatform).
-			DoNothing().
-			Exec(l.ctx); err != nil {
-			if db.IsNoRows(err) {
-				continue
-			}
-			return errors.Wrap(err, "create highlight publish task")
-		}
+			SetPriority(clip.Priority))
+	}
+	if len(builders) == 0 {
+		return nil
+	}
+	if err := l.svcCtx.DB.HighlightPublishTask.CreateBulk(builders...).
+		OnConflictColumns(highlightpublishtask.HighlightClipColumn, highlightpublishtask.FieldPlatform).
+		DoNothing().
+		Exec(l.ctx); err != nil && !db.IsNoRows(err) {
+		return errors.Wrap(err, "bulk create highlight publish tasks")
 	}
 	return nil
 }

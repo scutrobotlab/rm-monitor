@@ -32,15 +32,22 @@ func main() {
 
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
+	source := "startup"
 	for {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-		if err := logic.NewDispatchLogic(ctx, svcCtx).Tick(); err != nil {
+		stats, err := logic.NewDispatchLogic(ctx, svcCtx).Tick(source)
+		if err != nil {
 			logx.Errorf("record dispatch tick failed: %v", err)
+		} else {
+			logx.Infof("record dispatch tick source=%s cancelled=%d created=%d recovered=%d dispatched=%d result_applied=%d manifest_created=%d",
+				stats.Source, stats.Cancelled, stats.Created, stats.Recovered, stats.Dispatched, stats.ResultApplied, stats.ManifestCreated)
 		}
 		cancel()
 		select {
 		case <-wake:
+			source = "notify"
 		case <-ticker.C:
+			source = "ticker"
 		}
 	}
 }

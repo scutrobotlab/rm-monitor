@@ -16,7 +16,6 @@ import (
 	"scutbot.cn/web/rm-monitor/ent/matchround"
 	"scutbot.cn/web/rm-monitor/ent/mediaartifact"
 	"scutbot.cn/web/rm-monitor/ent/recordtask"
-	"scutbot.cn/web/rm-monitor/ent/team"
 	"scutbot.cn/web/rm-monitor/ent/transcodetask"
 	"scutbot.cn/web/rm-monitor/ent/uploadtask"
 	"scutbot.cn/web/rm-monitor/monitor/internal/priority"
@@ -175,24 +174,7 @@ func (l *MatchScanLogic) upsertMatch(m scannedMatch) error {
 		return err
 	}
 	matchPriority := priority.ForSchools(l.svcCtx.Config.Priority, m.RedTeam.SchoolName, m.BlueTeam.SchoolName)
-	create := l.svcCtx.DB.Match.Create().
-		SetID(m.ID).
-		SetEvent(m.Event).
-		SetZone(m.Zone).
-		SetOrder(m.Order).
-		SetMatchType(m.MatchType).
-		SetTotalRounds(m.TotalRounds).
-		SetPriority(matchPriority).
-		SetResult(match.Result(m.Result)).
-		SetWinnerPlaceholderName(m.WinnerPlacehold).
-		SetLoserPlaceholderName(m.LoserPlacehold).
-		SetLatestStatus(latestStatus).
-		SetRedTeamID(m.RedTeam.ID).
-		SetBlueTeamID(m.BlueTeam.ID)
-	if m.MatchSlug != "" {
-		create.SetMatchSlug(m.MatchSlug)
-	}
-	if err := create.OnConflictColumns(match.FieldID).UpdateNewValues().Exec(l.ctx); err != nil {
+	if err := l.upsertMatchChangedOnly(m, latestStatus, matchPriority); err != nil {
 		return errors.Wrap(err, "upsert match")
 	}
 	if err := l.syncPendingTaskPriority(m.ID, matchPriority); err != nil {
@@ -218,14 +200,111 @@ func (l *MatchScanLogic) latestStatusForUpsert(m scannedMatch) (string, error) {
 }
 
 func (l *MatchScanLogic) upsertTeam(t scannedTeam) error {
-	return l.svcCtx.DB.Team.Create().
-		SetID(t.ID).
+	existing, err := l.svcCtx.DB.Team.Get(l.ctx, t.ID)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return l.svcCtx.DB.Team.Create().
+				SetID(t.ID).
+				SetName(t.Name).
+				SetSchoolName(t.SchoolName).
+				SetSchoolLogo(t.SchoolLogo).
+				Exec(l.ctx)
+		}
+		return err
+	}
+	if !teamNeedsUpdate(existing, t) {
+		return nil
+	}
+	return l.svcCtx.DB.Team.UpdateOneID(t.ID).
 		SetName(t.Name).
 		SetSchoolName(t.SchoolName).
 		SetSchoolLogo(t.SchoolLogo).
-		OnConflictColumns(team.FieldID).
-		UpdateNewValues().
 		Exec(l.ctx)
+}
+
+func (l *MatchScanLogic) upsertMatchChangedOnly(m scannedMatch, latestStatus string, matchPriority int) error {
+	existing, err := l.svcCtx.DB.Match.Query().
+		Where(match.ID(m.ID)).
+		WithRedTeam().
+		WithBlueTeam().
+		Only(l.ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			create := l.svcCtx.DB.Match.Create().
+				SetID(m.ID).
+				SetEvent(m.Event).
+				SetZone(m.Zone).
+				SetOrder(m.Order).
+				SetMatchType(m.MatchType).
+				SetTotalRounds(m.TotalRounds).
+				SetPriority(matchPriority).
+				SetResult(match.Result(m.Result)).
+				SetWinnerPlaceholderName(m.WinnerPlacehold).
+				SetLoserPlaceholderName(m.LoserPlacehold).
+				SetLatestStatus(latestStatus).
+				SetRedTeamID(m.RedTeam.ID).
+				SetBlueTeamID(m.BlueTeam.ID)
+			if m.MatchSlug != "" {
+				create.SetMatchSlug(m.MatchSlug)
+			}
+			return create.Exec(l.ctx)
+		}
+		return err
+	}
+	if !matchNeedsUpdate(existing, m, latestStatus, matchPriority) {
+		return nil
+	}
+	update := l.svcCtx.DB.Match.UpdateOneID(m.ID).
+		SetEvent(m.Event).
+		SetZone(m.Zone).
+		SetOrder(m.Order).
+		SetMatchType(m.MatchType).
+		SetTotalRounds(m.TotalRounds).
+		SetPriority(matchPriority).
+		SetResult(match.Result(m.Result)).
+		SetWinnerPlaceholderName(m.WinnerPlacehold).
+		SetLoserPlaceholderName(m.LoserPlacehold).
+		SetLatestStatus(latestStatus).
+		SetRedTeamID(m.RedTeam.ID).
+		SetBlueTeamID(m.BlueTeam.ID)
+	if m.MatchSlug != "" {
+		update.SetMatchSlug(m.MatchSlug)
+	}
+	return update.Exec(l.ctx)
+}
+
+func teamNeedsUpdate(existing *ent.Team, next scannedTeam) bool {
+	return existing.Name != next.Name ||
+		existing.SchoolName != next.SchoolName ||
+		existing.SchoolLogo != next.SchoolLogo
+}
+
+func matchNeedsUpdate(existing *ent.Match, next scannedMatch, latestStatus string, priorityValue int) bool {
+	redTeamID := ""
+	if existing.Edges.RedTeam != nil {
+		redTeamID = existing.Edges.RedTeam.ID
+	}
+	blueTeamID := ""
+	if existing.Edges.BlueTeam != nil {
+		blueTeamID = existing.Edges.BlueTeam.ID
+	}
+	return existing.Event != next.Event ||
+		existing.Zone != next.Zone ||
+		existing.Order != next.Order ||
+		existing.MatchType != next.MatchType ||
+		(next.MatchSlug != "" && !optionalStringValueEqual(existing.MatchSlug, next.MatchSlug)) ||
+		existing.TotalRounds != next.TotalRounds ||
+		existing.Priority != priorityValue ||
+		existing.Result != match.Result(next.Result) ||
+		!optionalStringValueEqual(existing.WinnerPlaceholderName, next.WinnerPlacehold) ||
+		!optionalStringValueEqual(existing.LoserPlaceholderName, next.LoserPlacehold) ||
+		existing.LatestStatus != latestStatus ||
+		redTeamID != next.RedTeam.ID ||
+		blueTeamID != next.BlueTeam.ID
+}
+
+func optionalStringValueEqual(existing *string, next string) bool {
+	return existing != nil && *existing == next
 }
 
 func (l *MatchScanLogic) reconcileRounds(prev processedSnapshot, cur scannedMatch) error {
@@ -259,6 +338,7 @@ func (l *MatchScanLogic) syncPendingTaskPriority(matchID string, priorityValue i
 	if _, err := l.svcCtx.DB.RecordTask.Update().
 		Where(
 			recordtask.StatusIn(recordtask.StatusPENDING, recordtask.StatusDISPATCHING),
+			recordtask.PriorityNEQ(priorityValue),
 			recordtask.HasMatchRoundWith(matchround.HasMatchWith(match.ID(matchID))),
 		).
 		SetPriority(priorityValue).
@@ -268,6 +348,7 @@ func (l *MatchScanLogic) syncPendingTaskPriority(matchID string, priorityValue i
 	if _, err := l.svcCtx.DB.UploadTask.Update().
 		Where(
 			uploadtask.StatusIn(uploadtask.StatusPENDING, uploadtask.StatusDISPATCHING),
+			uploadtask.PriorityNEQ(priorityValue),
 			uploadtask.HasRecordTaskWith(recordtask.HasMatchRoundWith(matchround.HasMatchWith(match.ID(matchID)))),
 		).
 		SetPriority(priorityValue).
@@ -277,6 +358,7 @@ func (l *MatchScanLogic) syncPendingTaskPriority(matchID string, priorityValue i
 	if _, err := l.svcCtx.DB.TranscodeTask.Update().
 		Where(
 			transcodetask.StatusIn(transcodetask.StatusPENDING, transcodetask.StatusDISPATCHING),
+			transcodetask.PriorityNEQ(priorityValue),
 			transcodetask.HasSourceArtifactWith(mediaartifact.HasRecordTaskWith(recordtask.HasMatchRoundWith(matchround.HasMatchWith(match.ID(matchID))))),
 		).
 		SetPriority(priorityValue).

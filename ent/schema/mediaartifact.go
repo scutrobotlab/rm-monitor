@@ -45,5 +45,7 @@ func (MediaArtifact) Indexes() []ent.Index {
 		index.Edges("record_task").Fields("kind").Unique(),
 		index.Fields("status"),
 		index.Fields("kind", "format", "codec"),
+		index.Fields("kind", "status", "created_at"),
+		index.Fields("kind", "status", "deletable_at"),
 	}
 }
