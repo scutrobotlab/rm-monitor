@@ -158,7 +158,7 @@ func TestRecognizeFilePostsWhisperMultipart(t *testing.T) {
 	}))
 	defer server.Close()
 
-	result, _, err := recognizeFile(context.Background(), server.URL+"/", "请使用简体中文输出。红方：A", wav)
+	result, _, err := recognizeFile(context.Background(), []string{server.URL + "/"}, 0, "请使用简体中文输出。红方：A", wav)
 	if err != nil {
 		t.Fatal(err)
 	}

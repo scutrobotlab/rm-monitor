@@ -52,7 +52,10 @@
       "properties": {
         "enabled": { "type": "boolean" },
         "role": { "type": "string" },
-        "whisperServerUrl": { "type": "string" }
+        "whisperServerUrls": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
       },
       "allOf": [
         {
@@ -61,10 +64,14 @@
             "required": ["enabled"]
           },
           "then": {
-            "required": ["role", "whisperServerUrl"],
+            "required": ["role", "whisperServerUrls"],
             "properties": {
               "role": { "minLength": 1 },
-              "whisperServerUrl": { "minLength": 1 }
+              "whisperServerUrls": {
+                "type": "array",
+                "minItems": 1,
+                "items": { "type": "string", "minLength": 1 }
+              }
             }
           }
         }
@@ -219,3 +226,4 @@
     }
   }
 }
+

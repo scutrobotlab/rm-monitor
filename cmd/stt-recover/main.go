@@ -33,10 +33,10 @@ import (
 const segmentSeconds = 60
 
 type toolConfig struct {
-	PostgresConf     common.PostgresConf
-	RedisConf        common.RedisConf
-	RecordConf       common.RecordConf
-	WhisperServerUrl string `json:",optional"`
+	PostgresConf      common.PostgresConf
+	RedisConf         common.RedisConf
+	RecordConf        common.RecordConf
+	WhisperServerUrls []string `json:",optional"`
 }
 
 type row struct {
@@ -116,8 +116,8 @@ func main() {
 		fatal(err)
 	}
 	c.RecordConf = c.RecordConf.WithDefaults()
-	if strings.TrimSpace(c.WhisperServerUrl) == "" {
-		fatal(errors.New("WhisperServerUrl is required"))
+	if len(c.WhisperServerUrls) == 0 {
+		fatal(errors.New("WhisperServerUrls is required"))
 	}
 
 	ctx := context.Background()
@@ -333,7 +333,7 @@ func recoverRound(ctx context.Context, c toolConfig, r row) (recoverMetric, erro
 	var metric recoverMetric
 	prompt := sttPrompt(c.RecordConf, r)
 	for i, segment := range segments {
-		seconds, duration, err := recognizeSegment(ctx, c.WhisperServerUrl, prompt, segment, sttPath, i)
+		seconds, duration, err := recognizeSegment(ctx, c.WhisperServerUrls, i, prompt, segment, sttPath)
 		metric.Segments++
 		metric.APISeconds += seconds
 		metric.AudioSeconds += duration
@@ -345,9 +345,9 @@ func recoverRound(ctx context.Context, c toolConfig, r row) (recoverMetric, erro
 	return metric, os.RemoveAll(audioDir)
 }
 
-func recognizeSegment(ctx context.Context, serverURL, prompt, wavPath, sttPath string, index int) (float64, float64, error) {
+func recognizeSegment(ctx context.Context, serverURLs []string, index int, prompt, wavPath, sttPath string) (float64, float64, error) {
 	start := float64(index * segmentSeconds)
-	result, seconds, err := recognizeFile(ctx, serverURL, prompt, wavPath)
+	result, seconds, err := recognizeFile(ctx, serverURLs, index, prompt, wavPath)
 	duration := result.Duration
 	if duration <= 0 {
 		duration = segmentSeconds
@@ -386,7 +386,26 @@ func recognizeSegment(ctx context.Context, serverURL, prompt, wavPath, sttPath s
 	return seconds, duration, appendLines(sttPath, lines)
 }
 
-func recognizeFile(ctx context.Context, serverURL, prompt, wavPath string) (whisperResult, float64, error) {
+func recognizeFile(ctx context.Context, serverURLs []string, segmentIndex int, prompt, wavPath string) (whisperResult, float64, error) {
+	if len(serverURLs) == 0 {
+		return whisperResult{}, 0, errors.New("WhisperServerURLs is empty")
+	}
+	serverURLs = dedupeWhisperServerURLs(serverURLs)
+	for offset := 0; offset < len(serverURLs); offset++ {
+		serverURL := serverURLs[(segmentIndex+offset)%len(serverURLs)]
+		result, seconds, err := recognizeFileOnce(ctx, serverURL, prompt, wavPath)
+		if err == nil {
+			return result, seconds, nil
+		}
+		if offset < len(serverURLs)-1 {
+			continue
+		}
+		return whisperResult{}, 0, errors.Wrapf(err, "all whisper servers failed for segment %d", segmentIndex)
+	}
+	return whisperResult{}, 0, errors.New("no whisper server candidates")
+}
+
+func recognizeFileOnce(ctx context.Context, serverURL, prompt, wavPath string) (whisperResult, float64, error) {
 	var out whisperResult
 	client := resty.New().
 		SetRetryCount(3).
@@ -421,6 +440,20 @@ func recognizeFile(ctx context.Context, serverURL, prompt, wavPath string) (whis
 	return out, elapsed, nil
 }
 
+func dedupeWhisperServerURLs(serverURLs []string) []string {
+	seen := make(map[string]struct{}, len(serverURLs))
+	uniq := make([]string, 0, len(serverURLs))
+	for _, url := range serverURLs {
+		url = strings.TrimSpace(url)
+		if url == "" || seen[url] {
+			continue
+		}
+		seen[url] = struct{}{}
+		uniq = append(uniq, url)
+	}
+	return uniq
+}
+
 func runBenchmark(ctx context.Context, c toolConfig, source string) error {
 	source = resolveRecordPath(c.RecordConf.BaseDir, source)
 	tmp, err := os.MkdirTemp("", "rm-monitor-stt-benchmark-*")
@@ -438,7 +471,7 @@ func runBenchmark(ctx context.Context, c toolConfig, source string) error {
 	if err := exec.CommandContext(ctx, "ffmpeg", args...).Run(); err != nil {
 		return errors.Wrap(err, "extract benchmark wav")
 	}
-	result, seconds, err := recognizeFile(ctx, c.WhisperServerUrl, stttext.GenericPrompt, wav)
+	result, seconds, err := recognizeFile(ctx, c.WhisperServerUrls, 0, stttext.GenericPrompt, wav)
 	if err != nil {
 		return err
 	}

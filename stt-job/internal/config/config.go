@@ -3,6 +3,6 @@ package config
 import common "scutbot.cn/web/rm-monitor/pkg/config"
 
 type Config struct {
-	RecordConf       common.RecordConf
-	WhisperServerUrl string `json:",optional"`
+	RecordConf        common.RecordConf
+	WhisperServerUrls []string `json:",optional"`
 }

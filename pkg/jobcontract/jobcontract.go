@@ -94,18 +94,18 @@ type UploadResult struct {
 }
 
 type STTContext struct {
-	Schema           string `json:"schema"`
-	MatchRoundID     int    `json:"match_round_id"`
-	MatchID          string `json:"match_id"`
-	RoundNo          int    `json:"round_no"`
-	Role             string `json:"role"`
-	SourceURL        string `json:"source_url"`
-	RoundDir         string `json:"round_dir"`
-	AudioDir         string `json:"audio_dir"`
-	STTPath          string `json:"stt_path"`
-	SubtitleName     string `json:"subtitle_name"`
-	Prompt           string `json:"prompt"`
-	WhisperServerURL string `json:"whisper_server_url"`
+	Schema            string   `json:"schema"`
+	MatchRoundID      int      `json:"match_round_id"`
+	MatchID           string   `json:"match_id"`
+	RoundNo           int      `json:"round_no"`
+	Role              string   `json:"role"`
+	SourceURL         string   `json:"source_url"`
+	RoundDir          string   `json:"round_dir"`
+	AudioDir          string   `json:"audio_dir"`
+	STTPath           string   `json:"stt_path"`
+	SubtitleName      string   `json:"subtitle_name"`
+	Prompt            string   `json:"prompt"`
+	WhisperServerURLs []string `json:"whisper_server_urls"`
 }
 
 type STTResult struct {

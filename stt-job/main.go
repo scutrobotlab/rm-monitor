@@ -59,8 +59,13 @@ func main() {
 			logx.Error(err)
 			os.Exit(1)
 		}
-		if sttCtx.WhisperServerURL == "" {
-			sttCtx.WhisperServerURL = c.WhisperServerUrl
+		sttCtx.WhisperServerURLs = resolveWhisperServerURLs(
+			sttCtx.WhisperServerURLs,
+			c.WhisperServerUrls,
+		)
+		if len(sttCtx.WhisperServerURLs) == 0 {
+			logx.Error(errors.New("WhisperServerURLs is empty"))
+			os.Exit(1)
 		}
 		jobDir := sttJobDir(sttCtx)
 		if err := jobcontract.WriteContext(jobDir, sttCtx); err != nil {
@@ -182,9 +187,9 @@ func runAudioRecorder(ctx context.Context, sttCtx jobcontract.STTContext) error 
 
 func runRecognizer(ctx context.Context, sttCtx jobcontract.STTContext) error {
 	info := roundInfoFromContext(sttCtx)
-	serverURL := strings.TrimSpace(sttCtx.WhisperServerURL)
-	if serverURL == "" {
-		return errors.New("WhisperServerUrl is empty")
+	serverURLs := dedupeWhisperServerURLs(sttCtx.WhisperServerURLs)
+	if len(serverURLs) == 0 {
+		return errors.New("WhisperServerURLs is empty")
 	}
 	if err := waitForDir(ctx, info.AudioDir); err != nil {
 		return err
@@ -205,7 +210,7 @@ func runRecognizer(ctx context.Context, sttCtx jobcontract.STTContext) error {
 		current := segmentPath(info.AudioDir, index)
 		if fileExists(current) {
 			if segmentComplete(info.AudioDir, index) {
-				if err := recognizeSegment(ctx, serverURL, info.Prompt, current, info.STTPath, index); err != nil {
+				if err := recognizeSegment(ctx, serverURLs, info.Prompt, current, info.STTPath, index); err != nil {
 					return err
 				}
 				index++
@@ -362,7 +367,7 @@ type sttLine struct {
 	ErrorMessage string  `json:"error_message,omitempty"`
 }
 
-func recognizeSegment(ctx context.Context, serverURL, prompt, wavPath, sttPath string, index int) error {
+func recognizeSegment(ctx context.Context, serverURLs []string, prompt, wavPath, sttPath string, index int) error {
 	start := float64(index * segmentSeconds)
 	end := start + float64(segmentSeconds)
 	stat, err := os.Stat(wavPath)
@@ -372,7 +377,7 @@ func recognizeSegment(ctx context.Context, serverURL, prompt, wavPath, sttPath s
 	if stat.Size() == 0 {
 		return appendLine(sttPath, sttLine{Index: index, Start: start, End: start, Status: "EMPTY"})
 	}
-	result, seconds, err := recognizeFile(ctx, serverURL, prompt, wavPath)
+	result, seconds, err := recognizeFile(ctx, serverURLs, index, prompt, wavPath)
 	if err == nil {
 		return appendRecognizedLine(sttPath, index, 0, start, result, seconds)
 	}
@@ -476,7 +481,27 @@ type whisperSegment struct {
 	Text  string  `json:"text"`
 }
 
-func recognizeFile(ctx context.Context, serverURL, prompt, wavPath string) (whisperResult, float64, error) {
+func recognizeFile(ctx context.Context, serverURLs []string, segmentIndex int, prompt, wavPath string) (whisperResult, float64, error) {
+	if len(serverURLs) == 0 {
+		return whisperResult{}, 0, errors.New("empty WhisperServerURLs")
+	}
+	serverURLs = dedupeWhisperServerURLs(serverURLs)
+	for offset := 0; offset < len(serverURLs); offset++ {
+		serverURL := serverURLs[(segmentIndex+offset)%len(serverURLs)]
+		out, seconds, err := recognizeFileOnce(ctx, serverURL, prompt, wavPath)
+		if err == nil {
+			return out, seconds, nil
+		}
+		if offset < len(serverURLs)-1 {
+			logx.Infof("whisper server %s failed for segment %d, trying next: %v", serverURL, segmentIndex, err)
+			continue
+		}
+		return whisperResult{}, 0, errors.Wrapf(err, "all whisper servers failed for segment %d", segmentIndex)
+	}
+	return whisperResult{}, 0, errors.New("no whisper server candidates")
+}
+
+func recognizeFileOnce(ctx context.Context, serverURL, prompt, wavPath string) (whisperResult, float64, error) {
 	var out whisperResult
 	client := resty.New().
 		SetRetryCount(3).
@@ -509,4 +534,31 @@ func recognizeFile(ctx context.Context, serverURL, prompt, wavPath string) (whis
 		return whisperResult{}, seconds, errors.Errorf("whisper server http %d: %s", resp.StatusCode(), resp.String())
 	}
 	return out, seconds, nil
+}
+
+func resolveWhisperServerURLs(urlLists ...[]string) []string {
+	var urls []string
+	for _, list := range urlLists {
+		urls = append(urls, list...)
+	}
+	return dedupeWhisperServerURLs(urls)
+}
+
+func dedupeWhisperServerURLs(urls ...[]string) []string {
+	seen := make(map[string]struct{}, 8)
+	out := make([]string, 0, 8)
+	for _, list := range urls {
+		for _, url := range list {
+			trimmed := strings.TrimSpace(url)
+			if trimmed == "" {
+				continue
+			}
+			if _, ok := seen[trimmed]; ok {
+				continue
+			}
+			seen[trimmed] = struct{}{}
+			out = append(out, trimmed)
+		}
+	}
+	return out
 }

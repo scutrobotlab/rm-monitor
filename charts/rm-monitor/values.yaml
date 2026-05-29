@@ -54,7 +54,7 @@ llm:
 stt:
   enabled: false
   role: ""
-  whisperServerUrl: ""
+  whisperServerUrls: []
 
 danmu:
   enabled: false

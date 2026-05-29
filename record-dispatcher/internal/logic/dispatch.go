@@ -85,9 +85,11 @@ func (l *DispatchLogic) cancelEndedRounds() error {
 			if err := l.svcCtx.DB.RecordTask.UpdateOneID(task.ID).SetStatus(recordtask.StatusCANCEL_REQUESTED).Exec(l.ctx); err != nil {
 				return errors.Wrap(err, "mark record stopping")
 			}
+			l.Infof("requested stop record job task=%d round=%d job=%s", task.ID, task.Edges.MatchRound.ID, name)
 			if l.svcCtx.K8s != nil && task.Edges.MatchRound != nil {
 				_ = l.svcCtx.K8s.DeleteJob(l.ctx, l.svcCtx.Config.STTJobConf.WithDefaults().Namespace, jobName("stt", task.Edges.MatchRound.ID))
 				_ = l.svcCtx.K8s.DeleteJob(l.ctx, l.svcCtx.Config.DanmuJobConf.WithDefaults().Namespace, jobName("danmu", task.Edges.MatchRound.ID))
+				l.Infof("requested stop sidecar jobs round=%d stt_job=%s danmu_job=%s", task.Edges.MatchRound.ID, jobName("stt", task.Edges.MatchRound.ID), jobName("danmu", task.Edges.MatchRound.ID))
 			}
 		}
 	}
@@ -119,11 +121,13 @@ func (l *DispatchLogic) recoverDispatchingTasks() error {
 			if err := l.svcCtx.DB.RecordTask.UpdateOneID(task.ID).SetStatus(recordtask.StatusRUNNING).SetStartedAt(time.Now()).Exec(l.ctx); err != nil {
 				return errors.Wrap(err, "recover running record task")
 			}
+			l.Infof("recovered dispatching record task as running task=%d job=%s", task.ID, name)
 			continue
 		}
 		if err := l.svcCtx.DB.RecordTask.UpdateOneID(task.ID).SetStatus(recordtask.StatusPENDING).Exec(l.ctx); err != nil {
 			return errors.Wrap(err, "requeue stale record task")
 		}
+		l.Infof("requeued stale dispatching record task task=%d job=%s", task.ID, name)
 	}
 	return nil
 }
@@ -201,6 +205,13 @@ func (l *DispatchLogic) dispatchDanmuJob(r *ent.MatchRound, chatRoomID string) e
 		return errors.Wrap(err, "encode danmu job context")
 	}
 	name := jobName("danmu", r.ID)
+	exists, err := l.svcCtx.K8s.JobExists(l.ctx, jobConf.Namespace, name)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return nil
+	}
 	job := kubejob.Build(l.svcCtx.Config.DanmuJobConf, kubejob.JobSpec{
 		Name:                    name,
 		App:                     "danmu-job",
@@ -212,7 +223,11 @@ func (l *DispatchLogic) dispatchDanmuJob(r *ent.MatchRound, chatRoomID string) e
 		PriorityClassName:       kubejob.PriorityClassRecordCritical,
 		TerminationGraceSeconds: 60,
 	})
-	return l.svcCtx.K8s.CreateJob(l.ctx, jobConf.Namespace, job)
+	if err := l.svcCtx.K8s.CreateJob(l.ctx, jobConf.Namespace, job); err != nil {
+		return err
+	}
+	l.Infof("dispatched danmu job round=%d job=%s chat_room_id=%s", r.ID, name, chatRoomID)
+	return nil
 }
 
 func (l *DispatchLogic) dispatchSTTJob(conf common.RecordConf, r *ent.MatchRound, urls map[string]string) error {
@@ -236,6 +251,13 @@ func (l *DispatchLogic) dispatchSTTJob(conf common.RecordConf, r *ent.MatchRound
 	}
 	jobConf := l.svcCtx.Config.STTJobConf.WithDefaults()
 	name := jobName("stt", r.ID)
+	exists, err := l.svcCtx.K8s.JobExists(l.ctx, jobConf.Namespace, name)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return nil
+	}
 	job := kubejob.Build(l.svcCtx.Config.STTJobConf, kubejob.JobSpec{
 		Name:          name,
 		App:           "stt-job",
@@ -258,7 +280,11 @@ func (l *DispatchLogic) dispatchSTTJob(conf common.RecordConf, r *ent.MatchRound
 		PriorityClassName:       kubejob.PriorityClassRecordCritical,
 		TerminationGraceSeconds: 60,
 	})
-	return l.svcCtx.K8s.CreateJob(l.ctx, jobConf.Namespace, job)
+	if err := l.svcCtx.K8s.CreateJob(l.ctx, jobConf.Namespace, job); err != nil {
+		return err
+	}
+	l.Infof("dispatched stt job round=%d job=%s role=%s", r.ID, name, conf.STTRole)
+	return nil
 }
 
 func (l *DispatchLogic) danmuContext(r *ent.MatchRound, chatRoomID string) (jobcontract.DanmuContext, error) {
@@ -293,18 +319,22 @@ func (l *DispatchLogic) sttContext(conf common.RecordConf, r *ent.MatchRound, so
 	if err != nil {
 		return jobcontract.STTContext{}, err
 	}
+	whisperServerURLs := resolveWhisperServerURLs(l.svcCtx.Config.WhisperServerUrls)
+	if len(whisperServerURLs) == 0 {
+		return jobcontract.STTContext{}, errors.New("WhisperServerUrls is empty")
+	}
 	return jobcontract.STTContext{
-		Schema:           "rm-monitor/stt-context/v1",
-		MatchRoundID:     r.ID,
-		MatchID:          m.ID,
-		RoundNo:          r.RoundNo,
-		Role:             conf.STTRole,
-		SourceURL:        sourceURL,
-		RoundDir:         roundDir,
-		AudioDir:         filepath.Join(roundDir, "audio"),
-		STTPath:          filepath.Join(roundDir, "stt.jsonl"),
-		SubtitleName:     fmt.Sprintf("%s.srt", conf.STTRole),
-		WhisperServerURL: l.svcCtx.Config.WhisperServerUrl,
+		Schema:            "rm-monitor/stt-context/v1",
+		MatchRoundID:      r.ID,
+		MatchID:           m.ID,
+		RoundNo:           r.RoundNo,
+		Role:              conf.STTRole,
+		SourceURL:         sourceURL,
+		RoundDir:          roundDir,
+		AudioDir:          filepath.Join(roundDir, "audio"),
+		STTPath:           filepath.Join(roundDir, "stt.jsonl"),
+		SubtitleName:      fmt.Sprintf("%s.srt", conf.STTRole),
+		WhisperServerURLs: whisperServerURLs,
 		Prompt: stttext.BuildPrompt(stttext.PromptData{
 			Event:      m.Event,
 			Zone:       m.Zone,
@@ -319,6 +349,31 @@ func (l *DispatchLogic) sttContext(conf common.RecordConf, r *ent.MatchRound, so
 			BlueName:   blue.Name,
 		}),
 	}, nil
+}
+
+func resolveWhisperServerURLs(urlLists ...[]string) []string {
+	var urls []string
+	for _, list := range urlLists {
+		urls = append(urls, list...)
+	}
+	return dedupeWhisperServerURLs(urls)
+}
+
+func dedupeWhisperServerURLs(urls []string) []string {
+	seen := make(map[string]struct{}, len(urls))
+	out := make([]string, 0, len(urls))
+	for _, url := range urls {
+		url = strings.TrimSpace(url)
+		if url == "" {
+			continue
+		}
+		if _, ok := seen[url]; ok {
+			continue
+		}
+		seen[url] = struct{}{}
+		out = append(out, url)
+	}
+	return out
 }
 
 func (l *DispatchLogic) roundDir(conf common.RecordConf, r *ent.MatchRound, role string) (string, error) {
@@ -450,6 +505,11 @@ func (l *DispatchLogic) dispatchPendingTasks() error {
 		if err := l.svcCtx.DB.RecordTask.UpdateOneID(task.ID).SetStatus(recordtask.StatusRUNNING).SetStartedAt(time.Now()).Exec(l.ctx); err != nil {
 			return errors.Wrap(err, "mark record running")
 		}
+		roundID := 0
+		if task.Edges.MatchRound != nil {
+			roundID = task.Edges.MatchRound.ID
+		}
+		l.Infof("dispatched record job task=%d round=%d role=%s job=%s output=%s", task.ID, roundID, task.Role, jobName, task.OutputPath)
 		_ = db.Notify(l.ctx, l.svcCtx.Config.PostgresConf.DSN, db.RecordTaskChangedChannel, strconv.Itoa(task.ID))
 	}
 	return nil
@@ -520,6 +580,7 @@ func (l *DispatchLogic) reconcileRecordResults() error {
 			if err := l.svcCtx.DB.RecordTask.UpdateOneID(task.ID).SetStatus(recordtask.StatusFAILED).SetErrorMessage(msg).SetCompletedAt(time.Now()).Exec(l.ctx); err != nil {
 				return errors.Wrap(err, "mark record missing result failed")
 			}
+			l.Errorf("record job missing result task=%d job=%s state=%s", task.ID, *task.K8sJobName, status.State)
 		}
 	}
 	return nil
@@ -559,6 +620,7 @@ func (l *DispatchLogic) applyRecordResult(result jobcontract.RecordResult) error
 		Exec(l.ctx); err != nil {
 		return errors.Wrap(err, "upsert source artifact")
 	}
+	l.Infof("applied record result task=%d output=%s size=%d checksum=%s", result.RecordTaskID, result.OutputPath, result.FileSize, result.Checksum)
 	return db.Notify(l.ctx, l.svcCtx.Config.PostgresConf.DSN, db.RecordTaskChangedChannel, strconv.Itoa(result.RecordTaskID))
 }
 
@@ -605,6 +667,7 @@ func (l *DispatchLogic) dispatchCompletedManifestJobs() error {
 		if err := l.svcCtx.K8s.CreateJob(l.ctx, conf.Namespace, job); err != nil {
 			return errors.Wrap(err, "create manifest job")
 		}
+		l.Infof("dispatched manifest job match=%s job=%s", m.ID, name)
 		created++
 	}
 	return nil

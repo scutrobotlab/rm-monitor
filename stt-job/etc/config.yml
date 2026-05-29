@@ -1,4 +1,6 @@
-WhisperServerUrl: http://172.30.162.40:48088
+WhisperServerUrls:
+  - http://172.30.162.40:48088
+  - http://172.30.162.41:48088
 RecordConf:
   Res: middle
   BaseDir: /records
