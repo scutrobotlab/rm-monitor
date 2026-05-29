@@ -445,7 +445,10 @@ func dedupeWhisperServerURLs(serverURLs []string) []string {
 	uniq := make([]string, 0, len(serverURLs))
 	for _, url := range serverURLs {
 		url = strings.TrimSpace(url)
-		if url == "" || seen[url] {
+		if url == "" {
+			continue
+		}
+		if _, ok := seen[url]; ok {
 			continue
 		}
 		seen[url] = struct{}{}
