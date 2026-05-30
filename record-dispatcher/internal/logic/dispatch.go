@@ -733,6 +733,13 @@ func (l *DispatchLogic) dispatchCompletedManifestJobs() (int, error) {
 			continue
 		}
 		name := manifestJobName(m.ID)
+		exists, err := l.svcCtx.K8s.JobExists(l.ctx, conf.Namespace, name)
+		if err != nil {
+			return created, err
+		}
+		if exists {
+			continue
+		}
 		job := kubejob.Build(l.svcCtx.Config.ManifestJobConf, kubejob.JobSpec{
 			Name:   name,
 			App:    "manifest-job",
