@@ -81,12 +81,15 @@ func listen(dsn string, events chan<- notifyEvent) {
 			time.Sleep(5 * time.Second)
 			continue
 		}
+		logx.Info("lark notifier listener connected")
 		for {
 			channel, payload, err := l.Wait(context.Background())
 			if err != nil {
 				_ = l.Close(context.Background())
+				logx.Errorf("lark notifier listener disconnected: %v", err)
 				break
 			}
+			logx.Infof("lark notifier event received channel=%s payload=%s", channel, payload)
 			select {
 			case events <- notifyEvent{Channel: channel, Payload: payload}:
 			default:

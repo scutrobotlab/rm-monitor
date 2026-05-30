@@ -235,31 +235,47 @@ func (l *NotifyLogic) ensureStoredCardIDs(m *ent.Match, content *utils.MatchCard
 
 func (l *NotifyLogic) patchChangedCardsSince(since time.Time) error {
 	seen := map[string]struct{}{}
-	rounds, err := l.svcCtx.DB.MatchRound.Query().
-		Where(matchround.UpdatedAtGTE(since)).
-		WithMatch().
-		Limit(100).
-		All(l.ctx)
-	if err != nil {
-		return errors.Wrap(err, "query recently changed rounds")
-	}
-	for _, r := range rounds {
-		m := r.Edges.Match
-		if m == nil {
-			continue
+	const pageSize = 100
+	for offset := 0; ; offset += pageSize {
+		rounds, err := l.svcCtx.DB.MatchRound.Query().
+			Where(matchround.UpdatedAtGTE(since)).
+			Order(matchround.ByUpdatedAt(), matchround.ByID()).
+			WithMatch().
+			Limit(pageSize).
+			Offset(offset).
+			All(l.ctx)
+		if err != nil {
+			return errors.Wrap(err, "query recently changed rounds")
 		}
-		seen[m.ID] = struct{}{}
+		for _, r := range rounds {
+			m := r.Edges.Match
+			if m == nil {
+				continue
+			}
+			seen[m.ID] = struct{}{}
+		}
+		if len(rounds) < pageSize {
+			break
+		}
 	}
-	matches, err := l.svcCtx.DB.Match.Query().
-		Where(match.UpdatedAtGTE(since)).
-		Limit(100).
-		All(l.ctx)
-	if err != nil {
-		return errors.Wrap(err, "query recently changed matches")
+	for offset := 0; ; offset += pageSize {
+		matches, err := l.svcCtx.DB.Match.Query().
+			Where(match.UpdatedAtGTE(since)).
+			Order(match.ByUpdatedAt(), match.ByID()).
+			Limit(pageSize).
+			Offset(offset).
+			All(l.ctx)
+		if err != nil {
+			return errors.Wrap(err, "query recently changed matches")
+		}
+		for _, m := range matches {
+			seen[m.ID] = struct{}{}
+		}
+		if len(matches) < pageSize {
+			break
+		}
 	}
-	for _, m := range matches {
-		seen[m.ID] = struct{}{}
-	}
+	l.Infof("lark compensation scan since=%s matches=%d", since.Format(time.RFC3339Nano), len(seen))
 	for id := range seen {
 		if l.ctx.Err() != nil {
 			return nil
@@ -313,30 +329,48 @@ func (l *NotifyLogic) patchMatchCards(m *ent.Match) error {
 		return err
 	}
 	contentMap := utils.ToMap(content)
-	sequence := cardDataUpdatedAt(m).Unix()
+	dataUpdatedAt := cardDataUpdatedAt(m)
+	sequence := dataUpdatedAt.Unix()
+	attempted := 0
+	updated := 0
+	skipped := 0
+	failed := 0
 	for _, card := range m.Edges.LarkMessages {
 		if !cardIDReady(card) {
+			skipped++
+			l.Infof("skip lark card update match=%s message=%s reason=card_not_ready", m.ID, card.MessageID)
 			continue
 		}
-		if reflect.DeepEqual(card.CardPayload, contentMap) {
+		if reflect.DeepEqual(card.CardPayload, contentMap) && !dataUpdatedAt.After(card.UpdatedAt) {
+			skipped++
+			l.Infof("skip lark card update match=%s message=%s card=%s reason=payload_unchanged data_updated_at=%s lark_updated_at=%s", m.ID, card.MessageID, *card.CardID, dataUpdatedAt.Format(time.RFC3339Nano), card.UpdatedAt.Format(time.RFC3339Nano))
 			continue
 		}
+		attempted++
+		l.Infof("attempt lark card update match=%s message=%s card=%s sequence=%d data_updated_at=%s lark_updated_at=%s forced=%t", m.ID, card.MessageID, *card.CardID, sequence, dataUpdatedAt.Format(time.RFC3339Nano), card.UpdatedAt.Format(time.RFC3339Nano), dataUpdatedAt.After(card.UpdatedAt))
 		payload, err := utils.UpdateCardEntity(l.ctx, l.svcCtx.LarkClient, l.retryLark, *card.CardID, utils.MatchCardUpdateUUID(m.ID, *card.CardID, sequence), sequence, content)
 		if err != nil {
 			if utils.IsCardUpdateAlreadyApplied(err) {
 				if err := l.svcCtx.DB.LarkMessage.UpdateOneID(card.ID).SetCardPayload(contentMap).Exec(l.ctx); err != nil {
 					l.Error(errors.Wrap(err, "update lark card payload after idempotent card update"))
 				}
+				updated++
+				l.Infof("lark card update already applied match=%s message=%s card=%s", m.ID, card.MessageID, *card.CardID)
 				continue
 			}
+			failed++
 			l.Error(errors.Wrap(err, "update lark card entity"))
 			continue
 		}
 		if err := l.svcCtx.DB.LarkMessage.UpdateOneID(card.ID).SetCardPayload(payload).Exec(l.ctx); err != nil {
+			failed++
 			l.Error(errors.Wrap(err, "update lark card payload"))
 			continue
 		}
+		updated++
+		l.Infof("updated lark card match=%s message=%s card=%s", m.ID, card.MessageID, *card.CardID)
 	}
+	l.Infof("lark card patch finished match=%s attempted=%d updated=%d skipped=%d failed=%d", m.ID, attempted, updated, skipped, failed)
 	return nil
 }
 
