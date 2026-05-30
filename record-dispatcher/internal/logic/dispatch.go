@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"os"
 	pathpkg "path"
 	"path/filepath"
 	"strconv"
@@ -80,6 +81,9 @@ func (l *DispatchLogic) Tick(source string) (TickStats, error) {
 		return stats, err
 	}
 	stats.Dispatched = dispatched
+	if _, err := l.dispatchCompletedSTTJobs(); err != nil {
+		return stats, err
+	}
 	manifestCreated, err := l.dispatchCompletedManifestJobs()
 	if err != nil {
 		return stats, err
@@ -115,9 +119,8 @@ func (l *DispatchLogic) cancelEndedRounds() (int, error) {
 			cancelled++
 			l.Infof("requested stop record job task=%d round=%d job=%s", task.ID, task.Edges.MatchRound.ID, name)
 			if l.svcCtx.K8s != nil && task.Edges.MatchRound != nil {
-				_ = l.svcCtx.K8s.DeleteJob(l.ctx, l.svcCtx.Config.STTJobConf.WithDefaults().Namespace, jobName("stt", task.Edges.MatchRound.ID))
 				_ = l.svcCtx.K8s.DeleteJob(l.ctx, l.svcCtx.Config.DanmuJobConf.WithDefaults().Namespace, jobName("danmu", task.Edges.MatchRound.ID))
-				l.Infof("requested stop sidecar jobs round=%d stt_job=%s danmu_job=%s", task.Edges.MatchRound.ID, jobName("stt", task.Edges.MatchRound.ID), jobName("danmu", task.Edges.MatchRound.ID))
+				l.Infof("requested stop sidecar jobs round=%d danmu_job=%s", task.Edges.MatchRound.ID, jobName("danmu", task.Edges.MatchRound.ID))
 			}
 		}
 	}
@@ -188,9 +191,6 @@ func (l *DispatchLogic) createTasksForStartedRounds() (int, error) {
 		urls := liveCtx.URLs
 		if err := l.dispatchDanmuJob(r, liveCtx.ChatRoomID); err != nil {
 			l.Errorf("dispatch danmu job for round %d: %v", r.ID, err)
-		}
-		if err := l.dispatchSTTJob(conf, r, urls); err != nil {
-			l.Errorf("dispatch stt job for round %d: %v", r.ID, err)
 		}
 		urls = filterBlacklistedRoles(urls, conf.RoleBlackList)
 		existingRoles := make(map[string]struct{}, len(r.Edges.RecordTasks))
@@ -270,63 +270,6 @@ func (l *DispatchLogic) dispatchDanmuJob(r *ent.MatchRound, chatRoomID string) e
 	return nil
 }
 
-func (l *DispatchLogic) dispatchSTTJob(conf common.RecordConf, r *ent.MatchRound, urls map[string]string) error {
-	if l.svcCtx.K8s == nil || strings.TrimSpace(conf.STTRole) == "" || strings.TrimSpace(l.svcCtx.Config.STTJobConf.Image) == "" {
-		return nil
-	}
-	sourceURL, ok := urls[conf.STTRole]
-	if !ok || strings.TrimSpace(sourceURL) == "" {
-		return nil
-	}
-	if r.Edges.Match == nil {
-		return errors.New("stt round has no match edge")
-	}
-	jobCtx, err := l.sttContext(conf, r, sourceURL)
-	if err != nil {
-		return err
-	}
-	rawCtx, err := json.Marshal(jobCtx)
-	if err != nil {
-		return errors.Wrap(err, "encode stt job context")
-	}
-	jobConf := l.svcCtx.Config.STTJobConf.WithDefaults()
-	name := jobName("stt", r.ID)
-	exists, err := l.svcCtx.K8s.JobExists(l.ctx, jobConf.Namespace, name)
-	if err != nil {
-		return err
-	}
-	if exists {
-		return nil
-	}
-	job := kubejob.Build(l.svcCtx.Config.STTJobConf, kubejob.JobSpec{
-		Name:          name,
-		App:           "stt-job",
-		ContainerName: "audio-recorder",
-		Image:         jobConf.Image,
-		CPU:           "100m",
-		Memory:        "128Mi",
-		Env:           map[string]string{jobcontract.EnvName: string(rawCtx)},
-		ExtraContainers: []kubejob.ContainerSpec{
-			{
-				Name:   "recognizer",
-				Image:  jobConf.Image,
-				Args:   []string{"-f", "/etc/rm-monitor/config.yml", "-mode", "recognizer"},
-				Env:    map[string]string{jobcontract.EnvName: string(rawCtx)},
-				CPU:    "100m",
-				Memory: "128Mi",
-			},
-		},
-		Args:                    []string{"-f", "/etc/rm-monitor/config.yml", "-mode", "audio-recorder"},
-		PriorityClassName:       kubejob.PriorityClassRecordCritical,
-		TerminationGraceSeconds: 60,
-	})
-	if err := l.svcCtx.K8s.CreateJob(l.ctx, jobConf.Namespace, job); err != nil {
-		return err
-	}
-	l.Infof("dispatched stt job round=%d job=%s role=%s", r.ID, name, conf.STTRole)
-	return nil
-}
-
 func (l *DispatchLogic) danmuContext(r *ent.MatchRound, chatRoomID string) (jobcontract.DanmuContext, error) {
 	conf := l.svcCtx.Config.RecordConf.WithDefaults()
 	roundDir, err := l.roundDir(conf, r, "")
@@ -342,7 +285,11 @@ func (l *DispatchLogic) danmuContext(r *ent.MatchRound, chatRoomID string) (jobc
 	}, nil
 }
 
-func (l *DispatchLogic) sttContext(conf common.RecordConf, r *ent.MatchRound, sourceURL string) (jobcontract.STTContext, error) {
+func (l *DispatchLogic) sttContext(conf common.RecordConf, task *ent.RecordTask, artifact *ent.MediaArtifact) (jobcontract.STTContext, error) {
+	r, err := task.Edges.MatchRoundOrErr()
+	if err != nil {
+		return jobcontract.STTContext{}, err
+	}
 	m := r.Edges.Match
 	if m == nil {
 		return jobcontract.STTContext{}, errors.New("stt round has no match edge")
@@ -355,10 +302,8 @@ func (l *DispatchLogic) sttContext(conf common.RecordConf, r *ent.MatchRound, so
 	if err != nil {
 		return jobcontract.STTContext{}, err
 	}
-	roundDir, err := l.roundDir(conf, r, conf.STTRole)
-	if err != nil {
-		return jobcontract.STTContext{}, err
-	}
+	sourcePath := storagepath.Resolve(conf.BaseDir, artifact.Path)
+	roundDir := filepath.Dir(sourcePath)
 	whisperServerURLs := resolveWhisperServerURLs(l.svcCtx.Config.WhisperServerUrls)
 	if len(whisperServerURLs) == 0 {
 		return jobcontract.STTContext{}, errors.New("WhisperServerUrls is empty")
@@ -369,9 +314,8 @@ func (l *DispatchLogic) sttContext(conf common.RecordConf, r *ent.MatchRound, so
 		MatchID:           m.ID,
 		RoundNo:           r.RoundNo,
 		Role:              conf.STTRole,
-		SourceURL:         sourceURL,
+		SourcePath:        sourcePath,
 		RoundDir:          roundDir,
-		AudioDir:          filepath.Join(roundDir, "audio"),
 		STTPath:           filepath.Join(roundDir, "stt.jsonl"),
 		SubtitleName:      fmt.Sprintf("%s.srt", conf.STTRole),
 		WhisperServerURLs: whisperServerURLs,
@@ -575,6 +519,84 @@ func (l *DispatchLogic) recordContext(task *ent.RecordTask) jobcontract.RecordCo
 	}
 }
 
+func (l *DispatchLogic) dispatchCompletedSTTJobs() (int, error) {
+	conf := l.svcCtx.Config.RecordConf.WithDefaults()
+	jobConf := l.svcCtx.Config.STTJobConf.WithDefaults()
+	if l.svcCtx.K8s == nil || strings.TrimSpace(conf.STTRole) == "" || strings.TrimSpace(jobConf.Image) == "" {
+		return 0, nil
+	}
+	tasks, err := l.svcCtx.DB.RecordTask.Query().
+		Where(
+			recordtask.StatusEQ(recordtask.StatusSUCCEEDED),
+			recordtask.RoleEQ(conf.STTRole),
+			recordtask.HasMatchRoundWith(matchround.StatusEQ(matchround.StatusENDED)),
+			recordtask.HasMediaArtifactsWith(mediaartifact.KindEQ(mediaartifact.KindSource), mediaartifact.StatusEQ(mediaartifact.StatusAVAILABLE)),
+		).
+		WithMatchRound(func(q *ent.MatchRoundQuery) {
+			q.WithMatch(func(mq *ent.MatchQuery) { mq.WithRedTeam().WithBlueTeam() })
+		}).
+		WithMediaArtifacts(func(q *ent.MediaArtifactQuery) {
+			q.Where(mediaartifact.KindEQ(mediaartifact.KindSource), mediaartifact.StatusEQ(mediaartifact.StatusAVAILABLE)).
+				Order(mediaartifact.ByCreatedAt(sql.OrderDesc())).
+				Limit(1)
+		}).
+		Order(recordtask.ByPriority(sql.OrderDesc()), recordtask.ByCompletedAt()).
+		Limit(50).
+		All(l.ctx)
+	if err != nil {
+		return 0, errors.Wrap(err, "query completed record tasks for stt")
+	}
+	dispatched := 0
+	for _, task := range tasks {
+		r, err := task.Edges.MatchRoundOrErr()
+		if err != nil {
+			return dispatched, err
+		}
+		if len(task.Edges.MediaArtifacts) == 0 {
+			continue
+		}
+		artifact := task.Edges.MediaArtifacts[0]
+		name := jobName("stt", r.ID)
+		roundDir := filepath.Dir(storagepath.Resolve(conf.BaseDir, artifact.Path))
+		if sttJobFinished(roundDir, name) {
+			continue
+		}
+		exists, err := l.svcCtx.K8s.JobExists(l.ctx, jobConf.Namespace, name)
+		if err != nil {
+			return dispatched, err
+		}
+		if exists {
+			continue
+		}
+		jobCtx, err := l.sttContext(conf, task, artifact)
+		if err != nil {
+			return dispatched, err
+		}
+		rawCtx, err := json.Marshal(jobCtx)
+		if err != nil {
+			return dispatched, errors.Wrap(err, "encode stt job context")
+		}
+		job := kubejob.Build(l.svcCtx.Config.STTJobConf, kubejob.JobSpec{
+			Name:              name,
+			App:               "stt-job",
+			Image:             jobConf.Image,
+			Args:              []string{"-f", "/etc/rm-monitor/config.yml"},
+			Env:               map[string]string{jobcontract.EnvName: string(rawCtx)},
+			CPU:               "500m",
+			Memory:            "512Mi",
+			CPULimit:          "2",
+			MemLimit:          "1Gi",
+			PriorityClassName: kubejob.PriorityClassBackground,
+		})
+		if err := l.svcCtx.K8s.CreateJob(l.ctx, jobConf.Namespace, job); err != nil {
+			return dispatched, err
+		}
+		dispatched++
+		l.Infof("dispatched stt job round=%d record_task=%d artifact=%d job=%s source=%s", r.ID, task.ID, artifact.ID, name, artifact.Path)
+	}
+	return dispatched, nil
+}
+
 func (l *DispatchLogic) reconcileRecordResults() (int, error) {
 	tasks, err := l.svcCtx.DB.RecordTask.Query().
 		Where(recordtask.StatusIn(recordtask.StatusRUNNING, recordtask.StatusCANCEL_REQUESTED)).
@@ -686,6 +708,8 @@ func (l *DispatchLogic) dispatchCompletedManifestJobs() (int, error) {
 	}
 	matches, err := l.svcCtx.DB.Match.Query().
 		Where(match.LatestStatusEQ("DONE"), match.ReportIsNil()).
+		WithRedTeam().
+		WithBlueTeam().
 		WithRounds().
 		Order(match.ByUpdatedAt(sql.OrderDesc())).
 		Limit(50).
@@ -699,6 +723,13 @@ func (l *DispatchLogic) dispatchCompletedManifestJobs() (int, error) {
 			break
 		}
 		if !completedMatch(m) {
+			continue
+		}
+		ready, err := l.matchSTTReady(m)
+		if err != nil {
+			return created, err
+		}
+		if !ready {
 			continue
 		}
 		name := manifestJobName(m.ID)
@@ -717,6 +748,57 @@ func (l *DispatchLogic) dispatchCompletedManifestJobs() (int, error) {
 		created++
 	}
 	return created, nil
+}
+
+func (l *DispatchLogic) matchSTTReady(m *ent.Match) (bool, error) {
+	recordConf := l.svcCtx.Config.RecordConf.WithDefaults()
+	sttRole := strings.TrimSpace(recordConf.STTRole)
+	if sttRole == "" || strings.TrimSpace(l.svcCtx.Config.STTJobConf.Image) == "" {
+		return true, nil
+	}
+	for _, r := range m.Edges.Rounds {
+		ready, err := l.roundSTTReady(recordConf, r, sttRole)
+		if err != nil {
+			return false, err
+		}
+		if !ready {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
+func (l *DispatchLogic) roundSTTReady(conf common.RecordConf, r *ent.MatchRound, sttRole string) (bool, error) {
+	task, err := l.svcCtx.DB.RecordTask.Query().
+		Where(recordtask.HasMatchRoundWith(matchround.ID(r.ID)), recordtask.RoleEQ(sttRole)).
+		WithMediaArtifacts().
+		Only(l.ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return false, nil
+		}
+		return false, errors.Wrap(err, "query stt record task")
+	}
+	switch task.Status {
+	case recordtask.StatusFAILED:
+		return true, nil
+	case recordtask.StatusSUCCEEDED:
+	default:
+		return false, nil
+	}
+	var source *ent.MediaArtifact
+	for _, artifact := range task.Edges.MediaArtifacts {
+		if artifact.Kind == mediaartifact.KindSource && artifact.Status == mediaartifact.StatusAVAILABLE {
+			source = artifact
+			break
+		}
+	}
+	if source == nil {
+		return false, nil
+	}
+	roundDir := filepath.Dir(storagepath.Resolve(conf.BaseDir, source.Path))
+	name := jobName("stt", r.ID)
+	return sttJobFinished(roundDir, name), nil
 }
 
 func completedMatch(m *ent.Match) bool {
@@ -738,4 +820,14 @@ func jobName(prefix string, id int) string {
 func manifestJobName(matchID string) string {
 	h := sha1.Sum([]byte(matchID))
 	return "manifest-" + hex.EncodeToString(h[:])[:16]
+}
+
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
+}
+
+func sttJobFinished(roundDir, jobName string) bool {
+	return fileExists(filepath.Join(roundDir, "stt.jsonl")) ||
+		fileExists(filepath.Join(roundDir, jobcontract.DirName, jobName, jobcontract.ErrorFile))
 }

@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -15,25 +16,6 @@ import (
 	"scutbot.cn/web/rm-monitor/pkg/jobcontract"
 	"scutbot.cn/web/rm-monitor/pkg/subtitle"
 )
-
-func TestSegmentCompleteRequiresNextOrDoneAndStable(t *testing.T) {
-	dir := t.TempDir()
-	if got := filepath.Base(segmentPath(dir, 0)); got != "part-00000.wav" {
-		t.Fatalf("segment path = %q, want wav", got)
-	}
-	if err := os.WriteFile(segmentPath(dir, 0), []byte("wav"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if segmentComplete(dir, 0) {
-		t.Fatal("segment without next segment or done marker is complete")
-	}
-	if err := os.WriteFile(segmentPath(dir, 1), []byte("next"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if !segmentComplete(dir, 0) {
-		t.Fatal("segment with next segment should be complete")
-	}
-}
 
 func TestAppendLineWritesJSONL(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "stt.jsonl")
@@ -53,7 +35,7 @@ func TestAppendLineWritesJSONL(t *testing.T) {
 	}
 }
 
-func TestAppendRecognizedLineWritesOneJSONLRowPerSegment(t *testing.T) {
+func TestWriteRecognizedLinesWritesOneJSONLRowPerSegment(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "stt.jsonl")
 	result := whisperResult{
 		Duration: 30,
@@ -63,7 +45,7 @@ func TestAppendRecognizedLineWritesOneJSONLRowPerSegment(t *testing.T) {
 			{ID: 2, Start: 5, End: 9, Text: "world"},
 		},
 	}
-	if err := appendRecognizedLine(path, 2, 1, 120, result, 1.5); err != nil {
+	if err := writeRecognizedLines(path, result, 1.5); err != nil {
 		t.Fatal(err)
 	}
 	raw, err := os.ReadFile(path)
@@ -78,18 +60,18 @@ func TestAppendRecognizedLineWritesOneJSONLRowPerSegment(t *testing.T) {
 	if err := json.Unmarshal(rows[0], &line); err != nil {
 		t.Fatal(err)
 	}
-	if line.Start != 122 || line.End != 124 || line.APISeconds != 1.5 || line.Text != "hello" || line.SegmentID != 1 {
+	if line.Start != 2 || line.End != 4 || line.APISeconds != 1.5 || line.Text != "hello" || line.SegmentID != 1 {
 		t.Fatalf("line = %#v", line)
 	}
 	if err := json.Unmarshal(rows[1], &line); err != nil {
 		t.Fatal(err)
 	}
-	if line.Start != 125 || line.End != 129 || line.Text != "world" || line.SegmentID != 2 {
+	if line.Start != 5 || line.End != 9 || line.Text != "world" || line.SegmentID != 2 {
 		t.Fatalf("line = %#v", line)
 	}
 }
 
-func TestAppendRecognizedLineSimplifiesTraditionalChinese(t *testing.T) {
+func TestWriteRecognizedLinesSimplifiesTraditionalChinese(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "stt.jsonl")
 	result := whisperResult{
 		Duration: 30,
@@ -99,7 +81,7 @@ func TestAppendRecognizedLineSimplifiesTraditionalChinese(t *testing.T) {
 			{ID: 2, Start: 5, End: 9, Text: "藍方防守"},
 		},
 	}
-	if err := appendRecognizedLine(path, 0, 0, 0, result, 1.5); err != nil {
+	if err := writeRecognizedLines(path, result, 1.5); err != nil {
 		t.Fatal(err)
 	}
 	raw, err := os.ReadFile(path)
@@ -128,8 +110,8 @@ func splitJSONLLines(raw []byte) [][]byte {
 
 func TestRecognizeFilePostsWhisperMultipart(t *testing.T) {
 	dir := t.TempDir()
-	wav := filepath.Join(dir, "part-00000.wav")
-	if err := os.WriteFile(wav, []byte("RIFFtest"), 0o644); err != nil {
+	audio := filepath.Join(dir, "audio.m4a")
+	if err := os.WriteFile(audio, []byte("m4atest"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -158,7 +140,7 @@ func TestRecognizeFilePostsWhisperMultipart(t *testing.T) {
 	}))
 	defer server.Close()
 
-	result, _, err := recognizeFile(context.Background(), []string{server.URL + "/inference"}, 0, "请使用简体中文输出。红方：A", wav)
+	result, _, err := recognizeFile(context.Background(), []string{server.URL + "/inference"}, "请使用简体中文输出。红方：A", audio)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -200,14 +182,10 @@ func TestRunSubtitleBackfill(t *testing.T) {
 	}
 }
 
-func TestFinishSTTWritesSubtitleRemovesAudioAndWritesResult(t *testing.T) {
+func TestFinishSTTWritesSubtitleAndResult(t *testing.T) {
 	dir := t.TempDir()
 	roundDir := filepath.Join(dir, "Round-1")
-	audioDir := filepath.Join(roundDir, "audio")
-	if err := os.MkdirAll(audioDir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(audioDir, "part-00000.wav"), []byte("wav"), 0o644); err != nil {
+	if err := os.MkdirAll(roundDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
 	sttPath := filepath.Join(roundDir, "stt.jsonl")
@@ -217,15 +195,11 @@ func TestFinishSTTWritesSubtitleRemovesAudioAndWritesResult(t *testing.T) {
 	sttCtx := jobcontract.STTContext{
 		MatchRoundID: 42,
 		RoundDir:     roundDir,
-		AudioDir:     audioDir,
 		STTPath:      sttPath,
 		SubtitleName: "主视角.srt",
 	}
 	if err := finishSTT(sttCtx, roundInfoFromContext(sttCtx)); err != nil {
 		t.Fatal(err)
-	}
-	if _, err := os.Stat(audioDir); !os.IsNotExist(err) {
-		t.Fatalf("audio dir should be removed, stat err=%v", err)
 	}
 	if raw, err := os.ReadFile(filepath.Join(roundDir, "主视角.srt")); err != nil {
 		t.Fatal(err)
@@ -235,4 +209,65 @@ func TestFinishSTTWritesSubtitleRemovesAudioAndWritesResult(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(roundDir, ".job", "stt-42", "result.json")); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func TestRunSTTNoAudioWritesNoAudioAndResult(t *testing.T) {
+	dir := t.TempDir()
+	roundDir := filepath.Join(dir, "Round-1")
+	if err := os.MkdirAll(roundDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	restore := prependFakeFFmpeg(t, dir, `#!/bin/sh
+echo "Stream map '0:a:0' matches no streams." >&2
+exit 1
+`)
+	defer restore()
+	sttCtx := jobcontract.STTContext{
+		MatchRoundID:      7,
+		SourcePath:        filepath.Join(dir, "source.flv"),
+		RoundDir:          roundDir,
+		STTPath:           filepath.Join(roundDir, "stt.jsonl"),
+		SubtitleName:      "主视角.srt",
+		WhisperServerURLs: []string{"http://127.0.0.1/unused"},
+	}
+	if err := runSTT(context.Background(), sttCtx); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := os.ReadFile(sttCtx.STTPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(raw), `"NO_AUDIO"`) {
+		t.Fatalf("missing NO_AUDIO row:\n%s", raw)
+	}
+	if _, err := os.Stat(filepath.Join(roundDir, "主视角.srt")); !os.IsNotExist(err) {
+		t.Fatalf("subtitle should not exist for no audio, err=%v", err)
+	}
+	if _, err := os.Stat(filepath.Join(roundDir, ".job", "stt-7", "result.json")); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func prependFakeFFmpeg(t *testing.T, dir, script string) func() {
+	t.Helper()
+	bin := filepath.Join(dir, "bin")
+	if err := os.MkdirAll(bin, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	ffmpeg := filepath.Join(bin, "ffmpeg")
+	if err := os.WriteFile(ffmpeg, []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if runtime.GOOS == "windows" {
+		ffmpeg = filepath.Join(bin, "ffmpeg.bat")
+		batch := "@echo off\r\necho Stream map '0:a:0' matches no streams. 1>&2\r\nexit /b 1\r\n"
+		if err := os.WriteFile(ffmpeg, []byte(batch), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	old := os.Getenv("PATH")
+	if err := os.Setenv("PATH", bin+string(os.PathListSeparator)+old); err != nil {
+		t.Fatal(err)
+	}
+	return func() { _ = os.Setenv("PATH", old) }
 }

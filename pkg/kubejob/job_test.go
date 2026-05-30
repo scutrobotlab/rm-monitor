@@ -82,25 +82,25 @@ func TestBuildWithPVCDoesNotInferNodeSelector(t *testing.T) {
 func TestBuildWithExtraContainerMountsSharedVolumes(t *testing.T) {
 	job := Build(config.K8sJobConf{
 		Namespace:        "rm-monitor",
-		Image:            "example/stt-job:test",
-		ConfigMapName:    "stt-job-config",
+		Image:            "example/tool-job:test",
+		ConfigMapName:    "tool-job-config",
 		RecordsPVC:       "records",
 		RecordsMountPath: "/records",
 	}, JobSpec{
-		Name:          "stt-1",
-		App:           "stt-job",
-		ContainerName: "audio-recorder",
-		Image:         "example/stt-job:test",
-		Args:          []string{"-mode", "audio-recorder"},
+		Name:          "tool-1",
+		App:           "tool-job",
+		ContainerName: "main",
+		Image:         "example/tool-job:test",
+		Args:          []string{"run"},
 		ExtraContainers: []ContainerSpec{
-			{Name: "recognizer", Image: "example/stt-job:test", Args: []string{"-mode", "recognizer"}},
+			{Name: "sidecar", Image: "example/tool-job:test", Args: []string{"watch"}},
 		},
 	})
 	pod := job.Spec.Template.Spec
 	if len(pod.Containers) != 2 {
 		t.Fatalf("containers = %d, want 2", len(pod.Containers))
 	}
-	if pod.Containers[0].Name != "audio-recorder" || pod.Containers[1].Name != "recognizer" {
+	if pod.Containers[0].Name != "main" || pod.Containers[1].Name != "sidecar" {
 		t.Fatalf("container names = %q, %q", pod.Containers[0].Name, pod.Containers[1].Name)
 	}
 	for _, c := range pod.Containers {

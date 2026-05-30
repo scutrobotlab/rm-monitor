@@ -9,18 +9,16 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"os/signal"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/pkg/errors"
 	"resty.dev/v3"
 
 	"scutbot.cn/web/rm-monitor/pkg/app"
+	common "scutbot.cn/web/rm-monitor/pkg/config"
 	"scutbot.cn/web/rm-monitor/pkg/jobcontract"
 	"scutbot.cn/web/rm-monitor/pkg/logx"
 	"scutbot.cn/web/rm-monitor/pkg/stttext"
@@ -30,20 +28,14 @@ import (
 
 var (
 	configFile = flag.String("f", "etc/config.yml", "the config file")
-	modeFlag   = flag.String("mode", "", "audio-recorder, recognizer, or backfill-subtitles")
+	modeFlag   = flag.String("mode", "", "empty for stt or backfill-subtitles")
 
 	simplifierOnce sync.Once
 	simplifier     *stttext.Converter
 	simplifierErr  error
 )
 
-const (
-	modeAudioRecorder = "audio-recorder"
-	modeRecognizer    = "recognizer"
-	modeBackfill      = "backfill-subtitles"
-	segmentSeconds    = 60
-	ua                = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-)
+const modeBackfill = "backfill-subtitles"
 
 func init() {
 	logx.MustSetup(logx.LogConf{ServiceName: "stt-job", Mode: "console", Encoding: "plain"})
@@ -53,182 +45,103 @@ func main() {
 	flag.Parse()
 	var c jobconfig.Config
 	app.MustLoadConfig(*configFile, &c)
+
+	if *modeFlag == modeBackfill {
+		runBackfill(c.RecordConf)
+		return
+	}
+	if strings.TrimSpace(*modeFlag) != "" {
+		logx.Error(errors.Errorf("unknown mode %q", *modeFlag))
+		os.Exit(1)
+	}
+
 	var sttCtx jobcontract.STTContext
-	if *modeFlag != modeBackfill {
-		if err := jobcontract.ContextFromEnv(&sttCtx); err != nil {
-			logx.Error(err)
-			os.Exit(1)
-		}
-		sttCtx.WhisperServerURLs = resolveWhisperServerURLs(
-			sttCtx.WhisperServerURLs,
-			c.WhisperServerUrls,
-		)
-		if len(sttCtx.WhisperServerURLs) == 0 {
-			logx.Error(errors.New("WhisperServerURLs is empty"))
-			os.Exit(1)
-		}
-		jobDir := sttJobDir(sttCtx)
-		if err := jobcontract.WriteContext(jobDir, sttCtx); err != nil {
-			logx.Error(err)
-			os.Exit(1)
-		}
+	if err := jobcontract.ContextFromEnv(&sttCtx); err != nil {
+		logx.Error(err)
+		os.Exit(1)
 	}
-	var runErr error
-	switch *modeFlag {
-	case modeAudioRecorder:
-		runErr = runAudioRecorder(context.Background(), sttCtx)
-	case modeRecognizer:
-		runErr = runRecognizer(context.Background(), sttCtx)
-	case modeBackfill:
-		var summary subtitle.BackfillSummary
-		summary, runErr = subtitle.Backfill(c.RecordConf, subtitle.BackfillOptions{Force: true, Rounds: true, Highlights: true})
-		if runErr == nil {
-			logx.Infof("subtitle backfill completed: round=%d highlight=%d", summary.RoundGenerated, summary.HighlightGenerated)
-		}
-	default:
-		runErr = errors.Errorf("unknown mode %q", *modeFlag)
+	sttCtx.WhisperServerURLs = resolveWhisperServerURLs(sttCtx.WhisperServerURLs, c.WhisperServerUrls)
+	if len(sttCtx.WhisperServerURLs) == 0 {
+		logx.Error(errors.New("WhisperServerURLs is empty"))
+		os.Exit(1)
 	}
-	if runErr != nil {
-		if *modeFlag != modeBackfill {
-			_ = jobcontract.WriteError(sttJobDir(sttCtx), "stt", sttCtx.MatchRoundID, runErr)
-		}
-		logx.Error(runErr)
+	jobDir := sttJobDir(sttCtx)
+	if err := jobcontract.WriteContext(jobDir, sttCtx); err != nil {
+		logx.Error(err)
+		os.Exit(1)
+	}
+	if err := runSTT(context.Background(), sttCtx); err != nil {
+		_ = jobcontract.WriteError(jobDir, "stt", sttCtx.MatchRoundID, err)
+		logx.Error(err)
 		os.Exit(1)
 	}
 }
 
-func runAudioRecorder(ctx context.Context, sttCtx jobcontract.STTContext) error {
+func runBackfill(conf common.RecordConf) {
+	summary, err := subtitle.Backfill(conf, subtitle.BackfillOptions{Force: true, Rounds: true, Highlights: true})
+	if err != nil {
+		logx.Error(err)
+		os.Exit(1)
+	}
+	logx.Infof("subtitle backfill completed: round=%d highlight=%d", summary.RoundGenerated, summary.HighlightGenerated)
+}
+
+func runSTT(ctx context.Context, sttCtx jobcontract.STTContext) error {
 	info := roundInfoFromContext(sttCtx)
-	if err := os.RemoveAll(info.AudioDir); err != nil {
-		return errors.Wrap(err, "clean audio dir")
+	if strings.TrimSpace(sttCtx.SourcePath) == "" {
+		return errors.New("stt source_path is empty")
 	}
 	if err := os.Remove(info.STTPath); err != nil && !os.IsNotExist(err) {
 		return errors.Wrap(err, "clean old stt jsonl")
 	}
-	if err := os.MkdirAll(info.AudioDir, 0o755); err != nil {
-		return errors.Wrap(err, "create audio dir")
+	if err := os.Remove(filepath.Join(info.RoundDir, info.SubtitleName)); err != nil && !os.IsNotExist(err) {
+		return errors.Wrap(err, "clean old subtitle")
 	}
-	sourceURL := strings.TrimSpace(sttCtx.SourceURL)
-	if sourceURL == "" {
-		err := errors.New("stt source_url is empty")
-		writeMarker(info.AudioDir, ".ffmpeg.failed", err.Error())
+	tmpDir, err := os.MkdirTemp("", "rm-monitor-stt-*")
+	if err != nil {
 		return err
 	}
+	defer os.RemoveAll(tmpDir)
 
-	jobCtx, cancel := signal.NotifyContext(ctx, syscall.SIGTERM, syscall.SIGINT)
-	defer cancel()
+	audioPath := filepath.Join(tmpDir, "audio.m4a")
+	if err := extractAudio(ctx, sttCtx.SourcePath, audioPath); err != nil {
+		if isNoAudio(err.Error()) {
+			if err := appendLine(info.STTPath, sttLine{Index: 0, Start: 0, End: 0, Status: "NO_AUDIO"}); err != nil {
+				return err
+			}
+			return finishSTT(sttCtx, info)
+		}
+		return err
+	}
+	result, seconds, err := recognizeFile(ctx, sttCtx.WhisperServerURLs, sttCtx.Prompt, audioPath)
+	if err != nil {
+		return err
+	}
+	if err := writeRecognizedLines(info.STTPath, result, seconds); err != nil {
+		return err
+	}
+	return finishSTT(sttCtx, info)
+}
 
-	pattern := filepath.Join(info.AudioDir, "part-%05d.wav")
+func extractAudio(ctx context.Context, sourcePath, audioPath string) error {
 	args := []string{
 		"-hide_banner",
-		"-loglevel", "info",
 		"-nostdin",
-		"-stats_period", "10",
-	}
-	if isNetworkSource(sourceURL) {
-		args = append(args,
-			"-user_agent", ua,
-			"-rw_timeout", "15000000",
-			"-reconnect", "1",
-			"-reconnect_streamed", "1",
-			"-reconnect_on_network_error", "1",
-			"-reconnect_on_http_error", "429,500,502,503,504",
-			"-reconnect_delay_max", "5",
-		)
-	}
-	args = append(args,
-		"-i", sourceURL,
-		"-map", "0:a:0?",
+		"-loglevel", "error",
+		"-i", sourcePath,
 		"-vn",
-		"-sn",
-		"-dn",
-		"-ac", "1",
-		"-ar", "16000",
-		"-c:a", "pcm_s16le",
-		"-f", "segment",
-		"-segment_time", strconv.Itoa(segmentSeconds),
-		"-reset_timestamps", "1",
-		"-segment_format", "wav",
-		"-y", pattern,
-	)
-	cmd := exec.CommandContext(jobCtx, "ffmpeg", args...)
+		"-map", "0:a:0",
+		"-c:a", "copy",
+		"-y", audioPath,
+	}
+	cmd := exec.CommandContext(ctx, "ffmpeg", args...)
 	var stderr bytes.Buffer
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = io.MultiWriter(os.Stderr, &stderr)
-	cmd.Cancel = func() error {
-		if cmd.Process == nil {
-			return nil
-		}
-		return cmd.Process.Signal(os.Interrupt)
+	if err := cmd.Run(); err != nil {
+		return errors.New(commandError(err, stderr.String()))
 	}
-	cmd.WaitDelay = 10 * time.Second
-	logx.Infof("recording stt audio for round %d role %s", sttCtx.MatchRoundID, sttCtx.Role)
-	err := cmd.Run()
-	stderrText := stderr.String()
-	if isNoAudio(stderrText) {
-		writeMarker(info.AudioDir, ".ffmpeg.no_audio", stderrText)
-		writeMarker(info.AudioDir, ".ffmpeg.done", "no audio")
-		return nil
-	}
-	stopRequested := jobCtx.Err() != nil
-	if err != nil && !stopRequested {
-		msg := commandError(err, stderrText)
-		writeMarker(info.AudioDir, ".ffmpeg.failed", msg)
-		return errors.New(msg)
-	}
-	if !stopRequested {
-		msg := "ffmpeg exited before dispatcher requested stop"
-		writeMarker(info.AudioDir, ".ffmpeg.failed", msg)
-		return errors.New(msg)
-	}
-	writeMarker(info.AudioDir, ".ffmpeg.done", "done")
 	return nil
-}
-
-func runRecognizer(ctx context.Context, sttCtx jobcontract.STTContext) error {
-	info := roundInfoFromContext(sttCtx)
-	serverURLs := dedupeWhisperServerURLs(sttCtx.WhisperServerURLs)
-	if len(serverURLs) == 0 {
-		return errors.New("WhisperServerURLs is empty")
-	}
-	if err := waitForDir(ctx, info.AudioDir); err != nil {
-		return err
-	}
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, syscall.SIGTERM, syscall.SIGINT)
-	defer signal.Stop(sigCh)
-
-	for index := 0; ; {
-		if markerExists(info.AudioDir, ".ffmpeg.no_audio") {
-			if index == 0 {
-				if err := appendLine(info.STTPath, sttLine{Index: 0, Start: 0, End: 0, Status: "NO_AUDIO"}); err != nil {
-					return err
-				}
-			}
-			return finishSTT(sttCtx, info)
-		}
-		current := segmentPath(info.AudioDir, index)
-		if fileExists(current) {
-			if segmentComplete(info.AudioDir, index) {
-				if err := recognizeSegment(ctx, serverURLs, info.Prompt, current, info.STTPath, index); err != nil {
-					return err
-				}
-				index++
-				continue
-			}
-		} else if markerExists(info.AudioDir, ".ffmpeg.done") {
-			return finishSTT(sttCtx, info)
-		} else if markerExists(info.AudioDir, ".ffmpeg.failed") {
-			return errors.New(readMarker(info.AudioDir, ".ffmpeg.failed"))
-		}
-		select {
-		case sig := <-sigCh:
-			logx.Infof("stt recognizer received %s; waiting for ffmpeg marker and finishing generated segments", sig)
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(time.Second):
-		}
-	}
 }
 
 func writeRoundSubtitle(info roundInfo) error {
@@ -241,7 +154,6 @@ func writeRoundSubtitle(info roundInfo) error {
 
 type roundInfo struct {
 	RoundDir     string
-	AudioDir     string
 	STTPath      string
 	SubtitleName string
 	Prompt       string
@@ -250,7 +162,6 @@ type roundInfo struct {
 func roundInfoFromContext(sttCtx jobcontract.STTContext) roundInfo {
 	return roundInfo{
 		RoundDir:     sttCtx.RoundDir,
-		AudioDir:     sttCtx.AudioDir,
 		STTPath:      sttCtx.STTPath,
 		SubtitleName: sttCtx.SubtitleName,
 		Prompt:       sttCtx.Prompt,
@@ -260,9 +171,6 @@ func roundInfoFromContext(sttCtx jobcontract.STTContext) roundInfo {
 func finishSTT(sttCtx jobcontract.STTContext, info roundInfo) error {
 	if err := writeRoundSubtitle(info); err != nil {
 		return err
-	}
-	if err := os.RemoveAll(info.AudioDir); err != nil {
-		return errors.Wrap(err, "clean audio dir")
 	}
 	return jobcontract.WriteResult(sttJobDir(sttCtx), jobcontract.STTResult{
 		Schema:       "rm-monitor/stt-result/v1",
@@ -274,11 +182,6 @@ func finishSTT(sttCtx jobcontract.STTContext, info roundInfo) error {
 
 func sttJobDir(sttCtx jobcontract.STTContext) string {
 	return filepath.Join(sttCtx.RoundDir, jobcontract.DirName, fmt.Sprintf("stt-%d", sttCtx.MatchRoundID))
-}
-
-func isNetworkSource(source string) bool {
-	lower := strings.ToLower(source)
-	return strings.HasPrefix(lower, "http://") || strings.HasPrefix(lower, "https://")
 }
 
 func isNoAudio(stderr string) bool {
@@ -300,64 +203,8 @@ func commandError(err error, stderr string) string {
 	return msg
 }
 
-func writeMarker(dir, name, content string) {
-	_ = os.WriteFile(filepath.Join(dir, name), []byte(content), 0o644)
-}
-
-func readMarker(dir, name string) string {
-	b, err := os.ReadFile(filepath.Join(dir, name))
-	if err != nil {
-		return err.Error()
-	}
-	return string(b)
-}
-
-func markerExists(dir, name string) bool {
-	return fileExists(filepath.Join(dir, name))
-}
-
-func waitForDir(ctx context.Context, dir string) error {
-	for {
-		if stat, err := os.Stat(dir); err == nil && stat.IsDir() {
-			return nil
-		}
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(time.Second):
-		}
-	}
-}
-
-func segmentPath(dir string, index int) string {
-	return filepath.Join(dir, fmt.Sprintf("part-%05d.wav", index))
-}
-
-func fileExists(path string) bool {
-	_, err := os.Stat(path)
-	return err == nil
-}
-
-func segmentComplete(dir string, index int) bool {
-	if fileExists(segmentPath(dir, index+1)) || markerExists(dir, ".ffmpeg.done") || markerExists(dir, ".ffmpeg.failed") {
-		return stableFile(segmentPath(dir, index))
-	}
-	return false
-}
-
-func stableFile(path string) bool {
-	first, err := os.Stat(path)
-	if err != nil || first.IsDir() {
-		return false
-	}
-	time.Sleep(time.Second)
-	second, err := os.Stat(path)
-	return err == nil && !second.IsDir() && first.Size() == second.Size()
-}
-
 type sttLine struct {
 	Index        int     `json:"index"`
-	Part         int     `json:"part,omitempty"`
 	SegmentID    int     `json:"segment_id,omitempty"`
 	Start        float64 `json:"start"`
 	End          float64 `json:"end"`
@@ -367,58 +214,29 @@ type sttLine struct {
 	ErrorMessage string  `json:"error_message,omitempty"`
 }
 
-func recognizeSegment(ctx context.Context, serverURLs []string, prompt, wavPath, sttPath string, index int) error {
-	start := float64(index * segmentSeconds)
-	end := start + float64(segmentSeconds)
-	stat, err := os.Stat(wavPath)
-	if err != nil {
-		return errors.Wrap(err, "stat segment")
-	}
-	if stat.Size() == 0 {
-		return appendLine(sttPath, sttLine{Index: index, Start: start, End: start, Status: "EMPTY"})
-	}
-	result, seconds, err := recognizeFile(ctx, serverURLs, index, prompt, wavPath)
-	if err == nil {
-		return appendRecognizedLine(sttPath, index, 0, start, result, seconds)
-	}
-	return appendLine(sttPath, sttLine{Index: index, Start: start, End: end, Status: "FAILED", ErrorMessage: err.Error()})
-}
-
-func appendRecognizedLine(path string, index, part int, start float64, result whisperResult, seconds float64) error {
-	duration := result.Duration
-	if duration <= 0 {
-		duration = segmentSeconds
-		if part != 0 {
-			duration = float64(segmentSeconds) / 2
-		}
-	}
+func writeRecognizedLines(path string, result whisperResult, seconds float64) error {
 	if len(result.Segments) == 0 {
 		text, err := simplifyText(result.Text)
 		if err != nil {
 			return err
 		}
-		return appendLine(path, sttLine{
-			Index:      index,
-			Part:       part,
-			Start:      start,
-			End:        start + duration,
-			Status:     "SUCCEEDED",
-			APISeconds: seconds,
-			Text:       text,
-		})
+		duration := result.Duration
+		if duration <= 0 {
+			duration = 0
+		}
+		return appendLine(path, sttLine{Index: 0, Start: 0, End: duration, Status: "SUCCEEDED", APISeconds: seconds, Text: text})
 	}
 	lines := make([]sttLine, 0, len(result.Segments))
-	for _, segment := range result.Segments {
+	for i, segment := range result.Segments {
 		text, err := simplifyText(segment.Text)
 		if err != nil {
 			return err
 		}
 		lines = append(lines, sttLine{
-			Index:      index,
-			Part:       part,
+			Index:      i,
 			SegmentID:  segment.ID,
-			Start:      start + segment.Start,
-			End:        start + segment.End,
+			Start:      segment.Start,
+			End:        segment.End,
 			Status:     "SUCCEEDED",
 			APISeconds: seconds,
 			Text:       text,
@@ -481,27 +299,24 @@ type whisperSegment struct {
 	Text  string  `json:"text"`
 }
 
-func recognizeFile(ctx context.Context, serverURLs []string, segmentIndex int, prompt, wavPath string) (whisperResult, float64, error) {
+func recognizeFile(ctx context.Context, serverURLs []string, prompt, audioPath string) (whisperResult, float64, error) {
 	if len(serverURLs) == 0 {
 		return whisperResult{}, 0, errors.New("empty WhisperServerURLs")
 	}
 	serverURLs = dedupeWhisperServerURLs(serverURLs)
-	for offset := 0; offset < len(serverURLs); offset++ {
-		serverURL := serverURLs[(segmentIndex+offset)%len(serverURLs)]
-		out, seconds, err := recognizeFileOnce(ctx, serverURL, prompt, wavPath)
+	var lastErr error
+	for _, serverURL := range serverURLs {
+		out, seconds, err := recognizeFileOnce(ctx, serverURL, prompt, audioPath)
 		if err == nil {
 			return out, seconds, nil
 		}
-		if offset < len(serverURLs)-1 {
-			logx.Infof("whisper server %s failed for segment %d, trying next: %v", serverURL, segmentIndex, err)
-			continue
-		}
-		return whisperResult{}, 0, errors.Wrapf(err, "all whisper servers failed for segment %d", segmentIndex)
+		lastErr = err
+		logx.Infof("whisper server %s failed: %v", serverURL, err)
 	}
-	return whisperResult{}, 0, errors.New("no whisper server candidates")
+	return whisperResult{}, 0, errors.Wrap(lastErr, "all whisper servers failed")
 }
 
-func recognizeFileOnce(ctx context.Context, serverURL, prompt, wavPath string) (whisperResult, float64, error) {
+func recognizeFileOnce(ctx context.Context, serverURL, prompt, audioPath string) (whisperResult, float64, error) {
 	var out whisperResult
 	client := resty.New().
 		SetRetryCount(3).
@@ -511,7 +326,7 @@ func recognizeFileOnce(ctx context.Context, serverURL, prompt, wavPath string) (
 		AddRetryConditions(func(resp *resty.Response, err error) bool {
 			return err != nil || resp.StatusCode() == 429 || resp.StatusCode() >= 500
 		}).
-		SetTimeout(180 * time.Second)
+		SetTimeout(30 * time.Minute)
 	start := time.Now()
 	form := map[string]string{
 		"temperature":     "0.0",
@@ -522,7 +337,7 @@ func recognizeFileOnce(ctx context.Context, serverURL, prompt, wavPath string) (
 	}
 	resp, err := client.R().
 		SetContext(ctx).
-		SetFile("file", wavPath).
+		SetFile("file", audioPath).
 		SetMultipartFormData(form).
 		SetResult(&out).
 		Post(serverURL)

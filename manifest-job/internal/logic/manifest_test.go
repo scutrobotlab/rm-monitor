@@ -13,7 +13,6 @@ import (
 	"scutbot.cn/web/rm-monitor/ent/match"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
 	common "scutbot.cn/web/rm-monitor/pkg/config"
-	"scutbot.cn/web/rm-monitor/pkg/sttcoord"
 )
 
 func TestRenderReadmeUsesStableMarkdown(t *testing.T) {
@@ -117,7 +116,7 @@ func TestBuildReportInputIncludesAuthorityFields(t *testing.T) {
 		Result:                match.ResultBLUE,
 		WinnerPlaceholderName: &winnerPlace,
 		LoserPlaceholderName:  &loserPlace,
-	}, &ent.Team{SchoolName: "红方大学", Name: "Alpha"}, &ent.Team{SchoolName: "蓝方大学", Name: "Beta"}, t.TempDir(), nil)
+	}, &ent.Team{SchoolName: "红方大学", Name: "Alpha"}, &ent.Team{SchoolName: "蓝方大学", Name: "Beta"}, t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -125,21 +124,6 @@ func TestBuildReportInputIncludesAuthorityFields(t *testing.T) {
 	assertContains(t, input, "- 胜者去向：晋级八强")
 	assertContains(t, input, "- 败者去向：进入败者组")
 	assertContains(t, input, "只有当它明确表达后续赛程、轮次或对阵安排时才纳入战报")
-}
-
-func TestPendingSTTRoundsOnlyWaitsCurrentMatchRounds(t *testing.T) {
-	m := &ent.Match{Edges: ent.MatchEdges{Rounds: []*ent.MatchRound{
-		{RoundNo: 1},
-		{RoundNo: 2},
-	}}}
-	pending := pendingSTTRounds(m, map[string]string{
-		"1": sttcoord.StatusDone,
-		"2": sttcoord.StatusPending,
-		"3": sttcoord.StatusPending,
-	})
-	if len(pending) != 1 || pending[0] != 2 {
-		t.Fatalf("pending = %#v", pending)
-	}
 }
 
 func TestCallReportLLMParsesOpenAICompatibleResponse(t *testing.T) {

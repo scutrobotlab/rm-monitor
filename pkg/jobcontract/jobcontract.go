@@ -99,9 +99,8 @@ type STTContext struct {
 	MatchID           string   `json:"match_id"`
 	RoundNo           int      `json:"round_no"`
 	Role              string   `json:"role"`
-	SourceURL         string   `json:"source_url"`
+	SourcePath        string   `json:"source_path"`
 	RoundDir          string   `json:"round_dir"`
-	AudioDir          string   `json:"audio_dir"`
 	STTPath           string   `json:"stt_path"`
 	SubtitleName      string   `json:"subtitle_name"`
 	Prompt            string   `json:"prompt"`

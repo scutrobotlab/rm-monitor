@@ -66,8 +66,6 @@ jobs:
             dockerfile: record-dispatcher/Dockerfile
           - app: stt-job
             dockerfile: stt-job/Dockerfile
-          - app: stt-recover
-            dockerfile: cmd/stt-recover/Dockerfile
           - app: stt-normalize
             dockerfile: cmd/stt-normalize/Dockerfile
           - app: stt-subtitle

@@ -1,6 +1,8 @@
 package logic
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"scutbot.cn/web/rm-monitor/ent"
@@ -57,7 +59,7 @@ func TestCompletedMatchRequiresAllRoundsEnded(t *testing.T) {
 	}
 }
 
-func TestSTTJobSpecCarriesContextToBothContainers(t *testing.T) {
+func TestSTTJobSpecIsSingleContainer(t *testing.T) {
 	jobConf := common.K8sJobConf{
 		Namespace:        "rm-monitor",
 		Image:            "example/stt-job:test",
@@ -67,23 +69,47 @@ func TestSTTJobSpecCarriesContextToBothContainers(t *testing.T) {
 		ImagePullPolicy:  "IfNotPresent",
 	}
 	job := kubejob.Build(jobConf, kubejob.JobSpec{
-		Name:          "stt-1",
-		App:           "stt-job",
-		ContainerName: "audio-recorder",
-		Image:         jobConf.Image,
-		Env:           map[string]string{jobcontract.EnvName: `{"source_url":"https://example.test/live.m3u8"}`},
-		ExtraContainers: []kubejob.ContainerSpec{
-			{Name: "recognizer", Image: jobConf.Image, Env: map[string]string{jobcontract.EnvName: `{"source_url":"https://example.test/live.m3u8"}`}},
-		},
+		Name:  "stt-1",
+		App:   "stt-job",
+		Image: jobConf.Image,
+		Env:   map[string]string{jobcontract.EnvName: `{"source_path":"/records/round/主视角.flv"}`},
 	})
 	containers := job.Spec.Template.Spec.Containers
-	if len(containers) != 2 {
-		t.Fatalf("containers = %d, want 2", len(containers))
+	if len(containers) != 1 {
+		t.Fatalf("containers = %d, want 1", len(containers))
+	}
+	if containers[0].Name != "stt-job" {
+		t.Fatalf("container name = %q", containers[0].Name)
 	}
 	if containers[0].Env[0].Name != jobcontract.EnvName {
-		t.Fatalf("audio recorder env = %#v", containers[0].Env)
+		t.Fatalf("stt env = %#v", containers[0].Env)
 	}
-	if containers[1].Env[0].Name != jobcontract.EnvName {
-		t.Fatalf("recognizer env = %#v", containers[1].Env)
+	if len(containers[0].Args) != 0 {
+		t.Fatalf("stt args = %#v, want default entrypoint without mode", containers[0].Args)
+	}
+}
+
+func TestSTTJobFinishedUsesResultOrErrorFile(t *testing.T) {
+	roundDir := t.TempDir()
+	if sttJobFinished(roundDir, "stt-1") {
+		t.Fatal("empty round dir should not be finished")
+	}
+	if err := os.WriteFile(filepath.Join(roundDir, "stt.jsonl"), []byte("{}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if !sttJobFinished(roundDir, "stt-1") {
+		t.Fatal("stt.jsonl should mark stt finished")
+	}
+
+	roundDir = t.TempDir()
+	errorDir := filepath.Join(roundDir, jobcontract.DirName, "stt-1")
+	if err := os.MkdirAll(errorDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(errorDir, jobcontract.ErrorFile), []byte("{}"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if !sttJobFinished(roundDir, "stt-1") {
+		t.Fatal("stt error.json should mark stt finished")
 	}
 }
