@@ -203,16 +203,16 @@ func (c *HighlightConf) WithDefaults() HighlightConf {
 		out.MinClipSeconds = 20
 	}
 	if out.MaxClipSeconds <= 0 {
-		out.MaxClipSeconds = 90
+		out.MaxClipSeconds = 50
 	}
 	if out.PreSeconds <= 0 {
-		out.PreSeconds = 15
+		out.PreSeconds = 8
 	}
 	if out.PostSeconds <= 0 {
-		out.PostSeconds = 25
+		out.PostSeconds = 18
 	}
 	if out.MergeGapSeconds <= 0 {
-		out.MergeGapSeconds = 20
+		out.MergeGapSeconds = 12
 	}
 	return out
 }

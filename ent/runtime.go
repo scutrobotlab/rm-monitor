@@ -7,6 +7,7 @@ import (
 
 	"scutbot.cn/web/rm-monitor/ent/highlightclip"
 	"scutbot.cn/web/rm-monitor/ent/highlightpublishtask"
+	"scutbot.cn/web/rm-monitor/ent/highlightroundstate"
 	"scutbot.cn/web/rm-monitor/ent/larkmessage"
 	"scutbot.cn/web/rm-monitor/ent/match"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
@@ -68,6 +69,22 @@ func init() {
 	highlightpublishtask.DefaultUpdatedAt = highlightpublishtaskDescUpdatedAt.Default.(func() time.Time)
 	// highlightpublishtask.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	highlightpublishtask.UpdateDefaultUpdatedAt = highlightpublishtaskDescUpdatedAt.UpdateDefault.(func() time.Time)
+	highlightroundstateFields := schema.HighlightRoundState{}.Fields()
+	_ = highlightroundstateFields
+	// highlightroundstateDescCandidateCount is the schema descriptor for candidate_count field.
+	highlightroundstateDescCandidateCount := highlightroundstateFields[3].Descriptor()
+	// highlightroundstate.DefaultCandidateCount holds the default value on creation for the candidate_count field.
+	highlightroundstate.DefaultCandidateCount = highlightroundstateDescCandidateCount.Default.(int)
+	// highlightroundstateDescCreatedAt is the schema descriptor for created_at field.
+	highlightroundstateDescCreatedAt := highlightroundstateFields[5].Descriptor()
+	// highlightroundstate.DefaultCreatedAt holds the default value on creation for the created_at field.
+	highlightroundstate.DefaultCreatedAt = highlightroundstateDescCreatedAt.Default.(func() time.Time)
+	// highlightroundstateDescUpdatedAt is the schema descriptor for updated_at field.
+	highlightroundstateDescUpdatedAt := highlightroundstateFields[6].Descriptor()
+	// highlightroundstate.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	highlightroundstate.DefaultUpdatedAt = highlightroundstateDescUpdatedAt.Default.(func() time.Time)
+	// highlightroundstate.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	highlightroundstate.UpdateDefaultUpdatedAt = highlightroundstateDescUpdatedAt.UpdateDefault.(func() time.Time)
 	larkmessageFields := schema.LarkMessage{}.Fields()
 	_ = larkmessageFields
 	// larkmessageDescCreatedAt is the schema descriptor for created_at field.

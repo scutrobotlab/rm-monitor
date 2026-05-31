@@ -49,11 +49,13 @@ type MatchRoundEdges struct {
 	SttTasks []*STTTask `json:"stt_tasks,omitempty"`
 	// HighlightClips holds the value of the highlight_clips edge.
 	HighlightClips []*HighlightClip `json:"highlight_clips,omitempty"`
+	// HighlightStates holds the value of the highlight_states edge.
+	HighlightStates []*HighlightRoundState `json:"highlight_states,omitempty"`
 	// OcrTasks holds the value of the ocr_tasks edge.
 	OcrTasks []*OCRTask `json:"ocr_tasks,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [5]bool
+	loadedTypes [6]bool
 }
 
 // MatchOrErr returns the Match value or an error if the edge
@@ -94,10 +96,19 @@ func (e MatchRoundEdges) HighlightClipsOrErr() ([]*HighlightClip, error) {
 	return nil, &NotLoadedError{edge: "highlight_clips"}
 }
 
+// HighlightStatesOrErr returns the HighlightStates value or an error if the edge
+// was not loaded in eager-loading.
+func (e MatchRoundEdges) HighlightStatesOrErr() ([]*HighlightRoundState, error) {
+	if e.loadedTypes[4] {
+		return e.HighlightStates, nil
+	}
+	return nil, &NotLoadedError{edge: "highlight_states"}
+}
+
 // OcrTasksOrErr returns the OcrTasks value or an error if the edge
 // was not loaded in eager-loading.
 func (e MatchRoundEdges) OcrTasksOrErr() ([]*OCRTask, error) {
-	if e.loadedTypes[4] {
+	if e.loadedTypes[5] {
 		return e.OcrTasks, nil
 	}
 	return nil, &NotLoadedError{edge: "ocr_tasks"}
@@ -219,6 +230,11 @@ func (_m *MatchRound) QuerySttTasks() *STTTaskQuery {
 // QueryHighlightClips queries the "highlight_clips" edge of the MatchRound entity.
 func (_m *MatchRound) QueryHighlightClips() *HighlightClipQuery {
 	return NewMatchRoundClient(_m.config).QueryHighlightClips(_m)
+}
+
+// QueryHighlightStates queries the "highlight_states" edge of the MatchRound entity.
+func (_m *MatchRound) QueryHighlightStates() *HighlightRoundStateQuery {
+	return NewMatchRoundClient(_m.config).QueryHighlightStates(_m)
 }
 
 // QueryOcrTasks queries the "ocr_tasks" edge of the MatchRound entity.

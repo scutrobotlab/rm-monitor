@@ -36,6 +36,7 @@ data:
       AppSecret: {{ .Values.lark.appSecret }}
 {{ include "rm-monitor.redisConf" . | indent 4 }}
 {{ include "rm-monitor.postgresConf" . | indent 4 }}
+{{ include "rm-monitor.recordConf" . | indent 4 }}
     UploadConf:
       Concurrency: {{ .Values.upload.concurrency }}
       PartRetries: {{ .Values.upload.partRetries }}
@@ -51,6 +52,7 @@ data:
 {{ include "rm-monitor.postgresConf" . | indent 4 }}
 {{ include "rm-monitor.redisConf" . | indent 4 }}
 {{ include "rm-monitor.recordConf" . | indent 4 }}
+{{ include "rm-monitor.highlightConf" . | indent 4 }}
       RoleBlackList:
 {{ toYaml .Values.record.roleBlackList | indent 8 }}
     WhisperServerUrls:

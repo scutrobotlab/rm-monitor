@@ -58,3 +58,24 @@ func TestFindCandidatesLimitsCount(t *testing.T) {
 		}
 	}
 }
+
+func TestFindCandidatesEnforcesMaxClipSecondsAfterMerge(t *testing.T) {
+	stats := DanmuStats{BucketSeconds: 10, Points: []DanmuPoint{
+		{T: 0, Count: 0}, {T: 10, Count: 0}, {T: 20, Count: 0}, {T: 30, Count: 0}, {T: 40, Count: 0}, {T: 50, Count: 0},
+		{T: 60, Count: 8}, {T: 70, Count: 0}, {T: 80, Count: 0}, {T: 90, Count: 0}, {T: 100, Count: 9},
+	}}
+	got := FindCandidates(stats, OnlineStats{}, common.HighlightConf{
+		MaxHighlightsPerRound: 5,
+		MinClipSeconds:        20,
+		MaxClipSeconds:        50,
+		PreSeconds:            20,
+		PostSeconds:           30,
+		MergeGapSeconds:       30,
+	})
+	if len(got) != 1 {
+		t.Fatalf("expected 1 merged candidate, got %d: %+v", len(got), got)
+	}
+	if length := got[0].End - got[0].Start; length > 50 {
+		t.Fatalf("candidate length = %.3f, want <= 50: %+v", length, got[0])
+	}
+}

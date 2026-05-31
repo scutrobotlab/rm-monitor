@@ -37,6 +37,8 @@ const (
 	EdgeSttTasks = "stt_tasks"
 	// EdgeHighlightClips holds the string denoting the highlight_clips edge name in mutations.
 	EdgeHighlightClips = "highlight_clips"
+	// EdgeHighlightStates holds the string denoting the highlight_states edge name in mutations.
+	EdgeHighlightStates = "highlight_states"
 	// EdgeOcrTasks holds the string denoting the ocr_tasks edge name in mutations.
 	EdgeOcrTasks = "ocr_tasks"
 	// Table holds the table name of the matchround in the database.
@@ -69,6 +71,13 @@ const (
 	HighlightClipsInverseTable = "highlight_clips"
 	// HighlightClipsColumn is the table column denoting the highlight_clips relation/edge.
 	HighlightClipsColumn = "match_round_highlight_clips"
+	// HighlightStatesTable is the table that holds the highlight_states relation/edge.
+	HighlightStatesTable = "highlight_round_states"
+	// HighlightStatesInverseTable is the table name for the HighlightRoundState entity.
+	// It exists in this package in order to avoid circular dependency with the "highlightroundstate" package.
+	HighlightStatesInverseTable = "highlight_round_states"
+	// HighlightStatesColumn is the table column denoting the highlight_states relation/edge.
+	HighlightStatesColumn = "match_round_highlight_states"
 	// OcrTasksTable is the table that holds the ocr_tasks relation/edge.
 	OcrTasksTable = "ocr_tasks"
 	// OcrTasksInverseTable is the table name for the OCRTask entity.
@@ -261,6 +270,20 @@ func ByHighlightClips(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	}
 }
 
+// ByHighlightStatesCount orders the results by highlight_states count.
+func ByHighlightStatesCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newHighlightStatesStep(), opts...)
+	}
+}
+
+// ByHighlightStates orders the results by highlight_states terms.
+func ByHighlightStates(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newHighlightStatesStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
 // ByOcrTasksCount orders the results by ocr_tasks count.
 func ByOcrTasksCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -300,6 +323,13 @@ func newHighlightClipsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(HighlightClipsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, HighlightClipsTable, HighlightClipsColumn),
+	)
+}
+func newHighlightStatesStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(HighlightStatesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, HighlightStatesTable, HighlightStatesColumn),
 	)
 }
 func newOcrTasksStep() *sqlgraph.Step {

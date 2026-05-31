@@ -14,6 +14,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"scutbot.cn/web/rm-monitor/ent/highlightclip"
 	"scutbot.cn/web/rm-monitor/ent/highlightpublishtask"
+	"scutbot.cn/web/rm-monitor/ent/highlightroundstate"
 	"scutbot.cn/web/rm-monitor/ent/larkmessage"
 	"scutbot.cn/web/rm-monitor/ent/match"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
@@ -86,6 +87,7 @@ func checkColumn(t, c string) error {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
 			highlightclip.Table:        highlightclip.ValidColumn,
 			highlightpublishtask.Table: highlightpublishtask.ValidColumn,
+			highlightroundstate.Table:  highlightroundstate.ValidColumn,
 			larkmessage.Table:          larkmessage.ValidColumn,
 			match.Table:                match.ValidColumn,
 			matchround.Table:           matchround.ValidColumn,

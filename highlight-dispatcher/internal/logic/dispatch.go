@@ -17,6 +17,7 @@ import (
 	"scutbot.cn/web/rm-monitor/ent"
 	"scutbot.cn/web/rm-monitor/ent/highlightclip"
 	"scutbot.cn/web/rm-monitor/ent/highlightpublishtask"
+	"scutbot.cn/web/rm-monitor/ent/highlightroundstate"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
 	"scutbot.cn/web/rm-monitor/ent/mediaartifact"
 	"scutbot.cn/web/rm-monitor/ent/recordtask"
@@ -67,6 +68,9 @@ func (l *DispatchLogic) Tick() error {
 		return err
 	}
 	if err := l.dispatchPending(); err != nil {
+		return err
+	}
+	if err := l.finalizeHighlightRoundStates(conf); err != nil {
 		return err
 	}
 	if err := l.createPublishTasks(); err != nil {
@@ -138,6 +142,9 @@ func (l *DispatchLogic) createHighlightClips(conf common.HighlightConf) error {
 			onlineStats, _ = highlight.LoadOnlineStats(p)
 		}
 		candidates := highlight.FindCandidates(danmuStats, onlineStats, conf)
+		if err := l.upsertHighlightRoundState(round.ID, conf, len(candidates)); err != nil {
+			return err
+		}
 		existing := make(map[int]struct{}, len(artifact.Edges.HighlightClips))
 		for _, clip := range artifact.Edges.HighlightClips {
 			if clip.Role == conf.Role && clip.AlgorithmVersion == conf.AlgorithmVersion {
@@ -174,6 +181,126 @@ func (l *DispatchLogic) createHighlightClips(conf common.HighlightConf) error {
 		return errors.Wrap(err, "bulk create highlight clips")
 	}
 	return nil
+}
+
+func (l *DispatchLogic) upsertHighlightRoundState(roundID int, conf common.HighlightConf, candidateCount int) error {
+	status := highlightroundstate.StatusPENDING
+	completedAt := (*time.Time)(nil)
+	if candidateCount == 0 {
+		now := time.Now()
+		status = highlightroundstate.StatusCOMPLETED
+		completedAt = &now
+	}
+	state, err := l.svcCtx.DB.HighlightRoundState.Query().
+		Where(
+			highlightroundstate.HasMatchRoundWith(matchround.ID(roundID)),
+			highlightroundstate.RoleEQ(conf.Role),
+			highlightroundstate.AlgorithmVersionEQ(conf.AlgorithmVersion),
+		).
+		Only(l.ctx)
+	if err != nil && !ent.IsNotFound(err) {
+		return errors.Wrap(err, "query highlight round state")
+	}
+	if ent.IsNotFound(err) {
+		create := l.svcCtx.DB.HighlightRoundState.Create().
+			SetMatchRoundID(roundID).
+			SetRole(conf.Role).
+			SetAlgorithmVersion(conf.AlgorithmVersion).
+			SetStatus(status).
+			SetCandidateCount(candidateCount)
+		if completedAt != nil {
+			create.SetCompletedAt(*completedAt)
+		}
+		if _, err := create.Save(l.ctx); err != nil && !ent.IsConstraintError(err) {
+			return errors.Wrap(err, "create highlight round state")
+		}
+		if status == highlightroundstate.StatusCOMPLETED {
+			l.notifyHighlightRound(roundID)
+		}
+		return nil
+	}
+	update := l.svcCtx.DB.HighlightRoundState.UpdateOneID(state.ID).SetCandidateCount(candidateCount)
+	if state.Status != highlightroundstate.StatusCOMPLETED {
+		update.SetStatus(status)
+		if completedAt != nil {
+			update.SetCompletedAt(*completedAt)
+		}
+	}
+	if err := update.Exec(l.ctx); err != nil {
+		return errors.Wrap(err, "update highlight round state")
+	}
+	if state.Status != highlightroundstate.StatusCOMPLETED && status == highlightroundstate.StatusCOMPLETED {
+		l.notifyHighlightRound(roundID)
+	}
+	return nil
+}
+
+func (l *DispatchLogic) finalizeHighlightRoundStates(conf common.HighlightConf) error {
+	states, err := l.svcCtx.DB.HighlightRoundState.Query().
+		Where(
+			highlightroundstate.RoleEQ(conf.Role),
+			highlightroundstate.AlgorithmVersionEQ(conf.AlgorithmVersion),
+			highlightroundstate.StatusEQ(highlightroundstate.StatusPENDING),
+		).
+		WithMatchRound().
+		Limit(100).
+		All(l.ctx)
+	if err != nil {
+		return errors.Wrap(err, "query pending highlight round states")
+	}
+	for _, state := range states {
+		round := state.Edges.MatchRound
+		if round == nil {
+			continue
+		}
+		clips, err := l.svcCtx.DB.HighlightClip.Query().
+			Where(
+				highlightclip.HasMatchRoundWith(matchround.ID(round.ID)),
+				highlightclip.RoleEQ(conf.Role),
+				highlightclip.AlgorithmVersionEQ(conf.AlgorithmVersion),
+			).
+			All(l.ctx)
+		if err != nil {
+			return errors.Wrap(err, "query round highlight clips")
+		}
+		if len(clips) < state.CandidateCount {
+			continue
+		}
+		done := true
+		for _, clip := range clips {
+			if !highlightClipTerminal(clip.Status) {
+				done = false
+				break
+			}
+		}
+		if !done {
+			continue
+		}
+		if err := l.svcCtx.DB.HighlightRoundState.UpdateOneID(state.ID).
+			SetStatus(highlightroundstate.StatusCOMPLETED).
+			SetCompletedAt(time.Now()).
+			Exec(l.ctx); err != nil {
+			return errors.Wrap(err, "mark highlight round completed")
+		}
+		l.notifyHighlightRound(round.ID)
+	}
+	return nil
+}
+
+func highlightClipTerminal(status highlightclip.Status) bool {
+	switch status {
+	case highlightclip.StatusSUCCEEDED, highlightclip.StatusSKIPPED, highlightclip.StatusFAILED:
+		return true
+	default:
+		return false
+	}
+}
+
+func (l *DispatchLogic) notifyHighlightRound(roundID int) {
+	if l.svcCtx.Config.PostgresConf.DSN == "" {
+		return
+	}
+	_ = db.Notify(l.ctx, l.svcCtx.Config.PostgresConf.DSN, db.HighlightRoundChangedChannel, fmt.Sprintf("%d", roundID))
 }
 
 func (l *DispatchLogic) recoverDispatching() error {

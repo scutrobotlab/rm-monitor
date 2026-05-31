@@ -4,10 +4,13 @@ import (
 	"testing"
 
 	"scutbot.cn/web/rm-monitor/ent"
+	"scutbot.cn/web/rm-monitor/ent/highlightroundstate"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
 	common "scutbot.cn/web/rm-monitor/pkg/config"
 	"scutbot.cn/web/rm-monitor/pkg/jobcontract"
 	"scutbot.cn/web/rm-monitor/pkg/kubejob"
+	"scutbot.cn/web/rm-monitor/record-dispatcher/internal/config"
+	"scutbot.cn/web/rm-monitor/record-dispatcher/internal/svc"
 )
 
 func TestFilterBlacklistedRoles(t *testing.T) {
@@ -54,6 +57,41 @@ func TestCompletedMatchRequiresAllRoundsEnded(t *testing.T) {
 	m.Edges.Rounds[1].Status = matchround.StatusENDED
 	if !completedMatch(m) {
 		t.Fatal("match with all rounds ended should be complete")
+	}
+}
+
+func TestMatchHighlightReadyRequiresCompletedStateWhenEnabled(t *testing.T) {
+	logic := &DispatchLogic{svcCtx: &svc.ServiceContext{Config: config.Config{
+		HighlightConf: common.HighlightConf{Enabled: true, Role: "主视角", AlgorithmVersion: "danmu-zscore-dify-v1"},
+	}}}
+	m := &ent.Match{Edges: ent.MatchEdges{Rounds: []*ent.MatchRound{
+		{Edges: ent.MatchRoundEdges{HighlightStates: []*ent.HighlightRoundState{
+			{Role: "主视角", AlgorithmVersion: "danmu-zscore-dify-v1", Status: highlightroundstate.StatusPENDING},
+		}}},
+	}}}
+	ready, err := logic.matchHighlightReady(m)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ready {
+		t.Fatal("pending highlight round state should block manifest")
+	}
+	m.Edges.Rounds[0].Edges.HighlightStates[0].Status = highlightroundstate.StatusCOMPLETED
+	ready, err = logic.matchHighlightReady(m)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !ready {
+		t.Fatal("completed highlight round state should allow manifest")
+	}
+	logic.svcCtx.Config.HighlightConf.Enabled = false
+	m.Edges.Rounds[0].Edges.HighlightStates = nil
+	ready, err = logic.matchHighlightReady(m)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !ready {
+		t.Fatal("disabled highlight should not block manifest")
 	}
 }
 

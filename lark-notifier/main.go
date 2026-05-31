@@ -75,7 +75,7 @@ type notifyEvent struct {
 
 func listen(dsn string, events chan<- notifyEvent) {
 	for {
-		l, err := db.NewListener(context.Background(), dsn, db.MatchRoundChangedChannel, db.MatchChangedChannel, db.UploadTaskChangedChannel)
+		l, err := db.NewListener(context.Background(), dsn, db.MatchRoundChangedChannel, db.MatchChangedChannel, db.UploadTaskChangedChannel, db.HighlightClipChangedChannel)
 		if err != nil {
 			logx.Errorf("lark notifier listener failed: %v", err)
 			time.Sleep(5 * time.Second)

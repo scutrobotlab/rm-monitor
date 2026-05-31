@@ -17,6 +17,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"scutbot.cn/web/rm-monitor/ent/highlightclip"
 	"scutbot.cn/web/rm-monitor/ent/highlightpublishtask"
+	"scutbot.cn/web/rm-monitor/ent/highlightroundstate"
 	"scutbot.cn/web/rm-monitor/ent/larkmessage"
 	"scutbot.cn/web/rm-monitor/ent/match"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
@@ -38,6 +39,8 @@ type Client struct {
 	HighlightClip *HighlightClipClient
 	// HighlightPublishTask is the client for interacting with the HighlightPublishTask builders.
 	HighlightPublishTask *HighlightPublishTaskClient
+	// HighlightRoundState is the client for interacting with the HighlightRoundState builders.
+	HighlightRoundState *HighlightRoundStateClient
 	// LarkMessage is the client for interacting with the LarkMessage builders.
 	LarkMessage *LarkMessageClient
 	// Match is the client for interacting with the Match builders.
@@ -71,6 +74,7 @@ func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
 	c.HighlightClip = NewHighlightClipClient(c.config)
 	c.HighlightPublishTask = NewHighlightPublishTaskClient(c.config)
+	c.HighlightRoundState = NewHighlightRoundStateClient(c.config)
 	c.LarkMessage = NewLarkMessageClient(c.config)
 	c.Match = NewMatchClient(c.config)
 	c.MatchRound = NewMatchRoundClient(c.config)
@@ -175,6 +179,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		config:               cfg,
 		HighlightClip:        NewHighlightClipClient(cfg),
 		HighlightPublishTask: NewHighlightPublishTaskClient(cfg),
+		HighlightRoundState:  NewHighlightRoundStateClient(cfg),
 		LarkMessage:          NewLarkMessageClient(cfg),
 		Match:                NewMatchClient(cfg),
 		MatchRound:           NewMatchRoundClient(cfg),
@@ -206,6 +211,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		config:               cfg,
 		HighlightClip:        NewHighlightClipClient(cfg),
 		HighlightPublishTask: NewHighlightPublishTaskClient(cfg),
+		HighlightRoundState:  NewHighlightRoundStateClient(cfg),
 		LarkMessage:          NewLarkMessageClient(cfg),
 		Match:                NewMatchClient(cfg),
 		MatchRound:           NewMatchRoundClient(cfg),
@@ -245,9 +251,9 @@ func (c *Client) Close() error {
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
-		c.HighlightClip, c.HighlightPublishTask, c.LarkMessage, c.Match, c.MatchRound,
-		c.MediaArtifact, c.OCRTask, c.RecordTask, c.STTTask, c.Team, c.TranscodeTask,
-		c.UploadTask,
+		c.HighlightClip, c.HighlightPublishTask, c.HighlightRoundState, c.LarkMessage,
+		c.Match, c.MatchRound, c.MediaArtifact, c.OCRTask, c.RecordTask, c.STTTask,
+		c.Team, c.TranscodeTask, c.UploadTask,
 	} {
 		n.Use(hooks...)
 	}
@@ -257,9 +263,9 @@ func (c *Client) Use(hooks ...Hook) {
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
-		c.HighlightClip, c.HighlightPublishTask, c.LarkMessage, c.Match, c.MatchRound,
-		c.MediaArtifact, c.OCRTask, c.RecordTask, c.STTTask, c.Team, c.TranscodeTask,
-		c.UploadTask,
+		c.HighlightClip, c.HighlightPublishTask, c.HighlightRoundState, c.LarkMessage,
+		c.Match, c.MatchRound, c.MediaArtifact, c.OCRTask, c.RecordTask, c.STTTask,
+		c.Team, c.TranscodeTask, c.UploadTask,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -272,6 +278,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.HighlightClip.mutate(ctx, m)
 	case *HighlightPublishTaskMutation:
 		return c.HighlightPublishTask.mutate(ctx, m)
+	case *HighlightRoundStateMutation:
+		return c.HighlightRoundState.mutate(ctx, m)
 	case *LarkMessageMutation:
 		return c.LarkMessage.mutate(ctx, m)
 	case *MatchMutation:
@@ -624,6 +632,155 @@ func (c *HighlightPublishTaskClient) mutate(ctx context.Context, m *HighlightPub
 		return (&HighlightPublishTaskDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown HighlightPublishTask mutation op: %q", m.Op())
+	}
+}
+
+// HighlightRoundStateClient is a client for the HighlightRoundState schema.
+type HighlightRoundStateClient struct {
+	config
+}
+
+// NewHighlightRoundStateClient returns a client for the HighlightRoundState from the given config.
+func NewHighlightRoundStateClient(c config) *HighlightRoundStateClient {
+	return &HighlightRoundStateClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `highlightroundstate.Hooks(f(g(h())))`.
+func (c *HighlightRoundStateClient) Use(hooks ...Hook) {
+	c.hooks.HighlightRoundState = append(c.hooks.HighlightRoundState, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `highlightroundstate.Intercept(f(g(h())))`.
+func (c *HighlightRoundStateClient) Intercept(interceptors ...Interceptor) {
+	c.inters.HighlightRoundState = append(c.inters.HighlightRoundState, interceptors...)
+}
+
+// Create returns a builder for creating a HighlightRoundState entity.
+func (c *HighlightRoundStateClient) Create() *HighlightRoundStateCreate {
+	mutation := newHighlightRoundStateMutation(c.config, OpCreate)
+	return &HighlightRoundStateCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of HighlightRoundState entities.
+func (c *HighlightRoundStateClient) CreateBulk(builders ...*HighlightRoundStateCreate) *HighlightRoundStateCreateBulk {
+	return &HighlightRoundStateCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *HighlightRoundStateClient) MapCreateBulk(slice any, setFunc func(*HighlightRoundStateCreate, int)) *HighlightRoundStateCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &HighlightRoundStateCreateBulk{err: fmt.Errorf("calling to HighlightRoundStateClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*HighlightRoundStateCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &HighlightRoundStateCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for HighlightRoundState.
+func (c *HighlightRoundStateClient) Update() *HighlightRoundStateUpdate {
+	mutation := newHighlightRoundStateMutation(c.config, OpUpdate)
+	return &HighlightRoundStateUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *HighlightRoundStateClient) UpdateOne(_m *HighlightRoundState) *HighlightRoundStateUpdateOne {
+	mutation := newHighlightRoundStateMutation(c.config, OpUpdateOne, withHighlightRoundState(_m))
+	return &HighlightRoundStateUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *HighlightRoundStateClient) UpdateOneID(id int) *HighlightRoundStateUpdateOne {
+	mutation := newHighlightRoundStateMutation(c.config, OpUpdateOne, withHighlightRoundStateID(id))
+	return &HighlightRoundStateUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for HighlightRoundState.
+func (c *HighlightRoundStateClient) Delete() *HighlightRoundStateDelete {
+	mutation := newHighlightRoundStateMutation(c.config, OpDelete)
+	return &HighlightRoundStateDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *HighlightRoundStateClient) DeleteOne(_m *HighlightRoundState) *HighlightRoundStateDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *HighlightRoundStateClient) DeleteOneID(id int) *HighlightRoundStateDeleteOne {
+	builder := c.Delete().Where(highlightroundstate.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &HighlightRoundStateDeleteOne{builder}
+}
+
+// Query returns a query builder for HighlightRoundState.
+func (c *HighlightRoundStateClient) Query() *HighlightRoundStateQuery {
+	return &HighlightRoundStateQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeHighlightRoundState},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a HighlightRoundState entity by its id.
+func (c *HighlightRoundStateClient) Get(ctx context.Context, id int) (*HighlightRoundState, error) {
+	return c.Query().Where(highlightroundstate.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *HighlightRoundStateClient) GetX(ctx context.Context, id int) *HighlightRoundState {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryMatchRound queries the match_round edge of a HighlightRoundState.
+func (c *HighlightRoundStateClient) QueryMatchRound(_m *HighlightRoundState) *MatchRoundQuery {
+	query := (&MatchRoundClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(highlightroundstate.Table, highlightroundstate.FieldID, id),
+			sqlgraph.To(matchround.Table, matchround.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, highlightroundstate.MatchRoundTable, highlightroundstate.MatchRoundColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *HighlightRoundStateClient) Hooks() []Hook {
+	return c.hooks.HighlightRoundState
+}
+
+// Interceptors returns the client interceptors.
+func (c *HighlightRoundStateClient) Interceptors() []Interceptor {
+	return c.inters.HighlightRoundState
+}
+
+func (c *HighlightRoundStateClient) mutate(ctx context.Context, m *HighlightRoundStateMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&HighlightRoundStateCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&HighlightRoundStateUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&HighlightRoundStateUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&HighlightRoundStateDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown HighlightRoundState mutation op: %q", m.Op())
 	}
 }
 
@@ -1138,6 +1295,22 @@ func (c *MatchRoundClient) QueryHighlightClips(_m *MatchRound) *HighlightClipQue
 			sqlgraph.From(matchround.Table, matchround.FieldID, id),
 			sqlgraph.To(highlightclip.Table, highlightclip.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, matchround.HighlightClipsTable, matchround.HighlightClipsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryHighlightStates queries the highlight_states edge of a MatchRound.
+func (c *MatchRoundClient) QueryHighlightStates(_m *MatchRound) *HighlightRoundStateQuery {
+	query := (&HighlightRoundStateClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(matchround.Table, matchround.FieldID, id),
+			sqlgraph.To(highlightroundstate.Table, highlightroundstate.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, matchround.HighlightStatesTable, matchround.HighlightStatesColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -2440,13 +2613,13 @@ func (c *UploadTaskClient) mutate(ctx context.Context, m *UploadTaskMutation) (V
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		HighlightClip, HighlightPublishTask, LarkMessage, Match, MatchRound,
-		MediaArtifact, OCRTask, RecordTask, STTTask, Team, TranscodeTask,
+		HighlightClip, HighlightPublishTask, HighlightRoundState, LarkMessage, Match,
+		MatchRound, MediaArtifact, OCRTask, RecordTask, STTTask, Team, TranscodeTask,
 		UploadTask []ent.Hook
 	}
 	inters struct {
-		HighlightClip, HighlightPublishTask, LarkMessage, Match, MatchRound,
-		MediaArtifact, OCRTask, RecordTask, STTTask, Team, TranscodeTask,
+		HighlightClip, HighlightPublishTask, HighlightRoundState, LarkMessage, Match,
+		MatchRound, MediaArtifact, OCRTask, RecordTask, STTTask, Team, TranscodeTask,
 		UploadTask []ent.Interceptor
 	}
 )

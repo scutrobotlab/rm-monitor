@@ -16,6 +16,8 @@ type Tx struct {
 	HighlightClip *HighlightClipClient
 	// HighlightPublishTask is the client for interacting with the HighlightPublishTask builders.
 	HighlightPublishTask *HighlightPublishTaskClient
+	// HighlightRoundState is the client for interacting with the HighlightRoundState builders.
+	HighlightRoundState *HighlightRoundStateClient
 	// LarkMessage is the client for interacting with the LarkMessage builders.
 	LarkMessage *LarkMessageClient
 	// Match is the client for interacting with the Match builders.
@@ -169,6 +171,7 @@ func (tx *Tx) Client() *Client {
 func (tx *Tx) init() {
 	tx.HighlightClip = NewHighlightClipClient(tx.config)
 	tx.HighlightPublishTask = NewHighlightPublishTaskClient(tx.config)
+	tx.HighlightRoundState = NewHighlightRoundStateClient(tx.config)
 	tx.LarkMessage = NewLarkMessageClient(tx.config)
 	tx.Match = NewMatchClient(tx.config)
 	tx.MatchRound = NewMatchRoundClient(tx.config)

@@ -3,6 +3,7 @@
     "config": {
         "enable_forward": true,
         "update_multi": true,
+        "width_mode": "fill",
         "enable_forward_interaction": false,
         "style": {
             "text_size": {
@@ -160,6 +161,36 @@
                 "text_size": "normal_v2",
                 "margin": "4px 0px 4px 0px"
             },
+            {{- if eq (len .HighlightImages) 1 }}
+            {{- $img := index .HighlightImages 0 }}
+            {
+                "tag": "img",
+                "element_id": "highlight_image_1",
+                "img_key": {{json $img.ImageKey}},
+                "preview": true,
+                "transparent": false,
+                "scale_type": "fit_horizontal",
+                "margin": "6px 0px 6px 0px"
+            },
+            {{- else if .HighlightImages }}
+            {
+                "tag": "img_combination",
+                "element_id": "highlight_images",
+                "combination_mode": {{json .HighlightMode}},
+                "combination_transparent": false,
+                "corner_radius": "8px",
+                "margin": "6px 0px 6px 0px",
+                "img_list": [
+                    {{- range $i, $img := .HighlightImages }}
+                    {{- if $i }},{{ end }}
+                    {
+                        "img_key": {{json $img.ImageKey}},
+                        "transparent": false
+                    }
+                    {{- end }}
+                ]
+            },
+            {{- end }}
             {
                 "tag": "div",
                 "text": {

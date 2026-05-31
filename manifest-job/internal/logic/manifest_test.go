@@ -98,11 +98,100 @@ func TestRenderReadmeIncludesOnlyExistingDanmuCharts(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	assertContains(t, readme, "## 弹幕统计")
+	assertContains(t, readme, "## 小局详情")
+	assertContains(t, readme, "### Round 1")
 	assertContains(t, readme, "![Round 1 弹幕数量](Round-1/stats/danmu-count.png)")
 	assertNotContains(t, readme, "online-count.png")
 	assertNotContains(t, readme, "Round 2")
 	assertNotContains(t, readme, ".json")
+}
+
+func TestRenderReadmeIncludesOnlyExistingHighlightGIFs(t *testing.T) {
+	matchDir := t.TempDir()
+	highlightDir := filepath.Join(matchDir, "Round-1", "highlights", "Highlight-01")
+	if err := os.MkdirAll(highlightDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(highlightDir, "preview.gif"), []byte("gif"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(highlightDir, "highlight.json"), []byte(`{
+		"title": "关键反超",
+		"highlight_index": 1,
+		"score": 8,
+		"artifacts": {
+			"preview_gif": "Round-1/highlights/Highlight-01/preview.gif"
+		}
+	}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	missingDir := filepath.Join(matchDir, "Round-1", "highlights", "Highlight-02")
+	if err := os.MkdirAll(missingDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(missingDir, "highlight.json"), []byte(`{
+		"title": "缺失 GIF",
+		"highlight_index": 2,
+		"score": 99,
+		"artifacts": {
+			"preview_gif": "Round-1/highlights/Highlight-02/preview.gif"
+		}
+	}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	thirdDir := filepath.Join(matchDir, "Round-1", "highlights", "Highlight-03")
+	if err := os.MkdirAll(thirdDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(thirdDir, "preview.gif"), []byte("gif"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(thirdDir, "highlight.json"), []byte(`{
+		"title": "第二高光",
+		"highlight_index": 3,
+		"score": 7,
+		"artifacts": {
+			"preview_gif": "Round-1/highlights/Highlight-03/preview.gif"
+		}
+	}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	fourthDir := filepath.Join(matchDir, "Round-1", "highlights", "Highlight-04")
+	if err := os.MkdirAll(fourthDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(fourthDir, "preview.gif"), []byte("gif"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(fourthDir, "highlight.json"), []byte(`{
+		"title": "第三高光",
+		"highlight_index": 4,
+		"score": 6,
+		"artifacts": {
+			"preview_gif": "Round-1/highlights/Highlight-04/preview.gif"
+		}
+	}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	readme, err := renderReadme(&ent.Match{
+		ID:    "match-1",
+		Event: "RMUC",
+		Zone:  "南部赛区",
+		Order: 55,
+		Edges: ent.MatchEdges{Rounds: []*ent.MatchRound{
+			{RoundNo: 1, Status: matchround.StatusENDED},
+		}},
+	}, &ent.Team{Name: "Alpha"}, &ent.Team{Name: "Beta"}, matchDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assertContains(t, readme, "## 小局详情")
+	assertContains(t, readme, "### Round 1")
+	assertContains(t, readme, "![Round 1 关键反超 高光预览](Round-1/highlights/Highlight-01/preview.gif)")
+	assertContains(t, readme, "![Round 1 第二高光 高光预览](Round-1/highlights/Highlight-03/preview.gif)")
+	assertNotContains(t, readme, "缺失 GIF")
+	assertNotContains(t, readme, "第三高光")
 }
 
 func TestBuildReportPayloadIncludesEvidence(t *testing.T) {

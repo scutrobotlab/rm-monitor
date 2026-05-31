@@ -16,6 +16,8 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"github.com/pkg/errors"
 	"scutbot.cn/web/rm-monitor/ent"
+	"scutbot.cn/web/rm-monitor/ent/highlightclip"
+	"scutbot.cn/web/rm-monitor/ent/highlightroundstate"
 	"scutbot.cn/web/rm-monitor/ent/match"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
 	"scutbot.cn/web/rm-monitor/ent/mediaartifact"
@@ -955,10 +957,23 @@ func (l *DispatchLogic) dispatchCompletedManifestJobs() (int, error) {
 		return 0, nil
 	}
 	matches, err := l.svcCtx.DB.Match.Query().
-		Where(match.LatestStatusEQ("DONE"), match.ReportIsNil()).
+		Where(
+			match.LatestStatusEQ("DONE"),
+			match.Or(
+				match.ReportIsNil(),
+				match.HasRoundsWith(matchround.HasHighlightClipsWith(highlightclip.StatusEQ(highlightclip.StatusSUCCEEDED))),
+			),
+		).
 		WithRedTeam().
 		WithBlueTeam().
-		WithRounds().
+		WithRounds(func(q *ent.MatchRoundQuery) {
+			q.WithHighlightStates()
+			q.WithHighlightClips(func(q *ent.HighlightClipQuery) {
+				q.Where(highlightclip.StatusEQ(highlightclip.StatusSUCCEEDED)).
+					Order(highlightclip.ByID(sql.OrderDesc())).
+					Limit(1)
+			})
+		}).
 		Order(match.ByUpdatedAt(sql.OrderDesc())).
 		Limit(50).
 		All(l.ctx)
@@ -980,7 +995,25 @@ func (l *DispatchLogic) dispatchCompletedManifestJobs() (int, error) {
 		if !ready {
 			continue
 		}
+		ready, err = l.matchHighlightReady(m)
+		if err != nil {
+			return created, err
+		}
+		if !ready {
+			continue
+		}
 		name := manifestJobName(m.ID)
+		latestHighlightID := latestSucceededHighlightID(m)
+		if m.Report != nil && latestHighlightID == 0 {
+			continue
+		}
+		if m.Report != nil {
+			key := fmt.Sprintf("rm-monitor:manifest:highlight:%s", m.ID)
+			if rendered, _ := l.svcCtx.Redis.GetCtx(l.ctx, key); rendered == strconv.Itoa(latestHighlightID) {
+				continue
+			}
+			name = manifestRefreshJobName(m.ID, latestHighlightID)
+		}
 		exists, err := l.svcCtx.K8s.JobExists(l.ctx, conf.Namespace, name)
 		if err != nil {
 			return created, err
@@ -999,6 +1032,9 @@ func (l *DispatchLogic) dispatchCompletedManifestJobs() (int, error) {
 		if err := l.svcCtx.K8s.CreateJob(l.ctx, conf.Namespace, job); err != nil {
 			return created, errors.Wrap(err, "create manifest job")
 		}
+		if latestHighlightID > 0 {
+			_ = l.svcCtx.Redis.SetexCtx(l.ctx, fmt.Sprintf("rm-monitor:manifest:highlight:%s", m.ID), strconv.Itoa(latestHighlightID), 30*24*60*60)
+		}
 		l.Infof("dispatched manifest job match=%s job=%s", m.ID, name)
 		created++
 	}
@@ -1015,6 +1051,28 @@ func (l *DispatchLogic) matchSTTReady(m *ent.Match) (bool, error) {
 		ready, err := l.roundSTTReady(r, sttRole)
 		if err != nil {
 			return false, err
+		}
+		if !ready {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
+func (l *DispatchLogic) matchHighlightReady(m *ent.Match) (bool, error) {
+	highlightConf := l.svcCtx.Config.HighlightConf.WithDefaults()
+	if !highlightConf.Enabled {
+		return true, nil
+	}
+	for _, r := range m.Edges.Rounds {
+		ready := false
+		for _, state := range r.Edges.HighlightStates {
+			if state.Role == highlightConf.Role &&
+				state.AlgorithmVersion == highlightConf.AlgorithmVersion &&
+				state.Status == highlightroundstate.StatusCOMPLETED {
+				ready = true
+				break
+			}
 		}
 		if !ready {
 			return false, nil
@@ -1062,6 +1120,23 @@ func jobName(prefix string, id int) string {
 func manifestJobName(matchID string) string {
 	h := sha1.Sum([]byte(matchID))
 	return "manifest-" + hex.EncodeToString(h[:])[:16]
+}
+
+func manifestRefreshJobName(matchID string, highlightID int) string {
+	h := sha1.Sum([]byte(fmt.Sprintf("%s:%d", matchID, highlightID)))
+	return "manifest-" + hex.EncodeToString(h[:])[:16]
+}
+
+func latestSucceededHighlightID(m *ent.Match) int {
+	latest := 0
+	for _, r := range m.Edges.Rounds {
+		for _, h := range r.Edges.HighlightClips {
+			if h.Status == highlightclip.StatusSUCCEEDED && h.ID > latest {
+				latest = h.ID
+			}
+		}
+	}
+	return latest
 }
 
 func fileExists(path string) bool {

@@ -12,6 +12,9 @@ type HighlightClip func(*sql.Selector)
 // HighlightPublishTask is the predicate function for highlightpublishtask builders.
 type HighlightPublishTask func(*sql.Selector)
 
+// HighlightRoundState is the predicate function for highlightroundstate builders.
+type HighlightRoundState func(*sql.Selector)
+
 // LarkMessage is the predicate function for larkmessage builders.
 type LarkMessage func(*sql.Selector)
 

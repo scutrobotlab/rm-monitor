@@ -43,15 +43,18 @@ spec:
               mountPath: {{ include "rm-monitor.configPath" $ }}
               subPath: config.yml
               readOnly: true
-            {{- if or (eq $component "record-dispatcher") (eq $component "uploader-dispatcher") (eq $component "transcode-dispatcher") }}
+            {{- if or (eq $component "lark-notifier") (eq $component "record-dispatcher") (eq $component "uploader-dispatcher") (eq $component "transcode-dispatcher") }}
             - name: records
               mountPath: {{ $.Values.jobs.recordsMountPath }}
+              {{- if eq $component "lark-notifier" }}
+              readOnly: true
+              {{- end }}
             {{- end }}
       volumes:
         - name: config
           configMap:
             name: {{ $cfg.configMap }}
-        {{- if or (eq $component "record-dispatcher") (eq $component "uploader-dispatcher") (eq $component "transcode-dispatcher") }}
+        {{- if or (eq $component "lark-notifier") (eq $component "record-dispatcher") (eq $component "uploader-dispatcher") (eq $component "transcode-dispatcher") }}
         - name: records
           persistentVolumeClaim:
             claimName: {{ $.Values.storage.shared.pvcName }}

@@ -8,12 +8,13 @@ import (
 )
 
 const (
-	MatchRoundChangedChannel    = "match_round_changed"
-	MatchChangedChannel         = "match_changed"
-	RecordTaskChangedChannel    = "record_task_changed"
-	UploadTaskChangedChannel    = "upload_task_changed"
-	TranscodeTaskChangedChannel = "transcode_task_changed"
-	HighlightClipChangedChannel = "highlight_clip_changed"
+	MatchRoundChangedChannel     = "match_round_changed"
+	MatchChangedChannel          = "match_changed"
+	RecordTaskChangedChannel     = "record_task_changed"
+	UploadTaskChangedChannel     = "upload_task_changed"
+	TranscodeTaskChangedChannel  = "transcode_task_changed"
+	HighlightClipChangedChannel  = "highlight_clip_changed"
+	HighlightRoundChangedChannel = "highlight_round_changed"
 )
 
 func Notify(ctx context.Context, dsn, channel, payload string) error {

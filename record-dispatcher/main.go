@@ -55,7 +55,7 @@ func main() {
 func listen(dsn string, wake chan<- struct{}) {
 	for {
 		ctx := context.Background()
-		l, err := db.NewListener(ctx, dsn, db.MatchRoundChangedChannel)
+		l, err := db.NewListener(ctx, dsn, db.MatchRoundChangedChannel, db.HighlightClipChangedChannel, db.HighlightRoundChangedChannel)
 		if err != nil {
 			logx.Errorf("record dispatcher listener failed: %v", err)
 			time.Sleep(5 * time.Second)

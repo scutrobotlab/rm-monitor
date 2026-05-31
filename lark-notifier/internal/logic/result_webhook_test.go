@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"scutbot.cn/web/rm-monitor/ent"
+	"scutbot.cn/web/rm-monitor/ent/highlightclip"
 	"scutbot.cn/web/rm-monitor/ent/match"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
 	"scutbot.cn/web/rm-monitor/lark-notifier/internal/utils"
@@ -91,8 +92,8 @@ func TestCardEntityDataRendersCardJSON(t *testing.T) {
 	if config["update_multi"] != true {
 		t.Fatalf("update_multi = %v, want true", config["update_multi"])
 	}
-	if config["width_mode"] != "compact" {
-		t.Fatalf("width_mode = %v, want compact", config["width_mode"])
+	if config["width_mode"] != "fill" {
+		t.Fatalf("width_mode = %v, want fill", config["width_mode"])
 	}
 	if config["enable_forward_interaction"] != false {
 		t.Fatalf("enable_forward_interaction = %v, want false", config["enable_forward_interaction"])
@@ -183,6 +184,162 @@ func TestCardEntityDataRendersMultipleRoundPanels(t *testing.T) {
 	}
 	if strings.Count(raw, "collapsible_panel") != 2 {
 		t.Fatalf("rendered card should contain two collapsible panels: %s", raw)
+	}
+}
+
+func TestCardEntityDataRendersHighlightImages(t *testing.T) {
+	content := &utils.MatchCardContent{Data: utils.MatchCardData{
+		RedTeam:       "红队",
+		BlueTeam:      "蓝队",
+		Color:         "orange",
+		RedSchool:     "红校",
+		BlueSchool:    "蓝校",
+		Report:        "战报正文",
+		HighlightMode: "double",
+		HighlightImages: []utils.HighlightImage{
+			{ImageKey: "img_1", Title: "高光1"},
+			{ImageKey: "img_2", Title: "高光2"},
+		},
+	}}
+	raw, _, err := utils.CardEntityData(content)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(raw, `"tag":"img_combination"`) {
+		t.Fatalf("rendered card missing img_combination: %s", raw)
+	}
+	if !strings.Contains(raw, `"combination_mode":"double"`) || !strings.Contains(raw, `"img_key":"img_1"`) || !strings.Contains(raw, `"img_key":"img_2"`) {
+		t.Fatalf("rendered card missing highlight image data: %s", raw)
+	}
+	if strings.Index(raw, "img_combination") < strings.Index(raw, "战报正文") {
+		t.Fatalf("highlight images should render after report markdown: %s", raw)
+	}
+}
+
+func TestCardEntityDataRendersNoHighlightImagesWithoutImageSection(t *testing.T) {
+	content := &utils.MatchCardContent{Data: utils.MatchCardData{
+		RedTeam:    "红队",
+		BlueTeam:   "蓝队",
+		Color:      "orange",
+		RedSchool:  "红校",
+		BlueSchool: "蓝校",
+		Report:     "战报正文",
+	}}
+	raw, _, err := utils.CardEntityData(content)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(raw, `"tag":"img_combination"`) || strings.Contains(raw, `"element_id":"highlight_image_1"`) {
+		t.Fatalf("rendered card should not contain highlight image section: %s", raw)
+	}
+}
+
+func TestCardEntityDataRendersOneHighlightImageAsPlainImage(t *testing.T) {
+	content := &utils.MatchCardContent{Data: utils.MatchCardData{
+		RedTeam:    "红队",
+		BlueTeam:   "蓝队",
+		Color:      "orange",
+		RedSchool:  "红校",
+		BlueSchool: "蓝校",
+		Report:     "战报正文",
+		HighlightImages: []utils.HighlightImage{
+			{ImageKey: "img_1", Title: "高光1"},
+		},
+	}}
+	raw, _, err := utils.CardEntityData(content)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(raw, `"tag":"img_combination"`) {
+		t.Fatalf("single highlight should not render img_combination: %s", raw)
+	}
+	if !strings.Contains(raw, `"tag":"img"`) || !strings.Contains(raw, `"element_id":"highlight_image_1"`) || !strings.Contains(raw, `"img_key":"img_1"`) {
+		t.Fatalf("single highlight should render plain image: %s", raw)
+	}
+	if strings.Index(raw, "highlight_image_1") < strings.Index(raw, "战报正文") {
+		t.Fatalf("highlight image should render after report markdown: %s", raw)
+	}
+}
+
+func TestCardEntityDataRendersTwoHighlightImagesAsDouble(t *testing.T) {
+	assertRenderedHighlightCombination(t, 2, "double")
+}
+
+func TestCardEntityDataRendersThreeHighlightImagesAsTriple(t *testing.T) {
+	assertRenderedHighlightCombination(t, 3, "triple")
+}
+
+func TestCardEntityDataRendersFourHighlightImagesAsBisect(t *testing.T) {
+	assertRenderedHighlightCombination(t, 4, "bisect")
+}
+
+func TestCardEntityDataRendersFiveHighlightImagesAsBisect(t *testing.T) {
+	assertRenderedHighlightCombination(t, 5, "bisect")
+}
+
+func assertRenderedHighlightCombination(t *testing.T, n int, mode string) {
+	t.Helper()
+	images := make([]utils.HighlightImage, 0, n)
+	for i := 1; i <= n; i++ {
+		images = append(images, utils.HighlightImage{ImageKey: "img_" + string(rune('0'+i)), Title: "高光"})
+	}
+	content := &utils.MatchCardContent{Data: utils.MatchCardData{
+		RedTeam:         "红队",
+		BlueTeam:        "蓝队",
+		Color:           "orange",
+		RedSchool:       "红校",
+		BlueSchool:      "蓝校",
+		Report:          "战报正文",
+		HighlightMode:   mode,
+		HighlightImages: images,
+	}}
+	raw, _, err := utils.CardEntityData(content)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(raw, `"combination_mode":"`+mode+`"`) {
+		t.Fatalf("combination_mode not rendered as %q: %s", mode, raw)
+	}
+	if got := strings.Count(raw, `"img_key":"img_`); got != n {
+		t.Fatalf("rendered image count = %d, want %d: %s", got, n, raw)
+	}
+	if strings.Index(raw, "img_combination") < strings.Index(raw, "战报正文") {
+		t.Fatalf("highlight images should render after report markdown: %s", raw)
+	}
+}
+
+func TestHighlightCombinationMode(t *testing.T) {
+	cases := map[int]string{1: "double", 2: "double", 3: "triple", 4: "bisect", 6: "bisect", 7: "trisect", 9: "trisect"}
+	for n, want := range cases {
+		if got := highlightCombinationMode(n); got != want {
+			t.Fatalf("highlightCombinationMode(%d) = %q, want %q", n, got, want)
+		}
+	}
+}
+
+func TestSelectedHighlightClipsLimitsPerRoundAndTotal(t *testing.T) {
+	title := "高光"
+	m := &ent.Match{Edges: ent.MatchEdges{Rounds: []*ent.MatchRound{
+		{RoundNo: 1, Edges: ent.MatchRoundEdges{HighlightClips: []*ent.HighlightClip{
+			{ID: 1, HighlightIndex: 1, Status: highlightclip.StatusSUCCEEDED, Score: 1, Title: &title},
+			{ID: 2, HighlightIndex: 2, Status: highlightclip.StatusSUCCEEDED, Score: 5, Title: &title},
+			{ID: 3, HighlightIndex: 3, Status: highlightclip.StatusSUCCEEDED, Score: 4, Title: &title},
+		}}},
+		{RoundNo: 2, Edges: ent.MatchRoundEdges{HighlightClips: []*ent.HighlightClip{
+			{ID: 4, HighlightIndex: 1, Status: highlightclip.StatusFAILED, Score: 99, Title: &title},
+			{ID: 5, HighlightIndex: 2, Status: highlightclip.StatusSUCCEEDED, Score: 3, Title: &title},
+		}}},
+	}}}
+	got := selectedHighlightClips(m, 2, 3)
+	if len(got) != 3 {
+		t.Fatalf("selected len = %d", len(got))
+	}
+	ids := []int{got[0].clip.ID, got[1].clip.ID, got[2].clip.ID}
+	want := []int{2, 3, 5}
+	for i := range want {
+		if ids[i] != want[i] {
+			t.Fatalf("selected ids = %#v, want %#v", ids, want)
+		}
 	}
 }
 

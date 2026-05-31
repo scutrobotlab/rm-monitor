@@ -91,7 +91,14 @@ struct HighlightResult {
     description: String,
     tags: Vec<String>,
     model_payload: Value,
+    preview_gif: String,
     completed_at: chrono::DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize)]
+struct PreviewWindow {
+    start: f64,
+    end: f64,
 }
 
 #[tokio::main]
@@ -136,6 +143,7 @@ async fn run(config: &Config, ctx: &HighlightContext) -> Result<()> {
     let ass = output_dir.join("video.danmuku.ass");
     let video_artifact = output_dir.join("video-artifact.mp4");
     let cover = output_dir.join("cover.jpg");
+    let preview_gif = output_dir.join("preview.gif");
 
     slice_video(&source, &video, ctx.start_seconds, ctx.end_seconds).await?;
     crop_danmu(&danmu_path, &danmu, ctx.start_seconds, ctx.end_seconds)?;
@@ -148,9 +156,11 @@ async fn run(config: &Config, ctx: &HighlightContext) -> Result<()> {
         (ctx.peak_seconds - ctx.start_seconds).max(0.0),
     )
     .await?;
+    let preview = preview_window(ctx.start_seconds, ctx.end_seconds, ctx.peak_seconds);
+    generate_preview_gif(&video, &preview_gif, preview).await?;
 
     let model_payload = ctx.model_payload.clone();
-    let highlight_json = build_highlight_json(ctx, &model_payload);
+    let highlight_json = build_highlight_json(ctx, &model_payload, preview);
     atomic_write_json(&output_dir.join("highlight.json"), &highlight_json)?;
     atomic_write_json(
         &job_dir(&base_dir, ctx)?.join("result.json"),
@@ -161,10 +171,34 @@ async fn run(config: &Config, ctx: &HighlightContext) -> Result<()> {
             description: ctx.description.clone(),
             tags: ctx.tags.clone(),
             model_payload,
+            preview_gif: format!("{}/preview.gif", ctx.output_dir),
             completed_at: Utc::now(),
         },
     )?;
     Ok(())
+}
+
+fn preview_window(start: f64, end: f64, peak: f64) -> PreviewWindow {
+    let clip_len = (end - start).max(0.0);
+    let duration = clip_len.min(6.0).max(0.0);
+    if duration == 0.0 {
+        return PreviewWindow {
+            start: 0.0,
+            end: 0.0,
+        };
+    }
+    let relative_peak = (peak - start).max(0.0).min(clip_len);
+    let mut preview_start = relative_peak - duration / 2.0;
+    if preview_start < 0.0 {
+        preview_start = 0.0;
+    }
+    if preview_start + duration > clip_len {
+        preview_start = (clip_len - duration).max(0.0);
+    }
+    PreviewWindow {
+        start: preview_start,
+        end: preview_start + duration,
+    }
 }
 
 async fn slice_video(source: &Path, output: &Path, start: f64, end: f64) -> Result<()> {
@@ -487,7 +521,54 @@ async fn extract_cover(video: &Path, cover: &Path, seconds: f64) -> Result<()> {
     Ok(())
 }
 
-fn build_highlight_json(ctx: &HighlightContext, model_payload: &Value) -> Value {
+async fn generate_preview_gif(video: &Path, output: &Path, window: PreviewWindow) -> Result<()> {
+    let tmp = output.with_extension("gif.part");
+    let _ = fs::remove_file(&tmp);
+    let duration = (window.end - window.start).max(0.0);
+    if duration <= 0.0 {
+        bail!("invalid preview gif duration {duration}");
+    }
+    let status = Command::new("ffmpeg")
+        .args([
+            "-hide_banner",
+            "-loglevel",
+            "info",
+            "-nostdin",
+            "-ss",
+            &format!("{:.3}", window.start),
+        ])
+        .arg("-i")
+        .arg(video)
+        .args([
+            "-t",
+            &format!("{duration:.3}"),
+            "-vf",
+            "fps=10,scale=480:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse",
+            "-loop",
+            "0",
+            "-f",
+            "gif",
+            "-y",
+        ])
+        .arg(&tmp)
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .status()
+        .await?;
+    if !status.success() {
+        let _ = fs::remove_file(&tmp);
+        bail!("ffmpeg preview gif failed with {status}");
+    }
+    ensure_file(&tmp)?;
+    fs::rename(tmp, output)?;
+    Ok(())
+}
+
+fn build_highlight_json(
+    ctx: &HighlightContext,
+    model_payload: &Value,
+    preview: PreviewWindow,
+) -> Value {
     serde_json::json!({
         "schema": "rm-monitor/highlight/v1",
         "highlight_clip_id": ctx.highlight_clip_id,
@@ -511,7 +592,10 @@ fn build_highlight_json(ctx: &HighlightContext, model_payload: &Value) -> Value 
         "subtitle": format!("{}/video.srt", ctx.output_dir),
         "artifacts": {
             "video_artifact": format!("{}/video-artifact.mp4", ctx.output_dir),
-            "cover": format!("{}/cover.jpg", ctx.output_dir)
+            "cover": format!("{}/cover.jpg", ctx.output_dir),
+            "preview_gif": format!("{}/preview.gif", ctx.output_dir),
+            "preview_start_seconds": preview.start,
+            "preview_end_seconds": preview.end
         },
         "model_payload": model_payload,
         "publish": {"status": "disabled"}
@@ -532,11 +616,13 @@ fn resolve_under(base: &Path, rel: &str) -> Result<PathBuf> {
 }
 
 fn filter_path(path: &Path) -> String {
-    path.to_string_lossy()
-        .replace('\\', "\\\\")
+    let escaped = path
+        .to_string_lossy()
+        .replace('\\', "/")
         .replace(':', "\\:")
         .replace('\'', "\\'")
-        .replace(',', "\\,")
+        .replace(',', "\\,");
+    format!("'{escaped}'")
 }
 
 fn ensure_file(path: &Path) -> Result<()> {
@@ -618,5 +704,23 @@ mod tests {
     #[test]
     fn formats_srt_time() {
         assert_eq!(format_srt_time(3661.234), "01:01:01,234");
+    }
+
+    #[test]
+    fn preview_window_centers_on_peak() {
+        let got = preview_window(100.0, 140.0, 120.0);
+        assert_eq!(got.start, 17.0);
+        assert_eq!(got.end, 23.0);
+    }
+
+    #[test]
+    fn preview_window_clamps_to_clip_edges() {
+        let start = preview_window(100.0, 140.0, 101.0);
+        assert_eq!(start.start, 0.0);
+        assert_eq!(start.end, 6.0);
+
+        let end = preview_window(100.0, 140.0, 139.0);
+        assert_eq!(end.start, 34.0);
+        assert_eq!(end.end, 40.0);
     }
 }

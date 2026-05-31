@@ -130,6 +130,49 @@ var (
 			},
 		},
 	}
+	// HighlightRoundStatesColumns holds the columns for the "highlight_round_states" table.
+	HighlightRoundStatesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "role", Type: field.TypeString},
+		{Name: "algorithm_version", Type: field.TypeString},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"PENDING", "COMPLETED"}, Default: "PENDING"},
+		{Name: "candidate_count", Type: field.TypeInt, Default: 0},
+		{Name: "completed_at", Type: field.TypeTime, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "match_round_highlight_states", Type: field.TypeInt},
+	}
+	// HighlightRoundStatesTable holds the schema information for the "highlight_round_states" table.
+	HighlightRoundStatesTable = &schema.Table{
+		Name:       "highlight_round_states",
+		Columns:    HighlightRoundStatesColumns,
+		PrimaryKey: []*schema.Column{HighlightRoundStatesColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "highlight_round_states_match_rounds_highlight_states",
+				Columns:    []*schema.Column{HighlightRoundStatesColumns[8]},
+				RefColumns: []*schema.Column{MatchRoundsColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "highlightroundstate_role_algorithm_version_match_round_highlight_states",
+				Unique:  true,
+				Columns: []*schema.Column{HighlightRoundStatesColumns[1], HighlightRoundStatesColumns[2], HighlightRoundStatesColumns[8]},
+			},
+			{
+				Name:    "highlightroundstate_status",
+				Unique:  false,
+				Columns: []*schema.Column{HighlightRoundStatesColumns[3]},
+			},
+			{
+				Name:    "highlightroundstate_updated_at",
+				Unique:  false,
+				Columns: []*schema.Column{HighlightRoundStatesColumns[7]},
+			},
+		},
+	}
 	// LarkMessagesColumns holds the columns for the "lark_messages" table.
 	LarkMessagesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -630,6 +673,7 @@ var (
 	Tables = []*schema.Table{
 		HighlightClipsTable,
 		HighlightPublishTasksTable,
+		HighlightRoundStatesTable,
 		LarkMessagesTable,
 		MatchesTable,
 		MatchRoundsTable,
@@ -647,6 +691,7 @@ func init() {
 	HighlightClipsTable.ForeignKeys[0].RefTable = MatchRoundsTable
 	HighlightClipsTable.ForeignKeys[1].RefTable = MediaArtifactsTable
 	HighlightPublishTasksTable.ForeignKeys[0].RefTable = HighlightClipsTable
+	HighlightRoundStatesTable.ForeignKeys[0].RefTable = MatchRoundsTable
 	LarkMessagesTable.ForeignKeys[0].RefTable = MatchesTable
 	MatchesTable.ForeignKeys[0].RefTable = TeamsTable
 	MatchesTable.ForeignKeys[1].RefTable = TeamsTable

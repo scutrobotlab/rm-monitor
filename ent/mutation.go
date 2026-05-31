@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"scutbot.cn/web/rm-monitor/ent/highlightclip"
 	"scutbot.cn/web/rm-monitor/ent/highlightpublishtask"
+	"scutbot.cn/web/rm-monitor/ent/highlightroundstate"
 	"scutbot.cn/web/rm-monitor/ent/larkmessage"
 	"scutbot.cn/web/rm-monitor/ent/match"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
@@ -37,6 +38,7 @@ const (
 	// Node types.
 	TypeHighlightClip        = "HighlightClip"
 	TypeHighlightPublishTask = "HighlightPublishTask"
+	TypeHighlightRoundState  = "HighlightRoundState"
 	TypeLarkMessage          = "LarkMessage"
 	TypeMatch                = "Match"
 	TypeMatchRound           = "MatchRound"
@@ -3245,6 +3247,781 @@ func (m *HighlightPublishTaskMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown HighlightPublishTask edge %s", name)
 }
 
+// HighlightRoundStateMutation represents an operation that mutates the HighlightRoundState nodes in the graph.
+type HighlightRoundStateMutation struct {
+	config
+	op                 Op
+	typ                string
+	id                 *int
+	role               *string
+	algorithm_version  *string
+	status             *highlightroundstate.Status
+	candidate_count    *int
+	addcandidate_count *int
+	completed_at       *time.Time
+	created_at         *time.Time
+	updated_at         *time.Time
+	clearedFields      map[string]struct{}
+	match_round        *int
+	clearedmatch_round bool
+	done               bool
+	oldValue           func(context.Context) (*HighlightRoundState, error)
+	predicates         []predicate.HighlightRoundState
+}
+
+var _ ent.Mutation = (*HighlightRoundStateMutation)(nil)
+
+// highlightroundstateOption allows management of the mutation configuration using functional options.
+type highlightroundstateOption func(*HighlightRoundStateMutation)
+
+// newHighlightRoundStateMutation creates new mutation for the HighlightRoundState entity.
+func newHighlightRoundStateMutation(c config, op Op, opts ...highlightroundstateOption) *HighlightRoundStateMutation {
+	m := &HighlightRoundStateMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeHighlightRoundState,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withHighlightRoundStateID sets the ID field of the mutation.
+func withHighlightRoundStateID(id int) highlightroundstateOption {
+	return func(m *HighlightRoundStateMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *HighlightRoundState
+		)
+		m.oldValue = func(ctx context.Context) (*HighlightRoundState, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().HighlightRoundState.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withHighlightRoundState sets the old HighlightRoundState of the mutation.
+func withHighlightRoundState(node *HighlightRoundState) highlightroundstateOption {
+	return func(m *HighlightRoundStateMutation) {
+		m.oldValue = func(context.Context) (*HighlightRoundState, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m HighlightRoundStateMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m HighlightRoundStateMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *HighlightRoundStateMutation) ID() (id int, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *HighlightRoundStateMutation) IDs(ctx context.Context) ([]int, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []int{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().HighlightRoundState.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetRole sets the "role" field.
+func (m *HighlightRoundStateMutation) SetRole(s string) {
+	m.role = &s
+}
+
+// Role returns the value of the "role" field in the mutation.
+func (m *HighlightRoundStateMutation) Role() (r string, exists bool) {
+	v := m.role
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRole returns the old "role" field's value of the HighlightRoundState entity.
+// If the HighlightRoundState object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *HighlightRoundStateMutation) OldRole(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRole is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRole requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRole: %w", err)
+	}
+	return oldValue.Role, nil
+}
+
+// ResetRole resets all changes to the "role" field.
+func (m *HighlightRoundStateMutation) ResetRole() {
+	m.role = nil
+}
+
+// SetAlgorithmVersion sets the "algorithm_version" field.
+func (m *HighlightRoundStateMutation) SetAlgorithmVersion(s string) {
+	m.algorithm_version = &s
+}
+
+// AlgorithmVersion returns the value of the "algorithm_version" field in the mutation.
+func (m *HighlightRoundStateMutation) AlgorithmVersion() (r string, exists bool) {
+	v := m.algorithm_version
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAlgorithmVersion returns the old "algorithm_version" field's value of the HighlightRoundState entity.
+// If the HighlightRoundState object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *HighlightRoundStateMutation) OldAlgorithmVersion(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAlgorithmVersion is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAlgorithmVersion requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAlgorithmVersion: %w", err)
+	}
+	return oldValue.AlgorithmVersion, nil
+}
+
+// ResetAlgorithmVersion resets all changes to the "algorithm_version" field.
+func (m *HighlightRoundStateMutation) ResetAlgorithmVersion() {
+	m.algorithm_version = nil
+}
+
+// SetStatus sets the "status" field.
+func (m *HighlightRoundStateMutation) SetStatus(h highlightroundstate.Status) {
+	m.status = &h
+}
+
+// Status returns the value of the "status" field in the mutation.
+func (m *HighlightRoundStateMutation) Status() (r highlightroundstate.Status, exists bool) {
+	v := m.status
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStatus returns the old "status" field's value of the HighlightRoundState entity.
+// If the HighlightRoundState object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *HighlightRoundStateMutation) OldStatus(ctx context.Context) (v highlightroundstate.Status, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStatus requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStatus: %w", err)
+	}
+	return oldValue.Status, nil
+}
+
+// ResetStatus resets all changes to the "status" field.
+func (m *HighlightRoundStateMutation) ResetStatus() {
+	m.status = nil
+}
+
+// SetCandidateCount sets the "candidate_count" field.
+func (m *HighlightRoundStateMutation) SetCandidateCount(i int) {
+	m.candidate_count = &i
+	m.addcandidate_count = nil
+}
+
+// CandidateCount returns the value of the "candidate_count" field in the mutation.
+func (m *HighlightRoundStateMutation) CandidateCount() (r int, exists bool) {
+	v := m.candidate_count
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCandidateCount returns the old "candidate_count" field's value of the HighlightRoundState entity.
+// If the HighlightRoundState object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *HighlightRoundStateMutation) OldCandidateCount(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCandidateCount is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCandidateCount requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCandidateCount: %w", err)
+	}
+	return oldValue.CandidateCount, nil
+}
+
+// AddCandidateCount adds i to the "candidate_count" field.
+func (m *HighlightRoundStateMutation) AddCandidateCount(i int) {
+	if m.addcandidate_count != nil {
+		*m.addcandidate_count += i
+	} else {
+		m.addcandidate_count = &i
+	}
+}
+
+// AddedCandidateCount returns the value that was added to the "candidate_count" field in this mutation.
+func (m *HighlightRoundStateMutation) AddedCandidateCount() (r int, exists bool) {
+	v := m.addcandidate_count
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetCandidateCount resets all changes to the "candidate_count" field.
+func (m *HighlightRoundStateMutation) ResetCandidateCount() {
+	m.candidate_count = nil
+	m.addcandidate_count = nil
+}
+
+// SetCompletedAt sets the "completed_at" field.
+func (m *HighlightRoundStateMutation) SetCompletedAt(t time.Time) {
+	m.completed_at = &t
+}
+
+// CompletedAt returns the value of the "completed_at" field in the mutation.
+func (m *HighlightRoundStateMutation) CompletedAt() (r time.Time, exists bool) {
+	v := m.completed_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCompletedAt returns the old "completed_at" field's value of the HighlightRoundState entity.
+// If the HighlightRoundState object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *HighlightRoundStateMutation) OldCompletedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCompletedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCompletedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCompletedAt: %w", err)
+	}
+	return oldValue.CompletedAt, nil
+}
+
+// ClearCompletedAt clears the value of the "completed_at" field.
+func (m *HighlightRoundStateMutation) ClearCompletedAt() {
+	m.completed_at = nil
+	m.clearedFields[highlightroundstate.FieldCompletedAt] = struct{}{}
+}
+
+// CompletedAtCleared returns if the "completed_at" field was cleared in this mutation.
+func (m *HighlightRoundStateMutation) CompletedAtCleared() bool {
+	_, ok := m.clearedFields[highlightroundstate.FieldCompletedAt]
+	return ok
+}
+
+// ResetCompletedAt resets all changes to the "completed_at" field.
+func (m *HighlightRoundStateMutation) ResetCompletedAt() {
+	m.completed_at = nil
+	delete(m.clearedFields, highlightroundstate.FieldCompletedAt)
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *HighlightRoundStateMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *HighlightRoundStateMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the HighlightRoundState entity.
+// If the HighlightRoundState object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *HighlightRoundStateMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *HighlightRoundStateMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *HighlightRoundStateMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *HighlightRoundStateMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the HighlightRoundState entity.
+// If the HighlightRoundState object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *HighlightRoundStateMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *HighlightRoundStateMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetMatchRoundID sets the "match_round" edge to the MatchRound entity by id.
+func (m *HighlightRoundStateMutation) SetMatchRoundID(id int) {
+	m.match_round = &id
+}
+
+// ClearMatchRound clears the "match_round" edge to the MatchRound entity.
+func (m *HighlightRoundStateMutation) ClearMatchRound() {
+	m.clearedmatch_round = true
+}
+
+// MatchRoundCleared reports if the "match_round" edge to the MatchRound entity was cleared.
+func (m *HighlightRoundStateMutation) MatchRoundCleared() bool {
+	return m.clearedmatch_round
+}
+
+// MatchRoundID returns the "match_round" edge ID in the mutation.
+func (m *HighlightRoundStateMutation) MatchRoundID() (id int, exists bool) {
+	if m.match_round != nil {
+		return *m.match_round, true
+	}
+	return
+}
+
+// MatchRoundIDs returns the "match_round" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// MatchRoundID instead. It exists only for internal usage by the builders.
+func (m *HighlightRoundStateMutation) MatchRoundIDs() (ids []int) {
+	if id := m.match_round; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetMatchRound resets all changes to the "match_round" edge.
+func (m *HighlightRoundStateMutation) ResetMatchRound() {
+	m.match_round = nil
+	m.clearedmatch_round = false
+}
+
+// Where appends a list predicates to the HighlightRoundStateMutation builder.
+func (m *HighlightRoundStateMutation) Where(ps ...predicate.HighlightRoundState) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the HighlightRoundStateMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *HighlightRoundStateMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.HighlightRoundState, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *HighlightRoundStateMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *HighlightRoundStateMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (HighlightRoundState).
+func (m *HighlightRoundStateMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *HighlightRoundStateMutation) Fields() []string {
+	fields := make([]string, 0, 7)
+	if m.role != nil {
+		fields = append(fields, highlightroundstate.FieldRole)
+	}
+	if m.algorithm_version != nil {
+		fields = append(fields, highlightroundstate.FieldAlgorithmVersion)
+	}
+	if m.status != nil {
+		fields = append(fields, highlightroundstate.FieldStatus)
+	}
+	if m.candidate_count != nil {
+		fields = append(fields, highlightroundstate.FieldCandidateCount)
+	}
+	if m.completed_at != nil {
+		fields = append(fields, highlightroundstate.FieldCompletedAt)
+	}
+	if m.created_at != nil {
+		fields = append(fields, highlightroundstate.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, highlightroundstate.FieldUpdatedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *HighlightRoundStateMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case highlightroundstate.FieldRole:
+		return m.Role()
+	case highlightroundstate.FieldAlgorithmVersion:
+		return m.AlgorithmVersion()
+	case highlightroundstate.FieldStatus:
+		return m.Status()
+	case highlightroundstate.FieldCandidateCount:
+		return m.CandidateCount()
+	case highlightroundstate.FieldCompletedAt:
+		return m.CompletedAt()
+	case highlightroundstate.FieldCreatedAt:
+		return m.CreatedAt()
+	case highlightroundstate.FieldUpdatedAt:
+		return m.UpdatedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *HighlightRoundStateMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case highlightroundstate.FieldRole:
+		return m.OldRole(ctx)
+	case highlightroundstate.FieldAlgorithmVersion:
+		return m.OldAlgorithmVersion(ctx)
+	case highlightroundstate.FieldStatus:
+		return m.OldStatus(ctx)
+	case highlightroundstate.FieldCandidateCount:
+		return m.OldCandidateCount(ctx)
+	case highlightroundstate.FieldCompletedAt:
+		return m.OldCompletedAt(ctx)
+	case highlightroundstate.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case highlightroundstate.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown HighlightRoundState field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *HighlightRoundStateMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case highlightroundstate.FieldRole:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRole(v)
+		return nil
+	case highlightroundstate.FieldAlgorithmVersion:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAlgorithmVersion(v)
+		return nil
+	case highlightroundstate.FieldStatus:
+		v, ok := value.(highlightroundstate.Status)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStatus(v)
+		return nil
+	case highlightroundstate.FieldCandidateCount:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCandidateCount(v)
+		return nil
+	case highlightroundstate.FieldCompletedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCompletedAt(v)
+		return nil
+	case highlightroundstate.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case highlightroundstate.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown HighlightRoundState field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *HighlightRoundStateMutation) AddedFields() []string {
+	var fields []string
+	if m.addcandidate_count != nil {
+		fields = append(fields, highlightroundstate.FieldCandidateCount)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *HighlightRoundStateMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case highlightroundstate.FieldCandidateCount:
+		return m.AddedCandidateCount()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *HighlightRoundStateMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case highlightroundstate.FieldCandidateCount:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddCandidateCount(v)
+		return nil
+	}
+	return fmt.Errorf("unknown HighlightRoundState numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *HighlightRoundStateMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(highlightroundstate.FieldCompletedAt) {
+		fields = append(fields, highlightroundstate.FieldCompletedAt)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *HighlightRoundStateMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *HighlightRoundStateMutation) ClearField(name string) error {
+	switch name {
+	case highlightroundstate.FieldCompletedAt:
+		m.ClearCompletedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown HighlightRoundState nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *HighlightRoundStateMutation) ResetField(name string) error {
+	switch name {
+	case highlightroundstate.FieldRole:
+		m.ResetRole()
+		return nil
+	case highlightroundstate.FieldAlgorithmVersion:
+		m.ResetAlgorithmVersion()
+		return nil
+	case highlightroundstate.FieldStatus:
+		m.ResetStatus()
+		return nil
+	case highlightroundstate.FieldCandidateCount:
+		m.ResetCandidateCount()
+		return nil
+	case highlightroundstate.FieldCompletedAt:
+		m.ResetCompletedAt()
+		return nil
+	case highlightroundstate.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case highlightroundstate.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown HighlightRoundState field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *HighlightRoundStateMutation) AddedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.match_round != nil {
+		edges = append(edges, highlightroundstate.EdgeMatchRound)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *HighlightRoundStateMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case highlightroundstate.EdgeMatchRound:
+		if id := m.match_round; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *HighlightRoundStateMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 1)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *HighlightRoundStateMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *HighlightRoundStateMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.clearedmatch_round {
+		edges = append(edges, highlightroundstate.EdgeMatchRound)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *HighlightRoundStateMutation) EdgeCleared(name string) bool {
+	switch name {
+	case highlightroundstate.EdgeMatchRound:
+		return m.clearedmatch_round
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *HighlightRoundStateMutation) ClearEdge(name string) error {
+	switch name {
+	case highlightroundstate.EdgeMatchRound:
+		m.ClearMatchRound()
+		return nil
+	}
+	return fmt.Errorf("unknown HighlightRoundState unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *HighlightRoundStateMutation) ResetEdge(name string) error {
+	switch name {
+	case highlightroundstate.EdgeMatchRound:
+		m.ResetMatchRound()
+		return nil
+	}
+	return fmt.Errorf("unknown HighlightRoundState edge %s", name)
+}
+
 // LarkMessageMutation represents an operation that mutates the LarkMessage nodes in the graph.
 type LarkMessageMutation struct {
 	config
@@ -5407,35 +6184,38 @@ func (m *MatchMutation) ResetEdge(name string) error {
 // MatchRoundMutation represents an operation that mutates the MatchRound nodes in the graph.
 type MatchRoundMutation struct {
 	config
-	op                     Op
-	typ                    string
-	id                     *int
-	round_no               *int
-	addround_no            *int
-	status                 *matchround.Status
-	winner                 *matchround.Winner
-	started_at             *time.Time
-	ended_at               *time.Time
-	created_at             *time.Time
-	updated_at             *time.Time
-	clearedFields          map[string]struct{}
-	match                  *string
-	clearedmatch           bool
-	record_tasks           map[int]struct{}
-	removedrecord_tasks    map[int]struct{}
-	clearedrecord_tasks    bool
-	stt_tasks              map[int]struct{}
-	removedstt_tasks       map[int]struct{}
-	clearedstt_tasks       bool
-	highlight_clips        map[int]struct{}
-	removedhighlight_clips map[int]struct{}
-	clearedhighlight_clips bool
-	ocr_tasks              map[int]struct{}
-	removedocr_tasks       map[int]struct{}
-	clearedocr_tasks       bool
-	done                   bool
-	oldValue               func(context.Context) (*MatchRound, error)
-	predicates             []predicate.MatchRound
+	op                      Op
+	typ                     string
+	id                      *int
+	round_no                *int
+	addround_no             *int
+	status                  *matchround.Status
+	winner                  *matchround.Winner
+	started_at              *time.Time
+	ended_at                *time.Time
+	created_at              *time.Time
+	updated_at              *time.Time
+	clearedFields           map[string]struct{}
+	match                   *string
+	clearedmatch            bool
+	record_tasks            map[int]struct{}
+	removedrecord_tasks     map[int]struct{}
+	clearedrecord_tasks     bool
+	stt_tasks               map[int]struct{}
+	removedstt_tasks        map[int]struct{}
+	clearedstt_tasks        bool
+	highlight_clips         map[int]struct{}
+	removedhighlight_clips  map[int]struct{}
+	clearedhighlight_clips  bool
+	highlight_states        map[int]struct{}
+	removedhighlight_states map[int]struct{}
+	clearedhighlight_states bool
+	ocr_tasks               map[int]struct{}
+	removedocr_tasks        map[int]struct{}
+	clearedocr_tasks        bool
+	done                    bool
+	oldValue                func(context.Context) (*MatchRound, error)
+	predicates              []predicate.MatchRound
 }
 
 var _ ent.Mutation = (*MatchRoundMutation)(nil)
@@ -6035,6 +6815,60 @@ func (m *MatchRoundMutation) ResetHighlightClips() {
 	m.removedhighlight_clips = nil
 }
 
+// AddHighlightStateIDs adds the "highlight_states" edge to the HighlightRoundState entity by ids.
+func (m *MatchRoundMutation) AddHighlightStateIDs(ids ...int) {
+	if m.highlight_states == nil {
+		m.highlight_states = make(map[int]struct{})
+	}
+	for i := range ids {
+		m.highlight_states[ids[i]] = struct{}{}
+	}
+}
+
+// ClearHighlightStates clears the "highlight_states" edge to the HighlightRoundState entity.
+func (m *MatchRoundMutation) ClearHighlightStates() {
+	m.clearedhighlight_states = true
+}
+
+// HighlightStatesCleared reports if the "highlight_states" edge to the HighlightRoundState entity was cleared.
+func (m *MatchRoundMutation) HighlightStatesCleared() bool {
+	return m.clearedhighlight_states
+}
+
+// RemoveHighlightStateIDs removes the "highlight_states" edge to the HighlightRoundState entity by IDs.
+func (m *MatchRoundMutation) RemoveHighlightStateIDs(ids ...int) {
+	if m.removedhighlight_states == nil {
+		m.removedhighlight_states = make(map[int]struct{})
+	}
+	for i := range ids {
+		delete(m.highlight_states, ids[i])
+		m.removedhighlight_states[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedHighlightStates returns the removed IDs of the "highlight_states" edge to the HighlightRoundState entity.
+func (m *MatchRoundMutation) RemovedHighlightStatesIDs() (ids []int) {
+	for id := range m.removedhighlight_states {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// HighlightStatesIDs returns the "highlight_states" edge IDs in the mutation.
+func (m *MatchRoundMutation) HighlightStatesIDs() (ids []int) {
+	for id := range m.highlight_states {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetHighlightStates resets all changes to the "highlight_states" edge.
+func (m *MatchRoundMutation) ResetHighlightStates() {
+	m.highlight_states = nil
+	m.clearedhighlight_states = false
+	m.removedhighlight_states = nil
+}
+
 // AddOcrTaskIDs adds the "ocr_tasks" edge to the OCRTask entity by ids.
 func (m *MatchRoundMutation) AddOcrTaskIDs(ids ...int) {
 	if m.ocr_tasks == nil {
@@ -6354,7 +7188,7 @@ func (m *MatchRoundMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *MatchRoundMutation) AddedEdges() []string {
-	edges := make([]string, 0, 5)
+	edges := make([]string, 0, 6)
 	if m.match != nil {
 		edges = append(edges, matchround.EdgeMatch)
 	}
@@ -6366,6 +7200,9 @@ func (m *MatchRoundMutation) AddedEdges() []string {
 	}
 	if m.highlight_clips != nil {
 		edges = append(edges, matchround.EdgeHighlightClips)
+	}
+	if m.highlight_states != nil {
+		edges = append(edges, matchround.EdgeHighlightStates)
 	}
 	if m.ocr_tasks != nil {
 		edges = append(edges, matchround.EdgeOcrTasks)
@@ -6399,6 +7236,12 @@ func (m *MatchRoundMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case matchround.EdgeHighlightStates:
+		ids := make([]ent.Value, 0, len(m.highlight_states))
+		for id := range m.highlight_states {
+			ids = append(ids, id)
+		}
+		return ids
 	case matchround.EdgeOcrTasks:
 		ids := make([]ent.Value, 0, len(m.ocr_tasks))
 		for id := range m.ocr_tasks {
@@ -6411,7 +7254,7 @@ func (m *MatchRoundMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *MatchRoundMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 5)
+	edges := make([]string, 0, 6)
 	if m.removedrecord_tasks != nil {
 		edges = append(edges, matchround.EdgeRecordTasks)
 	}
@@ -6420,6 +7263,9 @@ func (m *MatchRoundMutation) RemovedEdges() []string {
 	}
 	if m.removedhighlight_clips != nil {
 		edges = append(edges, matchround.EdgeHighlightClips)
+	}
+	if m.removedhighlight_states != nil {
+		edges = append(edges, matchround.EdgeHighlightStates)
 	}
 	if m.removedocr_tasks != nil {
 		edges = append(edges, matchround.EdgeOcrTasks)
@@ -6449,6 +7295,12 @@ func (m *MatchRoundMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case matchround.EdgeHighlightStates:
+		ids := make([]ent.Value, 0, len(m.removedhighlight_states))
+		for id := range m.removedhighlight_states {
+			ids = append(ids, id)
+		}
+		return ids
 	case matchround.EdgeOcrTasks:
 		ids := make([]ent.Value, 0, len(m.removedocr_tasks))
 		for id := range m.removedocr_tasks {
@@ -6461,7 +7313,7 @@ func (m *MatchRoundMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *MatchRoundMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 5)
+	edges := make([]string, 0, 6)
 	if m.clearedmatch {
 		edges = append(edges, matchround.EdgeMatch)
 	}
@@ -6473,6 +7325,9 @@ func (m *MatchRoundMutation) ClearedEdges() []string {
 	}
 	if m.clearedhighlight_clips {
 		edges = append(edges, matchround.EdgeHighlightClips)
+	}
+	if m.clearedhighlight_states {
+		edges = append(edges, matchround.EdgeHighlightStates)
 	}
 	if m.clearedocr_tasks {
 		edges = append(edges, matchround.EdgeOcrTasks)
@@ -6492,6 +7347,8 @@ func (m *MatchRoundMutation) EdgeCleared(name string) bool {
 		return m.clearedstt_tasks
 	case matchround.EdgeHighlightClips:
 		return m.clearedhighlight_clips
+	case matchround.EdgeHighlightStates:
+		return m.clearedhighlight_states
 	case matchround.EdgeOcrTasks:
 		return m.clearedocr_tasks
 	}
@@ -6524,6 +7381,9 @@ func (m *MatchRoundMutation) ResetEdge(name string) error {
 		return nil
 	case matchround.EdgeHighlightClips:
 		m.ResetHighlightClips()
+		return nil
+	case matchround.EdgeHighlightStates:
+		m.ResetHighlightStates()
 		return nil
 	case matchround.EdgeOcrTasks:
 		m.ResetOcrTasks()

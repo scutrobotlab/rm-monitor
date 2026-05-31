@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"html"
+	"path/filepath"
 	"reflect"
 	"sort"
 	"strconv"
@@ -13,6 +14,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/samber/lo"
 	"scutbot.cn/web/rm-monitor/ent"
+	"scutbot.cn/web/rm-monitor/ent/highlightclip"
 	"scutbot.cn/web/rm-monitor/ent/match"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
 	"scutbot.cn/web/rm-monitor/ent/uploadtask"
@@ -48,6 +50,12 @@ func (l *NotifyLogic) Sync(since time.Time) error {
 		}
 		return err
 	}
+	if err := l.patchCardsForHighlightsSince(since); err != nil {
+		if isContextDone(err) {
+			return nil
+		}
+		return err
+	}
 	return nil
 }
 
@@ -67,6 +75,12 @@ func (l *NotifyLogic) SyncEvent(channel, payload string) error {
 			return errors.Wrapf(err, "parse notify payload %q", payload)
 		}
 		return l.syncUploadTask(id)
+	case "highlight_clip_changed":
+		id, err := strconv.Atoi(payload)
+		if err != nil {
+			return errors.Wrapf(err, "parse notify payload %q", payload)
+		}
+		return l.syncHighlightClip(id)
 	default:
 		return nil
 	}
@@ -117,6 +131,25 @@ func (l *NotifyLogic) syncUploadTask(id int) error {
 		return err
 	}
 	return nil
+}
+
+func (l *NotifyLogic) syncHighlightClip(id int) error {
+	clip, err := l.svcCtx.DB.HighlightClip.Query().
+		Where(highlightclip.ID(id), highlightclip.StatusEQ(highlightclip.StatusSUCCEEDED)).
+		WithMatchRound(func(q *ent.MatchRoundQuery) {
+			q.WithMatch()
+		}).
+		Only(l.ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil
+		}
+		return errors.Wrap(err, "query notified highlight clip")
+	}
+	if clip.Edges.MatchRound == nil || clip.Edges.MatchRound.Edges.Match == nil {
+		return nil
+	}
+	return l.patchMatchCardsByID(clip.Edges.MatchRound.Edges.Match.ID)
 }
 
 func (l *NotifyLogic) ensureStartedMessages() error {
@@ -316,6 +349,10 @@ func (l *NotifyLogic) matchForPatch(matchID string) (*ent.Match, error) {
 			q.Order(matchround.ByRoundNo()).
 				WithRecordTasks(func(q *ent.RecordTaskQuery) {
 					q.WithUploadTask()
+				}).
+				WithHighlightClips(func(q *ent.HighlightClipQuery) {
+					q.Where(highlightclip.StatusEQ(highlightclip.StatusSUCCEEDED)).
+						Order(highlightclip.ByHighlightIndex())
 				})
 		}).
 		Only(l.ctx)
@@ -392,6 +429,11 @@ func cardDataUpdatedAt(m *ent.Match) time.Time {
 				updatedAt = task.Edges.UploadTask.UpdatedAt
 			}
 		}
+		for _, clip := range r.Edges.HighlightClips {
+			if clip.UpdatedAt.After(updatedAt) {
+				updatedAt = clip.UpdatedAt
+			}
+		}
 	}
 	return updatedAt
 }
@@ -414,6 +456,35 @@ func (l *NotifyLogic) patchCardsForUploadsSince(since time.Time) error {
 			continue
 		}
 		seen[task.Edges.RecordTask.Edges.MatchRound.Edges.Match.ID] = struct{}{}
+	}
+	for id := range seen {
+		if err := l.patchMatchCardsByID(id); err != nil {
+			if isContextDone(err) {
+				return nil
+			}
+			return err
+		}
+	}
+	return nil
+}
+
+func (l *NotifyLogic) patchCardsForHighlightsSince(since time.Time) error {
+	clips, err := l.svcCtx.DB.HighlightClip.Query().
+		Where(highlightclip.UpdatedAtGTE(since), highlightclip.StatusEQ(highlightclip.StatusSUCCEEDED)).
+		WithMatchRound(func(q *ent.MatchRoundQuery) {
+			q.WithMatch()
+		}).
+		Limit(200).
+		All(l.ctx)
+	if err != nil {
+		return errors.Wrap(err, "query completed highlights")
+	}
+	seen := map[string]struct{}{}
+	for _, clip := range clips {
+		if clip.Edges.MatchRound == nil || clip.Edges.MatchRound.Edges.Match == nil {
+			continue
+		}
+		seen[clip.Edges.MatchRound.Edges.Match.ID] = struct{}{}
 	}
 	for id := range seen {
 		if err := l.patchMatchCardsByID(id); err != nil {
@@ -490,6 +561,8 @@ func (l *NotifyLogic) cardContent(m *ent.Match) (*utils.MatchCardContent, error)
 		return nil, err
 	}
 	content.Data.Rounds = l.roundCards(m)
+	content.Data.HighlightImages = l.highlightImages(m)
+	content.Data.HighlightMode = highlightCombinationMode(len(content.Data.HighlightImages))
 	if matchCardCompleted(m) {
 		content.Data.MatchProgress = ""
 		content.Data.Color = completedCardColor(m.Result)
@@ -571,6 +644,109 @@ func roundRecordLinks(r *ent.MatchRound) string {
 		return "暂无录制"
 	}
 	return strings.Join(links, "\n")
+}
+
+func (l *NotifyLogic) highlightImages(m *ent.Match) []utils.HighlightImage {
+	if m == nil {
+		return nil
+	}
+	baseDir := strings.TrimSpace(l.svcCtx.Config.RecordConf.BaseDir)
+	if baseDir == "" {
+		baseDir = "/records"
+	}
+	clips := selectedHighlightClips(m, 2, 9)
+	images := make([]utils.HighlightImage, 0, len(clips))
+	for _, selected := range clips {
+		clip := selected.clip
+		path := filepath.Join(baseDir, filepath.FromSlash(clip.OutputDir), "preview.gif")
+		imageKey, err := utils.GetLocalImageKey(l.ctx, l.svcCtx, path)
+		if err != nil {
+			l.Error(errors.Wrapf(err, "upload highlight preview match=%s clip=%d path=%s", m.ID, clip.ID, path))
+			continue
+		}
+		title := fmt.Sprintf("Round %d Highlight %02d", selected.roundNo, clip.HighlightIndex)
+		if clip.Title != nil && strings.TrimSpace(*clip.Title) != "" {
+			title = strings.TrimSpace(*clip.Title)
+		}
+		images = append(images, utils.HighlightImage{
+			ImageKey: imageKey,
+			Title:    title,
+			Alt:      fmt.Sprintf("Round %d %s", selected.roundNo, title),
+		})
+	}
+	return images
+}
+
+type selectedHighlightClip struct {
+	clip    *ent.HighlightClip
+	roundNo int
+}
+
+func selectedHighlightClips(m *ent.Match, perRoundLimit, totalLimit int) []selectedHighlightClip {
+	if m == nil || perRoundLimit <= 0 || totalLimit <= 0 {
+		return nil
+	}
+	type candidate struct {
+		selectedHighlightClip
+		score float64
+		index int
+	}
+	candidates := make([]candidate, 0, totalLimit)
+	for _, r := range m.Edges.Rounds {
+		clips := append([]*ent.HighlightClip(nil), r.Edges.HighlightClips...)
+		sort.SliceStable(clips, func(i, j int) bool {
+			if clips[i].Score != clips[j].Score {
+				return clips[i].Score > clips[j].Score
+			}
+			return clips[i].HighlightIndex < clips[j].HighlightIndex
+		})
+		roundAdded := 0
+		for _, clip := range clips {
+			if clip.Status != highlightclip.StatusSUCCEEDED {
+				continue
+			}
+			if roundAdded >= perRoundLimit {
+				break
+			}
+			candidates = append(candidates, candidate{
+				selectedHighlightClip: selectedHighlightClip{clip: clip, roundNo: r.RoundNo},
+				score:                 clip.Score,
+				index:                 clip.HighlightIndex,
+			})
+			roundAdded++
+		}
+	}
+	sort.SliceStable(candidates, func(i, j int) bool {
+		if candidates[i].score != candidates[j].score {
+			return candidates[i].score > candidates[j].score
+		}
+		if candidates[i].roundNo != candidates[j].roundNo {
+			return candidates[i].roundNo < candidates[j].roundNo
+		}
+		return candidates[i].index < candidates[j].index
+	})
+	limit := totalLimit
+	if len(candidates) < limit {
+		limit = len(candidates)
+	}
+	out := make([]selectedHighlightClip, 0, limit)
+	for i := 0; i < limit; i++ {
+		out = append(out, candidates[i].selectedHighlightClip)
+	}
+	return out
+}
+
+func highlightCombinationMode(n int) string {
+	switch {
+	case n <= 2:
+		return "double"
+	case n == 3:
+		return "triple"
+	case n >= 7:
+		return "trisect"
+	default:
+		return "bisect"
+	}
 }
 
 func cardWinnerText(m *ent.Match, red, blue *ent.Team) string {

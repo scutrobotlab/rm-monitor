@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"text/template"
 	"time"
@@ -147,15 +148,19 @@ const readmeTemplate = `# {{ .Title }}
 | --- | --- | --- | --- | --- |
 {{ range .Rounds }}| {{ .RoundNo }} | {{ .Status }} | {{ .Winner }} | {{ .StartedAt }} | {{ .EndedAt }} |
 {{ end }}
-{{ if .DanmuCharts }}
+{{ if .RoundDetails }}
 
-## 弹幕统计
+## 小局详情
 
-{{ range .DanmuCharts }}### Round {{ .RoundNo }}
+{{ range .RoundDetails }}### Round {{ .RoundNo }}
+
 {{ if .DanmuCountImage }}![Round {{ .RoundNo }} 弹幕数量]({{ .DanmuCountImage }})
 {{ end }}{{ if .OnlineCountImage }}![Round {{ .RoundNo }} 在线人数]({{ .OnlineCountImage }})
+{{ end }}{{ range .HighlightPreviews }}![{{ .Alt }}]({{ .Image }})
+
 {{ end }}
 {{ end }}{{ end }}
+
 {{ if .Report }}
 
 ## 战报
@@ -193,12 +198,26 @@ type readmeDanmuChartRow struct {
 	OnlineCountImage string
 }
 
+type readmeHighlightPreviewRow struct {
+	RoundNo int
+	Title   string
+	Alt     string
+	Image   string
+}
+
+type readmeRoundDetail struct {
+	RoundNo           int
+	DanmuCountImage   string
+	OnlineCountImage  string
+	HighlightPreviews []readmeHighlightPreviewRow
+}
+
 type readmeData struct {
-	Title       string
-	InfoRows    []tableRow
-	Rounds      []readmeRoundRow
-	DanmuCharts []readmeDanmuChartRow
-	Report      string
+	Title        string
+	InfoRows     []tableRow
+	Rounds       []readmeRoundRow
+	RoundDetails []readmeRoundDetail
+	Report       string
 }
 
 func renderReadme(m *ent.Match, red, blue *ent.Team, matchDir string) (string, error) {
@@ -232,8 +251,15 @@ func renderReadme(m *ent.Match, red, blue *ent.Team, matchDir string) (string, e
 			StartedAt: markdownCell(formatDisplayTime(r.StartedAt)),
 			EndedAt:   markdownCell(formatOptionalDisplayTime(r.EndedAt)),
 		})
-		if chart := danmuChartRow(matchDir, r.RoundNo); chart.DanmuCountImage != "" || chart.OnlineCountImage != "" {
-			data.DanmuCharts = append(data.DanmuCharts, chart)
+		chart := danmuChartRow(matchDir, r.RoundNo)
+		previews := highlightPreviewRows(matchDir, r.RoundNo)
+		if chart.DanmuCountImage != "" || chart.OnlineCountImage != "" || len(previews) > 0 {
+			data.RoundDetails = append(data.RoundDetails, readmeRoundDetail{
+				RoundNo:           r.RoundNo,
+				DanmuCountImage:   chart.DanmuCountImage,
+				OnlineCountImage:  chart.OnlineCountImage,
+				HighlightPreviews: previews,
+			})
 		}
 	}
 	if m.Report != nil {
@@ -257,6 +283,76 @@ func danmuChartRow(matchDir string, roundNo int) readmeDanmuChartRow {
 		row.OnlineCountImage = filepath.ToSlash(filepath.Join(fmt.Sprintf("Round-%d", roundNo), "stats", "online-count.png"))
 	}
 	return row
+}
+
+type highlightManifestJSON struct {
+	Title          string  `json:"title"`
+	HighlightIndex int     `json:"highlight_index"`
+	Score          float64 `json:"score"`
+	Artifacts      struct {
+		PreviewGIF string `json:"preview_gif"`
+	} `json:"artifacts"`
+}
+
+func highlightPreviewRows(matchDir string, roundNo int) []readmeHighlightPreviewRow {
+	roundName := fmt.Sprintf("Round-%d", roundNo)
+	matches, err := filepath.Glob(filepath.Join(matchDir, roundName, "highlights", "*", "highlight.json"))
+	if err != nil {
+		return nil
+	}
+	type candidate struct {
+		row   readmeHighlightPreviewRow
+		score float64
+		index int
+	}
+	candidates := make([]candidate, 0, len(matches))
+	for _, path := range matches {
+		raw, err := os.ReadFile(path)
+		if err != nil {
+			continue
+		}
+		var meta highlightManifestJSON
+		if err := json.Unmarshal(raw, &meta); err != nil {
+			continue
+		}
+		preview := strings.TrimSpace(meta.Artifacts.PreviewGIF)
+		if preview == "" {
+			continue
+		}
+		fullPreview := filepath.Join(matchDir, filepath.FromSlash(preview))
+		if !fileExists(fullPreview) {
+			continue
+		}
+		title := strings.TrimSpace(meta.Title)
+		if title == "" {
+			title = filepath.Base(filepath.Dir(path))
+		}
+		candidates = append(candidates, candidate{
+			row: readmeHighlightPreviewRow{
+				RoundNo: roundNo,
+				Title:   markdownText(title),
+				Alt:     markdownText(fmt.Sprintf("Round %d %s 高光预览", roundNo, title)),
+				Image:   filepath.ToSlash(filepath.FromSlash(preview)),
+			},
+			score: meta.Score,
+			index: meta.HighlightIndex,
+		})
+	}
+	sort.SliceStable(candidates, func(i, j int) bool {
+		if candidates[i].score != candidates[j].score {
+			return candidates[i].score > candidates[j].score
+		}
+		return candidates[i].index < candidates[j].index
+	})
+	limit := 2
+	if len(candidates) < limit {
+		limit = len(candidates)
+	}
+	rows := make([]readmeHighlightPreviewRow, 0, limit)
+	for i := 0; i < limit; i++ {
+		rows = append(rows, candidates[i].row)
+	}
+	return rows
 }
 
 func fileExists(path string) bool {

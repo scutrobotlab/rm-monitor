@@ -80,10 +80,10 @@ highlight:
   maxHighlightsPerRound: 5
   maxConcurrentJobs: 3
   minClipSeconds: 20
-  maxClipSeconds: 90
-  preSeconds: 15
-  postSeconds: 25
-  mergeGapSeconds: 20
+  maxClipSeconds: 50
+  preSeconds: 8
+  postSeconds: 18
+  mergeGapSeconds: 12
   publish: {}
 
 publish:

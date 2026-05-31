@@ -33,6 +33,18 @@ func (f HighlightPublishTaskFunc) Mutate(ctx context.Context, m ent.Mutation) (e
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.HighlightPublishTaskMutation", m)
 }
 
+// The HighlightRoundStateFunc type is an adapter to allow the use of ordinary
+// function as HighlightRoundState mutator.
+type HighlightRoundStateFunc func(context.Context, *ent.HighlightRoundStateMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f HighlightRoundStateFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.HighlightRoundStateMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.HighlightRoundStateMutation", m)
+}
+
 // The LarkMessageFunc type is an adapter to allow the use of ordinary
 // function as LarkMessage mutator.
 type LarkMessageFunc func(context.Context, *ent.LarkMessageMutation) (ent.Value, error)

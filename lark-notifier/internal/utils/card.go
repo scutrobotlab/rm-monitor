@@ -32,27 +32,35 @@ type MatchRoundCard struct {
 	Content   string
 }
 
+type HighlightImage struct {
+	ImageKey string
+	Title    string
+	Alt      string
+}
+
 type MatchCardData struct {
-	RedTeam       string
-	BlueTeam      string
-	MatchProgress string
-	MatchIndex    string
-	TotalRound    string
-	MatchID       string
-	EventTitle    string
-	RedSchool     string
-	BlueSchool    string
-	RedAvatar     string
-	BlueAvatar    string
-	Rounds        []MatchRoundCard
-	Color         string
-	MatchType     string
-	ZoneTitle     string
-	Report        string
-	Result        string
-	Winner        string
-	WinnerPlace   string
-	LoserPlace    string
+	RedTeam         string
+	BlueTeam        string
+	MatchProgress   string
+	MatchIndex      string
+	TotalRound      string
+	MatchID         string
+	EventTitle      string
+	RedSchool       string
+	BlueSchool      string
+	RedAvatar       string
+	BlueAvatar      string
+	Rounds          []MatchRoundCard
+	Color           string
+	MatchType       string
+	ZoneTitle       string
+	Report          string
+	Result          string
+	Winner          string
+	WinnerPlace     string
+	LoserPlace      string
+	HighlightImages []HighlightImage
+	HighlightMode   string
 }
 
 type MatchCardContent struct {

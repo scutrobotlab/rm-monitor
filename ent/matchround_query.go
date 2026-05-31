@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"scutbot.cn/web/rm-monitor/ent/highlightclip"
+	"scutbot.cn/web/rm-monitor/ent/highlightroundstate"
 	"scutbot.cn/web/rm-monitor/ent/match"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
 	"scutbot.cn/web/rm-monitor/ent/ocrtask"
@@ -24,16 +25,17 @@ import (
 // MatchRoundQuery is the builder for querying MatchRound entities.
 type MatchRoundQuery struct {
 	config
-	ctx                *QueryContext
-	order              []matchround.OrderOption
-	inters             []Interceptor
-	predicates         []predicate.MatchRound
-	withMatch          *MatchQuery
-	withRecordTasks    *RecordTaskQuery
-	withSttTasks       *STTTaskQuery
-	withHighlightClips *HighlightClipQuery
-	withOcrTasks       *OCRTaskQuery
-	withFKs            bool
+	ctx                 *QueryContext
+	order               []matchround.OrderOption
+	inters              []Interceptor
+	predicates          []predicate.MatchRound
+	withMatch           *MatchQuery
+	withRecordTasks     *RecordTaskQuery
+	withSttTasks        *STTTaskQuery
+	withHighlightClips  *HighlightClipQuery
+	withHighlightStates *HighlightRoundStateQuery
+	withOcrTasks        *OCRTaskQuery
+	withFKs             bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -151,6 +153,28 @@ func (_q *MatchRoundQuery) QueryHighlightClips() *HighlightClipQuery {
 			sqlgraph.From(matchround.Table, matchround.FieldID, selector),
 			sqlgraph.To(highlightclip.Table, highlightclip.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, matchround.HighlightClipsTable, matchround.HighlightClipsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryHighlightStates chains the current query on the "highlight_states" edge.
+func (_q *MatchRoundQuery) QueryHighlightStates() *HighlightRoundStateQuery {
+	query := (&HighlightRoundStateClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(matchround.Table, matchround.FieldID, selector),
+			sqlgraph.To(highlightroundstate.Table, highlightroundstate.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, matchround.HighlightStatesTable, matchround.HighlightStatesColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -367,16 +391,17 @@ func (_q *MatchRoundQuery) Clone() *MatchRoundQuery {
 		return nil
 	}
 	return &MatchRoundQuery{
-		config:             _q.config,
-		ctx:                _q.ctx.Clone(),
-		order:              append([]matchround.OrderOption{}, _q.order...),
-		inters:             append([]Interceptor{}, _q.inters...),
-		predicates:         append([]predicate.MatchRound{}, _q.predicates...),
-		withMatch:          _q.withMatch.Clone(),
-		withRecordTasks:    _q.withRecordTasks.Clone(),
-		withSttTasks:       _q.withSttTasks.Clone(),
-		withHighlightClips: _q.withHighlightClips.Clone(),
-		withOcrTasks:       _q.withOcrTasks.Clone(),
+		config:              _q.config,
+		ctx:                 _q.ctx.Clone(),
+		order:               append([]matchround.OrderOption{}, _q.order...),
+		inters:              append([]Interceptor{}, _q.inters...),
+		predicates:          append([]predicate.MatchRound{}, _q.predicates...),
+		withMatch:           _q.withMatch.Clone(),
+		withRecordTasks:     _q.withRecordTasks.Clone(),
+		withSttTasks:        _q.withSttTasks.Clone(),
+		withHighlightClips:  _q.withHighlightClips.Clone(),
+		withHighlightStates: _q.withHighlightStates.Clone(),
+		withOcrTasks:        _q.withOcrTasks.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
@@ -424,6 +449,17 @@ func (_q *MatchRoundQuery) WithHighlightClips(opts ...func(*HighlightClipQuery))
 		opt(query)
 	}
 	_q.withHighlightClips = query
+	return _q
+}
+
+// WithHighlightStates tells the query-builder to eager-load the nodes that are connected to
+// the "highlight_states" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *MatchRoundQuery) WithHighlightStates(opts ...func(*HighlightRoundStateQuery)) *MatchRoundQuery {
+	query := (&HighlightRoundStateClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withHighlightStates = query
 	return _q
 }
 
@@ -517,11 +553,12 @@ func (_q *MatchRoundQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*M
 		nodes       = []*MatchRound{}
 		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
-		loadedTypes = [5]bool{
+		loadedTypes = [6]bool{
 			_q.withMatch != nil,
 			_q.withRecordTasks != nil,
 			_q.withSttTasks != nil,
 			_q.withHighlightClips != nil,
+			_q.withHighlightStates != nil,
 			_q.withOcrTasks != nil,
 		}
 	)
@@ -573,6 +610,15 @@ func (_q *MatchRoundQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*M
 		if err := _q.loadHighlightClips(ctx, query, nodes,
 			func(n *MatchRound) { n.Edges.HighlightClips = []*HighlightClip{} },
 			func(n *MatchRound, e *HighlightClip) { n.Edges.HighlightClips = append(n.Edges.HighlightClips, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withHighlightStates; query != nil {
+		if err := _q.loadHighlightStates(ctx, query, nodes,
+			func(n *MatchRound) { n.Edges.HighlightStates = []*HighlightRoundState{} },
+			func(n *MatchRound, e *HighlightRoundState) {
+				n.Edges.HighlightStates = append(n.Edges.HighlightStates, e)
+			}); err != nil {
 			return nil, err
 		}
 	}
@@ -706,6 +752,37 @@ func (_q *MatchRoundQuery) loadHighlightClips(ctx context.Context, query *Highli
 		node, ok := nodeids[*fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "match_round_highlight_clips" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *MatchRoundQuery) loadHighlightStates(ctx context.Context, query *HighlightRoundStateQuery, nodes []*MatchRound, init func(*MatchRound), assign func(*MatchRound, *HighlightRoundState)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[int]*MatchRound)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.HighlightRoundState(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(matchround.HighlightStatesColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.match_round_highlight_states
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "match_round_highlight_states" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "match_round_highlight_states" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
