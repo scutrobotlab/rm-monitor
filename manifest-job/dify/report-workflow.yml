@@ -260,13 +260,14 @@ workflow:
       type: custom
       width: 244
     - data:
-        code: "import json\n\ndef main(payload):\n    data = json.loads(payload or '{}')\n    match = data.get('match') or\
-          \ {}\n    bits = ['RoboMaster 机甲大师 赛制 术语 战报 写作']\n    for key in ('event','zone','match_type','winner'):\n     \
-          \   if match.get(key):\n            bits.append(str(match.get(key)))\n    for team_key in ('red_team','blue_team'):\n\
-          \        team = match.get(team_key) or {}\n        bits.append(str(team.get('school') or ''))\n        bits.append(str(team.get('name')\
-          \ or ''))\n    for rd in data.get('rounds') or []:\n        for line in rd.get('stt_lines') or []:\n           \
-          \ text = str(line.get('text') or '').strip()\n            if text:\n                bits.append(text)\n        \
-          \    if len(' '.join(bits)) > 220:\n                break\n    return {'query': ' '.join([b for b in bits if b])[:200]}"
+        code: "import json\n\ndef text_of(value):\n    if value is None:\n        return ''\n    if isinstance(value, dict):\n\
+          \        return ' '.join(str(value.get(k) or '') for k in ('school', 'name', 'team', 'display_name'))\n    return\
+          \ str(value)\n\ndef main(payload):\n    data = json.loads(payload or '{}')\n    match = data.get('match') or {}\n\
+          \    bits = ['RoboMaster 机甲大师 赛制 术语 战报 写作']\n    for key in ('event','zone','match_type','winner','score','red_team','blue_team','red','blue'):\n\
+          \        if match.get(key):\n            bits.append(text_of(match.get(key)))\n    for rd in data.get('rounds')\
+          \ or []:\n        for line in rd.get('stt_lines') or []:\n            text = str(line.get('text') or '').strip()\n\
+          \            if text:\n                bits.append(text)\n            if len(' '.join(bits)) > 220:\n          \
+          \      break\n    return {'query': ' '.join([b for b in bits if b])[:200]}"
         code_language: python3
         desc: ''
         outputs:
