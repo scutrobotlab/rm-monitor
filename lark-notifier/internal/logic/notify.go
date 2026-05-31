@@ -2,6 +2,7 @@ package logic
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"html"
 	"os"
@@ -22,6 +23,7 @@ import (
 	"scutbot.cn/web/rm-monitor/lark-notifier/internal/svc"
 	"scutbot.cn/web/rm-monitor/lark-notifier/internal/utils"
 	"scutbot.cn/web/rm-monitor/monitor/types"
+	"scutbot.cn/web/rm-monitor/pkg/highlight"
 	"scutbot.cn/web/rm-monitor/pkg/logx"
 )
 
@@ -562,7 +564,8 @@ func (l *NotifyLogic) cardContent(m *ent.Match) (*utils.MatchCardContent, error)
 		return nil, err
 	}
 	content.Data.Rounds = l.roundCards(m)
-	content.Data.HighlightImages = l.highlightImages(m)
+	content.Data.HighlightBullets, content.Data.HighlightImages = l.highlightPresentation(m)
+	content.Data.HighlightMarkdown = highlightMarkdown(content.Data.HighlightBullets)
 	content.Data.HighlightMode = highlightCombinationMode(len(content.Data.HighlightImages))
 	if matchCardCompleted(m) {
 		content.Data.MatchProgress = ""
@@ -647,9 +650,9 @@ func roundRecordLinks(r *ent.MatchRound) string {
 	return strings.Join(links, "\n")
 }
 
-func (l *NotifyLogic) highlightImages(m *ent.Match) []utils.HighlightImage {
+func (l *NotifyLogic) highlightPresentation(m *ent.Match) ([]utils.HighlightBullet, []utils.HighlightImage) {
 	if m == nil {
-		return nil
+		return nil, nil
 	}
 	baseDir := strings.TrimSpace(l.svcCtx.Config.RecordConf.BaseDir)
 	if baseDir == "" {
@@ -657,9 +660,10 @@ func (l *NotifyLogic) highlightImages(m *ent.Match) []utils.HighlightImage {
 	}
 	highlightConf := l.svcCtx.Config.HighlightConf.WithDefaults()
 	if !highlightConf.Enabled {
-		return nil
+		return nil, nil
 	}
-	clips := selectedHighlightClips(m, 2, 9, highlightConf.Role, highlightConf.AlgorithmVersion)
+	clips := selectedHighlightClips(m, 2, 9, highlightConf.Role, highlightConf.AlgorithmVersion, baseDir)
+	bullets := make([]utils.HighlightBullet, 0, len(clips))
 	images := make([]utils.HighlightImage, 0, len(clips))
 	seenImageKeys := make(map[string]struct{}, len(clips))
 	for _, selected := range clips {
@@ -687,13 +691,24 @@ func (l *NotifyLogic) highlightImages(m *ent.Match) []utils.HighlightImage {
 		if clip.Title != nil && strings.TrimSpace(*clip.Title) != "" {
 			title = strings.TrimSpace(*clip.Title)
 		}
+		caption := ""
+		if clip.Description != nil {
+			caption = strings.TrimSpace(*clip.Description)
+		}
+		publishCaption := highlightPublishCaption(clip)
+		bullets = append(bullets, utils.HighlightBullet{
+			RoundNo:        selected.roundNo,
+			Title:          title,
+			Caption:        caption,
+			PublishCaption: publishCaption,
+		})
 		images = append(images, utils.HighlightImage{
 			ImageKey: imageKey,
 			Title:    title,
 			Alt:      fmt.Sprintf("Round %d %s", selected.roundNo, title),
 		})
 	}
-	return images
+	return bullets, images
 }
 
 type selectedHighlightClip struct {
@@ -701,29 +716,16 @@ type selectedHighlightClip struct {
 	roundNo int
 }
 
-func selectedHighlightClips(m *ent.Match, perRoundLimit, totalLimit int, role, algorithmVersion string) []selectedHighlightClip {
+func selectedHighlightClips(m *ent.Match, perRoundLimit, totalLimit int, role, algorithmVersion, previewBaseDir string) []selectedHighlightClip {
 	if m == nil || perRoundLimit <= 0 || totalLimit <= 0 {
 		return nil
 	}
 	role = strings.TrimSpace(role)
 	algorithmVersion = strings.TrimSpace(algorithmVersion)
-	type candidate struct {
-		selectedHighlightClip
-		score float64
-		index int
-	}
-	candidates := make([]candidate, 0, totalLimit)
-	seenOutputDir := make(map[string]struct{})
+	selected := make([]selectedHighlightClip, 0)
+	candidates := make([]highlight.FeaturedCandidate, 0)
 	for _, r := range m.Edges.Rounds {
-		clips := append([]*ent.HighlightClip(nil), r.Edges.HighlightClips...)
-		sort.SliceStable(clips, func(i, j int) bool {
-			if clips[i].Score != clips[j].Score {
-				return clips[i].Score > clips[j].Score
-			}
-			return clips[i].HighlightIndex < clips[j].HighlightIndex
-		})
-		roundAdded := 0
-		for _, clip := range clips {
+		for _, clip := range r.Edges.HighlightClips {
 			if clip.Status != highlightclip.StatusSUCCEEDED {
 				continue
 			}
@@ -737,39 +739,62 @@ func selectedHighlightClips(m *ent.Match, perRoundLimit, totalLimit int, role, a
 			if outputDir == "" {
 				continue
 			}
-			if _, ok := seenOutputDir[outputDir]; ok {
+			if previewBaseDir != "" && !fileExists(filepath.Join(previewBaseDir, filepath.FromSlash(outputDir), "preview.gif")) {
 				continue
 			}
-			if roundAdded >= perRoundLimit {
-				break
-			}
-			seenOutputDir[outputDir] = struct{}{}
-			candidates = append(candidates, candidate{
-				selectedHighlightClip: selectedHighlightClip{clip: clip, roundNo: r.RoundNo},
-				score:                 clip.Score,
-				index:                 clip.HighlightIndex,
+			selected = append(selected, selectedHighlightClip{clip: clip, roundNo: r.RoundNo})
+			candidates = append(candidates, highlight.FeaturedCandidate{
+				RoundNo:        r.RoundNo,
+				HighlightIndex: clip.HighlightIndex,
+				Score:          clip.Score,
+				Key:            outputDir,
 			})
-			roundAdded++
 		}
 	}
-	sort.SliceStable(candidates, func(i, j int) bool {
-		if candidates[i].score != candidates[j].score {
-			return candidates[i].score > candidates[j].score
-		}
-		if candidates[i].roundNo != candidates[j].roundNo {
-			return candidates[i].roundNo < candidates[j].roundNo
-		}
-		return candidates[i].index < candidates[j].index
-	})
-	limit := totalLimit
-	if len(candidates) < limit {
-		limit = len(candidates)
-	}
-	out := make([]selectedHighlightClip, 0, limit)
-	for i := 0; i < limit; i++ {
-		out = append(out, candidates[i].selectedHighlightClip)
+	indexes := highlight.SelectFeatured(candidates, perRoundLimit, totalLimit)
+	out := make([]selectedHighlightClip, 0, len(indexes))
+	for _, idx := range indexes {
+		out = append(out, selected[idx])
 	}
 	return out
+}
+
+func fileExists(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && !info.IsDir()
+}
+
+func highlightPublishCaption(clip *ent.HighlightClip) string {
+	if clip == nil || clip.ModelPayload == nil || strings.TrimSpace(*clip.ModelPayload) == "" {
+		return ""
+	}
+	var payload struct {
+		Review struct {
+			PublishCaption string `json:"publish_caption"`
+		} `json:"review"`
+	}
+	if err := json.Unmarshal([]byte(*clip.ModelPayload), &payload); err != nil {
+		return ""
+	}
+	return strings.TrimSpace(payload.Review.PublishCaption)
+}
+
+func highlightMarkdown(bullets []utils.HighlightBullet) string {
+	if len(bullets) == 0 {
+		return ""
+	}
+	var b strings.Builder
+	b.WriteString("**精选高光**")
+	for _, item := range bullets {
+		b.WriteString(fmt.Sprintf("\n- **Round %d %s**", item.RoundNo, item.Title))
+		if strings.TrimSpace(item.Caption) != "" {
+			b.WriteString("：" + strings.TrimSpace(item.Caption))
+		}
+		if strings.TrimSpace(item.PublishCaption) != "" {
+			b.WriteString("\n  " + strings.TrimSpace(item.PublishCaption))
+		}
+	}
+	return b.String()
 }
 
 func highlightCombinationMode(n int) string {

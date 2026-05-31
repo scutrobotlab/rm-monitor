@@ -190,13 +190,14 @@ func TestCardEntityDataRendersMultipleRoundPanels(t *testing.T) {
 
 func TestCardEntityDataRendersHighlightImages(t *testing.T) {
 	content := &utils.MatchCardContent{Data: utils.MatchCardData{
-		RedTeam:       "红队",
-		BlueTeam:      "蓝队",
-		Color:         "orange",
-		RedSchool:     "红校",
-		BlueSchool:    "蓝校",
-		Report:        "战报正文",
-		HighlightMode: "double",
+		RedTeam:           "红队",
+		BlueTeam:          "蓝队",
+		Color:             "orange",
+		RedSchool:         "红校",
+		BlueSchool:        "蓝校",
+		Report:            "战报正文",
+		HighlightMarkdown: "**精选高光**\n- **Round 1 高光1**：关键交锋\n  发布文案",
+		HighlightMode:     "double",
 		HighlightImages: []utils.HighlightImage{
 			{ImageKey: "img_1", Title: "高光1"},
 			{ImageKey: "img_2", Title: "高光2"},
@@ -215,6 +216,12 @@ func TestCardEntityDataRendersHighlightImages(t *testing.T) {
 	if strings.Index(raw, "img_combination") < strings.Index(raw, "战报正文") {
 		t.Fatalf("highlight images should render after report markdown: %s", raw)
 	}
+	if strings.Index(raw, "img_combination") < strings.Index(raw, "精选高光") {
+		t.Fatalf("highlight images should render after highlight bullets: %s", raw)
+	}
+	if !strings.Contains(raw, "关键交锋") || !strings.Contains(raw, "发布文案") {
+		t.Fatalf("highlight bullets missing: %s", raw)
+	}
 }
 
 func TestCardEntityDataRendersNoHighlightImagesWithoutImageSection(t *testing.T) {
@@ -230,19 +237,20 @@ func TestCardEntityDataRendersNoHighlightImagesWithoutImageSection(t *testing.T)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if strings.Contains(raw, `"tag":"img_combination"`) || strings.Contains(raw, `"element_id":"highlight_image_1"`) {
-		t.Fatalf("rendered card should not contain highlight image section: %s", raw)
+	if strings.Contains(raw, `"tag":"img_combination"`) || strings.Contains(raw, `"element_id":"highlight_image_1"`) || strings.Contains(raw, `"featured_highlights"`) {
+		t.Fatalf("rendered card should not contain highlight section: %s", raw)
 	}
 }
 
 func TestCardEntityDataRendersOneHighlightImageAsPlainImage(t *testing.T) {
 	content := &utils.MatchCardContent{Data: utils.MatchCardData{
-		RedTeam:    "红队",
-		BlueTeam:   "蓝队",
-		Color:      "orange",
-		RedSchool:  "红校",
-		BlueSchool: "蓝校",
-		Report:     "战报正文",
+		RedTeam:           "红队",
+		BlueTeam:          "蓝队",
+		Color:             "orange",
+		RedSchool:         "红校",
+		BlueSchool:        "蓝校",
+		Report:            "战报正文",
+		HighlightMarkdown: "**精选高光**\n- **Round 1 高光1**：关键交锋",
 		HighlightImages: []utils.HighlightImage{
 			{ImageKey: "img_1", Title: "高光1"},
 		},
@@ -259,6 +267,9 @@ func TestCardEntityDataRendersOneHighlightImageAsPlainImage(t *testing.T) {
 	}
 	if strings.Index(raw, "highlight_image_1") < strings.Index(raw, "战报正文") {
 		t.Fatalf("highlight image should render after report markdown: %s", raw)
+	}
+	if strings.Index(raw, "highlight_image_1") < strings.Index(raw, "精选高光") {
+		t.Fatalf("highlight image should render after highlight bullets: %s", raw)
 	}
 }
 
@@ -285,14 +296,15 @@ func assertRenderedHighlightCombination(t *testing.T, n int, mode string) {
 		images = append(images, utils.HighlightImage{ImageKey: "img_" + string(rune('0'+i)), Title: "高光"})
 	}
 	content := &utils.MatchCardContent{Data: utils.MatchCardData{
-		RedTeam:         "红队",
-		BlueTeam:        "蓝队",
-		Color:           "orange",
-		RedSchool:       "红校",
-		BlueSchool:      "蓝校",
-		Report:          "战报正文",
-		HighlightMode:   mode,
-		HighlightImages: images,
+		RedTeam:           "红队",
+		BlueTeam:          "蓝队",
+		Color:             "orange",
+		RedSchool:         "红校",
+		BlueSchool:        "蓝校",
+		Report:            "战报正文",
+		HighlightMarkdown: "**精选高光**\n- **Round 1 高光**：关键交锋",
+		HighlightMode:     mode,
+		HighlightImages:   images,
 	}}
 	raw, _, err := utils.CardEntityData(content)
 	if err != nil {
@@ -306,6 +318,9 @@ func assertRenderedHighlightCombination(t *testing.T, n int, mode string) {
 	}
 	if strings.Index(raw, "img_combination") < strings.Index(raw, "战报正文") {
 		t.Fatalf("highlight images should render after report markdown: %s", raw)
+	}
+	if strings.Index(raw, "img_combination") < strings.Index(raw, "精选高光") {
+		t.Fatalf("highlight images should render after highlight bullets: %s", raw)
 	}
 }
 
@@ -345,7 +360,7 @@ func TestSelectedHighlightClipsLimitsPerRoundAndTotal(t *testing.T) {
 			}
 		}
 	}
-	got := selectedHighlightClips(m, 2, 3, "主视角", "danmu-zscore-dify-v1")
+	got := selectedHighlightClips(m, 2, 3, "主视角", "danmu-zscore-dify-v1", "")
 	if len(got) != 3 {
 		t.Fatalf("selected len = %d", len(got))
 	}
@@ -404,7 +419,7 @@ func TestSelectedHighlightClipsFiltersCurrentAlgorithmAndDedupesOutput(t *testin
 			},
 		}}},
 	}}}
-	got := selectedHighlightClips(m, 2, 9, "主视角", "danmu-zscore-dify-v1")
+	got := selectedHighlightClips(m, 2, 9, "主视角", "danmu-zscore-dify-v1", "")
 	if len(got) != 2 {
 		t.Fatalf("selected len = %d, want 2", len(got))
 	}
@@ -414,6 +429,27 @@ func TestSelectedHighlightClipsFiltersCurrentAlgorithmAndDedupesOutput(t *testin
 		if ids[i] != want[i] {
 			t.Fatalf("selected ids = %#v, want %#v", ids, want)
 		}
+	}
+}
+
+func TestHighlightMarkdownUsesCaptionAndPublishCaption(t *testing.T) {
+	got := highlightMarkdown([]utils.HighlightBullet{{
+		RoundNo:        2,
+		Title:          "关键反超",
+		Caption:        "蓝方抓住窗口完成反超",
+		PublishCaption: "关键窗口，节奏拉满。",
+	}})
+	if !strings.Contains(got, "**精选高光**") || !strings.Contains(got, "Round 2 关键反超") ||
+		!strings.Contains(got, "蓝方抓住窗口完成反超") || !strings.Contains(got, "关键窗口，节奏拉满。") {
+		t.Fatalf("highlight markdown = %q", got)
+	}
+}
+
+func TestHighlightPublishCaptionReadsModelPayload(t *testing.T) {
+	payload := `{"review":{"publish_caption":"关键窗口，节奏拉满。"}}`
+	got := highlightPublishCaption(&ent.HighlightClip{ModelPayload: &payload})
+	if got != "关键窗口，节奏拉满。" {
+		t.Fatalf("publish caption = %q", got)
 	}
 }
 

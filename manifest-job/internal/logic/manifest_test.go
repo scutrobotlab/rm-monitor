@@ -117,8 +117,11 @@ func TestRenderReadmeIncludesOnlyExistingHighlightGIFs(t *testing.T) {
 	}
 	if err := os.WriteFile(filepath.Join(highlightDir, "highlight.json"), []byte(`{
 		"title": "关键反超",
+		"description": "蓝方抓住窗口完成反超",
+		"publish_caption": "关键窗口，节奏拉满。",
 		"highlight_index": 1,
 		"score": 8,
+		"video": "Round-1/highlights/Highlight-01/video.mp4",
 		"artifacts": {
 			"preview_gif": "Round-1/highlights/Highlight-01/preview.gif"
 		}
@@ -148,8 +151,11 @@ func TestRenderReadmeIncludesOnlyExistingHighlightGIFs(t *testing.T) {
 	}
 	if err := os.WriteFile(filepath.Join(thirdDir, "highlight.json"), []byte(`{
 		"title": "第二高光",
+		"description": "中段交锋继续升温",
+		"publish_caption": "中段热度继续抬升。",
 		"highlight_index": 3,
 		"score": 7,
+		"video": "Round-1/highlights/Highlight-03/video.mp4",
 		"artifacts": {
 			"preview_gif": "Round-1/highlights/Highlight-03/preview.gif"
 		}
@@ -188,8 +194,15 @@ func TestRenderReadmeIncludesOnlyExistingHighlightGIFs(t *testing.T) {
 
 	assertContains(t, readme, "## 小局详情")
 	assertContains(t, readme, "### Round 1")
+	assertContains(t, readme, "#### 高光时刻")
+	assertContains(t, readme, "- **关键反超**：蓝方抓住窗口完成反超")
+	assertContains(t, readme, "关键窗口，节奏拉满。")
+	assertContains(t, readme, "[视频](Round-1/highlights/Highlight-01/video.mp4)")
 	assertContains(t, readme, "![Round 1 关键反超 高光预览](Round-1/highlights/Highlight-01/preview.gif)")
 	assertContains(t, readme, "![Round 1 第二高光 高光预览](Round-1/highlights/Highlight-03/preview.gif)")
+	assertContains(t, readme, "## 精选高光")
+	assertContains(t, readme, "- **Round 1 关键反超**：蓝方抓住窗口完成反超")
+	assertContains(t, readme, "|  |  |  |")
 	assertNotContains(t, readme, "缺失 GIF")
 	assertNotContains(t, readme, "第三高光")
 }

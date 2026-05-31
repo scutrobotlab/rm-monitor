@@ -569,6 +569,7 @@ fn build_highlight_json(
     model_payload: &Value,
     preview: PreviewWindow,
 ) -> Value {
+    let output_dir = match_relative(ctx, &ctx.output_dir);
     serde_json::json!({
         "schema": "rm-monitor/highlight/v1",
         "highlight_clip_id": ctx.highlight_clip_id,
@@ -586,20 +587,37 @@ fn build_highlight_json(
         "publish_caption": ctx.publish_caption,
         "explanation": model_payload.pointer("/review/reason").and_then(Value::as_str).unwrap_or(""),
         "source_artifact": ctx.source_artifact_path,
-        "output_dir": ctx.output_dir,
-        "video": format!("{}/video.mp4", ctx.output_dir),
-        "danmu": format!("{}/video.danmuku.xml", ctx.output_dir),
-        "subtitle": format!("{}/video.srt", ctx.output_dir),
+        "output_dir": output_dir,
+        "video": format!("{}/video.mp4", output_dir),
+        "danmu": format!("{}/video.danmuku.xml", output_dir),
+        "subtitle": format!("{}/video.srt", output_dir),
         "artifacts": {
-            "video_artifact": format!("{}/video-artifact.mp4", ctx.output_dir),
-            "cover": format!("{}/cover.jpg", ctx.output_dir),
-            "preview_gif": format!("{}/preview.gif", ctx.output_dir),
+            "video_artifact": format!("{}/video-artifact.mp4", output_dir),
+            "cover": format!("{}/cover.jpg", output_dir),
+            "preview_gif": format!("{}/preview.gif", output_dir),
             "preview_start_seconds": preview.start,
             "preview_end_seconds": preview.end
         },
         "model_payload": model_payload,
         "publish": {"status": "disabled"}
     })
+}
+
+fn match_relative(ctx: &HighlightContext, path: &str) -> String {
+    let normalized = path.trim().replace('\\', "/").trim_matches('/').to_string();
+    let round_dir = ctx
+        .round_dir
+        .trim()
+        .replace('\\', "/")
+        .trim_matches('/')
+        .to_string();
+    if let Some(match_dir) = round_dir.rsplit_once('/') {
+        let prefix = format!("{}/", match_dir.0);
+        if normalized.starts_with(&prefix) {
+            return normalized[prefix.len()..].to_string();
+        }
+    }
+    normalized
 }
 
 fn resolve_under(base: &Path, rel: &str) -> Result<PathBuf> {
@@ -722,5 +740,51 @@ mod tests {
         let end = preview_window(100.0, 140.0, 139.0);
         assert_eq!(end.start, 34.0);
         assert_eq!(end.end, 40.0);
+    }
+
+    #[test]
+    fn highlight_json_paths_are_match_relative() {
+        let ctx = HighlightContext {
+            highlight_clip_id: 1,
+            highlight_index: 2,
+            role: "主视角".to_string(),
+            algorithm_version: "danmu-zscore-dify-v1".to_string(),
+            start_seconds: 1.0,
+            end_seconds: 20.0,
+            peak_seconds: 10.0,
+            score: 3.0,
+            source_artifact_path: "Event/Zone/55. A VS B/Round-2/主视角.flv".to_string(),
+            round_dir: "Event/Zone/55. A VS B/Round-2".to_string(),
+            output_dir: "Event/Zone/55. A VS B/Round-2/highlights/Highlight-02".to_string(),
+            event: "Event".to_string(),
+            zone: "Zone".to_string(),
+            order: 55,
+            match_type: "GROUP".to_string(),
+            round_no: 2,
+            red_school: "A".to_string(),
+            red_name: "A".to_string(),
+            blue_school: "B".to_string(),
+            blue_name: "B".to_string(),
+            title: "高光".to_string(),
+            description: "说明".to_string(),
+            tags: vec![],
+            highlight_type: "关键压制".to_string(),
+            publish_caption: "发布文案".to_string(),
+            model_payload: serde_json::json!({"review":{"reason":"ok"}}),
+        };
+        let got = build_highlight_json(
+            &ctx,
+            &ctx.model_payload,
+            PreviewWindow {
+                start: 0.0,
+                end: 6.0,
+            },
+        );
+        assert_eq!(got["output_dir"], "Round-2/highlights/Highlight-02");
+        assert_eq!(got["video"], "Round-2/highlights/Highlight-02/video.mp4");
+        assert_eq!(
+            got["artifacts"]["preview_gif"],
+            "Round-2/highlights/Highlight-02/preview.gif"
+        );
     }
 }

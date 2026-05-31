@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 	"text/template"
 	"time"
@@ -156,9 +155,14 @@ const readmeTemplate = `# {{ .Title }}
 
 {{ if .DanmuCountImage }}![Round {{ .RoundNo }} 弹幕数量]({{ .DanmuCountImage }})
 {{ end }}{{ if .OnlineCountImage }}![Round {{ .RoundNo }} 在线人数]({{ .OnlineCountImage }})
-{{ end }}{{ range .HighlightPreviews }}![{{ .Alt }}]({{ .Image }})
+{{ end }}{{ if .FeaturedHighlights }}#### 高光时刻
 
-{{ end }}
+{{ range .FeaturedHighlights }}- **{{ .Title }}**：{{ .Caption }}{{ if .PublishCaption }}
+  {{ .PublishCaption }}{{ end }}
+  [视频]({{ .Video }})
+  ![{{ .Alt }}]({{ .Image }})
+
+{{ end }}{{ end }}
 {{ end }}{{ end }}
 
 {{ if .Report }}
@@ -167,6 +171,19 @@ const readmeTemplate = `# {{ .Title }}
 
 {{ .Report }}
 {{ end }}
+{{ if .MatchHighlights }}
+
+## 精选高光
+
+{{ range .MatchHighlights }}- **Round {{ .RoundNo }} {{ .Title }}**：{{ .Caption }}{{ if .PublishCaption }}
+  {{ .PublishCaption }}{{ end }}
+  [视频]({{ .Video }})
+{{ end }}
+{{ if .HighlightImageRows }}
+|  |  |  |
+| --- | --- | --- |
+{{ range .HighlightImageRows }}|{{ range . }} {{ if .Image }}![{{ .Alt }}]({{ .Image }}){{ end }} |{{ end }}
+{{ end }}{{ end }}{{ end }}
 `
 
 var readmeTmpl = template.Must(template.New("readme").Parse(readmeTemplate))
@@ -199,25 +216,32 @@ type readmeDanmuChartRow struct {
 }
 
 type readmeHighlightPreviewRow struct {
-	RoundNo int
-	Title   string
-	Alt     string
-	Image   string
+	RoundNo        int
+	Title          string
+	Caption        string
+	PublishCaption string
+	Alt            string
+	Image          string
+	Video          string
+	Score          float64
+	Index          int
 }
 
 type readmeRoundDetail struct {
-	RoundNo           int
-	DanmuCountImage   string
-	OnlineCountImage  string
-	HighlightPreviews []readmeHighlightPreviewRow
+	RoundNo            int
+	DanmuCountImage    string
+	OnlineCountImage   string
+	FeaturedHighlights []readmeHighlightPreviewRow
 }
 
 type readmeData struct {
-	Title        string
-	InfoRows     []tableRow
-	Rounds       []readmeRoundRow
-	RoundDetails []readmeRoundDetail
-	Report       string
+	Title              string
+	InfoRows           []tableRow
+	Rounds             []readmeRoundRow
+	RoundDetails       []readmeRoundDetail
+	Report             string
+	MatchHighlights    []readmeHighlightPreviewRow
+	HighlightImageRows [][]readmeHighlightPreviewRow
 }
 
 func renderReadme(m *ent.Match, red, blue *ent.Team, matchDir string) (string, error) {
@@ -243,7 +267,9 @@ func renderReadme(m *ent.Match, red, blue *ent.Team, matchDir string) (string, e
 	if m.MatchSlug != nil && *m.MatchSlug != "" {
 		data.InfoRows = append(data.InfoRows, readmeInfoRow("Match Slug", *m.MatchSlug))
 	}
+	roundNos := make([]int, 0, len(m.Edges.Rounds))
 	for _, r := range m.Edges.Rounds {
+		roundNos = append(roundNos, r.RoundNo)
 		data.Rounds = append(data.Rounds, readmeRoundRow{
 			RoundNo:   r.RoundNo,
 			Status:    markdownCell(displayRoundStatus(r.Status)),
@@ -251,14 +277,22 @@ func renderReadme(m *ent.Match, red, blue *ent.Team, matchDir string) (string, e
 			StartedAt: markdownCell(formatDisplayTime(r.StartedAt)),
 			EndedAt:   markdownCell(formatOptionalDisplayTime(r.EndedAt)),
 		})
+	}
+	data.MatchHighlights = featuredHighlightRows(matchDir, roundNos)
+	data.HighlightImageRows = highlightImageRows(data.MatchHighlights, 3)
+	highlightsByRound := make(map[int][]readmeHighlightPreviewRow, len(data.MatchHighlights))
+	for _, row := range data.MatchHighlights {
+		highlightsByRound[row.RoundNo] = append(highlightsByRound[row.RoundNo], row)
+	}
+	for _, r := range m.Edges.Rounds {
 		chart := danmuChartRow(matchDir, r.RoundNo)
-		previews := highlightPreviewRows(matchDir, r.RoundNo)
+		previews := highlightsByRound[r.RoundNo]
 		if chart.DanmuCountImage != "" || chart.OnlineCountImage != "" || len(previews) > 0 {
 			data.RoundDetails = append(data.RoundDetails, readmeRoundDetail{
-				RoundNo:           r.RoundNo,
-				DanmuCountImage:   chart.DanmuCountImage,
-				OnlineCountImage:  chart.OnlineCountImage,
-				HighlightPreviews: previews,
+				RoundNo:            r.RoundNo,
+				DanmuCountImage:    chart.DanmuCountImage,
+				OnlineCountImage:   chart.OnlineCountImage,
+				FeaturedHighlights: previews,
 			})
 		}
 	}
@@ -287,72 +321,139 @@ func danmuChartRow(matchDir string, roundNo int) readmeDanmuChartRow {
 
 type highlightManifestJSON struct {
 	Title          string  `json:"title"`
+	Description    string  `json:"description"`
+	PublishCaption string  `json:"publish_caption"`
 	HighlightIndex int     `json:"highlight_index"`
 	Score          float64 `json:"score"`
+	Video          string  `json:"video"`
 	Artifacts      struct {
 		PreviewGIF string `json:"preview_gif"`
 	} `json:"artifacts"`
 }
 
-func highlightPreviewRows(matchDir string, roundNo int) []readmeHighlightPreviewRow {
-	roundName := fmt.Sprintf("Round-%d", roundNo)
-	matches, err := filepath.Glob(filepath.Join(matchDir, roundName, "highlights", "*", "highlight.json"))
-	if err != nil {
-		return nil
-	}
-	type candidate struct {
-		row   readmeHighlightPreviewRow
-		score float64
-		index int
-	}
-	candidates := make([]candidate, 0, len(matches))
-	for _, path := range matches {
-		raw, err := os.ReadFile(path)
+func featuredHighlightRows(matchDir string, roundNos []int) []readmeHighlightPreviewRow {
+	rows := make([]readmeHighlightPreviewRow, 0)
+	candidates := make([]highlight.FeaturedCandidate, 0)
+	for _, roundNo := range roundNos {
+		roundName := fmt.Sprintf("Round-%d", roundNo)
+		matches, err := filepath.Glob(filepath.Join(matchDir, roundName, "highlights", "*", "highlight.json"))
 		if err != nil {
 			continue
 		}
-		var meta highlightManifestJSON
-		if err := json.Unmarshal(raw, &meta); err != nil {
-			continue
+		for _, path := range matches {
+			raw, err := os.ReadFile(path)
+			if err != nil {
+				continue
+			}
+			var meta highlightManifestJSON
+			if err := json.Unmarshal(raw, &meta); err != nil {
+				continue
+			}
+			preview := strings.TrimSpace(meta.Artifacts.PreviewGIF)
+			fullPreview, previewRel, ok := resolveHighlightAsset(matchDir, preview)
+			if !ok || !fileExists(fullPreview) {
+				continue
+			}
+			title := strings.TrimSpace(meta.Title)
+			if title == "" {
+				title = filepath.Base(filepath.Dir(path))
+			}
+			video := strings.TrimSpace(meta.Video)
+			if video == "" {
+				video = filepath.ToSlash(filepath.Join(roundName, "highlights", filepath.Base(filepath.Dir(path)), "video.mp4"))
+			}
+			_, videoRel, _ := resolveHighlightAsset(matchDir, video)
+			rows = append(rows, readmeHighlightPreviewRow{
+				RoundNo:        roundNo,
+				Title:          markdownText(title),
+				Caption:        markdownText(strings.TrimSpace(meta.Description)),
+				PublishCaption: markdownText(strings.TrimSpace(meta.PublishCaption)),
+				Alt:            markdownText(fmt.Sprintf("Round %d %s 高光预览", roundNo, title)),
+				Image:          previewRel,
+				Video:          videoRel,
+				Score:          meta.Score,
+				Index:          meta.HighlightIndex,
+			})
+			candidates = append(candidates, highlight.FeaturedCandidate{
+				RoundNo:        roundNo,
+				HighlightIndex: meta.HighlightIndex,
+				Score:          meta.Score,
+				Key:            filepath.ToSlash(filepath.Dir(path)),
+			})
 		}
-		preview := strings.TrimSpace(meta.Artifacts.PreviewGIF)
-		if preview == "" {
-			continue
-		}
-		fullPreview := filepath.Join(matchDir, filepath.FromSlash(preview))
-		if !fileExists(fullPreview) {
-			continue
-		}
-		title := strings.TrimSpace(meta.Title)
-		if title == "" {
-			title = filepath.Base(filepath.Dir(path))
-		}
-		candidates = append(candidates, candidate{
-			row: readmeHighlightPreviewRow{
-				RoundNo: roundNo,
-				Title:   markdownText(title),
-				Alt:     markdownText(fmt.Sprintf("Round %d %s 高光预览", roundNo, title)),
-				Image:   filepath.ToSlash(filepath.FromSlash(preview)),
-			},
-			score: meta.Score,
-			index: meta.HighlightIndex,
-		})
 	}
-	sort.SliceStable(candidates, func(i, j int) bool {
-		if candidates[i].score != candidates[j].score {
-			return candidates[i].score > candidates[j].score
+	selected := highlight.SelectFeatured(candidates, 2, 9)
+	out := make([]readmeHighlightPreviewRow, 0, len(selected))
+	for _, idx := range selected {
+		out = append(out, rows[idx])
+	}
+	return out
+}
+
+func resolveHighlightAsset(matchDir, rel string) (string, string, bool) {
+	rel = strings.TrimSpace(rel)
+	if rel == "" {
+		return "", "", false
+	}
+	clean := filepath.FromSlash(rel)
+	if roundRel := trimToRoundRelative(clean); roundRel != clean {
+		candidate := filepath.Join(matchDir, roundRel)
+		return candidate, filepath.ToSlash(roundRel), true
+	}
+	if filepath.IsAbs(clean) {
+		if r, err := filepath.Rel(matchDir, clean); err == nil && !strings.HasPrefix(r, "..") {
+			return clean, filepath.ToSlash(r), true
 		}
-		return candidates[i].index < candidates[j].index
-	})
-	limit := 2
-	if len(candidates) < limit {
-		limit = len(candidates)
+		return clean, filepath.ToSlash(clean), true
 	}
-	rows := make([]readmeHighlightPreviewRow, 0, limit)
-	for i := 0; i < limit; i++ {
-		rows = append(rows, candidates[i].row)
+	matchRelative := filepath.Join(matchDir, clean)
+	if fileExists(matchRelative) {
+		return matchRelative, filepath.ToSlash(clean), true
 	}
-	return rows
+	for base := matchDir; ; base = filepath.Dir(base) {
+		candidate := filepath.Join(base, clean)
+		if fileExists(candidate) {
+			if r, err := filepath.Rel(matchDir, candidate); err == nil {
+				return candidate, filepath.ToSlash(r), true
+			}
+			return candidate, filepath.ToSlash(clean), true
+		}
+		parent := filepath.Dir(base)
+		if parent == base {
+			break
+		}
+	}
+	return matchRelative, filepath.ToSlash(clean), true
+}
+
+func trimToRoundRelative(path string) string {
+	slash := filepath.ToSlash(path)
+	for i := 1; i <= 20; i++ {
+		marker := fmt.Sprintf("Round-%d/", i)
+		if idx := strings.Index(slash, marker); idx >= 0 {
+			return filepath.FromSlash(slash[idx:])
+		}
+	}
+	return path
+}
+
+func highlightImageRows(rows []readmeHighlightPreviewRow, columns int) [][]readmeHighlightPreviewRow {
+	if columns <= 0 || len(rows) == 0 {
+		return nil
+	}
+	out := make([][]readmeHighlightPreviewRow, 0, (len(rows)+columns-1)/columns)
+	for i := 0; i < len(rows); i += columns {
+		end := i + columns
+		if end > len(rows) {
+			end = len(rows)
+		}
+		row := append([]readmeHighlightPreviewRow(nil), rows[i:end]...)
+		for len(row) < columns {
+			row = append(row, readmeHighlightPreviewRow{})
+		}
+		out = append(out, row)
+	}
+	return out
 }
 
 func fileExists(path string) bool {

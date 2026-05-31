@@ -161,6 +161,16 @@
                 "text_size": "normal_v2",
                 "margin": "4px 0px 4px 0px"
             },
+            {{- if .HighlightMarkdown }}
+            {
+                "tag": "markdown",
+                "element_id": "featured_highlights",
+                "content": {{json .HighlightMarkdown}},
+                "text_align": "left",
+                "text_size": "normal_v2",
+                "margin": "4px 0px 4px 0px"
+            },
+            {{- end }}
             {{- if eq (len .HighlightImages) 1 }}
             {{- $img := index .HighlightImages 0 }}
             {
