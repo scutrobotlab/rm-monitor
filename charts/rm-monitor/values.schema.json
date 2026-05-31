@@ -52,6 +52,8 @@
       "properties": {
         "enabled": { "type": "boolean" },
         "role": { "type": "string" },
+        "useQuality": { "type": "boolean" },
+        "qualityWorkflowAPIKey": { "type": "string" },
         "whisperServerUrls": {
           "type": "array",
           "items": { "type": "string", "format": "uri", "minLength": 1 }

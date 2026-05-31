@@ -1,0 +1,276 @@
+app:
+  description: RoboMaster STT quality cleaner for rm-monitor stt-job.
+  icon: 🎙️
+  icon_background: '#E0F2FE'
+  mode: workflow
+  name: rm-monitor-stt-quality
+  use_icon_as_answer_icon: false
+kind: app
+version: 0.2.0
+workflow:
+  conversation_variables: []
+  environment_variables: []
+  features:
+    file_upload:
+      enabled: false
+      allowed_file_extensions: []
+      allowed_file_types: []
+      allowed_file_upload_methods: []
+      number_limits: 0
+    opening_statement: ''
+    retriever_resource:
+      enabled: true
+    sensitive_word_avoidance:
+      enabled: false
+    speech_to_text:
+      enabled: false
+    suggested_questions: []
+    suggested_questions_after_answer:
+      enabled: false
+    text_to_speech:
+      enabled: false
+      language: ''
+      voice: ''
+  graph:
+    edges:
+    - data:
+        sourceType: llm
+        targetType: code
+      id: llm-source-code-target
+      source: llm
+      sourceHandle: source
+      target: code
+      targetHandle: target
+      type: custom
+    - data:
+        sourceType: code
+        targetType: end
+      id: code-source-end-target
+      source: code
+      sourceHandle: source
+      target: end
+      targetHandle: target
+      type: custom
+    - data:
+        sourceType: start
+        targetType: code
+      id: start-source-retrieval_query-target
+      source: start
+      sourceHandle: source
+      target: retrieval_query
+      targetHandle: target
+      type: custom
+    - data:
+        sourceType: code
+        targetType: knowledge-retrieval
+      id: retrieval_query-source-robomaster_knowledge-target
+      source: retrieval_query
+      sourceHandle: source
+      target: robomaster_knowledge
+      targetHandle: target
+      type: custom
+    - data:
+        sourceType: knowledge-retrieval
+        targetType: llm
+      id: robomaster_knowledge-source-llm-target
+      source: robomaster_knowledge
+      sourceHandle: source
+      target: llm
+      targetHandle: target
+      type: custom
+    nodes:
+    - data:
+        desc: ''
+        selected: false
+        title: Start
+        type: start
+        variables:
+        - label: payload
+          max_length: 200000
+          options: []
+          required: true
+          type: paragraph
+          variable: payload
+      height: 90
+      id: start
+      position:
+        x: 80
+        y: 240
+      positionAbsolute:
+        x: 80
+        y: 240
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        context:
+          enabled: true
+          variable_selector:
+          - robomaster_knowledge
+          - result
+        desc: ''
+        model:
+          completion_params:
+            temperature: 0.1
+          mode: chat
+          name: scut-ai-proxy-deepseek-r1-671b
+          provider: langgenius/openai_api_compatible/openai_api_compatible
+        prompt_template:
+        - role: system
+          text: "你是 RoboMaster 中文赛事解说转写清洗器。你的任务是把 whisper.cpp 的逐段转写清洗为后续字幕和战报可用的结构化片段。\n\n输入 payload 是 JSON，包含 lines 数组。每个\
+            \ line 有 index/start/end/status/text。\n\n处理规则：\n- 保持每个片段的时间轴，不要合并相隔较远的片段，不要改动 start/end，除非原字段缺失。\n- 输出必须使用简体中文。\n\
+            - 修正常见同音、繁体、口头语、错别字和明显断句错误。\n- 保留赛事相关信息：红方、蓝方、学校、队名、比分、小局、进攻、防守、补给、哨兵、英雄、工程、步兵、飞镖、基地、前哨站等。\n- 删除或标记 keep=false：广告口播、关注账号、赛事宣传语、反复循环的队名/赛区/第几局幻觉、无意义语气词、明显不属于比赛现场的内容。\n\
+            - 如果片段只是在重复“红方/蓝方 + 学校/队名 + 赛区/第几局/第几场”，没有任何比赛动作、态势、比分或场上对象信息，必须 keep=false，reason 写 \"repetition\"。\n- “第3局、第4局、第5局”这类连续编号错觉很常见；除非上下文明确是在说明当前真实小局，否则不要保留。\n\
+            - 不要编造未出现的战术、击毁、分数或队伍动作。\n- 如果一个片段只有部分内容可用，保留可用部分并删除噪声。\n- 如果整段不可用，keep=false，并填写 reason。\n\n输出必须是严格 JSON，不要代码块。结构：\n\
+            {\n  \"usable\": true,\n  \"quality_score\": 0.0,\n  \"issues\": [\"repetition\", \"ad\", \"low_information\"\
+            ],\n  \"summary\": \"一句话说明清洗情况\",\n  \"segments\": [\n    {\n      \"index\": 0,\n      \"start\": 0.0,\n    \
+            \  \"end\": 1.0,\n      \"status\": \"SUCCEEDED\",\n      \"text\": \"清洗后的文本\",\n      \"keep\": true,\n     \
+            \ \"reason\": \"\"\n    }\n  ]\n}\n\n\n知识库使用规则：\n- <context> 中是 RoboMaster 术语、规则和表达参考，只用于纠正术语和理解赛事语境。\n- 如果知识库与\
+            \ payload 冲突，比赛事实以 payload 为准。\n- 不要把知识库中没有出现在转写里的动作编进文本。\n\n<context>\n{{#context#}}\n</context>"
+        - role: user
+          text: '请清洗以下 rm-monitor STT payload。
+
+
+            {{#start.payload#}}
+
+            '
+        selected: true
+        title: Clean STT JSON with RoboMaster KB
+        type: llm
+        variables: []
+        vision:
+          enabled: false
+      height: 88
+      id: llm
+      position:
+        x: 380
+        y: 240
+      positionAbsolute:
+        x: 380
+        y: 240
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        code: "import json\nimport re\n\ndef strip_fence(text):\n    text = (text or \"\").strip()\n    text = re.sub(r\"\
+          ^```(?:json)?\\s*\", \"\", text)\n    text = re.sub(r\"\\s*```$\", \"\", text)\n    return text.strip()\n\ndef normalize_segment(seg):\n\
+          \    out = dict(seg or {})\n    out[\"index\"] = int(out.get(\"index\", 0))\n    out[\"status\"] = str(out.get(\"\
+          status\") or \"SUCCEEDED\")\n    out[\"text\"] = str(out.get(\"text\") or \"\").strip()\n    out[\"keep\"] = bool(out.get(\"\
+          keep\", True))\n    out[\"reason\"] = str(out.get(\"reason\") or \"\").strip()\n    if out[\"status\"] == \"SUCCEEDED\"\
+          \ and not out[\"text\"]:\n        out[\"keep\"] = False\n        if not out[\"reason\"]:\n            out[\"reason\"\
+          ] = \"empty\"\n    for key in (\"start\", \"end\"):\n        if key in out and out[key] is not None:\n         \
+          \   out[key] = float(out[key])\n    return out\n\ndef main(text):\n    data = json.loads(strip_fence(text))\n  \
+          \  segments = [normalize_segment(item) for item in data.get(\"segments\") or []]\n    if not segments:\n       \
+          \ raise ValueError(\"segments is empty\")\n    cleaned = {\n        \"usable\": bool(data.get(\"usable\", True)),\n\
+          \        \"quality_score\": float(data.get(\"quality_score\", 0)),\n        \"issues\": list(data.get(\"issues\"\
+          ) or []),\n        \"summary\": str(data.get(\"summary\") or \"\").strip(),\n        \"segments\": segments,\n \
+          \   }\n    return {\"cleaned_json\": cleaned}\n"
+        code_language: python3
+        desc: ''
+        outputs:
+          cleaned_json:
+            children: null
+            type: object
+        selected: false
+        title: Normalize Output
+        type: code
+        variables:
+        - value_selector:
+          - llm
+          - text
+          variable: text
+      height: 54
+      id: code
+      position:
+        x: 680
+        y: 240
+      positionAbsolute:
+        x: 680
+        y: 240
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        desc: ''
+        outputs:
+        - value_selector:
+          - code
+          - cleaned_json
+          variable: cleaned_json
+        selected: false
+        title: End
+        type: end
+      height: 90
+      id: end
+      position:
+        x: 980
+        y: 240
+      positionAbsolute:
+        x: 980
+        y: 240
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        code: "import json\n\ndef main(payload):\n    data = json.loads(payload or '{}')\n    texts = []\n    for line in\
+          \ data.get('lines') or []:\n        text = str(line.get('text') or '').strip()\n        if text:\n            texts.append(text)\n\
+          \        if len(' '.join(texts)) > 180:\n            break\n    query = 'RoboMaster 机甲大师 赛事术语 队伍 机器人 部位 规则 解说纠错\
+          \ ' + ' '.join(texts)\n    return {'query': query[:200]}"
+        code_language: python3
+        desc: ''
+        outputs:
+          query:
+            children: null
+            type: string
+        selected: false
+        title: Build Retrieval Query
+        type: code
+        variables:
+        - value_selector:
+          - start
+          - payload
+          variable: payload
+      height: 54
+      id: retrieval_query
+      position:
+        x: 360
+        y: 120
+      positionAbsolute:
+        x: 360
+        y: 120
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        dataset_ids:
+        - 0a8e8227-b05f-458a-9060-ac4543273fcd
+        desc: ''
+        query_variable_selector:
+        - retrieval_query
+        - query
+        retrieval_mode: multiple
+        selected: false
+        title: RoboMaster Knowledge
+        type: knowledge-retrieval
+        multiple_retrieval_config:
+          top_k: 3
+          score_threshold: null
+          reranking_model: null
+      height: 92
+      id: robomaster_knowledge
+      position:
+        x: 660
+        y: 120
+      positionAbsolute:
+        x: 660
+        y: 120
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244

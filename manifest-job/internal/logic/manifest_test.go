@@ -166,6 +166,20 @@ func TestBuildReportPayloadIncludesEvidence(t *testing.T) {
 	}
 }
 
+func TestReadReportSTTFallsBackToRaw(t *testing.T) {
+	roundDir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(roundDir, "stt.raw.jsonl"), []byte(`{"start":1,"end":2,"status":"SUCCEEDED","text":"原始解说"}`+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	lines, truncated, err := readReportSTT(roundDir, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if truncated || len(lines) != 1 || lines[0].Text != "原始解说" {
+		t.Fatalf("lines=%#v truncated=%v", lines, truncated)
+	}
+}
+
 func TestGenerateMatchReportCallsDifyWorkflow(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/v1/workflows/run" {

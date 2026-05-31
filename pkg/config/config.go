@@ -111,6 +111,11 @@ type ManifestConf struct {
 	ReportWorkflowAPIKey string `json:",optional"`
 }
 
+type STTQualityConf struct {
+	UseQuality     bool   `json:",optional"`
+	WorkflowAPIKey string `json:",optional"`
+}
+
 type HighlightConf struct {
 	Enabled               bool                   `json:",optional"`
 	Role                  string                 `json:",optional"`

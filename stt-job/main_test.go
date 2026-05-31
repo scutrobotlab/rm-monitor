@@ -15,6 +15,7 @@ import (
 	common "scutbot.cn/web/rm-monitor/pkg/config"
 	"scutbot.cn/web/rm-monitor/pkg/jobcontract"
 	"scutbot.cn/web/rm-monitor/pkg/subtitle"
+	jobconfig "scutbot.cn/web/rm-monitor/stt-job/internal/config"
 )
 
 func TestAppendLineWritesJSONL(t *testing.T) {
@@ -230,7 +231,7 @@ exit 1
 		SubtitleName:      "主视角.srt",
 		WhisperServerURLs: []string{"http://127.0.0.1/unused"},
 	}
-	if err := runSTT(context.Background(), sttCtx); err != nil {
+	if err := runSTT(context.Background(), sttCtx, jobconfig.Config{}); err != nil {
 		t.Fatal(err)
 	}
 	raw, err := os.ReadFile(sttCtx.STTPath)
@@ -244,6 +245,62 @@ exit 1
 		t.Fatalf("subtitle should not exist for no audio, err=%v", err)
 	}
 	if _, err := os.Stat(filepath.Join(roundDir, ".job", "stt-7", "result.json")); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestQualityCleanSTTRenamesRawAndWritesCleaned(t *testing.T) {
+	roundDir := t.TempDir()
+	sttPath := filepath.Join(roundDir, "stt.jsonl")
+	if err := appendLines(sttPath, []sttLine{
+		{Index: 0, Start: 0, End: 2, Status: "SUCCEEDED", Text: "紅方開局"},
+		{Index: 1, Start: 3, End: 5, Status: "SUCCEEDED", Text: "关注官方账号"},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			Inputs map[string]any `json:"inputs"`
+			User   string         `json:"user"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Fatal(err)
+		}
+		if body.User != "rm-monitor:stt:9" {
+			t.Fatalf("user = %q", body.User)
+		}
+		payload, _ := body.Inputs["payload"].(string)
+		if !strings.Contains(payload, `"schema":"rm-monitor/dify-stt-quality-input/v1"`) {
+			t.Fatalf("payload missing schema: %s", payload)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"data":{"status":"succeeded","outputs":{"cleaned_json":{"usable":true,"quality_score":0.8,"segments":[{"index":0,"start":0,"end":2,"status":"SUCCEEDED","text":"红方开局压制","keep":true},{"index":1,"keep":false,"reason":"ad"}]}}}}`))
+	}))
+	defer server.Close()
+
+	sttCtx := jobcontract.STTContext{MatchRoundID: 9, MatchID: "match-8", RoundNo: 1, Role: "主视角", RoundDir: roundDir, STTPath: sttPath}
+	conf := jobconfig.Config{
+		DifyConf:       common.DifyConf{BaseURL: server.URL, TimeoutSeconds: 5},
+		STTQualityConf: common.STTQualityConf{UseQuality: true, WorkflowAPIKey: "app-test"},
+	}
+	if err := qualityCleanSTT(context.Background(), sttCtx, roundInfoFromContext(sttCtx), conf); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := os.ReadFile(filepath.Join(roundDir, "stt.raw.jsonl"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(raw), "关注官方账号") {
+		t.Fatalf("raw stt not preserved:\n%s", raw)
+	}
+	cleaned, err := os.ReadFile(sttPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(cleaned), "关注官方账号") || !strings.Contains(string(cleaned), "红方开局压制") {
+		t.Fatalf("unexpected cleaned stt:\n%s", cleaned)
+	}
+	if _, err := os.Stat(filepath.Join(roundDir, "stt.quality.json")); err != nil {
 		t.Fatal(err)
 	}
 }

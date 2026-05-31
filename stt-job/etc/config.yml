@@ -1,6 +1,12 @@
 WhisperServerUrls:
   - http://172.30.162.40:48088/inference
   - http://172.30.162.41:48088/inference
+DifyConf:
+  BaseURL: ""
+  TimeoutSeconds: 180
+STTQualityConf:
+  UseQuality: false
+  WorkflowAPIKey: ""
 RecordConf:
   Res: middle
   BaseDir: /records

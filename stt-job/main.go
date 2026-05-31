@@ -19,6 +19,7 @@ import (
 
 	"scutbot.cn/web/rm-monitor/pkg/app"
 	common "scutbot.cn/web/rm-monitor/pkg/config"
+	"scutbot.cn/web/rm-monitor/pkg/difyworkflow"
 	"scutbot.cn/web/rm-monitor/pkg/jobcontract"
 	"scutbot.cn/web/rm-monitor/pkg/logx"
 	"scutbot.cn/web/rm-monitor/pkg/stttext"
@@ -70,7 +71,7 @@ func main() {
 		logx.Error(err)
 		os.Exit(1)
 	}
-	if err := runSTT(context.Background(), sttCtx); err != nil {
+	if err := runSTT(context.Background(), sttCtx, c); err != nil {
 		_ = jobcontract.WriteError(jobDir, "stt", sttCtx.MatchRoundID, err)
 		logx.Error(err)
 		os.Exit(1)
@@ -86,13 +87,16 @@ func runBackfill(conf common.RecordConf) {
 	logx.Infof("subtitle backfill completed: round=%d highlight=%d", summary.RoundGenerated, summary.HighlightGenerated)
 }
 
-func runSTT(ctx context.Context, sttCtx jobcontract.STTContext) error {
+func runSTT(ctx context.Context, sttCtx jobcontract.STTContext, conf jobconfig.Config) error {
 	info := roundInfoFromContext(sttCtx)
 	if strings.TrimSpace(sttCtx.SourcePath) == "" {
 		return errors.New("stt source_path is empty")
 	}
 	if err := os.Remove(info.STTPath); err != nil && !os.IsNotExist(err) {
 		return errors.Wrap(err, "clean old stt jsonl")
+	}
+	if err := os.Remove(info.RawSTTPath); err != nil && !os.IsNotExist(err) {
+		return errors.Wrap(err, "clean old raw stt jsonl")
 	}
 	if err := os.Remove(filepath.Join(info.RoundDir, info.SubtitleName)); err != nil && !os.IsNotExist(err) {
 		return errors.Wrap(err, "clean old subtitle")
@@ -119,6 +123,11 @@ func runSTT(ctx context.Context, sttCtx jobcontract.STTContext) error {
 	}
 	if err := writeRecognizedLines(info.STTPath, result, seconds); err != nil {
 		return err
+	}
+	if conf.STTQualityConf.UseQuality {
+		if err := qualityCleanSTT(ctx, sttCtx, info, conf); err != nil {
+			return err
+		}
 	}
 	return finishSTT(sttCtx, info)
 }
@@ -155,14 +164,17 @@ func writeRoundSubtitle(info roundInfo) error {
 type roundInfo struct {
 	RoundDir     string
 	STTPath      string
+	RawSTTPath   string
 	SubtitleName string
 	Prompt       string
 }
 
 func roundInfoFromContext(sttCtx jobcontract.STTContext) roundInfo {
+	rawPath := filepath.Join(sttCtx.RoundDir, "stt.raw.jsonl")
 	return roundInfo{
 		RoundDir:     sttCtx.RoundDir,
 		STTPath:      sttCtx.STTPath,
+		RawSTTPath:   rawPath,
 		SubtitleName: sttCtx.SubtitleName,
 		Prompt:       sttCtx.Prompt,
 	}
@@ -249,6 +261,178 @@ func writeRecognizedLines(path string, result whisperResult, seconds float64) er
 		})
 	}
 	return appendLines(path, lines)
+}
+
+type sttQualityPayload struct {
+	Schema       string    `json:"schema"`
+	MatchID      string    `json:"match_id"`
+	MatchRoundID int       `json:"match_round_id"`
+	RoundNo      int       `json:"round_no"`
+	Role         string    `json:"role"`
+	Prompt       string    `json:"prompt,omitempty"`
+	Lines        []sttLine `json:"lines"`
+}
+
+type sttQualityOutput struct {
+	Usable       bool                `json:"usable"`
+	QualityScore float64             `json:"quality_score,omitempty"`
+	Issues       []string            `json:"issues,omitempty"`
+	Summary      string              `json:"summary,omitempty"`
+	Segments     []sttQualitySegment `json:"segments"`
+}
+
+type sttQualitySegment struct {
+	Index        int      `json:"index"`
+	SegmentID    int      `json:"segment_id,omitempty"`
+	Start        *float64 `json:"start,omitempty"`
+	End          *float64 `json:"end,omitempty"`
+	Status       string   `json:"status,omitempty"`
+	Text         string   `json:"text,omitempty"`
+	Keep         *bool    `json:"keep,omitempty"`
+	Reason       string   `json:"reason,omitempty"`
+	ErrorMessage string   `json:"error_message,omitempty"`
+}
+
+func qualityCleanSTT(ctx context.Context, sttCtx jobcontract.STTContext, info roundInfo, conf jobconfig.Config) error {
+	rawLines, err := readSTTLines(info.STTPath)
+	if err != nil {
+		return err
+	}
+	if len(rawLines) == 0 {
+		return errors.New("stt quality input is empty")
+	}
+	client, err := difyworkflow.New(conf.DifyConf)
+	if err != nil {
+		return errors.Wrap(err, "init dify stt quality client")
+	}
+	payload := sttQualityPayload{
+		Schema:       "rm-monitor/dify-stt-quality-input/v1",
+		MatchID:      sttCtx.MatchID,
+		MatchRoundID: sttCtx.MatchRoundID,
+		RoundNo:      sttCtx.RoundNo,
+		Role:         sttCtx.Role,
+		Prompt:       sttCtx.Prompt,
+		Lines:        rawLines,
+	}
+	payloadRaw, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+	result, err := client.RunWorkflow(ctx, conf.STTQualityConf.WorkflowAPIKey, fmt.Sprintf("rm-monitor:stt:%d", sttCtx.MatchRoundID), map[string]any{
+		"payload": string(payloadRaw),
+	})
+	if err != nil {
+		return errors.Wrap(err, "run dify stt quality workflow")
+	}
+	cleanedRaw, err := difyworkflow.RawOutput(result.Outputs, "cleaned_json")
+	if err != nil {
+		return err
+	}
+	var cleaned sttQualityOutput
+	if err := json.Unmarshal(cleanedRaw, &cleaned); err != nil {
+		return errors.Wrap(err, "decode dify stt quality output")
+	}
+	lines, err := qualityOutputToLines(rawLines, cleaned)
+	if err != nil {
+		return err
+	}
+	cleanTmp := info.STTPath + ".clean.tmp"
+	if err := os.Remove(cleanTmp); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	if err := appendLines(cleanTmp, lines); err != nil {
+		return errors.Wrap(err, "write cleaned stt jsonl")
+	}
+	if err := os.Rename(info.STTPath, info.RawSTTPath); err != nil {
+		return errors.Wrap(err, "rename raw stt jsonl")
+	}
+	if err := os.Rename(cleanTmp, info.STTPath); err != nil {
+		return errors.Wrap(err, "commit cleaned stt jsonl")
+	}
+	return writeQualityArtifact(info.RoundDir, cleanedRaw)
+}
+
+func readSTTLines(path string) ([]sttLine, error) {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	rows := strings.Split(strings.TrimSpace(string(raw)), "\n")
+	out := make([]sttLine, 0, len(rows))
+	for _, row := range rows {
+		row = strings.TrimSpace(row)
+		if row == "" {
+			continue
+		}
+		var line sttLine
+		if err := json.Unmarshal([]byte(row), &line); err != nil {
+			return nil, errors.Wrap(err, "decode stt jsonl")
+		}
+		out = append(out, line)
+	}
+	return out, nil
+}
+
+func qualityOutputToLines(rawLines []sttLine, cleaned sttQualityOutput) ([]sttLine, error) {
+	byIndex := make(map[int]sttLine, len(rawLines))
+	for _, line := range rawLines {
+		byIndex[line.Index] = line
+	}
+	out := make([]sttLine, 0, len(cleaned.Segments))
+	for _, segment := range cleaned.Segments {
+		keep := true
+		if segment.Keep != nil {
+			keep = *segment.Keep
+		}
+		if !keep {
+			continue
+		}
+		base, ok := byIndex[segment.Index]
+		if !ok {
+			base = sttLine{Index: segment.Index, SegmentID: segment.SegmentID, Status: "SUCCEEDED"}
+		}
+		if segment.Start != nil {
+			base.Start = *segment.Start
+		}
+		if segment.End != nil {
+			base.End = *segment.End
+		}
+		if segment.SegmentID != 0 {
+			base.SegmentID = segment.SegmentID
+		}
+		if strings.TrimSpace(segment.Status) != "" {
+			base.Status = strings.TrimSpace(segment.Status)
+		} else if base.Status == "" {
+			base.Status = "SUCCEEDED"
+		}
+		text, err := simplifyText(segment.Text)
+		if err != nil {
+			return nil, err
+		}
+		base.Text = strings.TrimSpace(text)
+		base.ErrorMessage = strings.TrimSpace(segment.ErrorMessage)
+		if base.Status == "SUCCEEDED" && base.Text == "" {
+			continue
+		}
+		out = append(out, base)
+	}
+	if len(out) == 0 {
+		out = append(out, sttLine{Index: 0, Start: 0, End: 0, Status: "NO_USABLE_STT", ErrorMessage: strings.Join(cleaned.Issues, ",")})
+	}
+	return out, nil
+}
+
+func writeQualityArtifact(roundDir string, raw json.RawMessage) error {
+	path := filepath.Join(roundDir, "stt.quality.json")
+	tmp := path + ".tmp"
+	var pretty bytes.Buffer
+	if err := json.Indent(&pretty, raw, "", "  "); err != nil {
+		pretty.Write(raw)
+	}
+	if err := os.WriteFile(tmp, pretty.Bytes(), 0o644); err != nil {
+		return err
+	}
+	return os.Rename(tmp, path)
 }
 
 func simplifyText(text string) (string, error) {

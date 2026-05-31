@@ -108,6 +108,10 @@ data:
   config.yml: |
     WhisperServerUrls:
 {{ toYaml .Values.stt.whisperServerUrls | nindent 6 }}
+{{ include "rm-monitor.difyConf" . | indent 4 }}
+    STTQualityConf:
+      UseQuality: {{ .Values.stt.useQuality }}
+      WorkflowAPIKey: {{ .Values.stt.qualityWorkflowAPIKey | quote }}
 {{ include "rm-monitor.recordConf" . | indent 4 }}
 ---
 apiVersion: v1

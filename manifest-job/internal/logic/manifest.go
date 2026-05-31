@@ -436,8 +436,17 @@ func buildReportPayload(m *ent.Match, red, blue *ent.Team, matchDir string) (rep
 }
 
 func readRoundSTT(matchDir string, roundNo int) ([]sttLine, error) {
-	path := filepath.Join(matchDir, fmt.Sprintf("Round-%d", roundNo), "stt.jsonl")
+	roundDir := filepath.Join(matchDir, fmt.Sprintf("Round-%d", roundNo))
+	path := preferredSTTPath(roundDir)
 	return readSTTFile(path)
+}
+
+func preferredSTTPath(roundDir string) string {
+	cleaned := filepath.Join(roundDir, "stt.jsonl")
+	if _, err := os.Stat(cleaned); err == nil {
+		return cleaned
+	}
+	return filepath.Join(roundDir, "stt.raw.jsonl")
 }
 
 func readSTTFile(path string) ([]sttLine, error) {
@@ -466,7 +475,7 @@ func readSTTFile(path string) ([]sttLine, error) {
 const maxReportSTTLinesPerRound = 120
 
 func readReportSTT(roundDir string, peaks []reportPeakInfo) ([]reportSTTLine, bool, error) {
-	lines, err := readSTTFile(filepath.Join(roundDir, "stt.jsonl"))
+	lines, err := readSTTFile(preferredSTTPath(roundDir))
 	if err != nil {
 		return nil, false, err
 	}
