@@ -370,7 +370,8 @@ func (l *DispatchLogic) recoverLostRunning() error {
 
 func (l *DispatchLogic) dispatchPending() error {
 	jobConf := l.svcCtx.Config.K8sJobConf.WithDefaults()
-	limit := l.svcCtx.Config.HighlightConf.WithDefaults().MaxConcurrentJobs
+	highlightConf := l.svcCtx.Config.HighlightConf.WithDefaults()
+	limit := highlightConf.MaxConcurrentJobs
 	if l.svcCtx.K8s != nil {
 		active, err := l.svcCtx.K8s.CountUnfinishedJobs(l.ctx, jobConf.Namespace, "rm-monitor/job=highlight-artifact-job")
 		if err != nil {
@@ -409,6 +410,9 @@ func (l *DispatchLogic) dispatchPending() error {
 			_ = l.svcCtx.DB.HighlightClip.UpdateOneID(clip.ID).SetStatus(highlightclip.StatusFAILED).SetErrorMessage(err.Error()).Exec(l.ctx)
 			continue
 		}
+		artifactCtx.PreviewSeconds = highlightConf.PreviewSeconds
+		artifactCtx.PreviewFPS = highlightConf.PreviewFPS
+		artifactCtx.PreviewWidth = highlightConf.PreviewWidth
 		review, err := l.reviewHighlight(artifactCtx)
 		if err != nil {
 			_ = l.svcCtx.DB.HighlightClip.UpdateOneID(clip.ID).SetStatus(highlightclip.StatusFAILED).SetErrorMessage(err.Error()).Exec(l.ctx)
@@ -507,6 +511,9 @@ type highlightJobContext struct {
 	HighlightType      string          `json:"highlight_type"`
 	PublishCaption     string          `json:"publish_caption"`
 	ModelPayload       json.RawMessage `json:"model_payload"`
+	PreviewSeconds     int             `json:"preview_seconds"`
+	PreviewFPS         int             `json:"preview_fps"`
+	PreviewWidth       int             `json:"preview_width"`
 }
 
 func (l *DispatchLogic) buildHighlightContext(clipID int) (highlightJobContext, error) {

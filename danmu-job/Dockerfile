@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.7
-FROM node:22-bookworm-slim AS deps
+FROM oven/bun:1.2.15-debian AS deps
 WORKDIR /app/danmu-job
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
@@ -13,14 +13,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 \
   && rm -rf /var/lib/apt/lists/*
 COPY danmu-job/package.json danmu-job/package-lock.json* ./
-RUN --mount=type=cache,target=/root/.npm npm install
+RUN --mount=type=cache,target=/root/.bun/install/cache bun install --production
 
 FROM deps AS builder
 COPY danmu-job/tsconfig.json ./
 COPY danmu-job/src ./src
-RUN npm run build && npm prune --omit=dev
+RUN bun build ./src/main.ts --target=bun --format=esm --outfile=dist/main.js --external canvas
+RUN mkdir -p /app/runtime/node_modules \
+  && cp -a node_modules/canvas /app/runtime/node_modules/canvas
 
-FROM node:22-bookworm-slim
+FROM oven/bun:1.2.15-debian
 ENV TZ=Asia/Shanghai
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -34,6 +36,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     librsvg2-2 \
     tzdata \
   && rm -rf /var/lib/apt/lists/*
-COPY --from=builder /app/danmu-job/node_modules ./node_modules
+COPY --from=builder /app/runtime/node_modules ./node_modules
 COPY --from=builder /app/danmu-job/dist ./dist
-ENTRYPOINT ["node", "/app/dist/main.js"]
+ENTRYPOINT ["bun", "/app/dist/main.js"]

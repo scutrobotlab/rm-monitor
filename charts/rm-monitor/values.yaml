@@ -84,6 +84,9 @@ highlight:
   preSeconds: 8
   postSeconds: 18
   mergeGapSeconds: 12
+  previewSeconds: 6
+  previewFPS: 8
+  previewWidth: 360
   publish: {}
 
 publish:

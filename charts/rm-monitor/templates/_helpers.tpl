@@ -95,6 +95,9 @@ HighlightConf:
   PreSeconds: {{ .Values.highlight.preSeconds }}
   PostSeconds: {{ .Values.highlight.postSeconds }}
   MergeGapSeconds: {{ .Values.highlight.mergeGapSeconds }}
+  PreviewSeconds: {{ .Values.highlight.previewSeconds }}
+  PreviewFPS: {{ .Values.highlight.previewFPS }}
+  PreviewWidth: {{ .Values.highlight.previewWidth }}
   Publish:
 {{ toYaml .Values.highlight.publish | indent 4 }}
 {{- end -}}

@@ -111,6 +111,9 @@ type HighlightConf struct {
 	PreSeconds            int                    `json:",optional"`
 	PostSeconds           int                    `json:",optional"`
 	MergeGapSeconds       int                    `json:",optional"`
+	PreviewSeconds        int                    `json:",optional"`
+	PreviewFPS            int                    `json:",optional"`
+	PreviewWidth          int                    `json:",optional"`
 	Publish               map[string]interface{} `json:",optional"`
 }
 
@@ -213,6 +216,15 @@ func (c *HighlightConf) WithDefaults() HighlightConf {
 	}
 	if out.MergeGapSeconds <= 0 {
 		out.MergeGapSeconds = 12
+	}
+	if out.PreviewSeconds <= 0 {
+		out.PreviewSeconds = 6
+	}
+	if out.PreviewFPS <= 0 {
+		out.PreviewFPS = 8
+	}
+	if out.PreviewWidth <= 0 {
+		out.PreviewWidth = 360
 	}
 	return out
 }

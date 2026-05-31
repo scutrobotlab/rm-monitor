@@ -7,6 +7,9 @@ import { BilibiliXMLWriter, type DanmuMessage } from "./xml.js";
 
 const seenMessageLimit = 5000;
 const historyLimit = 80;
+const leancloudConnectTimeoutMs = 10000;
+const leancloudHistoryTimeoutMs = 10000;
+const leancloudOnlineCountTimeoutMs = 5000;
 const outputFileName = "主视角.danmuku.xml";
 const recordMetaFileName = "record-meta.json";
 
@@ -55,6 +58,11 @@ type LeanMessage = {
   getAttributes?: () => Record<string, unknown>;
 };
 
+type LeanRuntime = {
+  client: { close?: () => Promise<void> };
+  room: { count?: () => Promise<number>; leave?: () => Promise<void> };
+};
+
 const args = parseArgs(process.argv.slice(2));
 const configFile = args.f || "etc/config.yml";
 const jobContext = loadJobContext();
@@ -77,6 +85,16 @@ let runtimeClient = null as { close?: () => Promise<void> } | null;
 let room = null as { count?: () => Promise<number>; leave?: () => Promise<void> } | null;
 let shuttingDown = false;
 let mediaTimeZeroWallMs = 0;
+const diagnostics = {
+  connectAttempts: 0,
+  connectedAt: null as string | null,
+  lastConnectError: "",
+  acceptedMessages: 0,
+  onlineSampleAttempts: 0,
+  onlineSampleSuccess: 0,
+  onlineSampleFailures: 0,
+  onlineSampleTimeouts: 0,
+};
 
 process.on("SIGTERM", () => {
   shuttingDown = true;
@@ -156,16 +174,21 @@ async function run() {
   await writeJobResult(outputPath);
 }
 
-async function connectLeanCloudWithRetry(roomID: string, round: RoundInfo) {
+async function connectLeanCloudWithRetry(roomID: string, round: RoundInfo): Promise<LeanRuntime | null> {
   let attempt = 0;
   for (;;) {
     if (shuttingDown) {
+      console.error(
+        `leancloud room ${roomID} for round ${round.id} was not connected before shutdown after ${attempt} attempt(s)`,
+      );
       return null;
     }
+    attempt++;
+    diagnostics.connectAttempts = attempt;
     try {
       return await connectLeanCloud(roomID, round);
     } catch (error) {
-      attempt++;
+      diagnostics.lastConnectError = error instanceof Error ? error.message : String(error);
       const delayMs = Math.min(30000, 2000 * attempt);
       console.error(
         `connect leancloud room ${roomID} for round ${round.id} failed, retrying in ${delayMs}ms: ${
@@ -177,7 +200,7 @@ async function connectLeanCloudWithRetry(roomID: string, round: RoundInfo) {
   }
 }
 
-async function connectLeanCloud(roomID: string, round: RoundInfo) {
+async function connectLeanCloud(roomID: string, round: RoundInfo): Promise<LeanRuntime> {
   const { Realtime, Event } = await loadLeancloudRuntime();
   const realtime = new Realtime({
     appId: danmuConf.AppID,
@@ -188,11 +211,19 @@ async function connectLeanCloud(roomID: string, round: RoundInfo) {
     },
   });
   const clientID = `rm-monitor-danmu-${round.id}-${Date.now().toString(36)}`;
-  const client = await realtime.createIMClient(clientID);
-  const room = await resolveRoom(client, roomID);
+  const client = await withTimeout(
+    realtime.createIMClient(clientID),
+    leancloudConnectTimeoutMs,
+    `create leancloud im client ${clientID}`,
+  );
+  registerRuntimeDiagnostics(client, "leancloud-client");
+  const room = await withTimeout(resolveRoom(client, roomID), leancloudConnectTimeoutMs, `resolve leancloud room ${roomID}`);
+  registerRuntimeDiagnostics(room, "leancloud-room");
   if (room?.join) {
-    await room.join();
+    await withTimeout(room.join(), leancloudConnectTimeoutMs, `join leancloud room ${roomID}`);
   }
+  diagnostics.connectedAt = new Date().toISOString();
+  console.log(`connected leancloud room ${roomID} for round ${round.id} with client ${clientID}`);
 
   const seen = new Set<string>();
   const seenOrder: string[] = [];
@@ -213,13 +244,17 @@ async function connectLeanCloud(roomID: string, round: RoundInfo) {
     room.on(eventName, handler);
   }
 
-  await writeHistory(room, round, seen, seenOrder);
+  await withTimeout(
+    writeHistory(room as { queryMessages?: (opts: unknown) => Promise<LeanMessage[]> }, round, seen, seenOrder),
+    leancloudHistoryTimeoutMs,
+    `query leancloud history ${roomID}`,
+  );
   hydrating = false;
   pending.sort((a, b) => messageTimestamp(a) - messageTimestamp(b));
   for (const message of pending) {
     writeMessageIfValid(message, round, seen, seenOrder);
   }
-  return { client, room };
+  return { client: client as LeanRuntime["client"], room: room as LeanRuntime["room"] };
 }
 
 async function writeHistory(
@@ -275,6 +310,7 @@ function writeMessageIfValid(message: LeanMessage, round: RoundInfo, seen: Set<s
     color: attrs.color,
   };
   stats.recordDanmu(item.offsetSeconds);
+  diagnostics.acceptedMessages++;
   writer?.writeMessage(item);
 }
 
@@ -289,10 +325,16 @@ function startOnlineSampler(room: { count?: () => Promise<number> }, round: Roun
       if (typeof room.count !== "function") {
         stats.recordOnline(offsetSeconds, null);
       } else {
-        const count = await room.count();
+        diagnostics.onlineSampleAttempts++;
+        const count = await withTimeout(room.count(), leancloudOnlineCountTimeoutMs, "leancloud room count");
         stats.recordOnline(offsetSeconds, Number.isFinite(count) ? Number(count) : null);
+        diagnostics.onlineSampleSuccess++;
       }
-    } catch {
+    } catch (error) {
+      diagnostics.onlineSampleFailures++;
+      if (error instanceof Error && error.message.includes("timed out")) {
+        diagnostics.onlineSampleTimeouts++;
+      }
       stats.recordOnline(offsetSeconds, null);
     }
   };
@@ -363,6 +405,41 @@ async function resolveRoom(client: any, roomID: string) {
     // fallback below
   }
   return client.getConversation(roomID, true);
+}
+
+function registerRuntimeDiagnostics(target: any, label: string) {
+  if (!target || typeof target.on !== "function") {
+    return;
+  }
+  for (const eventName of ["disconnect", "reconnect", "offline", "online", "close", "error"]) {
+    try {
+      target.on(eventName, (error: unknown) => {
+        if (eventName === "error") {
+          console.error(`${label} ${eventName}: ${error instanceof Error ? error.message : String(error)}`);
+          return;
+        }
+        console.error(`${label} event: ${eventName}`);
+      });
+    } catch {
+      // Some SDK objects expose on() but reject unknown event names.
+    }
+  }
+}
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`${label} timed out after ${timeoutMs}ms`)), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer) {
+      clearTimeout(timer);
+    }
+  }
 }
 
 async function waitUntilStopped() {
@@ -468,6 +545,17 @@ async function writeJobResult(outputPath: string) {
     schema: "rm-monitor/danmu-result/v1",
     match_round_id: roundID,
     output_path: outputPath,
+    diagnostics: {
+      connected: diagnostics.connectedAt !== null,
+      connected_at: diagnostics.connectedAt,
+      connect_attempts: diagnostics.connectAttempts,
+      last_connect_error: diagnostics.lastConnectError || undefined,
+      accepted_messages: diagnostics.acceptedMessages,
+      online_sample_attempts: diagnostics.onlineSampleAttempts,
+      online_sample_success: diagnostics.onlineSampleSuccess,
+      online_sample_failures: diagnostics.onlineSampleFailures,
+      online_sample_timeouts: diagnostics.onlineSampleTimeouts,
+    },
     completed_at: new Date().toISOString(),
   });
 }

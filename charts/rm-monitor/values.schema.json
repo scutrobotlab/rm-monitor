@@ -157,6 +157,9 @@
         "preSeconds": { "type": "integer", "minimum": 0 },
         "postSeconds": { "type": "integer", "minimum": 0 },
         "mergeGapSeconds": { "type": "integer", "minimum": 0 },
+        "previewSeconds": { "type": "integer", "minimum": 1 },
+        "previewFPS": { "type": "integer", "minimum": 1 },
+        "previewWidth": { "type": "integer", "minimum": 1 },
         "publish": { "type": "object" }
       },
       "allOf": [

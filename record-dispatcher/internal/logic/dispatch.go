@@ -117,8 +117,10 @@ func (l *DispatchLogic) cancelEndedRounds() (int, error) {
 		return 0, errors.Wrap(err, "query running record tasks")
 	}
 	cancelled := 0
+	stoppedSidecarRounds := make(map[int]struct{})
 	for _, task := range tasks {
 		if task.Edges.MatchRound != nil && task.Edges.MatchRound.Status == matchround.StatusENDED {
+			roundID := task.Edges.MatchRound.ID
 			name := jobName("record", task.ID)
 			if task.K8sJobName != nil && *task.K8sJobName != "" {
 				name = *task.K8sJobName
@@ -132,10 +134,14 @@ func (l *DispatchLogic) cancelEndedRounds() (int, error) {
 				return cancelled, errors.Wrap(err, "mark record stopping")
 			}
 			cancelled++
-			l.Infof("requested stop record job task=%d round=%d job=%s", task.ID, task.Edges.MatchRound.ID, name)
-			if l.svcCtx.K8s != nil && task.Edges.MatchRound != nil {
-				_ = l.svcCtx.K8s.DeleteJob(l.ctx, l.svcCtx.Config.DanmuJobConf.WithDefaults().Namespace, jobName("danmu", task.Edges.MatchRound.ID))
-				l.Infof("requested stop sidecar jobs round=%d danmu_job=%s", task.Edges.MatchRound.ID, jobName("danmu", task.Edges.MatchRound.ID))
+			l.Infof("requested stop record job task=%d round=%d job=%s", task.ID, roundID, name)
+			if l.svcCtx.K8s != nil {
+				if _, ok := stoppedSidecarRounds[roundID]; !ok {
+					stoppedSidecarRounds[roundID] = struct{}{}
+					danmuJobName := jobName("danmu", roundID)
+					_ = l.svcCtx.K8s.DeleteJob(l.ctx, l.svcCtx.Config.DanmuJobConf.WithDefaults().Namespace, danmuJobName)
+					l.Infof("requested stop sidecar jobs round=%d danmu_job=%s", roundID, danmuJobName)
+				}
 			}
 		}
 	}

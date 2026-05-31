@@ -72,6 +72,24 @@ struct HighlightContext {
     publish_caption: String,
     #[serde(default)]
     model_payload: Value,
+    #[serde(default = "default_preview_seconds")]
+    preview_seconds: u32,
+    #[serde(default = "default_preview_fps")]
+    preview_fps: u32,
+    #[serde(default = "default_preview_width")]
+    preview_width: u32,
+}
+
+fn default_preview_seconds() -> u32 {
+    6
+}
+
+fn default_preview_fps() -> u32 {
+    8
+}
+
+fn default_preview_width() -> u32 {
+    360
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -156,8 +174,20 @@ async fn run(config: &Config, ctx: &HighlightContext) -> Result<()> {
         (ctx.peak_seconds - ctx.start_seconds).max(0.0),
     )
     .await?;
-    let preview = preview_window(ctx.start_seconds, ctx.end_seconds, ctx.peak_seconds);
-    generate_preview_gif(&video, &preview_gif, preview).await?;
+    let preview = preview_window(
+        ctx.start_seconds,
+        ctx.end_seconds,
+        ctx.peak_seconds,
+        ctx.preview_seconds,
+    );
+    generate_preview_gif(
+        &video,
+        &preview_gif,
+        preview,
+        ctx.preview_fps,
+        ctx.preview_width,
+    )
+    .await?;
 
     let model_payload = ctx.model_payload.clone();
     let highlight_json = build_highlight_json(ctx, &model_payload, preview);
@@ -178,9 +208,9 @@ async fn run(config: &Config, ctx: &HighlightContext) -> Result<()> {
     Ok(())
 }
 
-fn preview_window(start: f64, end: f64, peak: f64) -> PreviewWindow {
+fn preview_window(start: f64, end: f64, peak: f64, preview_seconds: u32) -> PreviewWindow {
     let clip_len = (end - start).max(0.0);
-    let duration = clip_len.min(6.0).max(0.0);
+    let duration = clip_len.min(preview_seconds.max(1) as f64).max(0.0);
     if duration == 0.0 {
         return PreviewWindow {
             start: 0.0,
@@ -521,7 +551,13 @@ async fn extract_cover(video: &Path, cover: &Path, seconds: f64) -> Result<()> {
     Ok(())
 }
 
-async fn generate_preview_gif(video: &Path, output: &Path, window: PreviewWindow) -> Result<()> {
+async fn generate_preview_gif(
+    video: &Path,
+    output: &Path,
+    window: PreviewWindow,
+    fps: u32,
+    width: u32,
+) -> Result<()> {
     let tmp = output.with_extension("gif.part");
     let _ = fs::remove_file(&tmp);
     let duration = (window.end - window.start).max(0.0);
@@ -543,7 +579,11 @@ async fn generate_preview_gif(video: &Path, output: &Path, window: PreviewWindow
             "-t",
             &format!("{duration:.3}"),
             "-vf",
-            "fps=10,scale=480:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse",
+            &format!(
+                "fps={},scale={}:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse",
+                fps.max(1),
+                width.max(1)
+            ),
             "-loop",
             "0",
             "-f",
@@ -726,18 +766,18 @@ mod tests {
 
     #[test]
     fn preview_window_centers_on_peak() {
-        let got = preview_window(100.0, 140.0, 120.0);
+        let got = preview_window(100.0, 140.0, 120.0, 6);
         assert_eq!(got.start, 17.0);
         assert_eq!(got.end, 23.0);
     }
 
     #[test]
     fn preview_window_clamps_to_clip_edges() {
-        let start = preview_window(100.0, 140.0, 101.0);
+        let start = preview_window(100.0, 140.0, 101.0, 6);
         assert_eq!(start.start, 0.0);
         assert_eq!(start.end, 6.0);
 
-        let end = preview_window(100.0, 140.0, 139.0);
+        let end = preview_window(100.0, 140.0, 139.0, 6);
         assert_eq!(end.start, 34.0);
         assert_eq!(end.end, 40.0);
     }
@@ -771,6 +811,9 @@ mod tests {
             highlight_type: "关键压制".to_string(),
             publish_caption: "发布文案".to_string(),
             model_payload: serde_json::json!({"review":{"reason":"ok"}}),
+            preview_seconds: default_preview_seconds(),
+            preview_fps: default_preview_fps(),
+            preview_width: default_preview_width(),
         };
         let got = build_highlight_json(
             &ctx,
