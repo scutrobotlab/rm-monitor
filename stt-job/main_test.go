@@ -305,6 +305,68 @@ func TestQualityCleanSTTRenamesRawAndWritesCleaned(t *testing.T) {
 	}
 }
 
+func TestQualityOutputPartialAppliesOnlyChanges(t *testing.T) {
+	keep := false
+	lines, err := qualityOutputToLines([]sttLine{
+		{Index: 0, Start: 0, End: 1, Status: "SUCCEEDED", Text: "紅方開局"},
+		{Index: 1, Start: 1, End: 2, Status: "SUCCEEDED", Text: "是的"},
+		{Index: 2, Start: 2, End: 3, Status: "SUCCEEDED", Text: "蓝方防守"},
+	}, sttQualityOutput{
+		Partial: true,
+		Segments: []sttQualitySegment{
+			{Index: 0, Text: "红方开局压制"},
+			{Index: 1, Keep: &keep, Reason: "low_information"},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(lines) != 2 {
+		t.Fatalf("lines = %#v", lines)
+	}
+	if lines[0].Text != "红方开局压制" || lines[1].Text != "蓝方防守" {
+		t.Fatalf("unexpected partial output: %#v", lines)
+	}
+}
+
+func TestQualityFailureKeepsRawSTTAndWritesErrorArtifact(t *testing.T) {
+	roundDir := t.TempDir()
+	sttPath := filepath.Join(roundDir, "stt.jsonl")
+	if err := appendLine(sttPath, sttLine{Index: 0, Start: 0, End: 2, Status: "SUCCEEDED", Text: "红方开局"}); err != nil {
+		t.Fatal(err)
+	}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "dify unavailable", http.StatusBadGateway)
+	}))
+	defer server.Close()
+
+	sttCtx := jobcontract.STTContext{MatchRoundID: 9, MatchID: "match-8", RoundNo: 1, Role: "主视角", RoundDir: roundDir, STTPath: sttPath}
+	conf := jobconfig.Config{
+		DifyConf:       common.DifyConf{BaseURL: server.URL, TimeoutSeconds: 5},
+		STTQualityConf: common.STTQualityConf{UseQuality: true, WorkflowAPIKey: "app-test"},
+	}
+	if err := applyQualityCleanSTT(context.Background(), sttCtx, roundInfoFromContext(sttCtx), conf); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(roundDir, "stt.raw.jsonl")); !os.IsNotExist(err) {
+		t.Fatalf("raw rename should not happen on quality failure, err=%v", err)
+	}
+	raw, err := os.ReadFile(sttPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(raw), "红方开局") {
+		t.Fatalf("raw stt should stay at stt.jsonl:\n%s", raw)
+	}
+	errArtifact, err := os.ReadFile(filepath.Join(roundDir, "stt.quality.error.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(errArtifact), "dify") {
+		t.Fatalf("quality error artifact missing error detail:\n%s", errArtifact)
+	}
+}
+
 func prependFakeFFmpeg(t *testing.T, dir, script string) func() {
 	t.Helper()
 	bin := filepath.Join(dir, "bin")

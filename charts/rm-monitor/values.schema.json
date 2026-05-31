@@ -129,15 +129,6 @@
         }
       ]
     },
-    "llm": {
-      "type": "object",
-      "properties": {
-        "baseURL": { "type": "string" },
-        "apiKey": { "type": "string" },
-        "model": { "type": "string" },
-        "timeoutSeconds": { "type": "integer", "minimum": 1 }
-      }
-    },
     "dify": {
       "type": "object",
       "properties": {
@@ -150,6 +141,39 @@
       "properties": {
         "reportWorkflowAPIKey": { "type": "string" }
       }
+    },
+    "highlight": {
+      "type": "object",
+      "required": ["enabled"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "role": { "type": "string" },
+        "algorithmVersion": { "type": "string" },
+        "reviewWorkflowAPIKey": { "type": "string" },
+        "maxHighlightsPerRound": { "type": "integer", "minimum": 1 },
+        "maxConcurrentJobs": { "type": "integer", "minimum": 1 },
+        "minClipSeconds": { "type": "integer", "minimum": 1 },
+        "maxClipSeconds": { "type": "integer", "minimum": 1 },
+        "preSeconds": { "type": "integer", "minimum": 0 },
+        "postSeconds": { "type": "integer", "minimum": 0 },
+        "mergeGapSeconds": { "type": "integer", "minimum": 0 },
+        "publish": { "type": "object" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "enabled": { "const": true } },
+            "required": ["enabled"]
+          },
+          "then": {
+            "required": ["role", "reviewWorkflowAPIKey"],
+            "properties": {
+              "role": { "minLength": 1 },
+              "reviewWorkflowAPIKey": { "minLength": 1 }
+            }
+          }
+        }
+      ]
     },
     "publish": {
       "type": "object",

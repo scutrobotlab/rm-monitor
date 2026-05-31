@@ -124,10 +124,8 @@ func runSTT(ctx context.Context, sttCtx jobcontract.STTContext, conf jobconfig.C
 	if err := writeRecognizedLines(info.STTPath, result, seconds); err != nil {
 		return err
 	}
-	if conf.STTQualityConf.UseQuality {
-		if err := qualityCleanSTT(ctx, sttCtx, info, conf); err != nil {
-			return err
-		}
+	if err := applyQualityCleanSTT(ctx, sttCtx, info, conf); err != nil {
+		return err
 	}
 	return finishSTT(sttCtx, info)
 }
@@ -275,6 +273,7 @@ type sttQualityPayload struct {
 
 type sttQualityOutput struct {
 	Usable       bool                `json:"usable"`
+	Partial      bool                `json:"partial,omitempty"`
 	QualityScore float64             `json:"quality_score,omitempty"`
 	Issues       []string            `json:"issues,omitempty"`
 	Summary      string              `json:"summary,omitempty"`
@@ -352,6 +351,19 @@ func qualityCleanSTT(ctx context.Context, sttCtx jobcontract.STTContext, info ro
 	return writeQualityArtifact(info.RoundDir, cleanedRaw)
 }
 
+func applyQualityCleanSTT(ctx context.Context, sttCtx jobcontract.STTContext, info roundInfo, conf jobconfig.Config) error {
+	if !conf.STTQualityConf.UseQuality {
+		return nil
+	}
+	if err := qualityCleanSTT(ctx, sttCtx, info, conf); err != nil {
+		logx.Errorf("stt quality failed, keeping raw transcript: %v", err)
+		if artifactErr := writeQualityErrorArtifact(info.RoundDir, err); artifactErr != nil {
+			return errors.Wrap(artifactErr, "write stt quality error artifact")
+		}
+	}
+	return nil
+}
+
 func readSTTLines(path string) ([]sttLine, error) {
 	raw, err := os.ReadFile(path)
 	if err != nil {
@@ -378,6 +390,45 @@ func qualityOutputToLines(rawLines []sttLine, cleaned sttQualityOutput) ([]sttLi
 	for _, line := range rawLines {
 		byIndex[line.Index] = line
 	}
+	if cleaned.Partial {
+		out := make([]sttLine, 0, len(rawLines))
+		overrides := make(map[int]*sttLine, len(cleaned.Segments))
+		drops := make(map[int]bool, len(cleaned.Segments))
+		for _, segment := range cleaned.Segments {
+			keep := true
+			if segment.Keep != nil {
+				keep = *segment.Keep
+			}
+			if !keep {
+				drops[segment.Index] = true
+				continue
+			}
+			base, ok := byIndex[segment.Index]
+			if !ok {
+				base = sttLine{Index: segment.Index, SegmentID: segment.SegmentID, Status: "SUCCEEDED"}
+			}
+			if err := applyQualitySegment(&base, segment); err != nil {
+				return nil, err
+			}
+			overrides[segment.Index] = &base
+		}
+		for _, line := range rawLines {
+			if drops[line.Index] {
+				continue
+			}
+			if override := overrides[line.Index]; override != nil {
+				line = *override
+			}
+			if line.Status == "SUCCEEDED" && strings.TrimSpace(line.Text) == "" {
+				continue
+			}
+			out = append(out, line)
+		}
+		if len(out) == 0 {
+			out = append(out, sttLine{Index: 0, Start: 0, End: 0, Status: "NO_USABLE_STT", ErrorMessage: strings.Join(cleaned.Issues, ",")})
+		}
+		return out, nil
+	}
 	out := make([]sttLine, 0, len(cleaned.Segments))
 	for _, segment := range cleaned.Segments {
 		keep := true
@@ -391,26 +442,9 @@ func qualityOutputToLines(rawLines []sttLine, cleaned sttQualityOutput) ([]sttLi
 		if !ok {
 			base = sttLine{Index: segment.Index, SegmentID: segment.SegmentID, Status: "SUCCEEDED"}
 		}
-		if segment.Start != nil {
-			base.Start = *segment.Start
-		}
-		if segment.End != nil {
-			base.End = *segment.End
-		}
-		if segment.SegmentID != 0 {
-			base.SegmentID = segment.SegmentID
-		}
-		if strings.TrimSpace(segment.Status) != "" {
-			base.Status = strings.TrimSpace(segment.Status)
-		} else if base.Status == "" {
-			base.Status = "SUCCEEDED"
-		}
-		text, err := simplifyText(segment.Text)
-		if err != nil {
+		if err := applyQualitySegment(&base, segment); err != nil {
 			return nil, err
 		}
-		base.Text = strings.TrimSpace(text)
-		base.ErrorMessage = strings.TrimSpace(segment.ErrorMessage)
 		if base.Status == "SUCCEEDED" && base.Text == "" {
 			continue
 		}
@@ -422,6 +456,32 @@ func qualityOutputToLines(rawLines []sttLine, cleaned sttQualityOutput) ([]sttLi
 	return out, nil
 }
 
+func applyQualitySegment(base *sttLine, segment sttQualitySegment) error {
+	if segment.Start != nil {
+		base.Start = *segment.Start
+	}
+	if segment.End != nil {
+		base.End = *segment.End
+	}
+	if segment.SegmentID != 0 {
+		base.SegmentID = segment.SegmentID
+	}
+	if strings.TrimSpace(segment.Status) != "" {
+		base.Status = strings.TrimSpace(segment.Status)
+	} else if base.Status == "" {
+		base.Status = "SUCCEEDED"
+	}
+	if strings.TrimSpace(segment.Text) != "" {
+		text, err := simplifyText(segment.Text)
+		if err != nil {
+			return err
+		}
+		base.Text = strings.TrimSpace(text)
+	}
+	base.ErrorMessage = strings.TrimSpace(segment.ErrorMessage)
+	return nil
+}
+
 func writeQualityArtifact(roundDir string, raw json.RawMessage) error {
 	path := filepath.Join(roundDir, "stt.quality.json")
 	tmp := path + ".tmp"
@@ -430,6 +490,30 @@ func writeQualityArtifact(roundDir string, raw json.RawMessage) error {
 		pretty.Write(raw)
 	}
 	if err := os.WriteFile(tmp, pretty.Bytes(), 0o644); err != nil {
+		return err
+	}
+	return os.Rename(tmp, path)
+}
+
+func writeQualityErrorArtifact(roundDir string, err error) error {
+	path := filepath.Join(roundDir, "stt.quality.error.json")
+	tmp := path + ".tmp"
+	payload := struct {
+		Schema       string    `json:"schema"`
+		Status       string    `json:"status"`
+		ErrorMessage string    `json:"error_message"`
+		CompletedAt  time.Time `json:"completed_at"`
+	}{
+		Schema:       "rm-monitor/stt-quality-error/v1",
+		Status:       "FAILED",
+		ErrorMessage: err.Error(),
+		CompletedAt:  time.Now(),
+	}
+	raw, marshalErr := json.MarshalIndent(payload, "", "  ")
+	if marshalErr != nil {
+		return marshalErr
+	}
+	if err := os.WriteFile(tmp, raw, 0o644); err != nil {
 		return err
 	}
 	return os.Rename(tmp, path)

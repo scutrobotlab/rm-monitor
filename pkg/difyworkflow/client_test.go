@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"sync/atomic"
 	"testing"
 
 	common "scutbot.cn/web/rm-monitor/pkg/config"
@@ -69,6 +70,29 @@ func TestRunWorkflowHTTPError(t *testing.T) {
 	}
 	if _, err := client.RunWorkflow(context.Background(), "key", "user", map[string]any{"payload": "{}"}); err == nil {
 		t.Fatal("expected http error")
+	}
+}
+
+func TestRunWorkflowRetriesTransientError(t *testing.T) {
+	var calls int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if atomic.AddInt32(&calls, 1) == 1 {
+			http.Error(w, "bad gateway", http.StatusBadGateway)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"data":{"status":"succeeded","outputs":{"report_markdown":"ok"}}}`))
+	}))
+	defer server.Close()
+	client, err := New(common.DifyConf{BaseURL: server.URL})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := client.RunWorkflow(context.Background(), "key", "user", map[string]any{"payload": "{}"}); err != nil {
+		t.Fatal(err)
+	}
+	if calls != 2 {
+		t.Fatalf("calls = %d, want 2", calls)
 	}
 }
 

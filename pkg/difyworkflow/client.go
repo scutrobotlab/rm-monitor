@@ -3,6 +3,9 @@ package difyworkflow
 import (
 	"context"
 	"encoding/json"
+	"net"
+	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -15,6 +18,11 @@ type Client struct {
 	baseURL string
 	timeout time.Duration
 }
+
+const (
+	maxAttempts = 3
+	retryDelay  = 2 * time.Second
+)
 
 type RunResult struct {
 	WorkflowRunID string
@@ -44,6 +52,28 @@ func (c *Client) RunWorkflow(ctx context.Context, apiKey, user string, inputs ma
 	if strings.TrimSpace(user) == "" {
 		return nil, errors.New("dify workflow user is required")
 	}
+	var lastErr error
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		result, err := c.runWorkflowOnce(ctx, apiKey, user, inputs)
+		if err == nil {
+			return result, nil
+		}
+		lastErr = err
+		if attempt == maxAttempts || !isTransient(err) {
+			break
+		}
+		timer := time.NewTimer(time.Duration(attempt) * retryDelay)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return nil, ctx.Err()
+		case <-timer.C:
+		}
+	}
+	return nil, lastErr
+}
+
+func (c *Client) runWorkflowOnce(ctx context.Context, apiKey, user string, inputs map[string]any) (*RunResult, error) {
 	var out workflowResponse
 	resp, err := resty.New().
 		SetTimeout(c.timeout).
@@ -84,6 +114,36 @@ func (c *Client) RunWorkflow(ctx context.Context, apiKey, user string, inputs ma
 		TotalTokens:   out.Data.TotalTokens,
 		TotalSteps:    out.Data.TotalSteps,
 	}, nil
+}
+
+func isTransient(err error) bool {
+	if err == nil {
+		return false
+	}
+	var netErr net.Error
+	if errors.As(err, &netErr) && netErr.Timeout() {
+		return true
+	}
+	msg := strings.ToLower(err.Error())
+	if strings.Contains(msg, "timeout") ||
+		strings.Contains(msg, "signal: killed") ||
+		strings.Contains(msg, "upstream_error") ||
+		strings.Contains(msg, "bad gateway") ||
+		strings.Contains(msg, "service unavailable") {
+		return true
+	}
+	for _, code := range []int{
+		http.StatusBadGateway,
+		http.StatusServiceUnavailable,
+		http.StatusGatewayTimeout,
+		http.StatusTooManyRequests,
+		http.StatusInternalServerError,
+	} {
+		if strings.Contains(msg, "http "+http.StatusText(code)) || strings.Contains(msg, "http "+strconv.Itoa(code)) {
+			return true
+		}
+	}
+	return false
 }
 
 func StringOutput(outputs map[string]json.RawMessage, key string) (string, error) {

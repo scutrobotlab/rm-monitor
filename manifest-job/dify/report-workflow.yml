@@ -118,24 +118,23 @@ workflow:
           provider: langgenius/openai_api_compatible/openai_api_compatible
         prompt_template:
         - role: system
-          text: "你是 RoboMaster 机甲大师赛事官方战报编辑，读者是参赛队、观众和赛事运营人员。\n\n写作目标：\n- 写出一篇赛后战报，不是数据表复述，也不是夸张营销文案。\n- 先交代赛果和比赛意义，再按小局回顾走势，最后总结胜负关键和后续关注。\n\
-            - 语气专业、克制、有现场感；可以有节奏感，但不要用“碾压、吊打、封神、梦幻开局、血洗、统治全场”等夸张词。\n\n证据规则：\n- 只根据 payload 写作，不编造未给出的机器人动作、击毁、经济、血量、点位、战术细节或选手表现。\n\
-            - 比分、胜方、小局胜负、时长是强事实，可以直接写。\n- stt_lines 是解说摘录，只能作为辅助证据；不要逐字引用过长句子。\n- danmu.peaks[].peak_seconds 是秒级时间点，danmu.peaks[].peak_count\
-            \ 是该 10 秒桶弹幕数量；弹幕峰值只能表述为“观众讨论升温、弹幕集中出现、关注度抬升”，不能直接推断发生击杀或团战。\n- highlights、ocr_settlement 如果存在，可以作为高光和赛果证据；不存在时不要提“缺失”。\n\
+          text: "你是 RoboMaster 机甲大师赛事官方战报主笔，读者是参赛队、观众、赛事运营和社媒编辑。你正在直接撰写赛事战报，不是在转述素材、审稿或做数据说明。\n\n写作目标：\n- 写出一篇有现场张力的电竞赛事战报，不是数据表复述，也不是空泛宣传稿。\n- 开头要直接给出胜负和比分，再迅速带出整场节奏、转折和关键关注点。\n- 小局回顾要有推进感：开局态势、局中拉扯、收束结果；证据不足时用比分、小局结果、时长和现场素材归纳成赛况叙述。\n\
+            - 语气要像赛事现场战报：短句有冲击力，段落有节奏，允许“抢下首局、扳回一城、锁定胜势、顶住压力、节奏拉满”等电竞表达；但不要用“碾压、吊打、封神、梦幻开局、血洗、统治全场”等无证据夸张词。\n\n证据规则：\n- 只根据 payload 写作，不编造未给出的机器人动作、击毁、经济、血量、点位、战术细节或选手表现。\n\
+            - 比分、胜方、小局胜负、时长是强事实，可以直接写。\n- stt_lines 是现场语音转写素材，用来帮助理解比赛节奏；必须吸收成战报叙述，不要写“解说称、据解说、解说提到、从解说中可以看出”等转述口吻，不要逐字引用长句。\n- danmu.peaks[].peak_seconds 是内部时间锚点，danmu.peaks[].peak_count\
+            \ 是该 10 秒桶弹幕数量；正文不要写具体“第几秒/xx秒”，只把弹幕峰值转成“开局、中段、收束阶段、关键回合后观众讨论升温”等自然赛况表达。弹幕峰值不能直接推断发生击杀或团战。\n- highlights、ocr_settlement 如果存在，可以作为高光和赛果证据；不存在时不要提“缺失”。\n\
             - payload 中 started_at/ended_at 是墙钟时间，不是比赛用时；duration_seconds 才是小局时长。\n\n禁止内容：\n- 不要提到 AI、模型、系统、Dify、工作流、STT、识别文本、自动生成、数据待完善、信息不足等内部实现。\n\
-            - 不要写“技术原因、数据缺失、未完整记录、无法还原、资料有限”等解释性托辞；证据不足时只写已确认事实。\n- 不要评价“数据是否充分、解说是否收录、弹幕是否显示”；这些是内部素材状态，不是战报内容。\n- 不要写“可能、似乎、应该、疑似”等弱化词；证据不足时改写为保守事实表达。\n\
+            - 不要写“技术原因、数据缺失、未完整记录、无法还原、资料有限”等解释性托辞；证据不足时只写已确认事实。\n- 不要评价“数据是否充分、解说是否收录、弹幕是否显示”；这些是内部素材状态，不是战报内容。\n- 不要写“解说称、据解说、解说提到、从解说中、在xx秒、xx秒时、第xx秒”等素材溯源口吻；你就是战报作者，应直接写赛况。\n- 不要写“可能、似乎、应该、疑似”等弱化词；证据不足时改写为保守事实表达。\n\
             - 不要生成没有证据支撑的战术判断。\n\nMarkdown 正文结构：\n- 必须包含这些二级标题，且顺序固定：\n  1. ## 赛果速览\n  2. ## 比赛走势\n  3. ## 小局回顾\n  4. ## 关键节点\n\
-            \  5. ## 后续关注\n- Markdown 标题必须写成“## 标题”“### 标题”，# 后必须有空格。\n- Markdown 列表必须写成“- 文本”；如果加粗，写成“- **标题**：内容”。\n- 正文建议\
-            \ 500-900 个中文字符；每个章节至少写一个完整段落或 2 条要点，关键节点列出 2-4 条。\n\n内容要求：\n- “赛果速览”：一句话写清谁以几比几获胜、赛区、场次和小局结果。\n- “比赛走势”：概括整场节奏，优先使用比分、小局时长、弹幕热度峰值和解说摘录支撑。\n\
-            - “小局回顾”：每局一段，说明胜方、时长和观众关注点；不要流水账。\n- “关键节点”：列出 2-5 个节点，时间点必须来自弹幕峰值、highlights 或 STT 时间戳。\n- “后续关注”：写胜方晋级/排名/后续对阵信息；如果\
-            \ payload 没给明确去向，只写“后续赛程中继续关注两队表现”。\n\n输出必须是严格 JSON，不要用代码块包裹。\nJSON 结构必须为：\n{\n  \"report_markdown\": \"Markdown正文，最高从二级标题开始\"\
+            - Markdown 标题必须写成“## 标题”“### 标题”，# 后必须有空格。\n- Markdown 列表必须写成“- 文本”；如果加粗，写成“- **标题**：内容”。\n- 正文建议\
+            \ 800-1300 个中文字符；每个章节至少写一个完整段落或 2 条要点，关键节点列出 3-5 条。\n\n内容要求：\n- “赛果速览”：第一句必须写清谁以几比几获胜、赛区、场次和小局结果；随后补一小句比赛基调。\n- “比赛走势”：用更有冲击力的叙述概括整场节奏，优先使用比分、小局时长、弹幕热度峰值和现场语音素材形成自然叙述。\n\
+            - “小局回顾”：每局使用 `### 首局...`、`### 次局...`、`### 决胜局...` 这类三级标题，再写一段完整回顾；不要用星号模拟标题，不要写成 `* **标题**`。\n- “关键节点”：列出 3-5 个节点，用“开局、中段、末段、决胜阶段、收官回合”等自然阶段表达，不要写秒级时间戳；节点标题要短、有现场感。\n- 只有 payload 明确提供 winner_placeholder 或 loser_placeholder 时，才可以在“赛果速览”末尾补一句赛程去向；否则不要写任何“后续关注/继续关注/赛程展望”尾巴。\n\n输出必须是严格 JSON，不要用代码块包裹。\nJSON 结构必须为：\n{\n  \"report_markdown\": \"Markdown正文，最高从二级标题开始\"\
             ,\n  \"report_json\": {\n    \"headline\": \"不超过28字的标题\",\n    \"summary\": \"一句话概括\",\n    \"round_summaries\"\
             : [{\"round_no\": 1, \"summary\": \"...\"}],\n    \"key_moments\": [{\"round_no\": 1, \"time\": 0, \"title\":\
             \ \"...\", \"description\": \"...\"}],\n    \"evidence_used\": [\"score\", \"rounds\", \"stt\", \"danmu\"],\n\
             \    \"tags\": [\"...\"]\n  }\n}\n\n\n知识库使用规则：\n- <context> 中是 RoboMaster 规则、术语和官方表达参考。\n- 用它校正术语、避免错写机器人/赛制概念；不要把知识库内容当成本场事实。\n\
             - 本场比分、小局结果、时间点和素材证据必须以 payload 为准。\n\n<context>\n{{#context#}}\n</context>\n\n赛程去向规则：\n- 只有 payload.match.winner_placeholder\
-            \ 或 loser_placeholder 明确给出时，才能写晋级、淘汰、进入败者组、结束征程、下一轮等赛程去向。\n- 如果没有这些字段，后续关注只能写“后续赛程中继续关注两队表现”，不能根据 match_type 自行推断。\n\
-            \n强判断限制：\n- 没有小局具体比分、经济、击毁、血量或结算 OCR 证据时，不要写“一边倒、较大优势、未给反击空间、明显倾斜”等强判断。\n- “前压、压制、卡住前哨站”等可以作为解说摘录引用，但不能扩展成完整战术结论。"
+            \ 或 loser_placeholder 明确给出时，才能写晋级、淘汰、进入败者组、结束征程、下一轮等赛程去向。\n- 如果没有这些字段，不要写赛程去向，也不要生成“后续关注”“继续关注两队表现”这类固定收尾。\n\
+            \n强判断限制：\n- 没有小局具体比分、经济、击毁、血量或结算 OCR 证据时，不要写“一边倒、较大优势、未给反击空间、明显倾斜”等强判断。\n- “前压、压制、卡住前哨站”等如果只来自语音素材，只能转成保守赛况表达，不能扩展成完整战术结论。\n\n表达增强：\n- 多用主动句，少用“进行了、获得了、出现了”这类平铺句。\n- 段落开头避免重复“第 X 局”；可写“首局开门见山”“第二局风向反转”“决胜局悬念拉满”等，但必须与实际小局胜负一致。\n- 可以把短句素材吸收成现场感，但不要以“引用/转述”的形式展示，不要长段摘抄。"
         - role: user
           text: '请基于以下 rm-monitor 比赛 payload 生成战报。
 
@@ -163,15 +162,15 @@ workflow:
       width: 244
     - data:
         code: "import json\nimport re\n\nREQUIRED_HEADINGS = [\n    \"## 赛果速览\",\n    \"## 比赛走势\",\n    \"## 小局回顾\",\n   \
-          \ \"## 关键节点\",\n    \"## 后续关注\",\n]\nFORBIDDEN_TERMS = [\n    \"Dify\", \"工作流\", \"自动生成\", \"数据待完善\", \"信息不足\",\
-          \ \"无法判断\",\n    \"技术原因\", \"数据缺失\", \"未被完整记录\", \"未完整记录\", \"无法还原\", \"资料有限\",\n    \"未收录\", \"未显示\",\n]\nINTERNAL_REPLACEMENTS\
-          \ = {\n    \"STT\": \"解说摘录\",\n    \"识别文本\": \"解说摘录\",\n    \"AI\": \"编辑\",\n    \"模型\": \"资料\",\n    \"系统\": \"\
+          \ \"## 关键节点\",\n]\nFORBIDDEN_TERMS = [\n    \"Dify\", \"工作流\", \"自动生成\", \"数据待完善\", \"信息不足\",\
+          \ \"无法判断\",\n    \"技术原因\", \"数据缺失\", \"未被完整记录\", \"未完整记录\", \"无法还原\", \"资料有限\",\n    \"未收录\", \"未显示\",\n    \"解说称\", \"据解说\", \"解说提到\", \"解说表示\", \"从解说中\",\n]\nINTERNAL_REPLACEMENTS\
+          \ = {\n    \"STT\": \"现场素材\",\n    \"识别文本\": \"现场素材\",\n    \"AI\": \"编辑\",\n    \"模型\": \"资料\",\n    \"系统\": \"\
           资料\",\n    \"弹幕数据\": \"弹幕反馈\",\n}\n\ndef normalize_markdown(markdown):\n    lines = markdown.strip().splitlines()\n\
           \    out = []\n    for line in lines:\n        line = re.sub(r\"^(\\s*#{2,6})([^#\\s].*)$\", r\"\\1 \\2\", line)\n\
-          \        line = re.sub(r\"^(\\s*[-*])([^\\s].*)$\", r\"\\1 \\2\", line)\n        out.append(line)\n    return \"\
+          \        line = re.sub(r\"^(\\s*[-*])([^\\s].*)$\", r\"\\1 \\2\", line)\n        for old, new in {\n            \"## 分局回顾\": \"## 小局回顾\",\n            \"## 各局回顾\": \"## 小局回顾\",\n            \"## 单局回顾\": \"## 小局回顾\",\n            \"## 小局战况\": \"## 小局回顾\",\n            \"## 关键时刻\": \"## 关键节点\",\n            \"## 关键回合\": \"## 关键节点\",\n            \"## 比赛节奏\": \"## 比赛走势\",\n        }.items():\n            line = line.replace(old, new)\n        out.append(line)\n    return \"\
           \\n\".join(out).strip()\n\ndef remove_bad_public_sentences(markdown):\n    bad = [\"技术原因\", \"数据缺失\", \"未被完整记录\"\
           , \"未完整记录\", \"无法还原\", \"资料有限\"]\n    markdown = re.sub(r\"但弹幕[^。\\n]*(未显示|缺少|不足)[^。\\n]*。?\", \"\", markdown)\n\
-          \    markdown = re.sub(r\"比赛过程未收录有效解说信息，?\", \"红方延续首局节奏，\", markdown)\n    markdown = re.sub(r\"[^。\\n]*(未收录|未显示)[^。\\\
+          \    markdown = re.sub(r\"比赛过程未收录有效解说信息，?\", \"红方延续首局节奏，\", markdown)\n    markdown = re.sub(r\"(解说称|据解说|解说提到|解说表示|从解说中可以看出|从解说中)[，,：:\\s]*\", \"\", markdown)\n    markdown = re.sub(r\"(?<![分\\d])(第\\s*)?\\d+\\s*秒(左右|前后|时|处|阶段|节点)?\", \"该阶段\", markdown)\n    markdown = markdown.replace(\"最后该阶段\", \"最后阶段\")\n    markdown = re.sub(r\"^\\s*\\*\\s+\\*\\*(.+?)\\*\\*\\s*$\", r\"### \\1\", markdown, flags=re.MULTILINE)\n    markdown = re.sub(r\"[^。\\n]*(未收录|未显示)[^。\\\
           n]*。?\", \"\", markdown)\n    lines = []\n    for line in markdown.splitlines():\n        if any(term in line for\
           \ term in bad):\n            continue\n        lines.append(line)\n    return \"\\n\".join(lines).strip()\n\n\n\
           def has_explicit_advancement(payload):\n    try:\n        data = json.loads(payload or '{}')\n        match = data.get('match')\
@@ -179,8 +178,8 @@ workflow:
           \        return False\n\ndef sanitize_advancement(markdown, report_json, payload):\n    if has_explicit_advancement(payload):\n\
           \        return markdown, report_json\n    banned = [\"晋级\", \"淘汰\", \"进入败者组\", \"结束征程\", \"下一轮\"]\n    markdown\
           \ = re.sub(r\"[，,][^。\\n]*(晋级|淘汰|进入败者组|结束征程|下一轮)[^。\\n]*。\", \"。\", markdown)\n    markdown = re.sub(r\"## 后续关注[\\\
-          s\\S]*$\", \"## 后续关注\\n后续赛程中继续关注两队表现。\", markdown).strip()\n    markdown = re.sub(r\"未给([^。\\n]{0,12})喘息机会\", r\"\
-          保持前压节奏\", markdown)\n    markdown = markdown.replace(\"效果显著\", \"被解说提及\")\n    markdown = markdown.replace(\"确立胜势\"\
+          s\\S]*$\", \"\", markdown).strip()\n    markdown = re.sub(r\"[^。\\n]*(后续赛程中继续关注|继续关注两队表现|后续关注)[^。\\n]*。?\", \"\", markdown).strip()\n    markdown = re.sub(r\"未给([^。\\n]{0,12})喘息机会\", r\"\
+          保持前压节奏\", markdown)\n    markdown = markdown.replace(\"效果显著\", \"节奏得到体现\")\n    markdown = markdown.replace(\"被解说提及\", \"成为场上焦点\")\n    markdown = markdown.replace(\"确立胜势\"\
           , \"取得主动\")\n    markdown = markdown.replace(\"奠定胜势\", \"取得主动\")\n    def clean_text(text):\n        text = str(text\
           \ or \"\")\n        for term in banned:\n            text = text.replace(term, \"\")\n        text = re.sub(r\"\\\
           s+\", \" \", text).strip()\n        return text\n    if isinstance(report_json, dict):\n        for key in (\"headline\"\
@@ -188,7 +187,7 @@ workflow:
           \    return markdown, report_json\n\ndef main(text, payload=\"\"):\n    raw = (text or \"\").strip()\n    raw =\
           \ re.sub(r\"^```(?:json)?\\s*\", \"\", raw)\n    raw = re.sub(r\"\\s*```$\", \"\", raw)\n    data = json.loads(raw)\n\
           \    report_markdown = normalize_markdown(str(data.get(\"report_markdown\") or \"\"))\n    for old, new in INTERNAL_REPLACEMENTS.items():\n\
-          \        report_markdown = report_markdown.replace(old, new)\n    report_markdown = remove_bad_public_sentences(report_markdown)\n\
+          \        report_markdown = report_markdown.replace(old, new)\n    report_markdown = remove_bad_public_sentences(report_markdown)\n    if \"## 小局回顾\" not in report_markdown and \"\\n### \" in report_markdown:\n        report_markdown = report_markdown.replace(\"\\n### \", \"\\n## 小局回顾\\n### \", 1)\n\
           \    report_json = data.get(\"report_json\")\n    if not report_markdown:\n        raise ValueError(\"report_markdown\
           \ is empty\")\n    if report_json is None:\n        raise ValueError(\"report_json is missing\")\n    report_markdown,\
           \ report_json = sanitize_advancement(report_markdown, report_json, payload)\n    for heading in REQUIRED_HEADINGS:\n\
@@ -297,6 +296,7 @@ workflow:
     - data:
         dataset_ids:
         - 0a8e8227-b05f-458a-9060-ac4543273fcd
+        - c2243160-9c95-4e01-bb30-5c60c72ed2aa
         desc: ''
         query_variable_selector:
         - retrieval_query
@@ -306,7 +306,7 @@ workflow:
         title: RoboMaster Knowledge
         type: knowledge-retrieval
         multiple_retrieval_config:
-          top_k: 3
+          top_k: 6
           score_threshold: null
           reranking_model: null
       height: 92

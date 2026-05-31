@@ -85,6 +85,7 @@ HighlightConf:
   Enabled: {{ .Values.highlight.enabled }}
   Role: {{ .Values.highlight.role | quote }}
   AlgorithmVersion: {{ .Values.highlight.algorithmVersion | quote }}
+  ReviewWorkflowAPIKey: {{ .Values.highlight.reviewWorkflowAPIKey | quote }}
   MaxHighlightsPerRound: {{ .Values.highlight.maxHighlightsPerRound }}
   MaxConcurrentJobs: {{ .Values.highlight.maxConcurrentJobs }}
   MinClipSeconds: {{ .Values.highlight.minClipSeconds }}
@@ -117,14 +118,6 @@ PublishConf:
     MaxConcurrentJobs: {{ .Values.publish.bilibili.maxConcurrentJobs }}
     Cover:
       Enabled: {{ .Values.publish.bilibili.cover.enabled }}
-{{- end -}}
-
-{{- define "rm-monitor.llmConf" -}}
-LLMConf:
-  BaseURL: {{ .Values.llm.baseURL }}
-  APIKey: {{ .Values.llm.apiKey | quote }}
-  Model: {{ .Values.llm.model }}
-  TimeoutSeconds: {{ .Values.llm.timeoutSeconds }}
 {{- end -}}
 
 {{- define "rm-monitor.difyConf" -}}

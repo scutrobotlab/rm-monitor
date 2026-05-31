@@ -77,23 +77,6 @@ func (c *OCRConf) WithDefaults() OCRConf {
 	return out
 }
 
-type LLMConf struct {
-	BaseURL        string `json:",optional"`
-	APIKey         string `json:",optional"`
-	Model          string `json:",optional"`
-	TimeoutSeconds int    `json:",optional"`
-}
-
-type ReportConf = LLMConf
-
-func (c *LLMConf) WithDefaults() LLMConf {
-	out := *c
-	if out.TimeoutSeconds <= 0 {
-		out.TimeoutSeconds = 120
-	}
-	return out
-}
-
 type DifyConf struct {
 	BaseURL        string `json:",optional"`
 	TimeoutSeconds int    `json:",optional"`
@@ -120,6 +103,7 @@ type HighlightConf struct {
 	Enabled               bool                   `json:",optional"`
 	Role                  string                 `json:",optional"`
 	AlgorithmVersion      string                 `json:",optional"`
+	ReviewWorkflowAPIKey  string                 `json:",optional"`
 	MaxHighlightsPerRound int                    `json:",optional"`
 	MaxConcurrentJobs     int                    `json:",optional"`
 	MinClipSeconds        int                    `json:",optional"`
@@ -207,7 +191,7 @@ func (c *HighlightConf) WithDefaults() HighlightConf {
 		out.Role = "主视角"
 	}
 	if out.AlgorithmVersion == "" {
-		out.AlgorithmVersion = "danmu-zscore-v1"
+		out.AlgorithmVersion = "danmu-zscore-dify-v1"
 	}
 	if out.MaxHighlightsPerRound <= 0 {
 		out.MaxHighlightsPerRound = 5

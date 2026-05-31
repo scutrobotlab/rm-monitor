@@ -45,12 +45,6 @@ record:
     - "蓝方机器人第一视角合集"
     - "红方机器人第一视角合集"
 
-llm:
-  baseURL: ""
-  apiKey: ""
-  model: ""
-  timeoutSeconds: 120
-
 dify:
   baseURL: ""
   timeoutSeconds: 180
@@ -81,7 +75,8 @@ ocr:
 highlight:
   enabled: false
   role: "主视角"
-  algorithmVersion: "danmu-zscore-v1"
+  algorithmVersion: "danmu-zscore-dify-v1"
+  reviewWorkflowAPIKey: ""
   maxHighlightsPerRound: 5
   maxConcurrentJobs: 3
   minClipSeconds: 20

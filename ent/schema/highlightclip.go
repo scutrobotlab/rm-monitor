@@ -18,7 +18,7 @@ func (HighlightClip) Fields() []ent.Field {
 		field.Int("highlight_index"),
 		field.String("role"),
 		field.String("algorithm_version"),
-		field.Enum("status").Values("PENDING", "DISPATCHING", "RUNNING", "SUCCEEDED", "FAILED").Default("PENDING"),
+		field.Enum("status").Values("PENDING", "DISPATCHING", "RUNNING", "SUCCEEDED", "FAILED", "SKIPPED").Default("PENDING"),
 		field.Int("priority").Default(0),
 		field.String("k8s_job_name").Optional().Nillable(),
 		field.Int("attempts").Default(0),

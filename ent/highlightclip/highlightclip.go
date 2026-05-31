@@ -164,6 +164,7 @@ const (
 	StatusRUNNING     Status = "RUNNING"
 	StatusSUCCEEDED   Status = "SUCCEEDED"
 	StatusFAILED      Status = "FAILED"
+	StatusSKIPPED     Status = "SKIPPED"
 )
 
 func (s Status) String() string {
@@ -173,7 +174,7 @@ func (s Status) String() string {
 // StatusValidator is a validator for the "status" field enum values. It is called by the builders before save.
 func StatusValidator(s Status) error {
 	switch s {
-	case StatusPENDING, StatusDISPATCHING, StatusRUNNING, StatusSUCCEEDED, StatusFAILED:
+	case StatusPENDING, StatusDISPATCHING, StatusRUNNING, StatusSUCCEEDED, StatusFAILED, StatusSKIPPED:
 		return nil
 	default:
 		return fmt.Errorf("highlightclip: invalid enum value for status field: %q", s)

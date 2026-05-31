@@ -28,8 +28,6 @@ struct Args {
 struct Config {
     #[serde(rename = "RecordConf", default)]
     record: RecordConf,
-    #[serde(rename = "LLMConf", default)]
-    llm: LLMConf,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -40,22 +38,6 @@ struct RecordConf {
 
 fn default_base_dir() -> String {
     "/records".to_string()
-}
-
-#[derive(Debug, Default, Deserialize)]
-struct LLMConf {
-    #[serde(rename = "BaseURL", default)]
-    base_url: String,
-    #[serde(rename = "APIKey", default)]
-    api_key: String,
-    #[serde(rename = "Model", default)]
-    model: String,
-    #[serde(rename = "TimeoutSeconds", default = "default_timeout_seconds")]
-    timeout_seconds: u64,
-}
-
-fn default_timeout_seconds() -> u64 {
-    120
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -80,6 +62,16 @@ struct HighlightContext {
     red_name: String,
     blue_school: String,
     blue_name: String,
+    title: String,
+    description: String,
+    #[serde(default)]
+    tags: Vec<String>,
+    #[serde(default)]
+    highlight_type: String,
+    #[serde(default)]
+    publish_caption: String,
+    #[serde(default)]
+    model_payload: Value,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -89,21 +81,6 @@ struct STTLine {
     status: String,
     #[serde(default)]
     text: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct DanmuText {
-    time: f64,
-    text: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct LLMOutput {
-    title: String,
-    description: String,
-    tags: Vec<String>,
-    #[serde(default)]
-    explanation: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -149,10 +126,9 @@ async fn run(config: &Config, ctx: &HighlightContext) -> Result<()> {
     ensure_file(&source)?;
     ensure_file(&stt_path)?;
     ensure_file(&danmu_path)?;
-
-    let stt_lines = read_stt(&stt_path, ctx.start_seconds, ctx.end_seconds)?;
-    let danmu_lines = read_danmu_text(&danmu_path, ctx.start_seconds, ctx.end_seconds)?;
-    let llm = generate_llm(&config.llm, ctx, &stt_lines, &danmu_lines).await?;
+    if ctx.title.trim().is_empty() || ctx.description.trim().is_empty() {
+        bail!("highlight context missing reviewed title or description");
+    }
 
     let video = output_dir.join("video.mp4");
     let danmu = output_dir.join("video.danmuku.xml");
@@ -173,17 +149,17 @@ async fn run(config: &Config, ctx: &HighlightContext) -> Result<()> {
     )
     .await?;
 
-    let model_payload = serde_json::to_value(&llm)?;
-    let highlight_json = build_highlight_json(ctx, &llm, &model_payload);
+    let model_payload = ctx.model_payload.clone();
+    let highlight_json = build_highlight_json(ctx, &model_payload);
     atomic_write_json(&output_dir.join("highlight.json"), &highlight_json)?;
     atomic_write_json(
         &job_dir(&base_dir, ctx)?.join("result.json"),
         &HighlightResult {
             highlight_clip_id: ctx.highlight_clip_id,
             output_dir: ctx.output_dir.clone(),
-            title: llm.title,
-            description: llm.description,
-            tags: llm.tags,
+            title: ctx.title.clone(),
+            description: ctx.description.clone(),
+            tags: ctx.tags.clone(),
             model_payload,
             completed_at: Utc::now(),
         },
@@ -318,42 +294,6 @@ fn crop_danmu(input: &Path, output: &Path, start: f64, end: f64) -> Result<()> {
     Ok(())
 }
 
-fn read_danmu_text(input: &Path, start: f64, end: f64) -> Result<Vec<DanmuText>> {
-    let raw = fs::read(input).with_context(|| format!("read {}", input.display()))?;
-    let mut reader = Reader::from_reader(raw.as_slice());
-    reader.trim_text(true);
-    let mut buf = Vec::new();
-    let mut out = Vec::new();
-    loop {
-        match reader.read_event_into(&mut buf)? {
-            Event::Start(e) if e.name().as_ref() == b"d" => {
-                let elem = e.into_owned();
-                let p = attr_value(&elem, b"p")?;
-                let mut text = String::new();
-                let mut inner = Vec::new();
-                loop {
-                    match reader.read_event_into(&mut inner)? {
-                        Event::Text(t) => text.push_str(&t.unescape()?.into_owned()),
-                        Event::End(end_tag) if end_tag.name().as_ref() == b"d" => break,
-                        Event::Eof => bail!("unexpected EOF in danmu d element"),
-                        _ => {}
-                    }
-                    inner.clear();
-                }
-                if let Some(t) = parse_danmu_time(p.as_deref().unwrap_or("")) {
-                    if t >= start && t <= end {
-                        out.push(DanmuText { time: t, text });
-                    }
-                }
-            }
-            Event::Eof => break,
-            _ => {}
-        }
-        buf.clear();
-    }
-    Ok(out)
-}
-
 fn attr_value(elem: &BytesStart<'_>, key: &[u8]) -> Result<Option<String>> {
     for attr in elem.attributes().with_checks(false) {
         let attr = attr?;
@@ -392,51 +332,6 @@ fn rewrite_danmu_time(p: &str, t: f64) -> String {
     }
     parts[0] = format!("{:.3}", t.max(0.0));
     parts.join(",")
-}
-
-fn read_stt(path: &Path, start: f64, end: f64) -> Result<Vec<STTLine>> {
-    let raw = fs::read_to_string(path).with_context(|| format!("read {}", path.display()))?;
-    let mut all = Vec::new();
-    let mut out = Vec::new();
-    for line in raw.lines() {
-        if line.trim().is_empty() {
-            continue;
-        }
-        let row: STTLine = match serde_json::from_str(line) {
-            Ok(v) => v,
-            Err(_) => continue,
-        };
-        if row.status != "SUCCEEDED" || row.text.trim().is_empty() {
-            continue;
-        }
-        if row.end >= start && row.start <= end {
-            out.push(row.clone());
-        }
-        all.push(row);
-    }
-    if !out.is_empty() {
-        return Ok(out);
-    }
-    if all.is_empty() {
-        bail!("no stt text available");
-    }
-    let mut context = Vec::new();
-    for row in &all {
-        if row.end >= start - 60.0 && row.start <= end + 60.0 {
-            context.push(row.clone());
-        }
-    }
-    if !context.is_empty() {
-        return Ok(context);
-    }
-    all.sort_by(|a, b| {
-        let center = (start + end) / 2.0;
-        let da = (((a.start + a.end) / 2.0) - center).abs();
-        let db = (((b.start + b.end) / 2.0) - center).abs();
-        da.partial_cmp(&db).unwrap_or(std::cmp::Ordering::Equal)
-    });
-    all.truncate(6);
-    Ok(all)
 }
 
 fn write_srt(stt_path: &Path, output: &Path, start: f64, end: f64) -> Result<()> {
@@ -592,72 +487,7 @@ async fn extract_cover(video: &Path, cover: &Path, seconds: f64) -> Result<()> {
     Ok(())
 }
 
-async fn generate_llm(
-    conf: &LLMConf,
-    ctx: &HighlightContext,
-    stt: &[STTLine],
-    danmu: &[DanmuText],
-) -> Result<LLMOutput> {
-    if conf.base_url.trim().is_empty()
-        || conf.api_key.trim().is_empty()
-        || conf.model.trim().is_empty()
-    {
-        bail!("highlight llm config is incomplete");
-    }
-    let client = reqwest::Client::builder()
-        .timeout(Duration::from_secs(conf.timeout_seconds.max(1)))
-        .build()?;
-    let input = serde_json::json!({
-        "start_seconds": ctx.start_seconds,
-        "end_seconds": ctx.end_seconds,
-        "peak_seconds": ctx.peak_seconds,
-        "score": ctx.score,
-        "stt": stt,
-        "danmu": danmu,
-    });
-    let url = format!("{}/chat/completions", conf.base_url.trim_end_matches('/'));
-    let response: Value = client
-        .post(url)
-        .bearer_auth(&conf.api_key)
-        .json(&serde_json::json!({
-            "model": conf.model,
-            "temperature": 0.2,
-            "messages": [
-                {"role": "system", "content": "你是 RoboMaster 赛事短视频编辑。只输出 JSON，对象字段为 title、description、tags、explanation。title 不超过 20 个中文字符，description 不超过 80 个中文字符，tags 是中文短标签数组。不要编造输入没有的击杀、战术或比分。"},
-                {"role": "user", "content": input.to_string()}
-            ]
-        }))
-        .send()
-        .await?
-        .error_for_status()?
-        .json()
-        .await?;
-    let content = response
-        .pointer("/choices/0/message/content")
-        .and_then(Value::as_str)
-        .context("llm returned no content")?;
-    let out: LLMOutput =
-        serde_json::from_str(&strip_code_fence(content)).context("parse highlight llm json")?;
-    if out.title.trim().is_empty() || out.description.trim().is_empty() {
-        bail!("highlight llm output missing title or description");
-    }
-    Ok(out)
-}
-
-fn strip_code_fence(input: &str) -> String {
-    let s = input.trim();
-    if !s.starts_with("```") {
-        return s.to_string();
-    }
-    let lines: Vec<&str> = s.lines().collect();
-    if lines.len() >= 3 {
-        lines[1..lines.len() - 1].join("\n").trim().to_string()
-    } else {
-        s.to_string()
-    }
-}
-
-fn build_highlight_json(ctx: &HighlightContext, llm: &LLMOutput, model_payload: &Value) -> Value {
+fn build_highlight_json(ctx: &HighlightContext, model_payload: &Value) -> Value {
     serde_json::json!({
         "schema": "rm-monitor/highlight/v1",
         "highlight_clip_id": ctx.highlight_clip_id,
@@ -668,10 +498,12 @@ fn build_highlight_json(ctx: &HighlightContext, llm: &LLMOutput, model_payload: 
         "end_seconds": ctx.end_seconds,
         "peak_seconds": ctx.peak_seconds,
         "score": ctx.score,
-        "title": llm.title,
-        "description": llm.description,
-        "tags": llm.tags,
-        "explanation": llm.explanation,
+        "title": ctx.title,
+        "description": ctx.description,
+        "tags": ctx.tags,
+        "highlight_type": ctx.highlight_type,
+        "publish_caption": ctx.publish_caption,
+        "explanation": model_payload.pointer("/review/reason").and_then(Value::as_str).unwrap_or(""),
         "source_artifact": ctx.source_artifact_path,
         "output_dir": ctx.output_dir,
         "video": format!("{}/video.mp4", ctx.output_dir),

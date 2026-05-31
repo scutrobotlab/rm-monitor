@@ -3,10 +3,12 @@ package logic
 import (
 	"context"
 	"encoding/json"
+	"encoding/xml"
 	"fmt"
 	"os"
 	pathpkg "path"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -21,6 +23,7 @@ import (
 	"scutbot.cn/web/rm-monitor/highlight-dispatcher/internal/svc"
 	common "scutbot.cn/web/rm-monitor/pkg/config"
 	"scutbot.cn/web/rm-monitor/pkg/db"
+	"scutbot.cn/web/rm-monitor/pkg/difyworkflow"
 	"scutbot.cn/web/rm-monitor/pkg/highlight"
 	"scutbot.cn/web/rm-monitor/pkg/jobcontract"
 	"scutbot.cn/web/rm-monitor/pkg/kubejob"
@@ -34,7 +37,7 @@ type DispatchLogic struct {
 	logx.Logger
 }
 
-const dispatchingStaleAfter = 5 * time.Minute
+const dispatchingStaleAfter = 15 * time.Minute
 
 func NewDispatchLogic(ctx context.Context, svcCtx *svc.ServiceContext) *DispatchLogic {
 	return &DispatchLogic{ctx: ctx, svcCtx: svcCtx, Logger: logx.WithContext(ctx)}
@@ -44,6 +47,12 @@ func (l *DispatchLogic) Tick() error {
 	conf := l.svcCtx.Config.HighlightConf.WithDefaults()
 	if !conf.Enabled {
 		return nil
+	}
+	if strings.TrimSpace(l.svcCtx.Config.DifyConf.BaseURL) == "" {
+		return errors.New("highlight dify base url is required")
+	}
+	if strings.TrimSpace(conf.ReviewWorkflowAPIKey) == "" {
+		return errors.New("highlight review workflow api key is required")
 	}
 	if err := l.createHighlightClips(conf); err != nil {
 		return err
@@ -273,6 +282,46 @@ func (l *DispatchLogic) dispatchPending() error {
 			_ = l.svcCtx.DB.HighlightClip.UpdateOneID(clip.ID).SetStatus(highlightclip.StatusFAILED).SetErrorMessage(err.Error()).Exec(l.ctx)
 			continue
 		}
+		review, err := l.reviewHighlight(artifactCtx)
+		if err != nil {
+			_ = l.svcCtx.DB.HighlightClip.UpdateOneID(clip.ID).SetStatus(highlightclip.StatusFAILED).SetErrorMessage(err.Error()).Exec(l.ctx)
+			continue
+		}
+		modelPayload, err := json.Marshal(review.ModelPayload)
+		if err != nil {
+			_ = l.svcCtx.DB.HighlightClip.UpdateOneID(clip.ID).SetStatus(highlightclip.StatusFAILED).SetErrorMessage(err.Error()).Exec(l.ctx)
+			continue
+		}
+		if !review.Accepted {
+			reason := strings.TrimSpace(review.Reason)
+			if reason == "" {
+				reason = "dify rejected highlight candidate"
+			}
+			if err := l.svcCtx.DB.HighlightClip.UpdateOneID(clip.ID).
+				SetStatus(highlightclip.StatusSKIPPED).
+				SetModelPayload(string(modelPayload)).
+				SetErrorMessage(reason).
+				SetCompletedAt(time.Now()).
+				Exec(l.ctx); err != nil {
+				return errors.Wrap(err, "mark highlight skipped")
+			}
+			continue
+		}
+		artifactCtx.Title = review.Title
+		artifactCtx.Description = review.Description
+		artifactCtx.Tags = review.Tags
+		artifactCtx.HighlightType = review.HighlightType
+		artifactCtx.PublishCaption = review.PublishCaption
+		artifactCtx.ModelPayload = modelPayload
+		if err := l.svcCtx.DB.HighlightClip.UpdateOneID(clip.ID).
+			SetTitle(review.Title).
+			SetDescription(review.Description).
+			SetTags(review.Tags).
+			SetModelPayload(string(modelPayload)).
+			ClearErrorMessage().
+			Exec(l.ctx); err != nil {
+			return errors.Wrap(err, "save highlight review")
+		}
 		artifactCtxRaw, err := json.Marshal(artifactCtx)
 		if err != nil {
 			_ = l.svcCtx.DB.HighlightClip.UpdateOneID(clip.ID).SetStatus(highlightclip.StatusFAILED).SetErrorMessage(err.Error()).Exec(l.ctx)
@@ -305,26 +354,32 @@ func (l *DispatchLogic) dispatchPending() error {
 }
 
 type highlightJobContext struct {
-	HighlightClipID    int     `json:"highlight_clip_id"`
-	HighlightIndex     int     `json:"highlight_index"`
-	Role               string  `json:"role"`
-	AlgorithmVersion   string  `json:"algorithm_version"`
-	StartSeconds       float64 `json:"start_seconds"`
-	EndSeconds         float64 `json:"end_seconds"`
-	PeakSeconds        float64 `json:"peak_seconds"`
-	Score              float64 `json:"score"`
-	SourceArtifactPath string  `json:"source_artifact_path"`
-	RoundDir           string  `json:"round_dir"`
-	OutputDir          string  `json:"output_dir"`
-	Event              string  `json:"event"`
-	Zone               string  `json:"zone"`
-	Order              int     `json:"order"`
-	MatchType          string  `json:"match_type"`
-	RoundNo            int     `json:"round_no"`
-	RedSchool          string  `json:"red_school"`
-	RedName            string  `json:"red_name"`
-	BlueSchool         string  `json:"blue_school"`
-	BlueName           string  `json:"blue_name"`
+	HighlightClipID    int             `json:"highlight_clip_id"`
+	HighlightIndex     int             `json:"highlight_index"`
+	Role               string          `json:"role"`
+	AlgorithmVersion   string          `json:"algorithm_version"`
+	StartSeconds       float64         `json:"start_seconds"`
+	EndSeconds         float64         `json:"end_seconds"`
+	PeakSeconds        float64         `json:"peak_seconds"`
+	Score              float64         `json:"score"`
+	SourceArtifactPath string          `json:"source_artifact_path"`
+	RoundDir           string          `json:"round_dir"`
+	OutputDir          string          `json:"output_dir"`
+	Event              string          `json:"event"`
+	Zone               string          `json:"zone"`
+	Order              int             `json:"order"`
+	MatchType          string          `json:"match_type"`
+	RoundNo            int             `json:"round_no"`
+	RedSchool          string          `json:"red_school"`
+	RedName            string          `json:"red_name"`
+	BlueSchool         string          `json:"blue_school"`
+	BlueName           string          `json:"blue_name"`
+	Title              string          `json:"title"`
+	Description        string          `json:"description"`
+	Tags               []string        `json:"tags"`
+	HighlightType      string          `json:"highlight_type"`
+	PublishCaption     string          `json:"publish_caption"`
+	ModelPayload       json.RawMessage `json:"model_payload"`
 }
 
 func (l *DispatchLogic) buildHighlightContext(clipID int) (highlightJobContext, error) {
@@ -367,6 +422,150 @@ func (l *DispatchLogic) buildHighlightContext(clipID int) (highlightJobContext, 
 		RedName:            match.Edges.RedTeam.Name,
 		BlueSchool:         match.Edges.BlueTeam.SchoolName,
 		BlueName:           match.Edges.BlueTeam.Name,
+	}, nil
+}
+
+type highlightReview struct {
+	Accepted       bool            `json:"accepted"`
+	Confidence     float64         `json:"confidence"`
+	HighlightType  string          `json:"highlight_type"`
+	Title          string          `json:"title"`
+	Description    string          `json:"description"`
+	Tags           []string        `json:"tags"`
+	Reason         string          `json:"reason"`
+	PublishCaption string          `json:"publish_caption"`
+	ModelPayload   json.RawMessage `json:"-"`
+}
+
+type highlightReviewPayload struct {
+	Schema             string            `json:"schema"`
+	Match              map[string]any    `json:"match"`
+	Round              map[string]any    `json:"round"`
+	Candidate          map[string]any    `json:"candidate"`
+	STTSegments        []sttWindowLine   `json:"stt_segments"`
+	DanmuSamples       []danmuWindowLine `json:"danmu_samples"`
+	DanmuSummary       map[string]any    `json:"danmu_summary"`
+	OCRSettlement      json.RawMessage   `json:"ocr_settlement,omitempty"`
+	ExistingHighlights []json.RawMessage `json:"existing_highlights,omitempty"`
+}
+
+type sttWindowLine struct {
+	Start  float64 `json:"start"`
+	End    float64 `json:"end"`
+	Status string  `json:"status"`
+	Text   string  `json:"text"`
+}
+
+type danmuWindowLine struct {
+	Time float64 `json:"time"`
+	Text string  `json:"text"`
+}
+
+func (l *DispatchLogic) reviewHighlight(ctx highlightJobContext) (highlightReview, error) {
+	client, err := difyworkflow.New(l.svcCtx.Config.DifyConf)
+	if err != nil {
+		return highlightReview{}, errors.Wrap(err, "init highlight dify client")
+	}
+	payload, err := l.buildHighlightReviewPayload(ctx)
+	if err != nil {
+		return highlightReview{}, err
+	}
+	payloadRaw, err := json.Marshal(payload)
+	if err != nil {
+		return highlightReview{}, err
+	}
+	result, err := client.RunWorkflow(l.ctx, l.svcCtx.Config.HighlightConf.WithDefaults().ReviewWorkflowAPIKey, fmt.Sprintf("rm-monitor:highlight:%d", ctx.HighlightClipID), map[string]any{
+		"payload": string(payloadRaw),
+	})
+	if err != nil {
+		return highlightReview{}, errors.Wrap(err, "run dify highlight review workflow")
+	}
+	raw, err := difyworkflow.RawOutput(result.Outputs, "highlight_review_json")
+	if err != nil {
+		return highlightReview{}, err
+	}
+	var review highlightReview
+	if err := json.Unmarshal(raw, &review); err != nil {
+		return highlightReview{}, errors.Wrap(err, "decode highlight review")
+	}
+	review.Title = strings.TrimSpace(review.Title)
+	review.Description = strings.TrimSpace(review.Description)
+	review.HighlightType = strings.TrimSpace(review.HighlightType)
+	review.Reason = strings.TrimSpace(review.Reason)
+	review.PublishCaption = strings.TrimSpace(review.PublishCaption)
+	if review.Accepted && (review.Title == "" || review.Description == "") {
+		return highlightReview{}, errors.New("accepted highlight review missing title or description")
+	}
+	if review.Accepted && len(review.Tags) == 0 {
+		review.Tags = []string{"RoboMaster", "赛事高光"}
+	}
+	modelPayload, err := json.Marshal(map[string]any{
+		"schema":          "rm-monitor/dify-highlight-review-output/v1",
+		"workflow_run_id": result.WorkflowRunID,
+		"task_id":         result.TaskID,
+		"total_tokens":    result.TotalTokens,
+		"total_steps":     result.TotalSteps,
+		"review":          review,
+	})
+	if err != nil {
+		return highlightReview{}, err
+	}
+	review.ModelPayload = modelPayload
+	return review, nil
+}
+
+func (l *DispatchLogic) buildHighlightReviewPayload(ctx highlightJobContext) (highlightReviewPayload, error) {
+	recordConf := l.svcCtx.Config.RecordConf.WithDefaults()
+	roundDir := storagepath.Resolve(recordConf.BaseDir, ctx.RoundDir)
+	sttLines, err := readSTTWindow(filepath.Join(roundDir, "stt.jsonl"), ctx.StartSeconds, ctx.EndSeconds)
+	if err != nil {
+		return highlightReviewPayload{}, err
+	}
+	danmuLines, _ := readDanmuWindow(filepath.Join(roundDir, fmt.Sprintf("%s.danmuku.xml", ctx.Role)), ctx.StartSeconds, ctx.EndSeconds)
+	danmuSummary := map[string]any{
+		"peak_seconds": ctx.PeakSeconds,
+		"score":        ctx.Score,
+		"sample_count": len(danmuLines),
+	}
+	if stats, err := highlight.LoadDanmuStats(filepath.Join(roundDir, "stats", "danmu-count.json")); err == nil {
+		if peak, ok := nearestDanmuPoint(stats, ctx.PeakSeconds); ok {
+			danmuSummary["peak_bucket"] = peak
+		}
+	}
+	ocr := readOptionalJSON(filepath.Join(roundDir, "settlement.json"))
+	existing := readExistingHighlightJSON(roundDir, ctx.OutputDir)
+	return highlightReviewPayload{
+		Schema: "rm-monitor/dify-highlight-review-input/v1",
+		Match: map[string]any{
+			"event":       ctx.Event,
+			"zone":        ctx.Zone,
+			"order":       ctx.Order,
+			"match_type":  ctx.MatchType,
+			"red_school":  ctx.RedSchool,
+			"red_name":    ctx.RedName,
+			"blue_school": ctx.BlueSchool,
+			"blue_name":   ctx.BlueName,
+		},
+		Round: map[string]any{
+			"round_no": ctx.RoundNo,
+			"role":     ctx.Role,
+		},
+		Candidate: map[string]any{
+			"highlight_clip_id": ctx.HighlightClipID,
+			"highlight_index":   ctx.HighlightIndex,
+			"algorithm_version": ctx.AlgorithmVersion,
+			"start_seconds":     ctx.StartSeconds,
+			"end_seconds":       ctx.EndSeconds,
+			"peak_seconds":      ctx.PeakSeconds,
+			"score":             ctx.Score,
+			"source_artifact":   ctx.SourceArtifactPath,
+			"output_dir":        ctx.OutputDir,
+		},
+		STTSegments:        sttLines,
+		DanmuSamples:       danmuLines,
+		DanmuSummary:       danmuSummary,
+		OCRSettlement:      ocr,
+		ExistingHighlights: existing,
 	}, nil
 }
 
@@ -792,6 +991,149 @@ func (l *DispatchLogic) reconcilePublishResults() error {
 		}
 	}
 	return nil
+}
+
+func readSTTWindow(path string, start, end float64) ([]sttWindowLine, error) {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return nil, errors.Wrap(err, "read highlight stt")
+	}
+	var out []sttWindowLine
+	var nearby []sttWindowLine
+	for _, line := range strings.Split(strings.TrimSpace(string(raw)), "\n") {
+		if strings.TrimSpace(line) == "" {
+			continue
+		}
+		var row sttWindowLine
+		if err := json.Unmarshal([]byte(line), &row); err != nil {
+			continue
+		}
+		if row.Status != "SUCCEEDED" || strings.TrimSpace(row.Text) == "" {
+			continue
+		}
+		if row.End >= start && row.Start <= end {
+			out = append(out, row)
+			continue
+		}
+		if row.End >= start-60 && row.Start <= end+60 {
+			nearby = append(nearby, row)
+		}
+	}
+	if len(out) > 0 {
+		return limitSTTLines(out), nil
+	}
+	if len(nearby) > 0 {
+		return limitSTTLines(nearby), nil
+	}
+	return nil, errors.New("highlight candidate has no stt context")
+}
+
+func limitSTTLines(lines []sttWindowLine) []sttWindowLine {
+	if len(lines) <= 20 {
+		return lines
+	}
+	return append(append([]sttWindowLine{}, lines[:10]...), lines[len(lines)-10:]...)
+}
+
+func readDanmuWindow(path string, start, end float64) ([]danmuWindowLine, error) {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	decoder := xml.NewDecoder(strings.NewReader(string(raw)))
+	var out []danmuWindowLine
+	for {
+		token, err := decoder.Token()
+		if err != nil {
+			break
+		}
+		startElem, ok := token.(xml.StartElement)
+		if !ok || startElem.Name.Local != "d" {
+			continue
+		}
+		var p string
+		for _, attr := range startElem.Attr {
+			if attr.Name.Local == "p" {
+				p = attr.Value
+				break
+			}
+		}
+		var text string
+		if err := decoder.DecodeElement(&text, &startElem); err != nil {
+			continue
+		}
+		t, ok := parseDanmuTime(p)
+		if !ok || t < start || t > end || strings.TrimSpace(text) == "" {
+			continue
+		}
+		out = append(out, danmuWindowLine{Time: t, Text: strings.TrimSpace(text)})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Time < out[j].Time })
+	if len(out) > 40 {
+		out = out[:40]
+	}
+	return out, nil
+}
+
+func parseDanmuTime(p string) (float64, bool) {
+	first := strings.Split(p, ",")[0]
+	var t float64
+	if _, err := fmt.Sscanf(first, "%f", &t); err != nil {
+		return 0, false
+	}
+	return t, true
+}
+
+func nearestDanmuPoint(stats highlight.DanmuStats, t float64) (highlight.DanmuPoint, bool) {
+	if len(stats.Points) == 0 {
+		return highlight.DanmuPoint{}, false
+	}
+	best := stats.Points[0]
+	bestDist := absFloat(best.T - t)
+	for _, point := range stats.Points[1:] {
+		if d := absFloat(point.T - t); d < bestDist {
+			best = point
+			bestDist = d
+		}
+	}
+	return best, true
+}
+
+func absFloat(v float64) float64 {
+	if v < 0 {
+		return -v
+	}
+	return v
+}
+
+func readOptionalJSON(path string) json.RawMessage {
+	raw, err := os.ReadFile(path)
+	if err != nil || !json.Valid(raw) {
+		return nil
+	}
+	return json.RawMessage(raw)
+}
+
+func readExistingHighlightJSON(roundDir, currentOutputDir string) []json.RawMessage {
+	matches, err := filepath.Glob(filepath.Join(roundDir, "highlights", "*", "highlight.json"))
+	if err != nil {
+		return nil
+	}
+	current := filepath.ToSlash(currentOutputDir)
+	var out []json.RawMessage
+	for _, p := range matches {
+		if strings.Contains(filepath.ToSlash(p), current+"/highlight.json") {
+			continue
+		}
+		raw, err := os.ReadFile(p)
+		if err == nil && json.Valid(raw) {
+			out = append(out, json.RawMessage(raw))
+		}
+		if len(out) >= 5 {
+			break
+		}
+	}
+	return out
 }
 
 func fileExists(path string) bool {

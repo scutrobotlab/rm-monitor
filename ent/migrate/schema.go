@@ -14,7 +14,7 @@ var (
 		{Name: "highlight_index", Type: field.TypeInt},
 		{Name: "role", Type: field.TypeString},
 		{Name: "algorithm_version", Type: field.TypeString},
-		{Name: "status", Type: field.TypeEnum, Enums: []string{"PENDING", "DISPATCHING", "RUNNING", "SUCCEEDED", "FAILED"}, Default: "PENDING"},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"PENDING", "DISPATCHING", "RUNNING", "SUCCEEDED", "FAILED", "SKIPPED"}, Default: "PENDING"},
 		{Name: "priority", Type: field.TypeInt, Default: 0},
 		{Name: "k8s_job_name", Type: field.TypeString, Nullable: true},
 		{Name: "attempts", Type: field.TypeInt, Default: 0},
