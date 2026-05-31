@@ -3,7 +3,7 @@
     "config": {
         "enable_forward": true,
         "update_multi": true,
-        "width_mode": "fill",
+        "width_mode": "compact",
         "enable_forward_interaction": false,
         "style": {
             "text_size": {
