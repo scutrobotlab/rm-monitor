@@ -3,6 +3,7 @@ package logic
 import (
 	"context"
 	"fmt"
+	"html"
 	"reflect"
 	"sort"
 	"strconv"
@@ -560,7 +561,11 @@ func roundRecordLinks(r *ent.MatchRound) string {
 		if task.Edges.UploadTask == nil || task.Edges.UploadTask.BitableRecordURL == nil || *task.Edges.UploadTask.BitableRecordURL == "" {
 			continue
 		}
-		links = append(links, fmt.Sprintf("[%s](%s)", task.Role, *task.Edges.UploadTask.BitableRecordURL))
+		links = append(links, fmt.Sprintf(
+			"<link icon='video_outlined' url='%s' pc_url='' ios_url='' android_url=''>%s</link>",
+			html.EscapeString(*task.Edges.UploadTask.BitableRecordURL),
+			html.EscapeString(task.Role),
+		))
 	}
 	if len(links) == 0 {
 		return "暂无录制"

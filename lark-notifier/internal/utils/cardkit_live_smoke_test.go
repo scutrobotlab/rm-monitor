@@ -79,7 +79,7 @@ func TestCardEntityFanoutSmoke(t *testing.T) {
 		PanelID:   "elem_round_1",
 		ContentID: "elem_round_1_content",
 		Title:     "<font color=red>**1**</font> : <font color=blue>**0** </font>",
-		Content:   "[主视角](https://example.com/round1-main)",
+		Content:   "<link icon='video_outlined' url='https://example.com/round1-main' pc_url='' ios_url='' android_url=''>主视角</link>",
 	}}
 	for _, cardID := range cardIDs {
 		if _, err := UpdateCardEntity(ctx, client, retry, cardID, SmokeUpdateUUID(), time.Now().Unix(), content); err != nil {
@@ -93,7 +93,7 @@ func TestCardEntityFanoutSmoke(t *testing.T) {
 		PanelID:   "elem_round_2",
 		ContentID: "elem_round_2_content",
 		Title:     "<font color=red>**1**</font> : <font color=blue>**1** </font>",
-		Content:   "[主视角](https://example.com/round2-main)\n[蓝方视角](https://example.com/round2-blue)",
+		Content:   "<link icon='video_outlined' url='https://example.com/round2-main' pc_url='' ios_url='' android_url=''>主视角</link>\n<link icon='video_outlined' url='https://example.com/round2-blue' pc_url='' ios_url='' android_url=''>蓝方视角</link>",
 	})
 	for _, cardID := range cardIDs {
 		if _, err := UpdateCardEntity(ctx, client, retry, cardID, SmokeUpdateUUID(), time.Now().Unix(), content); err != nil {

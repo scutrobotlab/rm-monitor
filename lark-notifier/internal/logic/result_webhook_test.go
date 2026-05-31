@@ -74,7 +74,7 @@ func TestCardEntityDataRendersCardJSON(t *testing.T) {
 		PanelID:   "elem_round_1",
 		ContentID: "elem_round_1_content",
 		Title:     "<font color=red>**1**</font> : <font color=blue>**0** </font>",
-		Content:   "[主视角](https://example.com/record)",
+		Content:   "<link icon='video_outlined' url='https://example.com/record' pc_url='' ios_url='' android_url=''>主视角</link>",
 	}}
 	raw, _, err := utils.CardEntityData(content)
 	if err != nil {
@@ -91,8 +91,8 @@ func TestCardEntityDataRendersCardJSON(t *testing.T) {
 	if config["update_multi"] != true {
 		t.Fatalf("update_multi = %v, want true", config["update_multi"])
 	}
-	if config["width_mode"] != "fill" {
-		t.Fatalf("width_mode = %v, want fill", config["width_mode"])
+	if config["width_mode"] != "compact" {
+		t.Fatalf("width_mode = %v, want compact", config["width_mode"])
 	}
 	if config["enable_forward_interaction"] != false {
 		t.Fatalf("enable_forward_interaction = %v, want false", config["enable_forward_interaction"])
@@ -174,7 +174,7 @@ func TestCardEntityDataRendersMultipleRoundPanels(t *testing.T) {
 		BlueSchool: "蓝校",
 		Rounds: []utils.MatchRoundCard{
 			{PanelID: "elem_round_1", ContentID: "elem_round_1_content", Title: "<font color=red>**0**</font> : <font color=blue>**0** </font>", Content: "暂无录制"},
-			{PanelID: "elem_round_2", ContentID: "elem_round_2_content", Title: "<font color=red>**1**</font> : <font color=blue>**0** </font>", Content: "[主视角](https://example.com)"},
+			{PanelID: "elem_round_2", ContentID: "elem_round_2_content", Title: "<font color=red>**1**</font> : <font color=blue>**0** </font>", Content: "<link icon='video_outlined' url='https://example.com' pc_url='' ios_url='' android_url=''>主视角</link>"},
 		},
 	}}
 	raw, _, err := utils.CardEntityData(content)
@@ -227,7 +227,7 @@ func TestRoundCardsIncludeUploadLinks(t *testing.T) {
 	if got[0].Title != "<font color=red>**1**</font> : <font color=blue>**0** </font>" {
 		t.Fatalf("unexpected title: %s", got[0].Title)
 	}
-	if got[0].Content != "[主视角](https://example.com/record)" {
+	if got[0].Content != "<link icon='video_outlined' url='https://example.com/record' pc_url='' ios_url='' android_url=''>主视角</link>" {
 		t.Fatalf("content = %q", got[0].Content)
 	}
 }
