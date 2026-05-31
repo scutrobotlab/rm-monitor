@@ -655,8 +655,13 @@ func (l *NotifyLogic) highlightImages(m *ent.Match) []utils.HighlightImage {
 	if baseDir == "" {
 		baseDir = "/records"
 	}
-	clips := selectedHighlightClips(m, 2, 9)
+	highlightConf := l.svcCtx.Config.HighlightConf.WithDefaults()
+	if !highlightConf.Enabled {
+		return nil
+	}
+	clips := selectedHighlightClips(m, 2, 9, highlightConf.Role, highlightConf.AlgorithmVersion)
 	images := make([]utils.HighlightImage, 0, len(clips))
+	seenImageKeys := make(map[string]struct{}, len(clips))
 	for _, selected := range clips {
 		clip := selected.clip
 		path := filepath.Join(baseDir, filepath.FromSlash(clip.OutputDir), "preview.gif")
@@ -673,6 +678,11 @@ func (l *NotifyLogic) highlightImages(m *ent.Match) []utils.HighlightImage {
 			l.Error(errors.Wrapf(err, "upload highlight preview match=%s clip=%d path=%s", m.ID, clip.ID, path))
 			continue
 		}
+		if _, ok := seenImageKeys[imageKey]; ok {
+			l.Infof("skip duplicate highlight preview image_key match=%s clip=%d path=%s", m.ID, clip.ID, path)
+			continue
+		}
+		seenImageKeys[imageKey] = struct{}{}
 		title := fmt.Sprintf("Round %d Highlight %02d", selected.roundNo, clip.HighlightIndex)
 		if clip.Title != nil && strings.TrimSpace(*clip.Title) != "" {
 			title = strings.TrimSpace(*clip.Title)
@@ -691,16 +701,19 @@ type selectedHighlightClip struct {
 	roundNo int
 }
 
-func selectedHighlightClips(m *ent.Match, perRoundLimit, totalLimit int) []selectedHighlightClip {
+func selectedHighlightClips(m *ent.Match, perRoundLimit, totalLimit int, role, algorithmVersion string) []selectedHighlightClip {
 	if m == nil || perRoundLimit <= 0 || totalLimit <= 0 {
 		return nil
 	}
+	role = strings.TrimSpace(role)
+	algorithmVersion = strings.TrimSpace(algorithmVersion)
 	type candidate struct {
 		selectedHighlightClip
 		score float64
 		index int
 	}
 	candidates := make([]candidate, 0, totalLimit)
+	seenOutputDir := make(map[string]struct{})
 	for _, r := range m.Edges.Rounds {
 		clips := append([]*ent.HighlightClip(nil), r.Edges.HighlightClips...)
 		sort.SliceStable(clips, func(i, j int) bool {
@@ -714,9 +727,23 @@ func selectedHighlightClips(m *ent.Match, perRoundLimit, totalLimit int) []selec
 			if clip.Status != highlightclip.StatusSUCCEEDED {
 				continue
 			}
+			if role != "" && clip.Role != role {
+				continue
+			}
+			if algorithmVersion != "" && clip.AlgorithmVersion != algorithmVersion {
+				continue
+			}
+			outputDir := strings.TrimSpace(clip.OutputDir)
+			if outputDir == "" {
+				continue
+			}
+			if _, ok := seenOutputDir[outputDir]; ok {
+				continue
+			}
 			if roundAdded >= perRoundLimit {
 				break
 			}
+			seenOutputDir[outputDir] = struct{}{}
 			candidates = append(candidates, candidate{
 				selectedHighlightClip: selectedHighlightClip{clip: clip, roundNo: r.RoundNo},
 				score:                 clip.Score,

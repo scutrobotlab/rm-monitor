@@ -3,6 +3,7 @@ package logic
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -92,8 +93,8 @@ func TestCardEntityDataRendersCardJSON(t *testing.T) {
 	if config["update_multi"] != true {
 		t.Fatalf("update_multi = %v, want true", config["update_multi"])
 	}
-	if config["width_mode"] != "fill" {
-		t.Fatalf("width_mode = %v, want fill", config["width_mode"])
+	if config["width_mode"] != "compact" {
+		t.Fatalf("width_mode = %v, want compact", config["width_mode"])
 	}
 	if config["enable_forward_interaction"] != false {
 		t.Fatalf("enable_forward_interaction = %v, want false", config["enable_forward_interaction"])
@@ -324,18 +325,91 @@ func TestSelectedHighlightClipsLimitsPerRoundAndTotal(t *testing.T) {
 			{ID: 1, HighlightIndex: 1, Status: highlightclip.StatusSUCCEEDED, Score: 1, Title: &title},
 			{ID: 2, HighlightIndex: 2, Status: highlightclip.StatusSUCCEEDED, Score: 5, Title: &title},
 			{ID: 3, HighlightIndex: 3, Status: highlightclip.StatusSUCCEEDED, Score: 4, Title: &title},
+			{ID: 6, HighlightIndex: 4, Status: highlightclip.StatusSUCCEEDED, Score: 10, Title: &title, AlgorithmVersion: "old"},
 		}}},
 		{RoundNo: 2, Edges: ent.MatchRoundEdges{HighlightClips: []*ent.HighlightClip{
 			{ID: 4, HighlightIndex: 1, Status: highlightclip.StatusFAILED, Score: 99, Title: &title},
 			{ID: 5, HighlightIndex: 2, Status: highlightclip.StatusSUCCEEDED, Score: 3, Title: &title},
 		}}},
 	}}}
-	got := selectedHighlightClips(m, 2, 3)
+	for _, r := range m.Edges.Rounds {
+		for _, clip := range r.Edges.HighlightClips {
+			if clip.Role == "" {
+				clip.Role = "主视角"
+			}
+			if clip.AlgorithmVersion == "" {
+				clip.AlgorithmVersion = "danmu-zscore-dify-v1"
+			}
+			if clip.OutputDir == "" {
+				clip.OutputDir = fmt.Sprintf("Round-%d/highlights/Highlight-%02d", r.RoundNo, clip.HighlightIndex)
+			}
+		}
+	}
+	got := selectedHighlightClips(m, 2, 3, "主视角", "danmu-zscore-dify-v1")
 	if len(got) != 3 {
 		t.Fatalf("selected len = %d", len(got))
 	}
 	ids := []int{got[0].clip.ID, got[1].clip.ID, got[2].clip.ID}
 	want := []int{2, 3, 5}
+	for i := range want {
+		if ids[i] != want[i] {
+			t.Fatalf("selected ids = %#v, want %#v", ids, want)
+		}
+	}
+}
+
+func TestSelectedHighlightClipsFiltersCurrentAlgorithmAndDedupesOutput(t *testing.T) {
+	title := "高光"
+	m := &ent.Match{Edges: ent.MatchEdges{Rounds: []*ent.MatchRound{
+		{RoundNo: 1, Edges: ent.MatchRoundEdges{HighlightClips: []*ent.HighlightClip{
+			{
+				ID:               1,
+				HighlightIndex:   1,
+				Role:             "主视角",
+				AlgorithmVersion: "danmu-zscore-v1",
+				Status:           highlightclip.StatusSUCCEEDED,
+				Score:            9,
+				OutputDir:        "Round-1/highlights/Highlight-01",
+				Title:            &title,
+			},
+			{
+				ID:               2,
+				HighlightIndex:   1,
+				Role:             "主视角",
+				AlgorithmVersion: "danmu-zscore-dify-v1",
+				Status:           highlightclip.StatusSUCCEEDED,
+				Score:            8,
+				OutputDir:        "Round-1/highlights/Highlight-01",
+				Title:            &title,
+			},
+			{
+				ID:               3,
+				HighlightIndex:   2,
+				Role:             "蓝方英雄第一视角",
+				AlgorithmVersion: "danmu-zscore-dify-v1",
+				Status:           highlightclip.StatusSUCCEEDED,
+				Score:            7,
+				OutputDir:        "Round-1/highlights/Highlight-02",
+				Title:            &title,
+			},
+			{
+				ID:               4,
+				HighlightIndex:   3,
+				Role:             "主视角",
+				AlgorithmVersion: "danmu-zscore-dify-v1",
+				Status:           highlightclip.StatusSUCCEEDED,
+				Score:            6,
+				OutputDir:        "Round-1/highlights/Highlight-03",
+				Title:            &title,
+			},
+		}}},
+	}}}
+	got := selectedHighlightClips(m, 2, 9, "主视角", "danmu-zscore-dify-v1")
+	if len(got) != 2 {
+		t.Fatalf("selected len = %d, want 2", len(got))
+	}
+	ids := []int{got[0].clip.ID, got[1].clip.ID}
+	want := []int{2, 4}
 	for i := range want {
 		if ids[i] != want[i] {
 			t.Fatalf("selected ids = %#v, want %#v", ids, want)

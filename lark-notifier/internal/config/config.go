@@ -15,6 +15,7 @@ type Config struct {
 		PartRetries  int
 		RetryBackoff int
 	}
-	PostgresConf common.PostgresConf
-	RedisConf    common.RedisConf
+	PostgresConf  common.PostgresConf
+	RedisConf     common.RedisConf
+	HighlightConf common.HighlightConf `json:",optional"`
 }

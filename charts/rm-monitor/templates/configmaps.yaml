@@ -37,6 +37,7 @@ data:
 {{ include "rm-monitor.redisConf" . | indent 4 }}
 {{ include "rm-monitor.postgresConf" . | indent 4 }}
 {{ include "rm-monitor.recordConf" . | indent 4 }}
+{{ include "rm-monitor.highlightConf" . | indent 4 }}
     UploadConf:
       Concurrency: {{ .Values.upload.concurrency }}
       PartRetries: {{ .Values.upload.partRetries }}
