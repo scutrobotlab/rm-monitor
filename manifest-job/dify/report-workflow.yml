@@ -1,0 +1,231 @@
+app:
+  description: RoboMaster match report generator for rm-monitor manifest-job.
+  icon: 🏆
+  icon_background: '#FFEAD5'
+  mode: workflow
+  name: rm-monitor-manifest-report
+  use_icon_as_answer_icon: false
+kind: app
+version: 0.2.0
+workflow:
+  conversation_variables: []
+  environment_variables: []
+  features:
+    file_upload:
+      enabled: false
+      allowed_file_extensions: []
+      allowed_file_types: []
+      allowed_file_upload_methods: []
+      number_limits: 0
+    opening_statement: ''
+    retriever_resource:
+      enabled: true
+    sensitive_word_avoidance:
+      enabled: false
+    speech_to_text:
+      enabled: false
+    suggested_questions: []
+    suggested_questions_after_answer:
+      enabled: false
+    text_to_speech:
+      enabled: false
+      language: ''
+      voice: ''
+  graph:
+    edges:
+    - data:
+        sourceType: start
+        targetType: llm
+      id: start-source-llm-target
+      source: start
+      sourceHandle: source
+      target: llm
+      targetHandle: target
+      type: custom
+    - data:
+        sourceType: llm
+        targetType: code
+      id: llm-source-code-target
+      source: llm
+      sourceHandle: source
+      target: code
+      targetHandle: target
+      type: custom
+    - data:
+        sourceType: code
+        targetType: end
+      id: code-source-end-target
+      source: code
+      sourceHandle: source
+      target: end
+      targetHandle: target
+      type: custom
+    nodes:
+    - data:
+        desc: ''
+        selected: false
+        title: Start
+        type: start
+        variables:
+        - label: payload
+          max_length: 200000
+          options: []
+          required: true
+          type: paragraph
+          variable: payload
+      height: 90
+      id: start
+      position:
+        x: 80
+        y: 240
+      positionAbsolute:
+        x: 80
+        y: 240
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        context:
+          enabled: false
+          variable_selector: []
+        desc: ''
+        model:
+          completion_params:
+            temperature: 0.2
+          mode: chat
+          name: gpt-4o-mini
+          provider: langgenius/openai/openai
+        prompt_template:
+        - role: system
+          text: |
+            你是 RoboMaster 机甲大师赛事战报编辑。
+            只根据输入 payload 写面向观众的中文战报，不编造未给出的机器人动作、击毁、经济、点位或战术细节。
+            不要提到 AI、模型、系统、Dify、工作流、STT、识别文本、自动生成、数据待完善等内部实现表述。
+            如果证据不足，基于比分、胜方、小局结果和解说摘录做保守概括，不要说明“信息不足”。
+            Markdown 标题必须写成“## 标题”“### 标题”，# 后必须有空格。
+            Markdown 列表必须写成“- 文本”；如果加粗，写成“- **标题**：内容”，不要写“-文本”或“-**标题**”。
+            payload 中 started_at/ended_at 是墙钟时间，不是比赛用时；duration_seconds 才是小局时长。
+            danmu.peaks[].peak_seconds 是秒级时间点，danmu.peaks[].peak_count 才是该 10 秒桶的弹幕数量。
+            输出必须是严格 JSON，不要用代码块包裹。
+            JSON 结构：
+            {
+              "report_markdown": "Markdown正文，最高从二级标题开始，约600-1000字",
+              "report_json": {
+                "summary": "一句话概括",
+                "round_summaries": [{"round_no": 1, "summary": "..."}],
+                "key_moments": [{"round_no": 1, "time": 0, "title": "...", "description": "..."}],
+                "tags": ["..."]
+              }
+            }
+        - role: user
+          text: |
+            请基于以下 rm-monitor 比赛 payload 生成战报。
+
+            {{#start.payload#}}
+        selected: true
+        title: Generate Report JSON
+        type: llm
+        variables: []
+        vision:
+          enabled: false
+      height: 88
+      id: llm
+      position:
+        x: 380
+        y: 240
+      positionAbsolute:
+        x: 380
+        y: 240
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        code: |
+          import json
+          import re
+
+          def normalize_markdown(markdown):
+              lines = markdown.strip().splitlines()
+              out = []
+              for line in lines:
+                  line = re.sub(r"^(\s*#{2,6})([^#\s].*)$", r"\1 \2", line)
+                  line = re.sub(r"^(\s*[-*])([^\s].*)$", r"\1 \2", line)
+                  out.append(line)
+              return "\n".join(out).strip()
+
+          def main(text):
+              raw = (text or "").strip()
+              raw = re.sub(r"^```(?:json)?\s*", "", raw)
+              raw = re.sub(r"\s*```$", "", raw)
+              data = json.loads(raw)
+              report_markdown = normalize_markdown(str(data.get("report_markdown") or ""))
+              report_json = data.get("report_json")
+              if not report_markdown:
+                  raise ValueError("report_markdown is empty")
+              if report_json is None:
+                  raise ValueError("report_json is missing")
+              return {
+                  "report_markdown": report_markdown,
+                  "report_json": report_json,
+              }
+        code_language: python3
+        desc: ''
+        outputs:
+          report_json:
+            children: null
+            type: object
+          report_markdown:
+            children: null
+            type: string
+        selected: false
+        title: Parse Strict JSON
+        type: code
+        variables:
+        - value_selector:
+          - llm
+          - text
+          variable: text
+      height: 54
+      id: code
+      position:
+        x: 680
+        y: 240
+      positionAbsolute:
+        x: 680
+        y: 240
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        desc: ''
+        outputs:
+        - value_selector:
+          - code
+          - report_markdown
+          variable: report_markdown
+        - value_selector:
+          - code
+          - report_json
+          variable: report_json
+        selected: false
+        title: End
+        type: end
+      height: 90
+      id: end
+      position:
+        x: 980
+        y: 240
+      positionAbsolute:
+        x: 980
+        y: 240
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    viewport:
+      x: 0
+      y: 0
+      zoom: 1

@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -104,10 +105,34 @@ func TestRenderReadmeIncludesOnlyExistingDanmuCharts(t *testing.T) {
 	assertNotContains(t, readme, ".json")
 }
 
-func TestBuildReportInputIncludesAuthorityFields(t *testing.T) {
+func TestBuildReportPayloadIncludesEvidence(t *testing.T) {
 	winnerPlace := "晋级八强"
 	loserPlace := "进入败者组"
-	input, err := buildReportInput(&ent.Match{
+	matchDir := t.TempDir()
+	roundDir := filepath.Join(matchDir, "Round-1")
+	if err := os.MkdirAll(filepath.Join(roundDir, "stats"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(roundDir, "stt.jsonl"), []byte(`{"start":1,"end":3,"status":"SUCCEEDED","text":"蓝方开局节奏很好"}`+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(roundDir, "stats", "danmu-count.json"), []byte(`{"bucket_seconds":10,"points":[{"t":0,"count":1,"total":1},{"t":10,"count":5,"total":6}]}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(roundDir, "stats", "online-count.json"), []byte(`{"points":[{"t":0,"online_count":12},{"t":10,"online_count":20}]}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(roundDir, "settlement.json"), []byte(`{"fields":{"red_score":"1"}}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	highlightDir := filepath.Join(roundDir, "highlights", "Highlight-1")
+	if err := os.MkdirAll(highlightDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(highlightDir, "highlight.json"), []byte(`{"title":"关键反超"}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	payload, err := buildReportPayload(&ent.Match{
 		ID:                    "match-1",
 		Event:                 "RMUC",
 		Zone:                  "南部赛区",
@@ -116,39 +141,58 @@ func TestBuildReportInputIncludesAuthorityFields(t *testing.T) {
 		Result:                match.ResultBLUE,
 		WinnerPlaceholderName: &winnerPlace,
 		LoserPlaceholderName:  &loserPlace,
-	}, &ent.Team{SchoolName: "红方大学", Name: "Alpha"}, &ent.Team{SchoolName: "蓝方大学", Name: "Beta"}, t.TempDir())
+		Edges:                 ent.MatchEdges{Rounds: []*ent.MatchRound{{RoundNo: 1, Status: matchround.StatusENDED}}},
+	}, &ent.Team{SchoolName: "红方大学", Name: "Alpha"}, &ent.Team{SchoolName: "蓝方大学", Name: "Beta"}, matchDir)
 	if err != nil {
 		t.Fatal(err)
 	}
-	assertContains(t, input, "- 胜方：蓝方（蓝方大学-Beta）")
-	assertContains(t, input, "- 胜者去向：晋级八强")
-	assertContains(t, input, "- 败者去向：进入败者组")
-	assertContains(t, input, "只有当它明确表达后续赛程、轮次或对阵安排时才纳入战报")
+	if payload.Match.Winner != "蓝方（蓝方大学-Beta）" {
+		t.Fatalf("winner = %q", payload.Match.Winner)
+	}
+	if payload.Match.WinnerPlaceholder != "晋级八强" || payload.Match.LoserPlaceholder != "进入败者组" {
+		t.Fatalf("placeholders = %#v", payload.Match)
+	}
+	if len(payload.Rounds) != 1 || len(payload.Rounds[0].STTLines) != 1 {
+		t.Fatalf("stt lines = %#v", payload.Rounds)
+	}
+	if payload.Rounds[0].Danmu == nil || payload.Rounds[0].Danmu.Total != 6 {
+		t.Fatalf("danmu = %#v", payload.Rounds[0].Danmu)
+	}
+	if payload.Rounds[0].Online == nil || payload.Rounds[0].Online.Samples != 2 {
+		t.Fatalf("online = %#v", payload.Rounds[0].Online)
+	}
+	if len(payload.Rounds[0].OCRSettlement) == 0 || len(payload.Rounds[0].Highlights) != 1 {
+		t.Fatalf("ocr/highlights missing: %#v", payload.Rounds[0])
+	}
 }
 
-func TestCallReportLLMParsesOpenAICompatibleResponse(t *testing.T) {
+func TestGenerateMatchReportCallsDifyWorkflow(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/v1/chat/completions" {
+		if r.URL.Path != "/v1/workflows/run" {
 			t.Fatalf("path = %q", r.URL.Path)
 		}
 		if got := r.Header.Get("Authorization"); got != "Bearer test-key" {
 			t.Fatalf("authorization = %q", got)
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"choices":[{"message":{"role":"assistant","content":"## 战报\n\n测试内容"}}]}`))
+		_, _ = w.Write([]byte(`{"data":{"status":"succeeded","outputs":{"report_markdown":"## 战报\n\n测试内容","report_json":{"summary":"测试"}}}}`))
 	}))
 	defer server.Close()
 
-	got, err := callReportLLM(context.Background(), common.LLMConf{
-		BaseURL: server.URL + "/v1",
-		APIKey:  "test-key",
-		Model:   "test-model",
-	}, "input")
+	got, reportJSON, err := generateMatchReport(context.Background(), common.DifyConf{
+		BaseURL: server.URL,
+	}, common.ManifestConf{ReportWorkflowAPIKey: "test-key"}, &ent.Match{
+		ID:    "match-1",
+		Edges: ent.MatchEdges{Rounds: []*ent.MatchRound{}},
+	}, &ent.Team{Name: "Alpha"}, &ent.Team{Name: "Beta"}, t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
 	if got != "## 战报\n\n测试内容" {
 		t.Fatalf("report = %q", got)
+	}
+	if string(reportJSON) != `{"summary":"测试"}` {
+		t.Fatalf("report_json = %s", reportJSON)
 	}
 }
 

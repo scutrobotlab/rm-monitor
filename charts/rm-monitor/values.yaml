@@ -51,6 +51,13 @@ llm:
   model: ""
   timeoutSeconds: 120
 
+dify:
+  baseURL: ""
+  timeoutSeconds: 180
+
+manifest:
+  reportWorkflowAPIKey: ""
+
 stt:
   enabled: false
   role: ""

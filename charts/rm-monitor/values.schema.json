@@ -136,6 +136,19 @@
         "timeoutSeconds": { "type": "integer", "minimum": 1 }
       }
     },
+    "dify": {
+      "type": "object",
+      "properties": {
+        "baseURL": { "type": "string" },
+        "timeoutSeconds": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "manifest": {
+      "type": "object",
+      "properties": {
+        "reportWorkflowAPIKey": { "type": "string" }
+      }
+    },
     "publish": {
       "type": "object",
       "properties": {

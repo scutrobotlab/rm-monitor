@@ -127,6 +127,12 @@ LLMConf:
   TimeoutSeconds: {{ .Values.llm.timeoutSeconds }}
 {{- end -}}
 
+{{- define "rm-monitor.difyConf" -}}
+DifyConf:
+  BaseURL: {{ .Values.dify.baseURL }}
+  TimeoutSeconds: {{ .Values.dify.timeoutSeconds }}
+{{- end -}}
+
 {{- define "rm-monitor.priority" -}}
 Priority:
 {{- if .Values.priority }}

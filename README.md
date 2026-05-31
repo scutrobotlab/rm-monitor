@@ -88,7 +88,8 @@ Only deployment-specific runtime values belong in `values.yaml`:
 - PostgreSQL DSN
 - Redis host/password
 - Feishu app and bitable token
-- LLM base URL, API key, and model
+- Dify base URL and per-job workflow API keys
+- LLM base URL, API key, and model for jobs not yet migrated to Dify
 - optional STT role and Whisper server URL
 - storage PVC binding names
 - replicas, resources, and scheduling-independent task limits

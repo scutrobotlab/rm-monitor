@@ -38,7 +38,7 @@ func main() {
 	defer client.Close()
 	redisClient := redisx.MustNew(c.RedisConf.WithDefaults())
 	defer redisClient.Close()
-	if err := logic.WriteMatchReadme(context.Background(), client, redisClient, c.RecordConf, c.LLMConf, c.PostgresConf.DSN, *matchID); err != nil {
+	if err := logic.WriteMatchReadme(context.Background(), client, redisClient, c.RecordConf, c.DifyConf, c.ManifestConf, c.PostgresConf.DSN, *matchID); err != nil {
 		logx.Error(err)
 		os.Exit(1)
 	}

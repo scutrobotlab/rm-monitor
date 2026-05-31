@@ -4,28 +4,26 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"text/template"
 	"time"
 
-	"github.com/openai/openai-go"
-	"github.com/openai/openai-go/option"
 	"github.com/pkg/errors"
 	"scutbot.cn/web/rm-monitor/ent"
 	"scutbot.cn/web/rm-monitor/ent/match"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
 	common "scutbot.cn/web/rm-monitor/pkg/config"
 	"scutbot.cn/web/rm-monitor/pkg/db"
-	"scutbot.cn/web/rm-monitor/pkg/logx"
+	"scutbot.cn/web/rm-monitor/pkg/difyworkflow"
+	"scutbot.cn/web/rm-monitor/pkg/highlight"
 	"scutbot.cn/web/rm-monitor/pkg/pathfmt"
 	"scutbot.cn/web/rm-monitor/pkg/redisx"
 )
 
 // WriteMatchReadme writes the match manifest into the match directory.
-func WriteMatchReadme(ctx context.Context, client *ent.Client, redisClient *redisx.Client, conf common.RecordConf, llmConf common.LLMConf, postgresDSN, matchID string) error {
+func WriteMatchReadme(ctx context.Context, client *ent.Client, redisClient *redisx.Client, conf common.RecordConf, difyConf common.DifyConf, manifestConf common.ManifestConf, postgresDSN, matchID string) error {
 	conf = conf.WithDefaults()
 	m, err := client.Match.Query().
 		Where(match.ID(matchID)).
@@ -66,16 +64,19 @@ func WriteMatchReadme(ctx context.Context, client *ent.Client, redisClient *redi
 		return err
 	}
 	if matchComplete(m) && (m.Report == nil || strings.TrimSpace(*m.Report) == "") {
-		if report, err := generateMatchReport(ctx, llmConf, m, red, blue, fullDir); err != nil {
-			logx.Errorf("generate match report %s failed: %v", m.ID, err)
-		} else if strings.TrimSpace(report) != "" {
-			if err := client.Match.UpdateOneID(m.ID).SetReport(report).Exec(ctx); err != nil {
-				return errors.Wrap(err, "save match report")
-			}
-			m.Report = &report
-			if postgresDSN != "" {
-				_ = db.Notify(ctx, postgresDSN, db.MatchChangedChannel, m.ID)
-			}
+		report, reportJSON, err := generateMatchReport(ctx, difyConf, manifestConf, m, red, blue, fullDir)
+		if err != nil {
+			return errors.Wrapf(err, "generate match report %s", m.ID)
+		}
+		if err := writeReportJSON(fullDir, reportJSON); err != nil {
+			return err
+		}
+		if err := client.Match.UpdateOneID(m.ID).SetReport(report).Exec(ctx); err != nil {
+			return errors.Wrap(err, "save match report")
+		}
+		m.Report = &report
+		if postgresDSN != "" {
+			_ = db.Notify(ctx, postgresDSN, db.MatchChangedChannel, m.ID)
 		}
 	}
 	unlock, err := lockDir(ctx, fullDir)
@@ -277,128 +278,169 @@ type sttLine struct {
 	ErrorMessage string  `json:"error_message"`
 }
 
-func generateMatchReport(ctx context.Context, c common.LLMConf, m *ent.Match, red, blue *ent.Team, matchDir string) (string, error) {
-	c = c.WithDefaults()
-	if strings.TrimSpace(c.BaseURL) == "" || strings.TrimSpace(c.APIKey) == "" || strings.TrimSpace(c.Model) == "" {
-		return "", errors.New("report llm config is incomplete")
-	}
-	input, err := buildReportInput(m, red, blue, matchDir)
+type reportPayload struct {
+	Schema string               `json:"schema"`
+	Match  reportMatchPayload   `json:"match"`
+	Rounds []reportRoundPayload `json:"rounds"`
+}
+
+type reportMatchPayload struct {
+	ID                string `json:"id"`
+	Title             string `json:"title"`
+	Event             string `json:"event"`
+	Zone              string `json:"zone"`
+	Order             int    `json:"order"`
+	MatchType         string `json:"match_type"`
+	Score             string `json:"score"`
+	Winner            string `json:"winner"`
+	RedTeam           string `json:"red_team"`
+	BlueTeam          string `json:"blue_team"`
+	RoundCount        int    `json:"round_count"`
+	WinnerPlaceholder string `json:"winner_placeholder,omitempty"`
+	LoserPlaceholder  string `json:"loser_placeholder,omitempty"`
+}
+
+type reportRoundPayload struct {
+	RoundNo         int               `json:"round_no"`
+	Status          string            `json:"status"`
+	Winner          string            `json:"winner"`
+	StartedAt       string            `json:"started_at,omitempty"`
+	EndedAt         string            `json:"ended_at,omitempty"`
+	DurationSeconds float64           `json:"duration_seconds,omitempty"`
+	STTLines        []reportSTTLine   `json:"stt_lines,omitempty"`
+	STTTruncated    bool              `json:"stt_truncated,omitempty"`
+	Danmu           *danmuSummary     `json:"danmu,omitempty"`
+	Online          *onlineSummary    `json:"online,omitempty"`
+	OCRSettlement   json.RawMessage   `json:"ocr_settlement,omitempty"`
+	Highlights      []json.RawMessage `json:"highlights,omitempty"`
+}
+
+type reportSTTLine struct {
+	Start float64 `json:"start"`
+	End   float64 `json:"end"`
+	Text  string  `json:"text"`
+}
+
+type danmuSummary struct {
+	BucketSeconds int              `json:"bucket_seconds"`
+	Total         int              `json:"total"`
+	Peaks         []reportPeakInfo `json:"peaks"`
+}
+
+type onlineSummary struct {
+	Samples int      `json:"samples"`
+	Min     *float64 `json:"min,omitempty"`
+	Max     *float64 `json:"max,omitempty"`
+	Last    *float64 `json:"last,omitempty"`
+}
+
+type reportPeakInfo struct {
+	StartSeconds float64 `json:"start_seconds"`
+	EndSeconds   float64 `json:"end_seconds"`
+	PeakSeconds  float64 `json:"peak_seconds"`
+	PeakCount    int     `json:"peak_count"`
+	Score        float64 `json:"score"`
+}
+
+func generateMatchReport(ctx context.Context, difyConf common.DifyConf, manifestConf common.ManifestConf, m *ent.Match, red, blue *ent.Team, matchDir string) (string, json.RawMessage, error) {
+	payload, err := buildReportPayload(m, red, blue, matchDir)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
-	return callReportLLM(ctx, c, input)
+	payloadJSON, err := json.Marshal(payload)
+	if err != nil {
+		return "", nil, errors.Wrap(err, "marshal report payload")
+	}
+	client, err := difyworkflow.New(difyConf)
+	if err != nil {
+		return "", nil, err
+	}
+	result, err := client.RunWorkflow(ctx, manifestConf.ReportWorkflowAPIKey, "rm-monitor:manifest:"+m.ID, map[string]any{
+		"payload": string(payloadJSON),
+	})
+	if err != nil {
+		return "", nil, err
+	}
+	report, err := difyworkflow.StringOutput(result.Outputs, "report_markdown")
+	if err != nil {
+		return "", nil, err
+	}
+	reportJSON, err := difyworkflow.RawOutput(result.Outputs, "report_json")
+	if err != nil {
+		return "", nil, err
+	}
+	return report, reportJSON, nil
 }
 
-const reportPromptTemplate = `【角色】
-你是 RoboMaster 机甲大师赛事战报编辑，熟悉机甲大师比赛表达方式。
-
-【指令】
-请根据下面的比赛信息和逐局解说摘录，写一篇面向普通观众的中文 Markdown 战报。
-
-【上下文】
-这是一场 RoboMaster 机甲大师比赛。读者希望快速知道谁赢了、比分如何、每局大致发生了什么、胜负走势如何变化，以及比赛有什么看点。
-
-【输入数据】
-- 比赛：{{ .Title }}
-- 赛事：{{ .Event }}
-- 赛区：{{ .Zone }}
-- 类型：{{ .MatchType }}
-- 比分：{{ .Score }}
-- 胜方：{{ .Winner }}
-- 胜者去向：{{ .WinnerPlaceholder }}
-- 败者去向：{{ .LoserPlaceholder }}
-{{ range .Rounds }}
-- Round {{ .RoundNo }}：{{ .Status }}，胜方 {{ .Winner }}，时间 {{ .StartedAt }} - {{ .EndedAt }}
-{{- if .CommentaryLines }}
-  解说摘录：
-{{- range .CommentaryLines }}
-  - {{ . }}
-{{- end }}
-{{ else }}
-  解说摘录：无。
-{{ end }}
-{{ end }}
-
-【输出格式】
-- 只输出 Markdown 正文，不要用代码块包裹。
-- 不要使用一级标题，最高从二级标题（##）开始，后续层级依次下推。
-- 建议结构：
-  1. 二级标题：一句话概括对阵和赛果。
-  2. “比赛概况”：3-5 句话说明赛事、赛区、比分、胜方和整体走势。
-  3. “小局回顾”：必须按 Round 顺序逐局写，每局 2-4 句话；优先使用该 Round 的解说摘录提到的节奏变化、攻防态势、关键转折和胜负原因。
-  4. “看点”：列出 2-4 条观众关心的比赛看点。
-
-【期望】
-- 信息密度比简讯更高，像赛事新闻稿，不要写成技术报告。
-- 不要出现“AI、模型、系统、结构化数据、STT、识别文本、自动生成、数据待完善”等开发或内部实现表述。
-- 不要编造输入中没有的具体机器人动作、击毁、经济、点位或战术细节；如果解说摘录只给出笼统描述，就用“持续施压、节奏占优、守住优势、完成反超”等保守表达。
-- 胜者去向和败者去向来自赛程占位字段，可能为空，也可能只是“胜者1”这类内部占位；只有当它明确表达后续赛程、轮次或对阵安排时才纳入战报，不要强行解读。
-- 如果某一局解说摘录信息不足，就基于比分、胜方和小局结果写保守概括，不要说明“信息不足”。
-- 全文控制在 600-1000 字左右。`
-
-var reportPromptTmpl = template.Must(template.New("report-prompt").Parse(reportPromptTemplate))
-
-type reportRoundData struct {
-	RoundNo         int
-	Status          string
-	Winner          string
-	StartedAt       string
-	EndedAt         string
-	CommentaryLines []string
+func writeReportJSON(matchDir string, raw json.RawMessage) error {
+	if !json.Valid(raw) {
+		return errors.New("report_json is not valid json")
+	}
+	tmp := filepath.Join(matchDir, ".report.json.tmp")
+	dst := filepath.Join(matchDir, "report.json")
+	if err := os.WriteFile(tmp, append([]byte(raw), '\n'), 0o644); err != nil {
+		return err
+	}
+	return errors.Wrap(os.Rename(tmp, dst), "rename report.json")
 }
 
-type reportPromptData struct {
-	Title             string
-	Event             string
-	Zone              string
-	MatchType         string
-	Score             string
-	Winner            string
-	WinnerPlaceholder string
-	LoserPlaceholder  string
-	Rounds            []reportRoundData
-}
-
-func buildReportInput(m *ent.Match, red, blue *ent.Team, matchDir string) (string, error) {
-	data := reportPromptData{
-		Title:             matchTitle(m, red, blue),
-		Event:             m.Event,
-		Zone:              m.Zone,
-		MatchType:         m.MatchType,
-		Score:             scoreText(m.Edges.Rounds),
-		Winner:            matchWinnerText(m, red, blue),
-		WinnerPlaceholder: placeholderText(m.WinnerPlaceholderName),
-		LoserPlaceholder:  placeholderText(m.LoserPlaceholderName),
+func buildReportPayload(m *ent.Match, red, blue *ent.Team, matchDir string) (reportPayload, error) {
+	payload := reportPayload{
+		Schema: "rm-monitor/dify-report-input/v1",
+		Match: reportMatchPayload{
+			ID:                m.ID,
+			Title:             matchTitle(m, red, blue),
+			Event:             m.Event,
+			Zone:              m.Zone,
+			Order:             m.Order,
+			MatchType:         m.MatchType,
+			Score:             scoreText(m.Edges.Rounds),
+			Winner:            matchWinnerText(m, red, blue),
+			RedTeam:           teamName(red),
+			BlueTeam:          teamName(blue),
+			RoundCount:        len(m.Edges.Rounds),
+			WinnerPlaceholder: placeholderText(m.WinnerPlaceholderName),
+			LoserPlaceholder:  placeholderText(m.LoserPlaceholderName),
+		},
 	}
 	for _, r := range m.Edges.Rounds {
-		row := reportRoundData{
-			RoundNo:   r.RoundNo,
-			Status:    displayRoundStatus(r.Status),
-			Winner:    roundWinnerText(r, red, blue),
-			StartedAt: formatDisplayTime(r.StartedAt),
-			EndedAt:   formatOptionalDisplayTime(r.EndedAt),
-		}
-		lines, err := readRoundSTT(matchDir, r.RoundNo)
+		roundDir := filepath.Join(matchDir, fmt.Sprintf("Round-%d", r.RoundNo))
+		sttLines, sttTruncated, err := readReportSTT(roundDir, nil)
 		if err != nil {
-			return "", err
+			return payload, err
 		}
-		for _, line := range lines {
-			if line.Status != "SUCCEEDED" || strings.TrimSpace(line.Text) == "" {
-				continue
+		danmu, peaks := readDanmuSummary(roundDir)
+		if len(peaks) > 0 {
+			sttLines, sttTruncated, err = readReportSTT(roundDir, peaks)
+			if err != nil {
+				return payload, err
 			}
-			row.CommentaryLines = append(row.CommentaryLines, fmt.Sprintf("%.0fs-%.0fs：%s", line.Start, line.End, strings.TrimSpace(line.Text)))
 		}
-		data.Rounds = append(data.Rounds, row)
+		row := reportRoundPayload{
+			RoundNo:         r.RoundNo,
+			Status:          displayRoundStatus(r.Status),
+			Winner:          roundWinnerText(r, red, blue),
+			StartedAt:       formatDisplayTime(r.StartedAt),
+			EndedAt:         formatOptionalDisplayTime(r.EndedAt),
+			DurationSeconds: roundDurationSeconds(r),
+			STTLines:        sttLines,
+			STTTruncated:    sttTruncated,
+			Danmu:           danmu,
+			Online:          readOnlineSummary(roundDir),
+			OCRSettlement:   readOptionalJSON(filepath.Join(roundDir, "settlement.json")),
+			Highlights:      readHighlightJSONs(roundDir),
+		}
+		payload.Rounds = append(payload.Rounds, row)
 	}
-	var out strings.Builder
-	if err := reportPromptTmpl.Execute(&out, data); err != nil {
-		return "", errors.Wrap(err, "render report prompt")
-	}
-	return out.String(), nil
+	return payload, nil
 }
 
 func readRoundSTT(matchDir string, roundNo int) ([]sttLine, error) {
 	path := filepath.Join(matchDir, fmt.Sprintf("Round-%d", roundNo), "stt.jsonl")
+	return readSTTFile(path)
+}
+
+func readSTTFile(path string) ([]sttLine, error) {
 	raw, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -421,27 +463,150 @@ func readRoundSTT(matchDir string, roundNo int) ([]sttLine, error) {
 	return out, nil
 }
 
-func callReportLLM(ctx context.Context, c common.LLMConf, input string) (string, error) {
-	client := openai.NewClient(
-		option.WithBaseURL(strings.TrimRight(strings.TrimSpace(c.BaseURL), "/")),
-		option.WithAPIKey(c.APIKey),
-		option.WithHTTPClient(&http.Client{Timeout: time.Duration(c.TimeoutSeconds) * time.Second}),
-	)
-	completion, err := client.Chat.Completions.New(ctx, openai.ChatCompletionNewParams{
-		Model: openai.ChatModel(c.Model),
-		Messages: []openai.ChatCompletionMessageParamUnion{
-			openai.SystemMessage("你是 RoboMaster 机甲大师赛事战报编辑。只输出面向观众的简洁 Markdown 战报，不输出代码块，不提及 AI、模型、系统、STT 或自动生成。"),
-			openai.UserMessage(input),
-		},
-		Temperature: openai.Float(0.2),
-	})
+const maxReportSTTLinesPerRound = 120
+
+func readReportSTT(roundDir string, peaks []reportPeakInfo) ([]reportSTTLine, bool, error) {
+	lines, err := readSTTFile(filepath.Join(roundDir, "stt.jsonl"))
 	if err != nil {
-		return "", err
+		return nil, false, err
 	}
-	if len(completion.Choices) == 0 || strings.TrimSpace(completion.Choices[0].Message.Content) == "" {
-		return "", errors.New("llm returned empty report")
+	var succeeded []reportSTTLine
+	for _, line := range lines {
+		if line.Status != "SUCCEEDED" || strings.TrimSpace(line.Text) == "" {
+			continue
+		}
+		succeeded = append(succeeded, reportSTTLine{
+			Start: line.Start,
+			End:   line.End,
+			Text:  strings.TrimSpace(line.Text),
+		})
 	}
-	return strings.TrimSpace(completion.Choices[0].Message.Content), nil
+	if len(succeeded) <= maxReportSTTLinesPerRound {
+		return succeeded, false, nil
+	}
+	selected := make(map[int]bool)
+	addRange := func(start, end int) {
+		if start < 0 {
+			start = 0
+		}
+		if end > len(succeeded) {
+			end = len(succeeded)
+		}
+		for i := start; i < end; i++ {
+			selected[i] = true
+		}
+	}
+	addRange(0, 20)
+	addRange(len(succeeded)-20, len(succeeded))
+	for _, peak := range peaks {
+		for i, line := range succeeded {
+			if line.End >= peak.PeakSeconds-30 && line.Start <= peak.PeakSeconds+30 {
+				addRange(i-2, i+3)
+			}
+		}
+	}
+	out := make([]reportSTTLine, 0, maxReportSTTLinesPerRound)
+	for i, line := range succeeded {
+		if selected[i] {
+			out = append(out, line)
+		}
+		if len(out) >= maxReportSTTLinesPerRound {
+			break
+		}
+	}
+	return out, true, nil
+}
+
+func roundDurationSeconds(r *ent.MatchRound) float64 {
+	if r == nil || r.EndedAt == nil {
+		return 0
+	}
+	return r.EndedAt.Sub(r.StartedAt).Seconds()
+}
+
+func readDanmuSummary(roundDir string) (*danmuSummary, []reportPeakInfo) {
+	stats, err := highlight.LoadDanmuStats(filepath.Join(roundDir, "stats", "danmu-count.json"))
+	if err != nil {
+		return nil, nil
+	}
+	var total int
+	for _, p := range stats.Points {
+		if p.Total > total {
+			total = p.Total
+		}
+	}
+	candidates := highlight.FindCandidates(stats, highlight.OnlineStats{}, common.HighlightConf{})
+	countByT := make(map[float64]int, len(stats.Points))
+	for _, p := range stats.Points {
+		countByT[p.T] = p.Count
+	}
+	peaks := make([]reportPeakInfo, 0, len(candidates))
+	for _, c := range candidates {
+		peaks = append(peaks, reportPeakInfo{
+			StartSeconds: c.Start,
+			EndSeconds:   c.End,
+			PeakSeconds:  c.Peak,
+			PeakCount:    countByT[c.Peak],
+			Score:        c.Score,
+		})
+	}
+	return &danmuSummary{
+		BucketSeconds: stats.BucketSeconds,
+		Total:         total,
+		Peaks:         peaks,
+	}, peaks
+}
+
+func readOnlineSummary(roundDir string) *onlineSummary {
+	stats, err := highlight.LoadOnlineStats(filepath.Join(roundDir, "stats", "online-count.json"))
+	if err != nil || len(stats.Points) == 0 {
+		return nil
+	}
+	var out onlineSummary
+	for _, p := range stats.Points {
+		if p.OnlineCount == nil {
+			continue
+		}
+		v := *p.OnlineCount
+		out.Samples++
+		out.Last = floatPtr(v)
+		if out.Min == nil || v < *out.Min {
+			out.Min = floatPtr(v)
+		}
+		if out.Max == nil || v > *out.Max {
+			out.Max = floatPtr(v)
+		}
+	}
+	if out.Samples == 0 {
+		return nil
+	}
+	return &out
+}
+
+func floatPtr(v float64) *float64 {
+	return &v
+}
+
+func readOptionalJSON(path string) json.RawMessage {
+	raw, err := os.ReadFile(path)
+	if err != nil || !json.Valid(raw) {
+		return nil
+	}
+	return json.RawMessage(raw)
+}
+
+func readHighlightJSONs(roundDir string) []json.RawMessage {
+	matches, err := filepath.Glob(filepath.Join(roundDir, "highlights", "*", "highlight.json"))
+	if err != nil {
+		return nil
+	}
+	out := make([]json.RawMessage, 0, len(matches))
+	for _, path := range matches {
+		if raw := readOptionalJSON(path); len(raw) > 0 {
+			out = append(out, raw)
+		}
+	}
+	return out
 }
 
 func matchTitle(m *ent.Match, red, blue *ent.Team) string {

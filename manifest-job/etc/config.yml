@@ -4,7 +4,8 @@ RedisConf:
   Host: 127.0.0.1:6379
 RecordConf:
   BaseDir: /records
-LLMConf:
+DifyConf:
   BaseURL: ""
-  APIKey: ""
-  Model: ""
+  TimeoutSeconds: 180
+ManifestConf:
+  ReportWorkflowAPIKey: ""

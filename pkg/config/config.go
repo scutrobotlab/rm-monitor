@@ -94,6 +94,23 @@ func (c *LLMConf) WithDefaults() LLMConf {
 	return out
 }
 
+type DifyConf struct {
+	BaseURL        string `json:",optional"`
+	TimeoutSeconds int    `json:",optional"`
+}
+
+func (c *DifyConf) WithDefaults() DifyConf {
+	out := *c
+	if out.TimeoutSeconds <= 0 {
+		out.TimeoutSeconds = 180
+	}
+	return out
+}
+
+type ManifestConf struct {
+	ReportWorkflowAPIKey string `json:",optional"`
+}
+
 type HighlightConf struct {
 	Enabled               bool                   `json:",optional"`
 	Role                  string                 `json:",optional"`
