@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"html"
+	"os"
 	"path/filepath"
 	"reflect"
 	"sort"
@@ -659,6 +660,14 @@ func (l *NotifyLogic) highlightImages(m *ent.Match) []utils.HighlightImage {
 	for _, selected := range clips {
 		clip := selected.clip
 		path := filepath.Join(baseDir, filepath.FromSlash(clip.OutputDir), "preview.gif")
+		if _, err := os.Stat(path); err != nil {
+			if os.IsNotExist(err) {
+				l.Infof("skip missing highlight preview match=%s clip=%d path=%s", m.ID, clip.ID, path)
+				continue
+			}
+			l.Error(errors.Wrapf(err, "stat highlight preview match=%s clip=%d path=%s", m.ID, clip.ID, path))
+			continue
+		}
 		imageKey, err := utils.GetLocalImageKey(l.ctx, l.svcCtx, path)
 		if err != nil {
 			l.Error(errors.Wrapf(err, "upload highlight preview match=%s clip=%d path=%s", m.ID, clip.ID, path))
