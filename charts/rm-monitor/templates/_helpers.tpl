@@ -58,6 +58,8 @@ RecordConf:
   {{- end }}
   AudioRoles:
 {{ toYaml .Values.record.audioRoles | indent 4 }}
+  RoleBlackList:
+{{ toYaml .Values.record.roleBlackList | indent 4 }}
   {{- if .Values.stt.enabled }}
   STTRole: {{ .Values.stt.role | quote }}
   {{- end }}

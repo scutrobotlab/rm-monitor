@@ -414,11 +414,15 @@ func filterBlacklistedRoles(urls map[string]string, blacklist []string) map[stri
 	}
 	blocked := make(map[string]struct{}, len(blacklist))
 	for _, role := range blacklist {
+		role = strings.TrimSpace(role)
+		if role == "" {
+			continue
+		}
 		blocked[role] = struct{}{}
 	}
 	out := make(map[string]string, len(urls))
 	for role, url := range urls {
-		if _, ok := blocked[role]; ok {
+		if _, ok := blocked[strings.TrimSpace(role)]; ok {
 			continue
 		}
 		out[role] = url
