@@ -45,13 +45,15 @@ type MatchRoundEdges struct {
 	Match *Match `json:"match,omitempty"`
 	// RecordTasks holds the value of the record_tasks edge.
 	RecordTasks []*RecordTask `json:"record_tasks,omitempty"`
+	// SttTasks holds the value of the stt_tasks edge.
+	SttTasks []*STTTask `json:"stt_tasks,omitempty"`
 	// HighlightClips holds the value of the highlight_clips edge.
 	HighlightClips []*HighlightClip `json:"highlight_clips,omitempty"`
 	// OcrTasks holds the value of the ocr_tasks edge.
 	OcrTasks []*OCRTask `json:"ocr_tasks,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [4]bool
+	loadedTypes [5]bool
 }
 
 // MatchOrErr returns the Match value or an error if the edge
@@ -74,10 +76,19 @@ func (e MatchRoundEdges) RecordTasksOrErr() ([]*RecordTask, error) {
 	return nil, &NotLoadedError{edge: "record_tasks"}
 }
 
+// SttTasksOrErr returns the SttTasks value or an error if the edge
+// was not loaded in eager-loading.
+func (e MatchRoundEdges) SttTasksOrErr() ([]*STTTask, error) {
+	if e.loadedTypes[2] {
+		return e.SttTasks, nil
+	}
+	return nil, &NotLoadedError{edge: "stt_tasks"}
+}
+
 // HighlightClipsOrErr returns the HighlightClips value or an error if the edge
 // was not loaded in eager-loading.
 func (e MatchRoundEdges) HighlightClipsOrErr() ([]*HighlightClip, error) {
-	if e.loadedTypes[2] {
+	if e.loadedTypes[3] {
 		return e.HighlightClips, nil
 	}
 	return nil, &NotLoadedError{edge: "highlight_clips"}
@@ -86,7 +97,7 @@ func (e MatchRoundEdges) HighlightClipsOrErr() ([]*HighlightClip, error) {
 // OcrTasksOrErr returns the OcrTasks value or an error if the edge
 // was not loaded in eager-loading.
 func (e MatchRoundEdges) OcrTasksOrErr() ([]*OCRTask, error) {
-	if e.loadedTypes[3] {
+	if e.loadedTypes[4] {
 		return e.OcrTasks, nil
 	}
 	return nil, &NotLoadedError{edge: "ocr_tasks"}
@@ -198,6 +209,11 @@ func (_m *MatchRound) QueryMatch() *MatchQuery {
 // QueryRecordTasks queries the "record_tasks" edge of the MatchRound entity.
 func (_m *MatchRound) QueryRecordTasks() *RecordTaskQuery {
 	return NewMatchRoundClient(_m.config).QueryRecordTasks(_m)
+}
+
+// QuerySttTasks queries the "stt_tasks" edge of the MatchRound entity.
+func (_m *MatchRound) QuerySttTasks() *STTTaskQuery {
+	return NewMatchRoundClient(_m.config).QuerySttTasks(_m)
 }
 
 // QueryHighlightClips queries the "highlight_clips" edge of the MatchRound entity.

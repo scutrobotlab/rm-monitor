@@ -23,6 +23,7 @@ import (
 	"scutbot.cn/web/rm-monitor/ent/mediaartifact"
 	"scutbot.cn/web/rm-monitor/ent/ocrtask"
 	"scutbot.cn/web/rm-monitor/ent/recordtask"
+	"scutbot.cn/web/rm-monitor/ent/stttask"
 	"scutbot.cn/web/rm-monitor/ent/team"
 	"scutbot.cn/web/rm-monitor/ent/transcodetask"
 	"scutbot.cn/web/rm-monitor/ent/uploadtask"
@@ -49,6 +50,8 @@ type Client struct {
 	OCRTask *OCRTaskClient
 	// RecordTask is the client for interacting with the RecordTask builders.
 	RecordTask *RecordTaskClient
+	// STTTask is the client for interacting with the STTTask builders.
+	STTTask *STTTaskClient
 	// Team is the client for interacting with the Team builders.
 	Team *TeamClient
 	// TranscodeTask is the client for interacting with the TranscodeTask builders.
@@ -74,6 +77,7 @@ func (c *Client) init() {
 	c.MediaArtifact = NewMediaArtifactClient(c.config)
 	c.OCRTask = NewOCRTaskClient(c.config)
 	c.RecordTask = NewRecordTaskClient(c.config)
+	c.STTTask = NewSTTTaskClient(c.config)
 	c.Team = NewTeamClient(c.config)
 	c.TranscodeTask = NewTranscodeTaskClient(c.config)
 	c.UploadTask = NewUploadTaskClient(c.config)
@@ -177,6 +181,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		MediaArtifact:        NewMediaArtifactClient(cfg),
 		OCRTask:              NewOCRTaskClient(cfg),
 		RecordTask:           NewRecordTaskClient(cfg),
+		STTTask:              NewSTTTaskClient(cfg),
 		Team:                 NewTeamClient(cfg),
 		TranscodeTask:        NewTranscodeTaskClient(cfg),
 		UploadTask:           NewUploadTaskClient(cfg),
@@ -207,6 +212,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		MediaArtifact:        NewMediaArtifactClient(cfg),
 		OCRTask:              NewOCRTaskClient(cfg),
 		RecordTask:           NewRecordTaskClient(cfg),
+		STTTask:              NewSTTTaskClient(cfg),
 		Team:                 NewTeamClient(cfg),
 		TranscodeTask:        NewTranscodeTaskClient(cfg),
 		UploadTask:           NewUploadTaskClient(cfg),
@@ -240,7 +246,7 @@ func (c *Client) Close() error {
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
 		c.HighlightClip, c.HighlightPublishTask, c.LarkMessage, c.Match, c.MatchRound,
-		c.MediaArtifact, c.OCRTask, c.RecordTask, c.Team, c.TranscodeTask,
+		c.MediaArtifact, c.OCRTask, c.RecordTask, c.STTTask, c.Team, c.TranscodeTask,
 		c.UploadTask,
 	} {
 		n.Use(hooks...)
@@ -252,7 +258,7 @@ func (c *Client) Use(hooks ...Hook) {
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
 		c.HighlightClip, c.HighlightPublishTask, c.LarkMessage, c.Match, c.MatchRound,
-		c.MediaArtifact, c.OCRTask, c.RecordTask, c.Team, c.TranscodeTask,
+		c.MediaArtifact, c.OCRTask, c.RecordTask, c.STTTask, c.Team, c.TranscodeTask,
 		c.UploadTask,
 	} {
 		n.Intercept(interceptors...)
@@ -278,6 +284,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.OCRTask.mutate(ctx, m)
 	case *RecordTaskMutation:
 		return c.RecordTask.mutate(ctx, m)
+	case *STTTaskMutation:
+		return c.STTTask.mutate(ctx, m)
 	case *TeamMutation:
 		return c.Team.mutate(ctx, m)
 	case *TranscodeTaskMutation:
@@ -1105,6 +1113,22 @@ func (c *MatchRoundClient) QueryRecordTasks(_m *MatchRound) *RecordTaskQuery {
 	return query
 }
 
+// QuerySttTasks queries the stt_tasks edge of a MatchRound.
+func (c *MatchRoundClient) QuerySttTasks(_m *MatchRound) *STTTaskQuery {
+	query := (&STTTaskClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(matchround.Table, matchround.FieldID, id),
+			sqlgraph.To(stttask.Table, stttask.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, matchround.SttTasksTable, matchround.SttTasksColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // QueryHighlightClips queries the highlight_clips edge of a MatchRound.
 func (c *MatchRoundClient) QueryHighlightClips(_m *MatchRound) *HighlightClipQuery {
 	query := (&HighlightClipClient{config: c.config}).Query()
@@ -1295,6 +1319,22 @@ func (c *MediaArtifactClient) QueryUploadTask(_m *MediaArtifact) *UploadTaskQuer
 			sqlgraph.From(mediaartifact.Table, mediaartifact.FieldID, id),
 			sqlgraph.To(uploadtask.Table, uploadtask.FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, false, mediaartifact.UploadTaskTable, mediaartifact.UploadTaskColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QuerySttTasks queries the stt_tasks edge of a MediaArtifact.
+func (c *MediaArtifactClient) QuerySttTasks(_m *MediaArtifact) *STTTaskQuery {
+	query := (&STTTaskClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(mediaartifact.Table, mediaartifact.FieldID, id),
+			sqlgraph.To(stttask.Table, stttask.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, mediaartifact.SttTasksTable, mediaartifact.SttTasksColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -1734,6 +1774,171 @@ func (c *RecordTaskClient) mutate(ctx context.Context, m *RecordTaskMutation) (V
 		return (&RecordTaskDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown RecordTask mutation op: %q", m.Op())
+	}
+}
+
+// STTTaskClient is a client for the STTTask schema.
+type STTTaskClient struct {
+	config
+}
+
+// NewSTTTaskClient returns a client for the STTTask from the given config.
+func NewSTTTaskClient(c config) *STTTaskClient {
+	return &STTTaskClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `stttask.Hooks(f(g(h())))`.
+func (c *STTTaskClient) Use(hooks ...Hook) {
+	c.hooks.STTTask = append(c.hooks.STTTask, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `stttask.Intercept(f(g(h())))`.
+func (c *STTTaskClient) Intercept(interceptors ...Interceptor) {
+	c.inters.STTTask = append(c.inters.STTTask, interceptors...)
+}
+
+// Create returns a builder for creating a STTTask entity.
+func (c *STTTaskClient) Create() *STTTaskCreate {
+	mutation := newSTTTaskMutation(c.config, OpCreate)
+	return &STTTaskCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of STTTask entities.
+func (c *STTTaskClient) CreateBulk(builders ...*STTTaskCreate) *STTTaskCreateBulk {
+	return &STTTaskCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *STTTaskClient) MapCreateBulk(slice any, setFunc func(*STTTaskCreate, int)) *STTTaskCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &STTTaskCreateBulk{err: fmt.Errorf("calling to STTTaskClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*STTTaskCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &STTTaskCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for STTTask.
+func (c *STTTaskClient) Update() *STTTaskUpdate {
+	mutation := newSTTTaskMutation(c.config, OpUpdate)
+	return &STTTaskUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *STTTaskClient) UpdateOne(_m *STTTask) *STTTaskUpdateOne {
+	mutation := newSTTTaskMutation(c.config, OpUpdateOne, withSTTTask(_m))
+	return &STTTaskUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *STTTaskClient) UpdateOneID(id int) *STTTaskUpdateOne {
+	mutation := newSTTTaskMutation(c.config, OpUpdateOne, withSTTTaskID(id))
+	return &STTTaskUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for STTTask.
+func (c *STTTaskClient) Delete() *STTTaskDelete {
+	mutation := newSTTTaskMutation(c.config, OpDelete)
+	return &STTTaskDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *STTTaskClient) DeleteOne(_m *STTTask) *STTTaskDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *STTTaskClient) DeleteOneID(id int) *STTTaskDeleteOne {
+	builder := c.Delete().Where(stttask.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &STTTaskDeleteOne{builder}
+}
+
+// Query returns a query builder for STTTask.
+func (c *STTTaskClient) Query() *STTTaskQuery {
+	return &STTTaskQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeSTTTask},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a STTTask entity by its id.
+func (c *STTTaskClient) Get(ctx context.Context, id int) (*STTTask, error) {
+	return c.Query().Where(stttask.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *STTTaskClient) GetX(ctx context.Context, id int) *STTTask {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryMatchRound queries the match_round edge of a STTTask.
+func (c *STTTaskClient) QueryMatchRound(_m *STTTask) *MatchRoundQuery {
+	query := (&MatchRoundClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(stttask.Table, stttask.FieldID, id),
+			sqlgraph.To(matchround.Table, matchround.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, stttask.MatchRoundTable, stttask.MatchRoundColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QuerySourceArtifact queries the source_artifact edge of a STTTask.
+func (c *STTTaskClient) QuerySourceArtifact(_m *STTTask) *MediaArtifactQuery {
+	query := (&MediaArtifactClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(stttask.Table, stttask.FieldID, id),
+			sqlgraph.To(mediaartifact.Table, mediaartifact.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, stttask.SourceArtifactTable, stttask.SourceArtifactColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *STTTaskClient) Hooks() []Hook {
+	return c.hooks.STTTask
+}
+
+// Interceptors returns the client interceptors.
+func (c *STTTaskClient) Interceptors() []Interceptor {
+	return c.inters.STTTask
+}
+
+func (c *STTTaskClient) mutate(ctx context.Context, m *STTTaskMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&STTTaskCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&STTTaskUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&STTTaskUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&STTTaskDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown STTTask mutation op: %q", m.Op())
 	}
 }
 
@@ -2236,11 +2441,12 @@ func (c *UploadTaskClient) mutate(ctx context.Context, m *UploadTaskMutation) (V
 type (
 	hooks struct {
 		HighlightClip, HighlightPublishTask, LarkMessage, Match, MatchRound,
-		MediaArtifact, OCRTask, RecordTask, Team, TranscodeTask, UploadTask []ent.Hook
+		MediaArtifact, OCRTask, RecordTask, STTTask, Team, TranscodeTask,
+		UploadTask []ent.Hook
 	}
 	inters struct {
 		HighlightClip, HighlightPublishTask, LarkMessage, Match, MatchRound,
-		MediaArtifact, OCRTask, RecordTask, Team, TranscodeTask,
+		MediaArtifact, OCRTask, RecordTask, STTTask, Team, TranscodeTask,
 		UploadTask []ent.Interceptor
 	}
 )

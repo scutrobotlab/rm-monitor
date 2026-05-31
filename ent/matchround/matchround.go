@@ -33,6 +33,8 @@ const (
 	EdgeMatch = "match"
 	// EdgeRecordTasks holds the string denoting the record_tasks edge name in mutations.
 	EdgeRecordTasks = "record_tasks"
+	// EdgeSttTasks holds the string denoting the stt_tasks edge name in mutations.
+	EdgeSttTasks = "stt_tasks"
 	// EdgeHighlightClips holds the string denoting the highlight_clips edge name in mutations.
 	EdgeHighlightClips = "highlight_clips"
 	// EdgeOcrTasks holds the string denoting the ocr_tasks edge name in mutations.
@@ -53,6 +55,13 @@ const (
 	RecordTasksInverseTable = "record_tasks"
 	// RecordTasksColumn is the table column denoting the record_tasks relation/edge.
 	RecordTasksColumn = "match_round_record_tasks"
+	// SttTasksTable is the table that holds the stt_tasks relation/edge.
+	SttTasksTable = "stt_tasks"
+	// SttTasksInverseTable is the table name for the STTTask entity.
+	// It exists in this package in order to avoid circular dependency with the "stttask" package.
+	SttTasksInverseTable = "stt_tasks"
+	// SttTasksColumn is the table column denoting the stt_tasks relation/edge.
+	SttTasksColumn = "match_round_stt_tasks"
 	// HighlightClipsTable is the table that holds the highlight_clips relation/edge.
 	HighlightClipsTable = "highlight_clips"
 	// HighlightClipsInverseTable is the table name for the HighlightClip entity.
@@ -224,6 +233,20 @@ func ByRecordTasks(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	}
 }
 
+// BySttTasksCount orders the results by stt_tasks count.
+func BySttTasksCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newSttTasksStep(), opts...)
+	}
+}
+
+// BySttTasks orders the results by stt_tasks terms.
+func BySttTasks(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newSttTasksStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
 // ByHighlightClipsCount orders the results by highlight_clips count.
 func ByHighlightClipsCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -263,6 +286,13 @@ func newRecordTasksStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(RecordTasksInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, RecordTasksTable, RecordTasksColumn),
+	)
+}
+func newSttTasksStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(SttTasksInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, SttTasksTable, SttTasksColumn),
 	)
 }
 func newHighlightClipsStep() *sqlgraph.Step {

@@ -30,6 +30,9 @@ type OCRTask func(*sql.Selector)
 // RecordTask is the predicate function for recordtask builders.
 type RecordTask func(*sql.Selector)
 
+// STTTask is the predicate function for stttask builders.
+type STTTask func(*sql.Selector)
+
 // Team is the predicate function for team builders.
 type Team func(*sql.Selector)
 

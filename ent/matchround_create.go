@@ -16,6 +16,7 @@ import (
 	"scutbot.cn/web/rm-monitor/ent/matchround"
 	"scutbot.cn/web/rm-monitor/ent/ocrtask"
 	"scutbot.cn/web/rm-monitor/ent/recordtask"
+	"scutbot.cn/web/rm-monitor/ent/stttask"
 )
 
 // MatchRoundCreate is the builder for creating a MatchRound entity.
@@ -132,6 +133,21 @@ func (_c *MatchRoundCreate) AddRecordTasks(v ...*RecordTask) *MatchRoundCreate {
 		ids[i] = v[i].ID
 	}
 	return _c.AddRecordTaskIDs(ids...)
+}
+
+// AddSttTaskIDs adds the "stt_tasks" edge to the STTTask entity by IDs.
+func (_c *MatchRoundCreate) AddSttTaskIDs(ids ...int) *MatchRoundCreate {
+	_c.mutation.AddSttTaskIDs(ids...)
+	return _c
+}
+
+// AddSttTasks adds the "stt_tasks" edges to the STTTask entity.
+func (_c *MatchRoundCreate) AddSttTasks(v ...*STTTask) *MatchRoundCreate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddSttTaskIDs(ids...)
 }
 
 // AddHighlightClipIDs adds the "highlight_clips" edge to the HighlightClip entity by IDs.
@@ -324,6 +340,22 @@ func (_c *MatchRoundCreate) createSpec() (*MatchRound, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(recordtask.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.SttTasksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   matchround.SttTasksTable,
+			Columns: []string{matchround.SttTasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(stttask.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

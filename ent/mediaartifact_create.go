@@ -15,6 +15,7 @@ import (
 	"scutbot.cn/web/rm-monitor/ent/mediaartifact"
 	"scutbot.cn/web/rm-monitor/ent/ocrtask"
 	"scutbot.cn/web/rm-monitor/ent/recordtask"
+	"scutbot.cn/web/rm-monitor/ent/stttask"
 	"scutbot.cn/web/rm-monitor/ent/transcodetask"
 	"scutbot.cn/web/rm-monitor/ent/uploadtask"
 )
@@ -177,6 +178,21 @@ func (_c *MediaArtifactCreate) SetNillableUploadTaskID(id *int) *MediaArtifactCr
 // SetUploadTask sets the "upload_task" edge to the UploadTask entity.
 func (_c *MediaArtifactCreate) SetUploadTask(v *UploadTask) *MediaArtifactCreate {
 	return _c.SetUploadTaskID(v.ID)
+}
+
+// AddSttTaskIDs adds the "stt_tasks" edge to the STTTask entity by IDs.
+func (_c *MediaArtifactCreate) AddSttTaskIDs(ids ...int) *MediaArtifactCreate {
+	_c.mutation.AddSttTaskIDs(ids...)
+	return _c
+}
+
+// AddSttTasks adds the "stt_tasks" edges to the STTTask entity.
+func (_c *MediaArtifactCreate) AddSttTasks(v ...*STTTask) *MediaArtifactCreate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddSttTaskIDs(ids...)
 }
 
 // SetSourceTranscodeTaskID sets the "source_transcode_task" edge to the TranscodeTask entity by ID.
@@ -439,6 +455,22 @@ func (_c *MediaArtifactCreate) createSpec() (*MediaArtifact, *sqlgraph.CreateSpe
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(uploadtask.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.SttTasksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   mediaartifact.SttTasksTable,
+			Columns: []string{mediaartifact.SttTasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(stttask.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

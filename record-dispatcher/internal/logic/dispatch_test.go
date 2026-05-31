@@ -1,8 +1,6 @@
 package logic
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 
 	"scutbot.cn/web/rm-monitor/ent"
@@ -86,30 +84,5 @@ func TestSTTJobSpecIsSingleContainer(t *testing.T) {
 	}
 	if len(containers[0].Args) != 0 {
 		t.Fatalf("stt args = %#v, want default entrypoint without mode", containers[0].Args)
-	}
-}
-
-func TestSTTJobFinishedUsesResultOrErrorFile(t *testing.T) {
-	roundDir := t.TempDir()
-	if sttJobFinished(roundDir, "stt-1") {
-		t.Fatal("empty round dir should not be finished")
-	}
-	if err := os.WriteFile(filepath.Join(roundDir, "stt.jsonl"), []byte("{}\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if !sttJobFinished(roundDir, "stt-1") {
-		t.Fatal("stt.jsonl should mark stt finished")
-	}
-
-	roundDir = t.TempDir()
-	errorDir := filepath.Join(roundDir, jobcontract.DirName, "stt-1")
-	if err := os.MkdirAll(errorDir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(errorDir, jobcontract.ErrorFile), []byte("{}"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if !sttJobFinished(roundDir, "stt-1") {
-		t.Fatal("stt error.json should mark stt finished")
 	}
 }

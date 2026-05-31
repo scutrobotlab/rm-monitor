@@ -20,6 +20,7 @@ import (
 	"scutbot.cn/web/rm-monitor/ent/ocrtask"
 	"scutbot.cn/web/rm-monitor/ent/predicate"
 	"scutbot.cn/web/rm-monitor/ent/recordtask"
+	"scutbot.cn/web/rm-monitor/ent/stttask"
 	"scutbot.cn/web/rm-monitor/ent/team"
 	"scutbot.cn/web/rm-monitor/ent/transcodetask"
 	"scutbot.cn/web/rm-monitor/ent/uploadtask"
@@ -42,6 +43,7 @@ const (
 	TypeMediaArtifact        = "MediaArtifact"
 	TypeOCRTask              = "OCRTask"
 	TypeRecordTask           = "RecordTask"
+	TypeSTTTask              = "STTTask"
 	TypeTeam                 = "Team"
 	TypeTranscodeTask        = "TranscodeTask"
 	TypeUploadTask           = "UploadTask"
@@ -5422,6 +5424,9 @@ type MatchRoundMutation struct {
 	record_tasks           map[int]struct{}
 	removedrecord_tasks    map[int]struct{}
 	clearedrecord_tasks    bool
+	stt_tasks              map[int]struct{}
+	removedstt_tasks       map[int]struct{}
+	clearedstt_tasks       bool
 	highlight_clips        map[int]struct{}
 	removedhighlight_clips map[int]struct{}
 	clearedhighlight_clips bool
@@ -5922,6 +5927,60 @@ func (m *MatchRoundMutation) ResetRecordTasks() {
 	m.removedrecord_tasks = nil
 }
 
+// AddSttTaskIDs adds the "stt_tasks" edge to the STTTask entity by ids.
+func (m *MatchRoundMutation) AddSttTaskIDs(ids ...int) {
+	if m.stt_tasks == nil {
+		m.stt_tasks = make(map[int]struct{})
+	}
+	for i := range ids {
+		m.stt_tasks[ids[i]] = struct{}{}
+	}
+}
+
+// ClearSttTasks clears the "stt_tasks" edge to the STTTask entity.
+func (m *MatchRoundMutation) ClearSttTasks() {
+	m.clearedstt_tasks = true
+}
+
+// SttTasksCleared reports if the "stt_tasks" edge to the STTTask entity was cleared.
+func (m *MatchRoundMutation) SttTasksCleared() bool {
+	return m.clearedstt_tasks
+}
+
+// RemoveSttTaskIDs removes the "stt_tasks" edge to the STTTask entity by IDs.
+func (m *MatchRoundMutation) RemoveSttTaskIDs(ids ...int) {
+	if m.removedstt_tasks == nil {
+		m.removedstt_tasks = make(map[int]struct{})
+	}
+	for i := range ids {
+		delete(m.stt_tasks, ids[i])
+		m.removedstt_tasks[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedSttTasks returns the removed IDs of the "stt_tasks" edge to the STTTask entity.
+func (m *MatchRoundMutation) RemovedSttTasksIDs() (ids []int) {
+	for id := range m.removedstt_tasks {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// SttTasksIDs returns the "stt_tasks" edge IDs in the mutation.
+func (m *MatchRoundMutation) SttTasksIDs() (ids []int) {
+	for id := range m.stt_tasks {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetSttTasks resets all changes to the "stt_tasks" edge.
+func (m *MatchRoundMutation) ResetSttTasks() {
+	m.stt_tasks = nil
+	m.clearedstt_tasks = false
+	m.removedstt_tasks = nil
+}
+
 // AddHighlightClipIDs adds the "highlight_clips" edge to the HighlightClip entity by ids.
 func (m *MatchRoundMutation) AddHighlightClipIDs(ids ...int) {
 	if m.highlight_clips == nil {
@@ -6295,12 +6354,15 @@ func (m *MatchRoundMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *MatchRoundMutation) AddedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 5)
 	if m.match != nil {
 		edges = append(edges, matchround.EdgeMatch)
 	}
 	if m.record_tasks != nil {
 		edges = append(edges, matchround.EdgeRecordTasks)
+	}
+	if m.stt_tasks != nil {
+		edges = append(edges, matchround.EdgeSttTasks)
 	}
 	if m.highlight_clips != nil {
 		edges = append(edges, matchround.EdgeHighlightClips)
@@ -6325,6 +6387,12 @@ func (m *MatchRoundMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case matchround.EdgeSttTasks:
+		ids := make([]ent.Value, 0, len(m.stt_tasks))
+		for id := range m.stt_tasks {
+			ids = append(ids, id)
+		}
+		return ids
 	case matchround.EdgeHighlightClips:
 		ids := make([]ent.Value, 0, len(m.highlight_clips))
 		for id := range m.highlight_clips {
@@ -6343,9 +6411,12 @@ func (m *MatchRoundMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *MatchRoundMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 5)
 	if m.removedrecord_tasks != nil {
 		edges = append(edges, matchround.EdgeRecordTasks)
+	}
+	if m.removedstt_tasks != nil {
+		edges = append(edges, matchround.EdgeSttTasks)
 	}
 	if m.removedhighlight_clips != nil {
 		edges = append(edges, matchround.EdgeHighlightClips)
@@ -6363,6 +6434,12 @@ func (m *MatchRoundMutation) RemovedIDs(name string) []ent.Value {
 	case matchround.EdgeRecordTasks:
 		ids := make([]ent.Value, 0, len(m.removedrecord_tasks))
 		for id := range m.removedrecord_tasks {
+			ids = append(ids, id)
+		}
+		return ids
+	case matchround.EdgeSttTasks:
+		ids := make([]ent.Value, 0, len(m.removedstt_tasks))
+		for id := range m.removedstt_tasks {
 			ids = append(ids, id)
 		}
 		return ids
@@ -6384,12 +6461,15 @@ func (m *MatchRoundMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *MatchRoundMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 5)
 	if m.clearedmatch {
 		edges = append(edges, matchround.EdgeMatch)
 	}
 	if m.clearedrecord_tasks {
 		edges = append(edges, matchround.EdgeRecordTasks)
+	}
+	if m.clearedstt_tasks {
+		edges = append(edges, matchround.EdgeSttTasks)
 	}
 	if m.clearedhighlight_clips {
 		edges = append(edges, matchround.EdgeHighlightClips)
@@ -6408,6 +6488,8 @@ func (m *MatchRoundMutation) EdgeCleared(name string) bool {
 		return m.clearedmatch
 	case matchround.EdgeRecordTasks:
 		return m.clearedrecord_tasks
+	case matchround.EdgeSttTasks:
+		return m.clearedstt_tasks
 	case matchround.EdgeHighlightClips:
 		return m.clearedhighlight_clips
 	case matchround.EdgeOcrTasks:
@@ -6436,6 +6518,9 @@ func (m *MatchRoundMutation) ResetEdge(name string) error {
 		return nil
 	case matchround.EdgeRecordTasks:
 		m.ResetRecordTasks()
+		return nil
+	case matchround.EdgeSttTasks:
+		m.ResetSttTasks()
 		return nil
 	case matchround.EdgeHighlightClips:
 		m.ResetHighlightClips()
@@ -6470,6 +6555,9 @@ type MediaArtifactMutation struct {
 	clearedrecord_task            bool
 	upload_task                   *int
 	clearedupload_task            bool
+	stt_tasks                     map[int]struct{}
+	removedstt_tasks              map[int]struct{}
+	clearedstt_tasks              bool
 	source_transcode_task         *int
 	clearedsource_transcode_task  bool
 	archive_transcode_task        *int
@@ -7130,6 +7218,60 @@ func (m *MediaArtifactMutation) ResetUploadTask() {
 	m.clearedupload_task = false
 }
 
+// AddSttTaskIDs adds the "stt_tasks" edge to the STTTask entity by ids.
+func (m *MediaArtifactMutation) AddSttTaskIDs(ids ...int) {
+	if m.stt_tasks == nil {
+		m.stt_tasks = make(map[int]struct{})
+	}
+	for i := range ids {
+		m.stt_tasks[ids[i]] = struct{}{}
+	}
+}
+
+// ClearSttTasks clears the "stt_tasks" edge to the STTTask entity.
+func (m *MediaArtifactMutation) ClearSttTasks() {
+	m.clearedstt_tasks = true
+}
+
+// SttTasksCleared reports if the "stt_tasks" edge to the STTTask entity was cleared.
+func (m *MediaArtifactMutation) SttTasksCleared() bool {
+	return m.clearedstt_tasks
+}
+
+// RemoveSttTaskIDs removes the "stt_tasks" edge to the STTTask entity by IDs.
+func (m *MediaArtifactMutation) RemoveSttTaskIDs(ids ...int) {
+	if m.removedstt_tasks == nil {
+		m.removedstt_tasks = make(map[int]struct{})
+	}
+	for i := range ids {
+		delete(m.stt_tasks, ids[i])
+		m.removedstt_tasks[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedSttTasks returns the removed IDs of the "stt_tasks" edge to the STTTask entity.
+func (m *MediaArtifactMutation) RemovedSttTasksIDs() (ids []int) {
+	for id := range m.removedstt_tasks {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// SttTasksIDs returns the "stt_tasks" edge IDs in the mutation.
+func (m *MediaArtifactMutation) SttTasksIDs() (ids []int) {
+	for id := range m.stt_tasks {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetSttTasks resets all changes to the "stt_tasks" edge.
+func (m *MediaArtifactMutation) ResetSttTasks() {
+	m.stt_tasks = nil
+	m.clearedstt_tasks = false
+	m.removedstt_tasks = nil
+}
+
 // SetSourceTranscodeTaskID sets the "source_transcode_task" edge to the TranscodeTask entity by id.
 func (m *MediaArtifactMutation) SetSourceTranscodeTaskID(id int) {
 	m.source_transcode_task = &id
@@ -7661,12 +7803,15 @@ func (m *MediaArtifactMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *MediaArtifactMutation) AddedEdges() []string {
-	edges := make([]string, 0, 6)
+	edges := make([]string, 0, 7)
 	if m.record_task != nil {
 		edges = append(edges, mediaartifact.EdgeRecordTask)
 	}
 	if m.upload_task != nil {
 		edges = append(edges, mediaartifact.EdgeUploadTask)
+	}
+	if m.stt_tasks != nil {
+		edges = append(edges, mediaartifact.EdgeSttTasks)
 	}
 	if m.source_transcode_task != nil {
 		edges = append(edges, mediaartifact.EdgeSourceTranscodeTask)
@@ -7695,6 +7840,12 @@ func (m *MediaArtifactMutation) AddedIDs(name string) []ent.Value {
 		if id := m.upload_task; id != nil {
 			return []ent.Value{*id}
 		}
+	case mediaartifact.EdgeSttTasks:
+		ids := make([]ent.Value, 0, len(m.stt_tasks))
+		for id := range m.stt_tasks {
+			ids = append(ids, id)
+		}
+		return ids
 	case mediaartifact.EdgeSourceTranscodeTask:
 		if id := m.source_transcode_task; id != nil {
 			return []ent.Value{*id}
@@ -7721,7 +7872,10 @@ func (m *MediaArtifactMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *MediaArtifactMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 6)
+	edges := make([]string, 0, 7)
+	if m.removedstt_tasks != nil {
+		edges = append(edges, mediaartifact.EdgeSttTasks)
+	}
 	if m.removedhighlight_clips != nil {
 		edges = append(edges, mediaartifact.EdgeHighlightClips)
 	}
@@ -7735,6 +7889,12 @@ func (m *MediaArtifactMutation) RemovedEdges() []string {
 // the given name in this mutation.
 func (m *MediaArtifactMutation) RemovedIDs(name string) []ent.Value {
 	switch name {
+	case mediaartifact.EdgeSttTasks:
+		ids := make([]ent.Value, 0, len(m.removedstt_tasks))
+		for id := range m.removedstt_tasks {
+			ids = append(ids, id)
+		}
+		return ids
 	case mediaartifact.EdgeHighlightClips:
 		ids := make([]ent.Value, 0, len(m.removedhighlight_clips))
 		for id := range m.removedhighlight_clips {
@@ -7753,12 +7913,15 @@ func (m *MediaArtifactMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *MediaArtifactMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 6)
+	edges := make([]string, 0, 7)
 	if m.clearedrecord_task {
 		edges = append(edges, mediaartifact.EdgeRecordTask)
 	}
 	if m.clearedupload_task {
 		edges = append(edges, mediaartifact.EdgeUploadTask)
+	}
+	if m.clearedstt_tasks {
+		edges = append(edges, mediaartifact.EdgeSttTasks)
 	}
 	if m.clearedsource_transcode_task {
 		edges = append(edges, mediaartifact.EdgeSourceTranscodeTask)
@@ -7783,6 +7946,8 @@ func (m *MediaArtifactMutation) EdgeCleared(name string) bool {
 		return m.clearedrecord_task
 	case mediaartifact.EdgeUploadTask:
 		return m.clearedupload_task
+	case mediaartifact.EdgeSttTasks:
+		return m.clearedstt_tasks
 	case mediaartifact.EdgeSourceTranscodeTask:
 		return m.clearedsource_transcode_task
 	case mediaartifact.EdgeArchiveTranscodeTask:
@@ -7824,6 +7989,9 @@ func (m *MediaArtifactMutation) ResetEdge(name string) error {
 		return nil
 	case mediaartifact.EdgeUploadTask:
 		m.ResetUploadTask()
+		return nil
+	case mediaartifact.EdgeSttTasks:
+		m.ResetSttTasks()
 		return nil
 	case mediaartifact.EdgeSourceTranscodeTask:
 		m.ResetSourceTranscodeTask()
@@ -10530,6 +10698,1238 @@ func (m *RecordTaskMutation) ResetEdge(name string) error {
 		return nil
 	}
 	return fmt.Errorf("unknown RecordTask edge %s", name)
+}
+
+// STTTaskMutation represents an operation that mutates the STTTask nodes in the graph.
+type STTTaskMutation struct {
+	config
+	op                     Op
+	typ                    string
+	id                     *int
+	role                   *string
+	status                 *stttask.Status
+	priority               *int
+	addpriority            *int
+	k8s_job_name           *string
+	attempts               *int
+	addattempts            *int
+	stt_path               *string
+	subtitle_path          *string
+	error_message          *string
+	started_at             *time.Time
+	completed_at           *time.Time
+	created_at             *time.Time
+	updated_at             *time.Time
+	clearedFields          map[string]struct{}
+	match_round            *int
+	clearedmatch_round     bool
+	source_artifact        *int
+	clearedsource_artifact bool
+	done                   bool
+	oldValue               func(context.Context) (*STTTask, error)
+	predicates             []predicate.STTTask
+}
+
+var _ ent.Mutation = (*STTTaskMutation)(nil)
+
+// stttaskOption allows management of the mutation configuration using functional options.
+type stttaskOption func(*STTTaskMutation)
+
+// newSTTTaskMutation creates new mutation for the STTTask entity.
+func newSTTTaskMutation(c config, op Op, opts ...stttaskOption) *STTTaskMutation {
+	m := &STTTaskMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeSTTTask,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withSTTTaskID sets the ID field of the mutation.
+func withSTTTaskID(id int) stttaskOption {
+	return func(m *STTTaskMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *STTTask
+		)
+		m.oldValue = func(ctx context.Context) (*STTTask, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().STTTask.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withSTTTask sets the old STTTask of the mutation.
+func withSTTTask(node *STTTask) stttaskOption {
+	return func(m *STTTaskMutation) {
+		m.oldValue = func(context.Context) (*STTTask, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m STTTaskMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m STTTaskMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *STTTaskMutation) ID() (id int, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *STTTaskMutation) IDs(ctx context.Context) ([]int, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []int{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().STTTask.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetRole sets the "role" field.
+func (m *STTTaskMutation) SetRole(s string) {
+	m.role = &s
+}
+
+// Role returns the value of the "role" field in the mutation.
+func (m *STTTaskMutation) Role() (r string, exists bool) {
+	v := m.role
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRole returns the old "role" field's value of the STTTask entity.
+// If the STTTask object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *STTTaskMutation) OldRole(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRole is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRole requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRole: %w", err)
+	}
+	return oldValue.Role, nil
+}
+
+// ResetRole resets all changes to the "role" field.
+func (m *STTTaskMutation) ResetRole() {
+	m.role = nil
+}
+
+// SetStatus sets the "status" field.
+func (m *STTTaskMutation) SetStatus(s stttask.Status) {
+	m.status = &s
+}
+
+// Status returns the value of the "status" field in the mutation.
+func (m *STTTaskMutation) Status() (r stttask.Status, exists bool) {
+	v := m.status
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStatus returns the old "status" field's value of the STTTask entity.
+// If the STTTask object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *STTTaskMutation) OldStatus(ctx context.Context) (v stttask.Status, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStatus requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStatus: %w", err)
+	}
+	return oldValue.Status, nil
+}
+
+// ResetStatus resets all changes to the "status" field.
+func (m *STTTaskMutation) ResetStatus() {
+	m.status = nil
+}
+
+// SetPriority sets the "priority" field.
+func (m *STTTaskMutation) SetPriority(i int) {
+	m.priority = &i
+	m.addpriority = nil
+}
+
+// Priority returns the value of the "priority" field in the mutation.
+func (m *STTTaskMutation) Priority() (r int, exists bool) {
+	v := m.priority
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPriority returns the old "priority" field's value of the STTTask entity.
+// If the STTTask object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *STTTaskMutation) OldPriority(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPriority is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPriority requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPriority: %w", err)
+	}
+	return oldValue.Priority, nil
+}
+
+// AddPriority adds i to the "priority" field.
+func (m *STTTaskMutation) AddPriority(i int) {
+	if m.addpriority != nil {
+		*m.addpriority += i
+	} else {
+		m.addpriority = &i
+	}
+}
+
+// AddedPriority returns the value that was added to the "priority" field in this mutation.
+func (m *STTTaskMutation) AddedPriority() (r int, exists bool) {
+	v := m.addpriority
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetPriority resets all changes to the "priority" field.
+func (m *STTTaskMutation) ResetPriority() {
+	m.priority = nil
+	m.addpriority = nil
+}
+
+// SetK8sJobName sets the "k8s_job_name" field.
+func (m *STTTaskMutation) SetK8sJobName(s string) {
+	m.k8s_job_name = &s
+}
+
+// K8sJobName returns the value of the "k8s_job_name" field in the mutation.
+func (m *STTTaskMutation) K8sJobName() (r string, exists bool) {
+	v := m.k8s_job_name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldK8sJobName returns the old "k8s_job_name" field's value of the STTTask entity.
+// If the STTTask object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *STTTaskMutation) OldK8sJobName(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldK8sJobName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldK8sJobName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldK8sJobName: %w", err)
+	}
+	return oldValue.K8sJobName, nil
+}
+
+// ClearK8sJobName clears the value of the "k8s_job_name" field.
+func (m *STTTaskMutation) ClearK8sJobName() {
+	m.k8s_job_name = nil
+	m.clearedFields[stttask.FieldK8sJobName] = struct{}{}
+}
+
+// K8sJobNameCleared returns if the "k8s_job_name" field was cleared in this mutation.
+func (m *STTTaskMutation) K8sJobNameCleared() bool {
+	_, ok := m.clearedFields[stttask.FieldK8sJobName]
+	return ok
+}
+
+// ResetK8sJobName resets all changes to the "k8s_job_name" field.
+func (m *STTTaskMutation) ResetK8sJobName() {
+	m.k8s_job_name = nil
+	delete(m.clearedFields, stttask.FieldK8sJobName)
+}
+
+// SetAttempts sets the "attempts" field.
+func (m *STTTaskMutation) SetAttempts(i int) {
+	m.attempts = &i
+	m.addattempts = nil
+}
+
+// Attempts returns the value of the "attempts" field in the mutation.
+func (m *STTTaskMutation) Attempts() (r int, exists bool) {
+	v := m.attempts
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAttempts returns the old "attempts" field's value of the STTTask entity.
+// If the STTTask object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *STTTaskMutation) OldAttempts(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAttempts is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAttempts requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAttempts: %w", err)
+	}
+	return oldValue.Attempts, nil
+}
+
+// AddAttempts adds i to the "attempts" field.
+func (m *STTTaskMutation) AddAttempts(i int) {
+	if m.addattempts != nil {
+		*m.addattempts += i
+	} else {
+		m.addattempts = &i
+	}
+}
+
+// AddedAttempts returns the value that was added to the "attempts" field in this mutation.
+func (m *STTTaskMutation) AddedAttempts() (r int, exists bool) {
+	v := m.addattempts
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetAttempts resets all changes to the "attempts" field.
+func (m *STTTaskMutation) ResetAttempts() {
+	m.attempts = nil
+	m.addattempts = nil
+}
+
+// SetSttPath sets the "stt_path" field.
+func (m *STTTaskMutation) SetSttPath(s string) {
+	m.stt_path = &s
+}
+
+// SttPath returns the value of the "stt_path" field in the mutation.
+func (m *STTTaskMutation) SttPath() (r string, exists bool) {
+	v := m.stt_path
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSttPath returns the old "stt_path" field's value of the STTTask entity.
+// If the STTTask object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *STTTaskMutation) OldSttPath(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSttPath is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSttPath requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSttPath: %w", err)
+	}
+	return oldValue.SttPath, nil
+}
+
+// ClearSttPath clears the value of the "stt_path" field.
+func (m *STTTaskMutation) ClearSttPath() {
+	m.stt_path = nil
+	m.clearedFields[stttask.FieldSttPath] = struct{}{}
+}
+
+// SttPathCleared returns if the "stt_path" field was cleared in this mutation.
+func (m *STTTaskMutation) SttPathCleared() bool {
+	_, ok := m.clearedFields[stttask.FieldSttPath]
+	return ok
+}
+
+// ResetSttPath resets all changes to the "stt_path" field.
+func (m *STTTaskMutation) ResetSttPath() {
+	m.stt_path = nil
+	delete(m.clearedFields, stttask.FieldSttPath)
+}
+
+// SetSubtitlePath sets the "subtitle_path" field.
+func (m *STTTaskMutation) SetSubtitlePath(s string) {
+	m.subtitle_path = &s
+}
+
+// SubtitlePath returns the value of the "subtitle_path" field in the mutation.
+func (m *STTTaskMutation) SubtitlePath() (r string, exists bool) {
+	v := m.subtitle_path
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSubtitlePath returns the old "subtitle_path" field's value of the STTTask entity.
+// If the STTTask object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *STTTaskMutation) OldSubtitlePath(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSubtitlePath is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSubtitlePath requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSubtitlePath: %w", err)
+	}
+	return oldValue.SubtitlePath, nil
+}
+
+// ClearSubtitlePath clears the value of the "subtitle_path" field.
+func (m *STTTaskMutation) ClearSubtitlePath() {
+	m.subtitle_path = nil
+	m.clearedFields[stttask.FieldSubtitlePath] = struct{}{}
+}
+
+// SubtitlePathCleared returns if the "subtitle_path" field was cleared in this mutation.
+func (m *STTTaskMutation) SubtitlePathCleared() bool {
+	_, ok := m.clearedFields[stttask.FieldSubtitlePath]
+	return ok
+}
+
+// ResetSubtitlePath resets all changes to the "subtitle_path" field.
+func (m *STTTaskMutation) ResetSubtitlePath() {
+	m.subtitle_path = nil
+	delete(m.clearedFields, stttask.FieldSubtitlePath)
+}
+
+// SetErrorMessage sets the "error_message" field.
+func (m *STTTaskMutation) SetErrorMessage(s string) {
+	m.error_message = &s
+}
+
+// ErrorMessage returns the value of the "error_message" field in the mutation.
+func (m *STTTaskMutation) ErrorMessage() (r string, exists bool) {
+	v := m.error_message
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldErrorMessage returns the old "error_message" field's value of the STTTask entity.
+// If the STTTask object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *STTTaskMutation) OldErrorMessage(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldErrorMessage is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldErrorMessage requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldErrorMessage: %w", err)
+	}
+	return oldValue.ErrorMessage, nil
+}
+
+// ClearErrorMessage clears the value of the "error_message" field.
+func (m *STTTaskMutation) ClearErrorMessage() {
+	m.error_message = nil
+	m.clearedFields[stttask.FieldErrorMessage] = struct{}{}
+}
+
+// ErrorMessageCleared returns if the "error_message" field was cleared in this mutation.
+func (m *STTTaskMutation) ErrorMessageCleared() bool {
+	_, ok := m.clearedFields[stttask.FieldErrorMessage]
+	return ok
+}
+
+// ResetErrorMessage resets all changes to the "error_message" field.
+func (m *STTTaskMutation) ResetErrorMessage() {
+	m.error_message = nil
+	delete(m.clearedFields, stttask.FieldErrorMessage)
+}
+
+// SetStartedAt sets the "started_at" field.
+func (m *STTTaskMutation) SetStartedAt(t time.Time) {
+	m.started_at = &t
+}
+
+// StartedAt returns the value of the "started_at" field in the mutation.
+func (m *STTTaskMutation) StartedAt() (r time.Time, exists bool) {
+	v := m.started_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStartedAt returns the old "started_at" field's value of the STTTask entity.
+// If the STTTask object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *STTTaskMutation) OldStartedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStartedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStartedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStartedAt: %w", err)
+	}
+	return oldValue.StartedAt, nil
+}
+
+// ClearStartedAt clears the value of the "started_at" field.
+func (m *STTTaskMutation) ClearStartedAt() {
+	m.started_at = nil
+	m.clearedFields[stttask.FieldStartedAt] = struct{}{}
+}
+
+// StartedAtCleared returns if the "started_at" field was cleared in this mutation.
+func (m *STTTaskMutation) StartedAtCleared() bool {
+	_, ok := m.clearedFields[stttask.FieldStartedAt]
+	return ok
+}
+
+// ResetStartedAt resets all changes to the "started_at" field.
+func (m *STTTaskMutation) ResetStartedAt() {
+	m.started_at = nil
+	delete(m.clearedFields, stttask.FieldStartedAt)
+}
+
+// SetCompletedAt sets the "completed_at" field.
+func (m *STTTaskMutation) SetCompletedAt(t time.Time) {
+	m.completed_at = &t
+}
+
+// CompletedAt returns the value of the "completed_at" field in the mutation.
+func (m *STTTaskMutation) CompletedAt() (r time.Time, exists bool) {
+	v := m.completed_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCompletedAt returns the old "completed_at" field's value of the STTTask entity.
+// If the STTTask object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *STTTaskMutation) OldCompletedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCompletedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCompletedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCompletedAt: %w", err)
+	}
+	return oldValue.CompletedAt, nil
+}
+
+// ClearCompletedAt clears the value of the "completed_at" field.
+func (m *STTTaskMutation) ClearCompletedAt() {
+	m.completed_at = nil
+	m.clearedFields[stttask.FieldCompletedAt] = struct{}{}
+}
+
+// CompletedAtCleared returns if the "completed_at" field was cleared in this mutation.
+func (m *STTTaskMutation) CompletedAtCleared() bool {
+	_, ok := m.clearedFields[stttask.FieldCompletedAt]
+	return ok
+}
+
+// ResetCompletedAt resets all changes to the "completed_at" field.
+func (m *STTTaskMutation) ResetCompletedAt() {
+	m.completed_at = nil
+	delete(m.clearedFields, stttask.FieldCompletedAt)
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *STTTaskMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *STTTaskMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the STTTask entity.
+// If the STTTask object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *STTTaskMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *STTTaskMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *STTTaskMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *STTTaskMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the STTTask entity.
+// If the STTTask object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *STTTaskMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *STTTaskMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetMatchRoundID sets the "match_round" edge to the MatchRound entity by id.
+func (m *STTTaskMutation) SetMatchRoundID(id int) {
+	m.match_round = &id
+}
+
+// ClearMatchRound clears the "match_round" edge to the MatchRound entity.
+func (m *STTTaskMutation) ClearMatchRound() {
+	m.clearedmatch_round = true
+}
+
+// MatchRoundCleared reports if the "match_round" edge to the MatchRound entity was cleared.
+func (m *STTTaskMutation) MatchRoundCleared() bool {
+	return m.clearedmatch_round
+}
+
+// MatchRoundID returns the "match_round" edge ID in the mutation.
+func (m *STTTaskMutation) MatchRoundID() (id int, exists bool) {
+	if m.match_round != nil {
+		return *m.match_round, true
+	}
+	return
+}
+
+// MatchRoundIDs returns the "match_round" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// MatchRoundID instead. It exists only for internal usage by the builders.
+func (m *STTTaskMutation) MatchRoundIDs() (ids []int) {
+	if id := m.match_round; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetMatchRound resets all changes to the "match_round" edge.
+func (m *STTTaskMutation) ResetMatchRound() {
+	m.match_round = nil
+	m.clearedmatch_round = false
+}
+
+// SetSourceArtifactID sets the "source_artifact" edge to the MediaArtifact entity by id.
+func (m *STTTaskMutation) SetSourceArtifactID(id int) {
+	m.source_artifact = &id
+}
+
+// ClearSourceArtifact clears the "source_artifact" edge to the MediaArtifact entity.
+func (m *STTTaskMutation) ClearSourceArtifact() {
+	m.clearedsource_artifact = true
+}
+
+// SourceArtifactCleared reports if the "source_artifact" edge to the MediaArtifact entity was cleared.
+func (m *STTTaskMutation) SourceArtifactCleared() bool {
+	return m.clearedsource_artifact
+}
+
+// SourceArtifactID returns the "source_artifact" edge ID in the mutation.
+func (m *STTTaskMutation) SourceArtifactID() (id int, exists bool) {
+	if m.source_artifact != nil {
+		return *m.source_artifact, true
+	}
+	return
+}
+
+// SourceArtifactIDs returns the "source_artifact" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// SourceArtifactID instead. It exists only for internal usage by the builders.
+func (m *STTTaskMutation) SourceArtifactIDs() (ids []int) {
+	if id := m.source_artifact; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetSourceArtifact resets all changes to the "source_artifact" edge.
+func (m *STTTaskMutation) ResetSourceArtifact() {
+	m.source_artifact = nil
+	m.clearedsource_artifact = false
+}
+
+// Where appends a list predicates to the STTTaskMutation builder.
+func (m *STTTaskMutation) Where(ps ...predicate.STTTask) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the STTTaskMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *STTTaskMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.STTTask, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *STTTaskMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *STTTaskMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (STTTask).
+func (m *STTTaskMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *STTTaskMutation) Fields() []string {
+	fields := make([]string, 0, 12)
+	if m.role != nil {
+		fields = append(fields, stttask.FieldRole)
+	}
+	if m.status != nil {
+		fields = append(fields, stttask.FieldStatus)
+	}
+	if m.priority != nil {
+		fields = append(fields, stttask.FieldPriority)
+	}
+	if m.k8s_job_name != nil {
+		fields = append(fields, stttask.FieldK8sJobName)
+	}
+	if m.attempts != nil {
+		fields = append(fields, stttask.FieldAttempts)
+	}
+	if m.stt_path != nil {
+		fields = append(fields, stttask.FieldSttPath)
+	}
+	if m.subtitle_path != nil {
+		fields = append(fields, stttask.FieldSubtitlePath)
+	}
+	if m.error_message != nil {
+		fields = append(fields, stttask.FieldErrorMessage)
+	}
+	if m.started_at != nil {
+		fields = append(fields, stttask.FieldStartedAt)
+	}
+	if m.completed_at != nil {
+		fields = append(fields, stttask.FieldCompletedAt)
+	}
+	if m.created_at != nil {
+		fields = append(fields, stttask.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, stttask.FieldUpdatedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *STTTaskMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case stttask.FieldRole:
+		return m.Role()
+	case stttask.FieldStatus:
+		return m.Status()
+	case stttask.FieldPriority:
+		return m.Priority()
+	case stttask.FieldK8sJobName:
+		return m.K8sJobName()
+	case stttask.FieldAttempts:
+		return m.Attempts()
+	case stttask.FieldSttPath:
+		return m.SttPath()
+	case stttask.FieldSubtitlePath:
+		return m.SubtitlePath()
+	case stttask.FieldErrorMessage:
+		return m.ErrorMessage()
+	case stttask.FieldStartedAt:
+		return m.StartedAt()
+	case stttask.FieldCompletedAt:
+		return m.CompletedAt()
+	case stttask.FieldCreatedAt:
+		return m.CreatedAt()
+	case stttask.FieldUpdatedAt:
+		return m.UpdatedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *STTTaskMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case stttask.FieldRole:
+		return m.OldRole(ctx)
+	case stttask.FieldStatus:
+		return m.OldStatus(ctx)
+	case stttask.FieldPriority:
+		return m.OldPriority(ctx)
+	case stttask.FieldK8sJobName:
+		return m.OldK8sJobName(ctx)
+	case stttask.FieldAttempts:
+		return m.OldAttempts(ctx)
+	case stttask.FieldSttPath:
+		return m.OldSttPath(ctx)
+	case stttask.FieldSubtitlePath:
+		return m.OldSubtitlePath(ctx)
+	case stttask.FieldErrorMessage:
+		return m.OldErrorMessage(ctx)
+	case stttask.FieldStartedAt:
+		return m.OldStartedAt(ctx)
+	case stttask.FieldCompletedAt:
+		return m.OldCompletedAt(ctx)
+	case stttask.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case stttask.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown STTTask field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *STTTaskMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case stttask.FieldRole:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRole(v)
+		return nil
+	case stttask.FieldStatus:
+		v, ok := value.(stttask.Status)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStatus(v)
+		return nil
+	case stttask.FieldPriority:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPriority(v)
+		return nil
+	case stttask.FieldK8sJobName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetK8sJobName(v)
+		return nil
+	case stttask.FieldAttempts:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAttempts(v)
+		return nil
+	case stttask.FieldSttPath:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSttPath(v)
+		return nil
+	case stttask.FieldSubtitlePath:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSubtitlePath(v)
+		return nil
+	case stttask.FieldErrorMessage:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetErrorMessage(v)
+		return nil
+	case stttask.FieldStartedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStartedAt(v)
+		return nil
+	case stttask.FieldCompletedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCompletedAt(v)
+		return nil
+	case stttask.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case stttask.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown STTTask field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *STTTaskMutation) AddedFields() []string {
+	var fields []string
+	if m.addpriority != nil {
+		fields = append(fields, stttask.FieldPriority)
+	}
+	if m.addattempts != nil {
+		fields = append(fields, stttask.FieldAttempts)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *STTTaskMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case stttask.FieldPriority:
+		return m.AddedPriority()
+	case stttask.FieldAttempts:
+		return m.AddedAttempts()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *STTTaskMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case stttask.FieldPriority:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddPriority(v)
+		return nil
+	case stttask.FieldAttempts:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddAttempts(v)
+		return nil
+	}
+	return fmt.Errorf("unknown STTTask numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *STTTaskMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(stttask.FieldK8sJobName) {
+		fields = append(fields, stttask.FieldK8sJobName)
+	}
+	if m.FieldCleared(stttask.FieldSttPath) {
+		fields = append(fields, stttask.FieldSttPath)
+	}
+	if m.FieldCleared(stttask.FieldSubtitlePath) {
+		fields = append(fields, stttask.FieldSubtitlePath)
+	}
+	if m.FieldCleared(stttask.FieldErrorMessage) {
+		fields = append(fields, stttask.FieldErrorMessage)
+	}
+	if m.FieldCleared(stttask.FieldStartedAt) {
+		fields = append(fields, stttask.FieldStartedAt)
+	}
+	if m.FieldCleared(stttask.FieldCompletedAt) {
+		fields = append(fields, stttask.FieldCompletedAt)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *STTTaskMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *STTTaskMutation) ClearField(name string) error {
+	switch name {
+	case stttask.FieldK8sJobName:
+		m.ClearK8sJobName()
+		return nil
+	case stttask.FieldSttPath:
+		m.ClearSttPath()
+		return nil
+	case stttask.FieldSubtitlePath:
+		m.ClearSubtitlePath()
+		return nil
+	case stttask.FieldErrorMessage:
+		m.ClearErrorMessage()
+		return nil
+	case stttask.FieldStartedAt:
+		m.ClearStartedAt()
+		return nil
+	case stttask.FieldCompletedAt:
+		m.ClearCompletedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown STTTask nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *STTTaskMutation) ResetField(name string) error {
+	switch name {
+	case stttask.FieldRole:
+		m.ResetRole()
+		return nil
+	case stttask.FieldStatus:
+		m.ResetStatus()
+		return nil
+	case stttask.FieldPriority:
+		m.ResetPriority()
+		return nil
+	case stttask.FieldK8sJobName:
+		m.ResetK8sJobName()
+		return nil
+	case stttask.FieldAttempts:
+		m.ResetAttempts()
+		return nil
+	case stttask.FieldSttPath:
+		m.ResetSttPath()
+		return nil
+	case stttask.FieldSubtitlePath:
+		m.ResetSubtitlePath()
+		return nil
+	case stttask.FieldErrorMessage:
+		m.ResetErrorMessage()
+		return nil
+	case stttask.FieldStartedAt:
+		m.ResetStartedAt()
+		return nil
+	case stttask.FieldCompletedAt:
+		m.ResetCompletedAt()
+		return nil
+	case stttask.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case stttask.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown STTTask field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *STTTaskMutation) AddedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.match_round != nil {
+		edges = append(edges, stttask.EdgeMatchRound)
+	}
+	if m.source_artifact != nil {
+		edges = append(edges, stttask.EdgeSourceArtifact)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *STTTaskMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case stttask.EdgeMatchRound:
+		if id := m.match_round; id != nil {
+			return []ent.Value{*id}
+		}
+	case stttask.EdgeSourceArtifact:
+		if id := m.source_artifact; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *STTTaskMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 2)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *STTTaskMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *STTTaskMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.clearedmatch_round {
+		edges = append(edges, stttask.EdgeMatchRound)
+	}
+	if m.clearedsource_artifact {
+		edges = append(edges, stttask.EdgeSourceArtifact)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *STTTaskMutation) EdgeCleared(name string) bool {
+	switch name {
+	case stttask.EdgeMatchRound:
+		return m.clearedmatch_round
+	case stttask.EdgeSourceArtifact:
+		return m.clearedsource_artifact
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *STTTaskMutation) ClearEdge(name string) error {
+	switch name {
+	case stttask.EdgeMatchRound:
+		m.ClearMatchRound()
+		return nil
+	case stttask.EdgeSourceArtifact:
+		m.ClearSourceArtifact()
+		return nil
+	}
+	return fmt.Errorf("unknown STTTask unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *STTTaskMutation) ResetEdge(name string) error {
+	switch name {
+	case stttask.EdgeMatchRound:
+		m.ResetMatchRound()
+		return nil
+	case stttask.EdgeSourceArtifact:
+		m.ResetSourceArtifact()
+		return nil
+	}
+	return fmt.Errorf("unknown STTTask edge %s", name)
 }
 
 // TeamMutation represents an operation that mutates the Team nodes in the graph.

@@ -386,6 +386,29 @@ func HasRecordTasksWith(preds ...predicate.RecordTask) predicate.MatchRound {
 	})
 }
 
+// HasSttTasks applies the HasEdge predicate on the "stt_tasks" edge.
+func HasSttTasks() predicate.MatchRound {
+	return predicate.MatchRound(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, SttTasksTable, SttTasksColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasSttTasksWith applies the HasEdge predicate on the "stt_tasks" edge with a given conditions (other predicates).
+func HasSttTasksWith(preds ...predicate.STTTask) predicate.MatchRound {
+	return predicate.MatchRound(func(s *sql.Selector) {
+		step := newSttTasksStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // HasHighlightClips applies the HasEdge predicate on the "highlight_clips" edge.
 func HasHighlightClips() predicate.MatchRound {
 	return predicate.MatchRound(func(s *sql.Selector) {

@@ -20,6 +20,7 @@ import (
 	"scutbot.cn/web/rm-monitor/ent/matchround"
 	"scutbot.cn/web/rm-monitor/ent/mediaartifact"
 	"scutbot.cn/web/rm-monitor/ent/recordtask"
+	"scutbot.cn/web/rm-monitor/ent/stttask"
 	common "scutbot.cn/web/rm-monitor/pkg/config"
 	"scutbot.cn/web/rm-monitor/pkg/db"
 	"scutbot.cn/web/rm-monitor/pkg/jobcontract"
@@ -82,6 +83,18 @@ func (l *DispatchLogic) Tick(source string) (TickStats, error) {
 	}
 	stats.Dispatched = dispatched
 	if _, err := l.dispatchCompletedSTTJobs(); err != nil {
+		return stats, err
+	}
+	if err := l.reconcileSTTResults(); err != nil {
+		return stats, err
+	}
+	if err := l.recoverSTTDispatching(); err != nil {
+		return stats, err
+	}
+	if err := l.recoverLostSTTJobs(); err != nil {
+		return stats, err
+	}
+	if _, err := l.dispatchPendingSTTJobs(); err != nil {
 		return stats, err
 	}
 	manifestCreated, err := l.dispatchCompletedManifestJobs()
@@ -285,10 +298,11 @@ func (l *DispatchLogic) danmuContext(r *ent.MatchRound, chatRoomID string) (jobc
 	}, nil
 }
 
-func (l *DispatchLogic) sttContext(conf common.RecordConf, task *ent.RecordTask, artifact *ent.MediaArtifact) (jobcontract.STTContext, error) {
-	r, err := task.Edges.MatchRoundOrErr()
-	if err != nil {
-		return jobcontract.STTContext{}, err
+func (l *DispatchLogic) sttContext(conf common.RecordConf, task *ent.STTTask) (jobcontract.STTContext, error) {
+	r := task.Edges.MatchRound
+	artifact := task.Edges.SourceArtifact
+	if r == nil || artifact == nil {
+		return jobcontract.STTContext{}, errors.New("stt task missing round or source artifact")
 	}
 	m := r.Edges.Match
 	if m == nil {
@@ -310,7 +324,9 @@ func (l *DispatchLogic) sttContext(conf common.RecordConf, task *ent.RecordTask,
 	}
 	return jobcontract.STTContext{
 		Schema:            "rm-monitor/stt-context/v1",
+		STTTaskID:         task.ID,
 		MatchRoundID:      r.ID,
+		SourceArtifactID:  artifact.ID,
 		MatchID:           m.ID,
 		RoundNo:           r.RoundNo,
 		Role:              conf.STTRole,
@@ -522,59 +538,252 @@ func (l *DispatchLogic) recordContext(task *ent.RecordTask) jobcontract.RecordCo
 func (l *DispatchLogic) dispatchCompletedSTTJobs() (int, error) {
 	conf := l.svcCtx.Config.RecordConf.WithDefaults()
 	jobConf := l.svcCtx.Config.STTJobConf.WithDefaults()
-	if l.svcCtx.K8s == nil || strings.TrimSpace(conf.STTRole) == "" || strings.TrimSpace(jobConf.Image) == "" {
+	if strings.TrimSpace(conf.STTRole) == "" || strings.TrimSpace(jobConf.Image) == "" {
 		return 0, nil
 	}
-	tasks, err := l.svcCtx.DB.RecordTask.Query().
+	artifacts, err := l.svcCtx.DB.MediaArtifact.Query().
 		Where(
-			recordtask.StatusEQ(recordtask.StatusSUCCEEDED),
-			recordtask.RoleEQ(conf.STTRole),
-			recordtask.HasMatchRoundWith(matchround.StatusEQ(matchround.StatusENDED)),
-			recordtask.HasMediaArtifactsWith(mediaartifact.KindEQ(mediaartifact.KindSource), mediaartifact.StatusEQ(mediaartifact.StatusAVAILABLE)),
+			mediaartifact.KindEQ(mediaartifact.KindSource),
+			mediaartifact.StatusEQ(mediaartifact.StatusAVAILABLE),
+			mediaartifact.HasRecordTaskWith(
+				recordtask.StatusEQ(recordtask.StatusSUCCEEDED),
+				recordtask.RoleEQ(conf.STTRole),
+				recordtask.HasMatchRoundWith(matchround.StatusEQ(matchround.StatusENDED)),
+			),
+			mediaartifact.Not(mediaartifact.HasSttTasks()),
 		).
+		WithRecordTask(func(q *ent.RecordTaskQuery) {
+			q.WithMatchRound()
+		}).
+		Order(mediaartifact.ByRecordTaskField(recordtask.FieldPriority, sql.OrderDesc()), mediaartifact.ByCreatedAt(sql.OrderDesc())).
+		Limit(100).
+		All(l.ctx)
+	if err != nil {
+		return 0, errors.Wrap(err, "query source artifacts for stt")
+	}
+	created := 0
+	for _, artifact := range artifacts {
+		task := artifact.Edges.RecordTask
+		if task == nil || task.Edges.MatchRound == nil {
+			continue
+		}
+		roundDir := filepath.Dir(storagepath.Resolve(conf.BaseDir, artifact.Path))
+		status := stttask.StatusPENDING
+		sttPath := filepath.Join(roundDir, "stt.jsonl")
+		subtitlePath := filepath.Join(roundDir, fmt.Sprintf("%s.srt", conf.STTRole))
+		if fileExists(sttPath) {
+			status = stttask.StatusSUCCEEDED
+		}
+		builder := l.svcCtx.DB.STTTask.Create().
+			SetMatchRoundID(task.Edges.MatchRound.ID).
+			SetSourceArtifactID(artifact.ID).
+			SetRole(conf.STTRole).
+			SetPriority(task.Priority).
+			SetStatus(status).
+			SetSttPath(sttPath).
+			SetSubtitlePath(subtitlePath)
+		if task.CompletedAt != nil {
+			builder.SetCreatedAt(*task.CompletedAt)
+		}
+		if status == stttask.StatusSUCCEEDED {
+			builder.SetCompletedAt(time.Now())
+		}
+		err := builder.
+			OnConflictColumns(stttask.MatchRoundColumn, stttask.FieldRole).
+			DoNothing().
+			Exec(l.ctx)
+		if err != nil && !ent.IsConstraintError(err) {
+			return created, errors.Wrap(err, "create stt task")
+		}
+		created++
+	}
+	return created, nil
+}
+
+func (l *DispatchLogic) reconcileSTTResults() error {
+	if l.svcCtx.K8s == nil {
+		return nil
+	}
+	tasks, err := l.svcCtx.DB.STTTask.Query().
+		Where(stttask.StatusEQ(stttask.StatusRUNNING)).
+		WithSourceArtifact(func(q *ent.MediaArtifactQuery) {
+			q.WithRecordTask(func(q *ent.RecordTaskQuery) {
+				q.WithMatchRound(func(q *ent.MatchRoundQuery) {
+					q.WithMatch(func(mq *ent.MatchQuery) { mq.WithRedTeam().WithBlueTeam() })
+				})
+			})
+		}).
 		WithMatchRound(func(q *ent.MatchRoundQuery) {
 			q.WithMatch(func(mq *ent.MatchQuery) { mq.WithRedTeam().WithBlueTeam() })
 		}).
-		WithMediaArtifacts(func(q *ent.MediaArtifactQuery) {
-			q.Where(mediaartifact.KindEQ(mediaartifact.KindSource), mediaartifact.StatusEQ(mediaartifact.StatusAVAILABLE)).
-				Order(mediaartifact.ByCreatedAt(sql.OrderDesc())).
-				Limit(1)
-		}).
-		Order(recordtask.ByPriority(sql.OrderDesc()), recordtask.ByCompletedAt()).
-		Limit(50).
+		Limit(100).
 		All(l.ctx)
 	if err != nil {
-		return 0, errors.Wrap(err, "query completed record tasks for stt")
+		return errors.Wrap(err, "query running stt tasks")
 	}
-	dispatched := 0
+	namespace := l.svcCtx.Config.STTJobConf.WithDefaults().Namespace
 	for _, task := range tasks {
-		r, err := task.Edges.MatchRoundOrErr()
-		if err != nil {
-			return dispatched, err
+		name := jobName("stt", task.ID)
+		if task.K8sJobName != nil && *task.K8sJobName != "" {
+			name = *task.K8sJobName
 		}
-		if len(task.Edges.MediaArtifacts) == 0 {
+		status, err := l.svcCtx.K8s.JobStatus(l.ctx, namespace, name)
+		if err != nil {
+			return err
+		}
+		if status.State == kubejob.JobStateRunning || status.State == kubejob.JobStateMissing {
 			continue
 		}
-		artifact := task.Edges.MediaArtifacts[0]
-		name := jobName("stt", r.ID)
-		roundDir := filepath.Dir(storagepath.Resolve(conf.BaseDir, artifact.Path))
-		if sttJobFinished(roundDir, name) {
+		resultPath, errorPath, err := l.sttResultPaths(task)
+		if err != nil {
+			if err := l.failSTTTask(task.ID, err.Error()); err != nil {
+				return err
+			}
 			continue
 		}
-		exists, err := l.svcCtx.K8s.JobExists(l.ctx, jobConf.Namespace, name)
+		var result jobcontract.STTResult
+		if ok, err := jobcontract.ReadJSON(resultPath, &result); err != nil {
+			return err
+		} else if ok {
+			if err := l.applySTTResult(task.ID, result); err != nil {
+				return err
+			}
+			continue
+		}
+		var jobErr jobcontract.ErrorResult
+		if ok, err := jobcontract.ReadJSON(errorPath, &jobErr); err != nil {
+			return err
+		} else if ok {
+			if err := l.failSTTTask(task.ID, jobErr.ErrorMessage); err != nil {
+				return err
+			}
+			continue
+		}
+		if err := l.failSTTTask(task.ID, fmt.Sprintf("stt job %s finished as %s but did not write result.json or error.json", name, status.State)); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (l *DispatchLogic) recoverSTTDispatching() error {
+	if l.svcCtx.K8s == nil {
+		return nil
+	}
+	tasks, err := l.svcCtx.DB.STTTask.Query().
+		Where(stttask.StatusEQ(stttask.StatusDISPATCHING), stttask.UpdatedAtLTE(time.Now().Add(-dispatchingStaleAfter))).
+		Limit(100).
+		All(l.ctx)
+	if err != nil {
+		return errors.Wrap(err, "query stale dispatching stt tasks")
+	}
+	namespace := l.svcCtx.Config.STTJobConf.WithDefaults().Namespace
+	for _, task := range tasks {
+		name := jobName("stt", task.ID)
+		if task.K8sJobName != nil && *task.K8sJobName != "" {
+			name = *task.K8sJobName
+		}
+		exists, err := l.svcCtx.K8s.JobExists(l.ctx, namespace, name)
 		if err != nil {
-			return dispatched, err
+			return err
+		}
+		if exists {
+			if err := l.svcCtx.DB.STTTask.UpdateOneID(task.ID).SetStatus(stttask.StatusRUNNING).SetStartedAt(time.Now()).Exec(l.ctx); err != nil {
+				return errors.Wrap(err, "recover running stt task")
+			}
+			continue
+		}
+		if err := l.svcCtx.DB.STTTask.UpdateOneID(task.ID).SetStatus(stttask.StatusPENDING).ClearK8sJobName().Exec(l.ctx); err != nil {
+			return errors.Wrap(err, "requeue stale stt task")
+		}
+	}
+	return nil
+}
+
+func (l *DispatchLogic) recoverLostSTTJobs() error {
+	if l.svcCtx.K8s == nil {
+		return nil
+	}
+	tasks, err := l.svcCtx.DB.STTTask.Query().
+		Where(stttask.StatusEQ(stttask.StatusRUNNING), stttask.UpdatedAtLTE(time.Now().Add(-dispatchingStaleAfter))).
+		Limit(100).
+		All(l.ctx)
+	if err != nil {
+		return errors.Wrap(err, "query stale running stt tasks")
+	}
+	namespace := l.svcCtx.Config.STTJobConf.WithDefaults().Namespace
+	for _, task := range tasks {
+		name := jobName("stt", task.ID)
+		if task.K8sJobName != nil && *task.K8sJobName != "" {
+			name = *task.K8sJobName
+		}
+		exists, err := l.svcCtx.K8s.JobExists(l.ctx, namespace, name)
+		if err != nil {
+			return err
 		}
 		if exists {
 			continue
 		}
-		jobCtx, err := l.sttContext(conf, task, artifact)
+		if err := l.svcCtx.DB.STTTask.UpdateOneID(task.ID).SetStatus(stttask.StatusPENDING).ClearK8sJobName().Exec(l.ctx); err != nil {
+			return errors.Wrap(err, "requeue lost stt task")
+		}
+	}
+	return nil
+}
+
+func (l *DispatchLogic) dispatchPendingSTTJobs() (int, error) {
+	conf := l.svcCtx.Config.RecordConf.WithDefaults()
+	jobConf := l.svcCtx.Config.STTJobConf.WithDefaults()
+	if l.svcCtx.K8s == nil || strings.TrimSpace(conf.STTRole) == "" || strings.TrimSpace(jobConf.Image) == "" {
+		return 0, nil
+	}
+	active, err := l.svcCtx.DB.STTTask.Query().
+		Where(stttask.StatusIn(stttask.StatusDISPATCHING, stttask.StatusRUNNING)).
+		Count(l.ctx)
+	if err != nil {
+		return 0, errors.Wrap(err, "count running stt tasks")
+	}
+	available := 1 - active
+	if available <= 0 {
+		return 0, nil
+	}
+	tasks, err := l.svcCtx.DB.STTTask.Query().
+		Where(stttask.StatusEQ(stttask.StatusPENDING)).
+		WithSourceArtifact().
+		WithMatchRound(func(q *ent.MatchRoundQuery) {
+			q.WithMatch(func(mq *ent.MatchQuery) { mq.WithRedTeam().WithBlueTeam() })
+		}).
+		Order(stttask.ByPriority(sql.OrderDesc()), stttask.ByCreatedAt(sql.OrderDesc())).
+		Limit(available).
+		All(l.ctx)
+	if err != nil {
+		return 0, errors.Wrap(err, "query pending stt tasks")
+	}
+	dispatched := 0
+	for _, task := range tasks {
+		name := jobName("stt", task.ID)
+		jobCtx, err := l.sttContext(conf, task)
 		if err != nil {
-			return dispatched, err
+			if err := l.failSTTTask(task.ID, err.Error()); err != nil {
+				return dispatched, err
+			}
+			continue
 		}
 		rawCtx, err := json.Marshal(jobCtx)
 		if err != nil {
 			return dispatched, errors.Wrap(err, "encode stt job context")
+		}
+		claimed, err := l.svcCtx.DB.STTTask.Update().
+			Where(stttask.ID(task.ID), stttask.StatusEQ(stttask.StatusPENDING)).
+			SetStatus(stttask.StatusDISPATCHING).
+			AddAttempts(1).
+			SetK8sJobName(name).
+			Save(l.ctx)
+		if err != nil {
+			return dispatched, errors.Wrap(err, "mark stt dispatching")
+		}
+		if claimed == 0 {
+			continue
 		}
 		job := kubejob.Build(l.svcCtx.Config.STTJobConf, kubejob.JobSpec{
 			Name:              name,
@@ -589,12 +798,51 @@ func (l *DispatchLogic) dispatchCompletedSTTJobs() (int, error) {
 			PriorityClassName: kubejob.PriorityClassBackground,
 		})
 		if err := l.svcCtx.K8s.CreateJob(l.ctx, jobConf.Namespace, job); err != nil {
+			_ = l.svcCtx.DB.STTTask.UpdateOneID(task.ID).SetStatus(stttask.StatusFAILED).SetErrorMessage(err.Error()).Exec(l.ctx)
 			return dispatched, err
 		}
+		if err := l.svcCtx.DB.STTTask.UpdateOneID(task.ID).SetStatus(stttask.StatusRUNNING).SetStartedAt(time.Now()).Exec(l.ctx); err != nil {
+			return dispatched, errors.Wrap(err, "mark stt running")
+		}
 		dispatched++
-		l.Infof("dispatched stt job round=%d record_task=%d artifact=%d job=%s source=%s", r.ID, task.ID, artifact.ID, name, artifact.Path)
+		l.Infof("dispatched stt job task=%d round=%d artifact=%d job=%s source=%s", task.ID, jobCtx.MatchRoundID, jobCtx.SourceArtifactID, name, jobCtx.SourcePath)
 	}
 	return dispatched, nil
+}
+
+func (l *DispatchLogic) sttResultPaths(task *ent.STTTask) (string, string, error) {
+	jobCtx, err := l.sttContext(l.svcCtx.Config.RecordConf.WithDefaults(), task)
+	if err != nil {
+		return "", "", err
+	}
+	dir := filepath.Join(jobCtx.RoundDir, jobcontract.DirName, fmt.Sprintf("stt-%d", jobCtx.STTTaskID))
+	return filepath.Join(dir, jobcontract.ResultFile), filepath.Join(dir, jobcontract.ErrorFile), nil
+}
+
+func (l *DispatchLogic) applySTTResult(taskID int, result jobcontract.STTResult) error {
+	completedAt := result.CompletedAt
+	if completedAt.IsZero() {
+		completedAt = time.Now()
+	}
+	if err := l.svcCtx.DB.STTTask.UpdateOneID(taskID).
+		SetStatus(stttask.StatusSUCCEEDED).
+		SetSttPath(result.STTPath).
+		SetSubtitlePath(result.SubtitlePath).
+		SetCompletedAt(completedAt).
+		ClearErrorMessage().
+		Exec(l.ctx); err != nil {
+		return errors.Wrap(err, "mark stt succeeded")
+	}
+	return db.Notify(l.ctx, l.svcCtx.Config.PostgresConf.DSN, db.RecordTaskChangedChannel, strconv.Itoa(taskID))
+}
+
+func (l *DispatchLogic) failSTTTask(taskID int, msg string) error {
+	msg = jobcontract.Tail(msg, 4096)
+	return errors.Wrap(l.svcCtx.DB.STTTask.UpdateOneID(taskID).
+		SetStatus(stttask.StatusFAILED).
+		SetErrorMessage(msg).
+		SetCompletedAt(time.Now()).
+		Exec(l.ctx), "mark stt failed")
 }
 
 func (l *DispatchLogic) reconcileRecordResults() (int, error) {
@@ -764,7 +1012,7 @@ func (l *DispatchLogic) matchSTTReady(m *ent.Match) (bool, error) {
 		return true, nil
 	}
 	for _, r := range m.Edges.Rounds {
-		ready, err := l.roundSTTReady(recordConf, r, sttRole)
+		ready, err := l.roundSTTReady(r, sttRole)
 		if err != nil {
 			return false, err
 		}
@@ -775,37 +1023,24 @@ func (l *DispatchLogic) matchSTTReady(m *ent.Match) (bool, error) {
 	return true, nil
 }
 
-func (l *DispatchLogic) roundSTTReady(conf common.RecordConf, r *ent.MatchRound, sttRole string) (bool, error) {
-	task, err := l.svcCtx.DB.RecordTask.Query().
-		Where(recordtask.HasMatchRoundWith(matchround.ID(r.ID)), recordtask.RoleEQ(sttRole)).
-		WithMediaArtifacts().
+func (l *DispatchLogic) roundSTTReady(r *ent.MatchRound, sttRole string) (bool, error) {
+	task, err := l.svcCtx.DB.STTTask.Query().
+		Where(stttask.HasMatchRoundWith(matchround.ID(r.ID)), stttask.RoleEQ(sttRole)).
 		Only(l.ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
 			return false, nil
 		}
-		return false, errors.Wrap(err, "query stt record task")
+		return false, errors.Wrap(err, "query stt task")
 	}
 	switch task.Status {
-	case recordtask.StatusFAILED:
+	case stttask.StatusFAILED:
 		return true, nil
-	case recordtask.StatusSUCCEEDED:
+	case stttask.StatusSUCCEEDED:
+		return true, nil
 	default:
 		return false, nil
 	}
-	var source *ent.MediaArtifact
-	for _, artifact := range task.Edges.MediaArtifacts {
-		if artifact.Kind == mediaartifact.KindSource && artifact.Status == mediaartifact.StatusAVAILABLE {
-			source = artifact
-			break
-		}
-	}
-	if source == nil {
-		return false, nil
-	}
-	roundDir := filepath.Dir(storagepath.Resolve(conf.BaseDir, source.Path))
-	name := jobName("stt", r.ID)
-	return sttJobFinished(roundDir, name), nil
 }
 
 func completedMatch(m *ent.Match) bool {
@@ -832,9 +1067,4 @@ func manifestJobName(matchID string) string {
 func fileExists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
-}
-
-func sttJobFinished(roundDir, jobName string) bool {
-	return fileExists(filepath.Join(roundDir, "stt.jsonl")) ||
-		fileExists(filepath.Join(roundDir, jobcontract.DirName, jobName, jobcontract.ErrorFile))
 }

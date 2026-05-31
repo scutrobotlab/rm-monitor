@@ -41,6 +41,8 @@ const (
 	EdgeRecordTask = "record_task"
 	// EdgeUploadTask holds the string denoting the upload_task edge name in mutations.
 	EdgeUploadTask = "upload_task"
+	// EdgeSttTasks holds the string denoting the stt_tasks edge name in mutations.
+	EdgeSttTasks = "stt_tasks"
 	// EdgeSourceTranscodeTask holds the string denoting the source_transcode_task edge name in mutations.
 	EdgeSourceTranscodeTask = "source_transcode_task"
 	// EdgeArchiveTranscodeTask holds the string denoting the archive_transcode_task edge name in mutations.
@@ -65,6 +67,13 @@ const (
 	UploadTaskInverseTable = "upload_tasks"
 	// UploadTaskColumn is the table column denoting the upload_task relation/edge.
 	UploadTaskColumn = "media_artifact_upload_task"
+	// SttTasksTable is the table that holds the stt_tasks relation/edge.
+	SttTasksTable = "stt_tasks"
+	// SttTasksInverseTable is the table name for the STTTask entity.
+	// It exists in this package in order to avoid circular dependency with the "stttask" package.
+	SttTasksInverseTable = "stt_tasks"
+	// SttTasksColumn is the table column denoting the stt_tasks relation/edge.
+	SttTasksColumn = "media_artifact_stt_tasks"
 	// SourceTranscodeTaskTable is the table that holds the source_transcode_task relation/edge.
 	SourceTranscodeTaskTable = "transcode_tasks"
 	// SourceTranscodeTaskInverseTable is the table name for the TranscodeTask entity.
@@ -313,6 +322,20 @@ func ByUploadTaskField(field string, opts ...sql.OrderTermOption) OrderOption {
 	}
 }
 
+// BySttTasksCount orders the results by stt_tasks count.
+func BySttTasksCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newSttTasksStep(), opts...)
+	}
+}
+
+// BySttTasks orders the results by stt_tasks terms.
+func BySttTasks(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newSttTasksStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
 // BySourceTranscodeTaskField orders the results by source_transcode_task field.
 func BySourceTranscodeTaskField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -366,6 +389,13 @@ func newUploadTaskStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(UploadTaskInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2O, false, UploadTaskTable, UploadTaskColumn),
+	)
+}
+func newSttTasksStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(SttTasksInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, SttTasksTable, SttTasksColumn),
 	)
 }
 func newSourceTranscodeTaskStep() *sqlgraph.Step {

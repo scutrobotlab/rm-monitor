@@ -20,6 +20,7 @@ import (
 	"scutbot.cn/web/rm-monitor/ent/mediaartifact"
 	"scutbot.cn/web/rm-monitor/ent/ocrtask"
 	"scutbot.cn/web/rm-monitor/ent/recordtask"
+	"scutbot.cn/web/rm-monitor/ent/stttask"
 	"scutbot.cn/web/rm-monitor/ent/team"
 	"scutbot.cn/web/rm-monitor/ent/transcodetask"
 	"scutbot.cn/web/rm-monitor/ent/uploadtask"
@@ -91,6 +92,7 @@ func checkColumn(t, c string) error {
 			mediaartifact.Table:        mediaartifact.ValidColumn,
 			ocrtask.Table:              ocrtask.ValidColumn,
 			recordtask.Table:           recordtask.ValidColumn,
+			stttask.Table:              stttask.ValidColumn,
 			team.Table:                 team.ValidColumn,
 			transcodetask.Table:        transcodetask.ValidColumn,
 			uploadtask.Table:           uploadtask.ValidColumn,

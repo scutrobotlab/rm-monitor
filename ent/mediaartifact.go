@@ -55,6 +55,8 @@ type MediaArtifactEdges struct {
 	RecordTask *RecordTask `json:"record_task,omitempty"`
 	// UploadTask holds the value of the upload_task edge.
 	UploadTask *UploadTask `json:"upload_task,omitempty"`
+	// SttTasks holds the value of the stt_tasks edge.
+	SttTasks []*STTTask `json:"stt_tasks,omitempty"`
 	// SourceTranscodeTask holds the value of the source_transcode_task edge.
 	SourceTranscodeTask *TranscodeTask `json:"source_transcode_task,omitempty"`
 	// ArchiveTranscodeTask holds the value of the archive_transcode_task edge.
@@ -65,7 +67,7 @@ type MediaArtifactEdges struct {
 	OcrTasks []*OCRTask `json:"ocr_tasks,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [6]bool
+	loadedTypes [7]bool
 }
 
 // RecordTaskOrErr returns the RecordTask value or an error if the edge
@@ -90,12 +92,21 @@ func (e MediaArtifactEdges) UploadTaskOrErr() (*UploadTask, error) {
 	return nil, &NotLoadedError{edge: "upload_task"}
 }
 
+// SttTasksOrErr returns the SttTasks value or an error if the edge
+// was not loaded in eager-loading.
+func (e MediaArtifactEdges) SttTasksOrErr() ([]*STTTask, error) {
+	if e.loadedTypes[2] {
+		return e.SttTasks, nil
+	}
+	return nil, &NotLoadedError{edge: "stt_tasks"}
+}
+
 // SourceTranscodeTaskOrErr returns the SourceTranscodeTask value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
 func (e MediaArtifactEdges) SourceTranscodeTaskOrErr() (*TranscodeTask, error) {
 	if e.SourceTranscodeTask != nil {
 		return e.SourceTranscodeTask, nil
-	} else if e.loadedTypes[2] {
+	} else if e.loadedTypes[3] {
 		return nil, &NotFoundError{label: transcodetask.Label}
 	}
 	return nil, &NotLoadedError{edge: "source_transcode_task"}
@@ -106,7 +117,7 @@ func (e MediaArtifactEdges) SourceTranscodeTaskOrErr() (*TranscodeTask, error) {
 func (e MediaArtifactEdges) ArchiveTranscodeTaskOrErr() (*TranscodeTask, error) {
 	if e.ArchiveTranscodeTask != nil {
 		return e.ArchiveTranscodeTask, nil
-	} else if e.loadedTypes[3] {
+	} else if e.loadedTypes[4] {
 		return nil, &NotFoundError{label: transcodetask.Label}
 	}
 	return nil, &NotLoadedError{edge: "archive_transcode_task"}
@@ -115,7 +126,7 @@ func (e MediaArtifactEdges) ArchiveTranscodeTaskOrErr() (*TranscodeTask, error) 
 // HighlightClipsOrErr returns the HighlightClips value or an error if the edge
 // was not loaded in eager-loading.
 func (e MediaArtifactEdges) HighlightClipsOrErr() ([]*HighlightClip, error) {
-	if e.loadedTypes[4] {
+	if e.loadedTypes[5] {
 		return e.HighlightClips, nil
 	}
 	return nil, &NotLoadedError{edge: "highlight_clips"}
@@ -124,7 +135,7 @@ func (e MediaArtifactEdges) HighlightClipsOrErr() ([]*HighlightClip, error) {
 // OcrTasksOrErr returns the OcrTasks value or an error if the edge
 // was not loaded in eager-loading.
 func (e MediaArtifactEdges) OcrTasksOrErr() ([]*OCRTask, error) {
-	if e.loadedTypes[5] {
+	if e.loadedTypes[6] {
 		return e.OcrTasks, nil
 	}
 	return nil, &NotLoadedError{edge: "ocr_tasks"}
@@ -262,6 +273,11 @@ func (_m *MediaArtifact) QueryRecordTask() *RecordTaskQuery {
 // QueryUploadTask queries the "upload_task" edge of the MediaArtifact entity.
 func (_m *MediaArtifact) QueryUploadTask() *UploadTaskQuery {
 	return NewMediaArtifactClient(_m.config).QueryUploadTask(_m)
+}
+
+// QuerySttTasks queries the "stt_tasks" edge of the MediaArtifact entity.
+func (_m *MediaArtifact) QuerySttTasks() *STTTaskQuery {
+	return NewMediaArtifactClient(_m.config).QuerySttTasks(_m)
 }
 
 // QuerySourceTranscodeTask queries the "source_transcode_task" edge of the MediaArtifact entity.

@@ -29,6 +29,7 @@ func (MatchRound) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("match", Match.Type).Ref("rounds").Unique().Required(),
 		edge.To("record_tasks", RecordTask.Type),
+		edge.To("stt_tasks", STTTask.Type),
 		edge.To("highlight_clips", HighlightClip.Type),
 		edge.To("ocr_tasks", OCRTask.Type),
 	}

@@ -17,6 +17,7 @@ import (
 	"scutbot.cn/web/rm-monitor/ent/ocrtask"
 	"scutbot.cn/web/rm-monitor/ent/predicate"
 	"scutbot.cn/web/rm-monitor/ent/recordtask"
+	"scutbot.cn/web/rm-monitor/ent/stttask"
 	"scutbot.cn/web/rm-monitor/ent/transcodetask"
 	"scutbot.cn/web/rm-monitor/ent/uploadtask"
 )
@@ -30,6 +31,7 @@ type MediaArtifactQuery struct {
 	predicates               []predicate.MediaArtifact
 	withRecordTask           *RecordTaskQuery
 	withUploadTask           *UploadTaskQuery
+	withSttTasks             *STTTaskQuery
 	withSourceTranscodeTask  *TranscodeTaskQuery
 	withArchiveTranscodeTask *TranscodeTaskQuery
 	withHighlightClips       *HighlightClipQuery
@@ -108,6 +110,28 @@ func (_q *MediaArtifactQuery) QueryUploadTask() *UploadTaskQuery {
 			sqlgraph.From(mediaartifact.Table, mediaartifact.FieldID, selector),
 			sqlgraph.To(uploadtask.Table, uploadtask.FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, false, mediaartifact.UploadTaskTable, mediaartifact.UploadTaskColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QuerySttTasks chains the current query on the "stt_tasks" edge.
+func (_q *MediaArtifactQuery) QuerySttTasks() *STTTaskQuery {
+	query := (&STTTaskClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(mediaartifact.Table, mediaartifact.FieldID, selector),
+			sqlgraph.To(stttask.Table, stttask.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, mediaartifact.SttTasksTable, mediaartifact.SttTasksColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -397,6 +421,7 @@ func (_q *MediaArtifactQuery) Clone() *MediaArtifactQuery {
 		predicates:               append([]predicate.MediaArtifact{}, _q.predicates...),
 		withRecordTask:           _q.withRecordTask.Clone(),
 		withUploadTask:           _q.withUploadTask.Clone(),
+		withSttTasks:             _q.withSttTasks.Clone(),
 		withSourceTranscodeTask:  _q.withSourceTranscodeTask.Clone(),
 		withArchiveTranscodeTask: _q.withArchiveTranscodeTask.Clone(),
 		withHighlightClips:       _q.withHighlightClips.Clone(),
@@ -426,6 +451,17 @@ func (_q *MediaArtifactQuery) WithUploadTask(opts ...func(*UploadTaskQuery)) *Me
 		opt(query)
 	}
 	_q.withUploadTask = query
+	return _q
+}
+
+// WithSttTasks tells the query-builder to eager-load the nodes that are connected to
+// the "stt_tasks" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *MediaArtifactQuery) WithSttTasks(opts ...func(*STTTaskQuery)) *MediaArtifactQuery {
+	query := (&STTTaskClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withSttTasks = query
 	return _q
 }
 
@@ -552,9 +588,10 @@ func (_q *MediaArtifactQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([
 		nodes       = []*MediaArtifact{}
 		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
-		loadedTypes = [6]bool{
+		loadedTypes = [7]bool{
 			_q.withRecordTask != nil,
 			_q.withUploadTask != nil,
+			_q.withSttTasks != nil,
 			_q.withSourceTranscodeTask != nil,
 			_q.withArchiveTranscodeTask != nil,
 			_q.withHighlightClips != nil,
@@ -594,6 +631,13 @@ func (_q *MediaArtifactQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([
 	if query := _q.withUploadTask; query != nil {
 		if err := _q.loadUploadTask(ctx, query, nodes, nil,
 			func(n *MediaArtifact, e *UploadTask) { n.Edges.UploadTask = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withSttTasks; query != nil {
+		if err := _q.loadSttTasks(ctx, query, nodes,
+			func(n *MediaArtifact) { n.Edges.SttTasks = []*STTTask{} },
+			func(n *MediaArtifact, e *STTTask) { n.Edges.SttTasks = append(n.Edges.SttTasks, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -681,6 +725,37 @@ func (_q *MediaArtifactQuery) loadUploadTask(ctx context.Context, query *UploadT
 		node, ok := nodeids[*fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "media_artifact_upload_task" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *MediaArtifactQuery) loadSttTasks(ctx context.Context, query *STTTaskQuery, nodes []*MediaArtifact, init func(*MediaArtifact), assign func(*MediaArtifact, *STTTask)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[int]*MediaArtifact)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.STTTask(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(mediaartifact.SttTasksColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.media_artifact_stt_tasks
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "media_artifact_stt_tasks" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "media_artifact_stt_tasks" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

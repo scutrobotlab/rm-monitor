@@ -14,6 +14,7 @@ import (
 	"scutbot.cn/web/rm-monitor/ent/ocrtask"
 	"scutbot.cn/web/rm-monitor/ent/recordtask"
 	"scutbot.cn/web/rm-monitor/ent/schema"
+	"scutbot.cn/web/rm-monitor/ent/stttask"
 	"scutbot.cn/web/rm-monitor/ent/team"
 	"scutbot.cn/web/rm-monitor/ent/transcodetask"
 	"scutbot.cn/web/rm-monitor/ent/uploadtask"
@@ -175,6 +176,26 @@ func init() {
 	recordtask.DefaultUpdatedAt = recordtaskDescUpdatedAt.Default.(func() time.Time)
 	// recordtask.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	recordtask.UpdateDefaultUpdatedAt = recordtaskDescUpdatedAt.UpdateDefault.(func() time.Time)
+	stttaskFields := schema.STTTask{}.Fields()
+	_ = stttaskFields
+	// stttaskDescPriority is the schema descriptor for priority field.
+	stttaskDescPriority := stttaskFields[2].Descriptor()
+	// stttask.DefaultPriority holds the default value on creation for the priority field.
+	stttask.DefaultPriority = stttaskDescPriority.Default.(int)
+	// stttaskDescAttempts is the schema descriptor for attempts field.
+	stttaskDescAttempts := stttaskFields[4].Descriptor()
+	// stttask.DefaultAttempts holds the default value on creation for the attempts field.
+	stttask.DefaultAttempts = stttaskDescAttempts.Default.(int)
+	// stttaskDescCreatedAt is the schema descriptor for created_at field.
+	stttaskDescCreatedAt := stttaskFields[10].Descriptor()
+	// stttask.DefaultCreatedAt holds the default value on creation for the created_at field.
+	stttask.DefaultCreatedAt = stttaskDescCreatedAt.Default.(func() time.Time)
+	// stttaskDescUpdatedAt is the schema descriptor for updated_at field.
+	stttaskDescUpdatedAt := stttaskFields[11].Descriptor()
+	// stttask.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	stttask.DefaultUpdatedAt = stttaskDescUpdatedAt.Default.(func() time.Time)
+	// stttask.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	stttask.UpdateDefaultUpdatedAt = stttaskDescUpdatedAt.UpdateDefault.(func() time.Time)
 	teamFields := schema.Team{}.Fields()
 	_ = teamFields
 	// teamDescName is the schema descriptor for name field.

@@ -95,7 +95,9 @@ type UploadResult struct {
 
 type STTContext struct {
 	Schema            string   `json:"schema"`
+	STTTaskID         int      `json:"stt_task_id"`
 	MatchRoundID      int      `json:"match_round_id"`
+	SourceArtifactID  int      `json:"source_artifact_id"`
 	MatchID           string   `json:"match_id"`
 	RoundNo           int      `json:"round_no"`
 	Role              string   `json:"role"`
@@ -109,8 +111,10 @@ type STTContext struct {
 
 type STTResult struct {
 	Schema       string    `json:"schema"`
+	STTTaskID    int       `json:"stt_task_id"`
 	MatchRoundID int       `json:"match_round_id"`
 	STTPath      string    `json:"stt_path"`
+	SubtitlePath string    `json:"subtitle_path,omitempty"`
 	CompletedAt  time.Time `json:"completed_at"`
 }
 

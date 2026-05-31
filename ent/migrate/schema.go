@@ -426,6 +426,66 @@ var (
 			},
 		},
 	}
+	// SttTasksColumns holds the columns for the "stt_tasks" table.
+	SttTasksColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "role", Type: field.TypeString},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"PENDING", "DISPATCHING", "RUNNING", "SUCCEEDED", "FAILED"}, Default: "PENDING"},
+		{Name: "priority", Type: field.TypeInt, Default: 0},
+		{Name: "k8s_job_name", Type: field.TypeString, Nullable: true},
+		{Name: "attempts", Type: field.TypeInt, Default: 0},
+		{Name: "stt_path", Type: field.TypeString, Nullable: true},
+		{Name: "subtitle_path", Type: field.TypeString, Nullable: true},
+		{Name: "error_message", Type: field.TypeString, Nullable: true},
+		{Name: "started_at", Type: field.TypeTime, Nullable: true},
+		{Name: "completed_at", Type: field.TypeTime, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "match_round_stt_tasks", Type: field.TypeInt},
+		{Name: "media_artifact_stt_tasks", Type: field.TypeInt},
+	}
+	// SttTasksTable holds the schema information for the "stt_tasks" table.
+	SttTasksTable = &schema.Table{
+		Name:       "stt_tasks",
+		Columns:    SttTasksColumns,
+		PrimaryKey: []*schema.Column{SttTasksColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "stt_tasks_match_rounds_stt_tasks",
+				Columns:    []*schema.Column{SttTasksColumns[13]},
+				RefColumns: []*schema.Column{MatchRoundsColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+			{
+				Symbol:     "stt_tasks_media_artifacts_stt_tasks",
+				Columns:    []*schema.Column{SttTasksColumns[14]},
+				RefColumns: []*schema.Column{MediaArtifactsColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "stttask_role_match_round_stt_tasks",
+				Unique:  true,
+				Columns: []*schema.Column{SttTasksColumns[1], SttTasksColumns[13]},
+			},
+			{
+				Name:    "stttask_status",
+				Unique:  false,
+				Columns: []*schema.Column{SttTasksColumns[2]},
+			},
+			{
+				Name:    "stttask_status_priority_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{SttTasksColumns[2], SttTasksColumns[3], SttTasksColumns[11]},
+			},
+			{
+				Name:    "stttask_status_updated_at",
+				Unique:  false,
+				Columns: []*schema.Column{SttTasksColumns[2], SttTasksColumns[12]},
+			},
+		},
+	}
 	// TeamsColumns holds the columns for the "teams" table.
 	TeamsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeString, Unique: true},
@@ -576,6 +636,7 @@ var (
 		MediaArtifactsTable,
 		OcrTasksTable,
 		RecordTasksTable,
+		SttTasksTable,
 		TeamsTable,
 		TranscodeTasksTable,
 		UploadTasksTable,
@@ -594,6 +655,8 @@ func init() {
 	OcrTasksTable.ForeignKeys[0].RefTable = MatchRoundsTable
 	OcrTasksTable.ForeignKeys[1].RefTable = MediaArtifactsTable
 	RecordTasksTable.ForeignKeys[0].RefTable = MatchRoundsTable
+	SttTasksTable.ForeignKeys[0].RefTable = MatchRoundsTable
+	SttTasksTable.ForeignKeys[1].RefTable = MediaArtifactsTable
 	TranscodeTasksTable.ForeignKeys[0].RefTable = MediaArtifactsTable
 	TranscodeTasksTable.ForeignKeys[1].RefTable = MediaArtifactsTable
 	UploadTasksTable.ForeignKeys[0].RefTable = MediaArtifactsTable

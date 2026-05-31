@@ -174,14 +174,20 @@ func finishSTT(sttCtx jobcontract.STTContext, info roundInfo) error {
 	}
 	return jobcontract.WriteResult(sttJobDir(sttCtx), jobcontract.STTResult{
 		Schema:       "rm-monitor/stt-result/v1",
+		STTTaskID:    sttCtx.STTTaskID,
 		MatchRoundID: sttCtx.MatchRoundID,
 		STTPath:      sttCtx.STTPath,
+		SubtitlePath: filepath.Join(info.RoundDir, info.SubtitleName),
 		CompletedAt:  time.Now(),
 	})
 }
 
 func sttJobDir(sttCtx jobcontract.STTContext) string {
-	return filepath.Join(sttCtx.RoundDir, jobcontract.DirName, fmt.Sprintf("stt-%d", sttCtx.MatchRoundID))
+	id := sttCtx.STTTaskID
+	if id == 0 {
+		id = sttCtx.MatchRoundID
+	}
+	return filepath.Join(sttCtx.RoundDir, jobcontract.DirName, fmt.Sprintf("stt-%d", id))
 }
 
 func isNoAudio(stderr string) bool {

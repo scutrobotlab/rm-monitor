@@ -586,6 +586,29 @@ func HasUploadTaskWith(preds ...predicate.UploadTask) predicate.MediaArtifact {
 	})
 }
 
+// HasSttTasks applies the HasEdge predicate on the "stt_tasks" edge.
+func HasSttTasks() predicate.MediaArtifact {
+	return predicate.MediaArtifact(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, SttTasksTable, SttTasksColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasSttTasksWith applies the HasEdge predicate on the "stt_tasks" edge with a given conditions (other predicates).
+func HasSttTasksWith(preds ...predicate.STTTask) predicate.MediaArtifact {
+	return predicate.MediaArtifact(func(s *sql.Selector) {
+		step := newSttTasksStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // HasSourceTranscodeTask applies the HasEdge predicate on the "source_transcode_task" edge.
 func HasSourceTranscodeTask() predicate.MediaArtifact {
 	return predicate.MediaArtifact(func(s *sql.Selector) {
