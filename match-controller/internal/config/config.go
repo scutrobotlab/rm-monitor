@@ -13,6 +13,7 @@ type Config struct {
 	RecordConf        common.RecordConf     `json:",optional"`
 	DanmuConf         common.DanmuConf      `json:",optional"`
 	AnalyzeConf       common.AnalyzeConf    `json:",optional"`
+	OCRServerConf     common.OCRServerConf  `json:",optional"`
 	UploadConf        common.UploadConf     `json:",optional"`
 	HighlightConf     common.HighlightConf  `json:",optional"`
 	WhisperServerUrls []string              `json:",optional"`

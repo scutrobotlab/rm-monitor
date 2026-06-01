@@ -553,12 +553,15 @@ func (l *MatchScanLogic) roundWorkflowArguments(m scannedMatch, r *ent.MatchRoun
 		args["main_source_available"] = "true"
 		sourceAbs := filepath.Join(recordConf.BaseDir, filepath.FromSlash(mainSourcePath))
 		analyzeConf := l.svcCtx.Config.AnalyzeConf.WithDefaults()
+		ocrServerConf := l.svcCtx.Config.OCRServerConf.WithDefaults()
 		args["analyze_context"] = mustJSON(jobcontract.AnalyzeContext{
-			Schema:       "rm-monitor/analyze-context/v1",
-			MatchRoundID: r.ID,
-			SourcePath:   sourceAbs,
-			RoundDir:     roundDir,
-			Role:         analyzeConf.Role,
+			Schema:            "rm-monitor/analyze-context/v1",
+			MatchRoundID:      r.ID,
+			SourcePath:        sourceAbs,
+			RoundDir:          roundDir,
+			Role:              analyzeConf.Role,
+			OCRServerURL:      ocrServerConf.BaseURL,
+			OCRTimeoutSeconds: ocrServerConf.TimeoutSeconds,
 			Scan: jobcontract.AnalyzeScanContext{
 				FPS:                           analyzeConf.Scan.FPS,
 				Width:                         analyzeConf.Scan.Width,

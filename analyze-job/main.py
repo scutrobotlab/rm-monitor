@@ -849,9 +849,7 @@ def analyze_round(
 def default_context() -> dict:
     return {
         "schema": "rm-monitor/analyze-job-context/v1",
-        "analyze_task_id": 0,
         "match_round_id": 0,
-        "source_artifact_id": 0,
         "source_path": "",
         "round_dir": "",
         "role": "主视角",
@@ -908,7 +906,6 @@ def context_from_args(args: argparse.Namespace) -> dict:
     merge_dict(
         ctx,
         {
-            "analyze_task_id": 0,
             "source_path": str(args.source),
             "round_dir": str(args.output_dir),
             "role": args.role,
@@ -933,18 +930,10 @@ def context_from_args(args: argparse.Namespace) -> dict:
     return ctx
 
 
-def job_dir(round_dir: Path, job_name: str) -> Path:
-    return round_dir / ".job" / job_name
-
-
 def run_job(ctx: dict) -> dict:
     source = Path(ctx["source_path"])
     round_dir = Path(ctx["round_dir"])
-    analyze_task_id = int(ctx.get("analyze_task_id") or 0)
     match_round_id = int(ctx.get("match_round_id") or 0)
-    source_artifact_id = int(ctx.get("source_artifact_id") or 0)
-    name = f"analyze-{analyze_task_id}" if analyze_task_id > 0 else (ctx.get("job_name") or f"analyze-{int(time.time())}")
-    work_dir = job_dir(round_dir, name)
     work_dir = Path("/tmp/job")
     work_dir.mkdir(parents=True, exist_ok=True)
     atomic_write_json(work_dir / "context.json", ctx)
@@ -975,9 +964,7 @@ def run_job(ctx: dict) -> dict:
         settlement_path = result.get("settlement", {}).get("image_path", "")
         job_result = {
             "schema": "rm-monitor/analyze-result/v1",
-            "analyze_task_id": analyze_task_id,
             "match_round_id": match_round_id,
-            "source_artifact_id": source_artifact_id,
             "round_json_path": str(round_json_path),
             "settlement_image_path": settlement_path,
             "settlement_status": settlement_status,
@@ -998,7 +985,7 @@ def run_job(ctx: dict) -> dict:
         error = {
             "schema": "rm-monitor/job-error/v1",
             "task_type": "analyze",
-            "task_id": analyze_task_id,
+            "task_id": match_round_id,
             "status": "FAILED",
             "error_message": str(exc),
             "completed_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),

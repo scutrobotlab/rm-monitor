@@ -42,26 +42,27 @@ def run_sample(source: Path, output_dir: Path, ocr_server_url: str) -> dict:
             "error": proc.stderr[-2000:],
         }
     result = json.loads(proc.stdout.strip().splitlines()[-1])
-    boundary_path = output_dir / "round-boundary.json"
-    boundary = json.loads(boundary_path.read_text(encoding="utf-8"))
-    settlement_json = output_dir / "settlement.json"
+    round_json_path = output_dir / "round.json"
+    round_json = json.loads(round_json_path.read_text(encoding="utf-8"))
+    settlement = round_json.get("settlement", {}) or {}
+    settlement_ocr = settlement.get("ocr") or {}
     settlement_data = {}
-    if settlement_json.exists():
-        settlement_data = json.loads(settlement_json.read_text(encoding="utf-8")).get("data", {})
+    if settlement_ocr:
+        settlement_data = settlement_ocr.get("data", {})
     return {
         "sample": source.name,
-        "status": result.get("analysis", {}).get("status", "UNKNOWN"),
+        "status": round_json.get("analysis", {}).get("status", "UNKNOWN"),
         "elapsed_seconds": elapsed,
-        "duration_seconds": boundary.get("duration_seconds"),
-        "start_seconds": result.get("boundary", {}).get("start_seconds"),
-        "end_seconds": result.get("boundary", {}).get("end_seconds"),
-        "settlement_status": result.get("boundary", {}).get("settlement_status"),
-        "settlement_path": result.get("settlement_path", ""),
-        "settlement_ocr_path": result.get("settlement_ocr_path", ""),
+        "duration_seconds": round_json.get("duration_seconds"),
+        "start_seconds": round_json.get("boundary", {}).get("start_seconds"),
+        "end_seconds": round_json.get("boundary", {}).get("end_seconds"),
+        "settlement_status": settlement.get("status"),
+        "settlement_path": result.get("settlement_image_path", ""),
+        "settlement_ocr_path": "",
         "red_score_reference": settlement_data.get("red", {}).get("score_reference"),
         "blue_score_reference": settlement_data.get("blue", {}).get("score_reference"),
         "victory_condition": settlement_data.get("victory_condition", ""),
-        "errors": "; ".join(result.get("analysis", {}).get("errors", [])),
+        "errors": "; ".join(round_json.get("analysis", {}).get("errors", [])),
     }
 
 

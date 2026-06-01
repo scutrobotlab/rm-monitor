@@ -2,7 +2,7 @@
 
 This is the shared OCR service used by `analyze-job`. It is intentionally
 generic: it OCRs uploaded ROI images and returns text boxes. `analyze-job`
-owns video scanning, ROI extraction, field validation, and `settlement.json`.
+owns video scanning, ROI extraction, field validation, and embedding settlement data into `round.json`.
 
 ## Local CPU
 

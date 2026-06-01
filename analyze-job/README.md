@@ -6,16 +6,16 @@ Responsibilities:
 
 - detect the effective round start from the pregame/self-check layout
 - detect the settlement panel from the end of the video
-- write `round-boundary.json`
+- write `round.json`
 - extract source-resolution `settlement.jpg`
-- call the PP-OCR daemon and write `settlement.json`
-- report job completion through `.job/<job-name>/result.json` or `.job/<job-name>/error.json`
+- call the PP-OCR daemon and embed settlement OCR into `round.json`
+- report job completion through `/tmp/job/result.json` or `/tmp/job/error.json`, plus Argo output parameters under `/tmp/argo`
 
 The job accepts the shared job contract through `RM_MONITOR_JOB_CONTEXT`:
 
 ```json
 {
-  "job_name": "analyze-123",
+  "match_round_id": 456,
   "source_path": "/records/.../Round-1/主视角.flv",
   "round_dir": "/records/.../Round-1",
   "role": "主视角",

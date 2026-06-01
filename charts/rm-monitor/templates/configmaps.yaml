@@ -26,6 +26,7 @@ data:
 {{ include "rm-monitor.recordConf" . | indent 4 }}
 {{ include "rm-monitor.danmuConf" . | indent 4 }}
 {{ include "rm-monitor.analyzeConf" . | indent 4 }}
+{{ include "rm-monitor.ocrServerConf" . | indent 4 }}
 {{ include "rm-monitor.highlightConf" . | indent 4 }}
     UploadConf:
       BitableAppToken: {{ .Values.upload.bitableAppToken | quote }}
