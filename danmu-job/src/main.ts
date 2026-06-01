@@ -85,6 +85,7 @@ let runtimeClient = null as { close?: () => Promise<void> } | null;
 let room = null as { count?: () => Promise<number>; leave?: () => Promise<void> } | null;
 let shuttingDown = false;
 let mediaTimeZeroWallMs = 0;
+let leancloudRealtime: any | null = null;
 const diagnostics = {
   connectAttempts: 0,
   connectedAt: null as string | null,
@@ -201,15 +202,8 @@ async function connectLeanCloudWithRetry(roomID: string, round: RoundInfo): Prom
 }
 
 async function connectLeanCloud(roomID: string, round: RoundInfo): Promise<LeanRuntime> {
-  const { Realtime, Event } = await loadLeancloudRuntime();
-  const realtime = new Realtime({
-    appId: danmuConf.AppID,
-    appKey: danmuConf.AppKey,
-    server: {
-      RTMRouter: "https://router-g0-push.leancloud.cn",
-      api: "https://api.leancloud.cn",
-    },
-  });
+  const { Event } = await loadLeancloudRuntime();
+  const realtime = await getLeancloudRealtime();
   const clientID = `rm-monitor-danmu-${round.id}-${Date.now().toString(36)}`;
   const client = await withTimeout(
     realtime.createIMClient(clientID),
@@ -255,6 +249,22 @@ async function connectLeanCloud(roomID: string, round: RoundInfo): Promise<LeanR
     writeMessageIfValid(message, round, seen, seenOrder);
   }
   return { client: client as LeanRuntime["client"], room: room as LeanRuntime["room"] };
+}
+
+async function getLeancloudRealtime() {
+  if (leancloudRealtime) {
+    return leancloudRealtime;
+  }
+  const { Realtime } = await loadLeancloudRuntime();
+  leancloudRealtime = new Realtime({
+    appId: danmuConf.AppID,
+    appKey: danmuConf.AppKey,
+    server: {
+      RTMRouter: "https://router-g0-push.leancloud.cn",
+      api: "https://api.leancloud.cn",
+    },
+  });
+  return leancloudRealtime;
 }
 
 async function writeHistory(
