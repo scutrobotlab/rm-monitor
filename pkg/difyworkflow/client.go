@@ -2,6 +2,7 @@ package difyworkflow
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"net"
 	"net/http"
@@ -75,7 +76,11 @@ func (c *Client) RunWorkflow(ctx context.Context, apiKey, user string, inputs ma
 
 func (c *Client) runWorkflowOnce(ctx context.Context, apiKey, user string, inputs map[string]any) (*RunResult, error) {
 	var out workflowResponse
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.ForceAttemptHTTP2 = false
+	transport.TLSNextProto = map[string]func(string, *tls.Conn) http.RoundTripper{}
 	resp, err := resty.New().
+		SetTransport(transport).
 		SetTimeout(c.timeout).
 		R().
 		SetContext(ctx).
