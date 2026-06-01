@@ -11,20 +11,14 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
-	"scutbot.cn/web/rm-monitor/ent/analyzetask"
+	"scutbot.cn/web/rm-monitor/ent/bilibilihighlightpublication"
 	"scutbot.cn/web/rm-monitor/ent/highlightclip"
-	"scutbot.cn/web/rm-monitor/ent/highlightpublishtask"
-	"scutbot.cn/web/rm-monitor/ent/highlightroundstate"
+	"scutbot.cn/web/rm-monitor/ent/larkbitablerecord"
 	"scutbot.cn/web/rm-monitor/ent/larkmessage"
 	"scutbot.cn/web/rm-monitor/ent/match"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
-	"scutbot.cn/web/rm-monitor/ent/mediaartifact"
 	"scutbot.cn/web/rm-monitor/ent/predicate"
-	"scutbot.cn/web/rm-monitor/ent/recordtask"
-	"scutbot.cn/web/rm-monitor/ent/stttask"
 	"scutbot.cn/web/rm-monitor/ent/team"
-	"scutbot.cn/web/rm-monitor/ent/transcodetask"
-	"scutbot.cn/web/rm-monitor/ent/uploadtask"
 )
 
 const (
@@ -36,67 +30,47 @@ const (
 	OpUpdateOne = ent.OpUpdateOne
 
 	// Node types.
-	TypeAnalyzeTask          = "AnalyzeTask"
-	TypeHighlightClip        = "HighlightClip"
-	TypeHighlightPublishTask = "HighlightPublishTask"
-	TypeHighlightRoundState  = "HighlightRoundState"
-	TypeLarkMessage          = "LarkMessage"
-	TypeMatch                = "Match"
-	TypeMatchRound           = "MatchRound"
-	TypeMediaArtifact        = "MediaArtifact"
-	TypeRecordTask           = "RecordTask"
-	TypeSTTTask              = "STTTask"
-	TypeTeam                 = "Team"
-	TypeTranscodeTask        = "TranscodeTask"
-	TypeUploadTask           = "UploadTask"
+	TypeBilibiliHighlightPublication = "BilibiliHighlightPublication"
+	TypeHighlightClip                = "HighlightClip"
+	TypeLarkBitableRecord            = "LarkBitableRecord"
+	TypeLarkMessage                  = "LarkMessage"
+	TypeMatch                        = "Match"
+	TypeMatchRound                   = "MatchRound"
+	TypeTeam                         = "Team"
 )
 
-// AnalyzeTaskMutation represents an operation that mutates the AnalyzeTask nodes in the graph.
-type AnalyzeTaskMutation struct {
+// BilibiliHighlightPublicationMutation represents an operation that mutates the BilibiliHighlightPublication nodes in the graph.
+type BilibiliHighlightPublicationMutation struct {
 	config
-	op                         Op
-	typ                        string
-	id                         *int
-	role                       *string
-	status                     *analyzetask.Status
-	priority                   *int
-	addpriority                *int
-	k8s_job_name               *string
-	attempts                   *int
-	addattempts                *int
-	round_json_path            *string
-	settlement_image_path      *string
-	settlement_status          *analyzetask.SettlementStatus
-	effective_start_seconds    *float64
-	addeffective_start_seconds *float64
-	effective_end_seconds      *float64
-	addeffective_end_seconds   *float64
-	error_message              *string
-	started_at                 *time.Time
-	completed_at               *time.Time
-	created_at                 *time.Time
-	updated_at                 *time.Time
-	clearedFields              map[string]struct{}
-	match_round                *int
-	clearedmatch_round         bool
-	source_artifact            *int
-	clearedsource_artifact     bool
-	done                       bool
-	oldValue                   func(context.Context) (*AnalyzeTask, error)
-	predicates                 []predicate.AnalyzeTask
+	op                    Op
+	typ                   string
+	id                    *int
+	external_id           *string
+	url                   *string
+	payload               *map[string]interface{}
+	error_message         *string
+	published_at          *time.Time
+	created_at            *time.Time
+	updated_at            *time.Time
+	clearedFields         map[string]struct{}
+	highlight_clip        *int
+	clearedhighlight_clip bool
+	done                  bool
+	oldValue              func(context.Context) (*BilibiliHighlightPublication, error)
+	predicates            []predicate.BilibiliHighlightPublication
 }
 
-var _ ent.Mutation = (*AnalyzeTaskMutation)(nil)
+var _ ent.Mutation = (*BilibiliHighlightPublicationMutation)(nil)
 
-// analyzetaskOption allows management of the mutation configuration using functional options.
-type analyzetaskOption func(*AnalyzeTaskMutation)
+// bilibilihighlightpublicationOption allows management of the mutation configuration using functional options.
+type bilibilihighlightpublicationOption func(*BilibiliHighlightPublicationMutation)
 
-// newAnalyzeTaskMutation creates new mutation for the AnalyzeTask entity.
-func newAnalyzeTaskMutation(c config, op Op, opts ...analyzetaskOption) *AnalyzeTaskMutation {
-	m := &AnalyzeTaskMutation{
+// newBilibiliHighlightPublicationMutation creates new mutation for the BilibiliHighlightPublication entity.
+func newBilibiliHighlightPublicationMutation(c config, op Op, opts ...bilibilihighlightpublicationOption) *BilibiliHighlightPublicationMutation {
+	m := &BilibiliHighlightPublicationMutation{
 		config:        c,
 		op:            op,
-		typ:           TypeAnalyzeTask,
+		typ:           TypeBilibiliHighlightPublication,
 		clearedFields: make(map[string]struct{}),
 	}
 	for _, opt := range opts {
@@ -105,20 +79,20 @@ func newAnalyzeTaskMutation(c config, op Op, opts ...analyzetaskOption) *Analyze
 	return m
 }
 
-// withAnalyzeTaskID sets the ID field of the mutation.
-func withAnalyzeTaskID(id int) analyzetaskOption {
-	return func(m *AnalyzeTaskMutation) {
+// withBilibiliHighlightPublicationID sets the ID field of the mutation.
+func withBilibiliHighlightPublicationID(id int) bilibilihighlightpublicationOption {
+	return func(m *BilibiliHighlightPublicationMutation) {
 		var (
 			err   error
 			once  sync.Once
-			value *AnalyzeTask
+			value *BilibiliHighlightPublication
 		)
-		m.oldValue = func(ctx context.Context) (*AnalyzeTask, error) {
+		m.oldValue = func(ctx context.Context) (*BilibiliHighlightPublication, error) {
 			once.Do(func() {
 				if m.done {
 					err = errors.New("querying old values post mutation is not allowed")
 				} else {
-					value, err = m.Client().AnalyzeTask.Get(ctx, id)
+					value, err = m.Client().BilibiliHighlightPublication.Get(ctx, id)
 				}
 			})
 			return value, err
@@ -127,10 +101,10 @@ func withAnalyzeTaskID(id int) analyzetaskOption {
 	}
 }
 
-// withAnalyzeTask sets the old AnalyzeTask of the mutation.
-func withAnalyzeTask(node *AnalyzeTask) analyzetaskOption {
-	return func(m *AnalyzeTaskMutation) {
-		m.oldValue = func(context.Context) (*AnalyzeTask, error) {
+// withBilibiliHighlightPublication sets the old BilibiliHighlightPublication of the mutation.
+func withBilibiliHighlightPublication(node *BilibiliHighlightPublication) bilibilihighlightpublicationOption {
+	return func(m *BilibiliHighlightPublicationMutation) {
+		m.oldValue = func(context.Context) (*BilibiliHighlightPublication, error) {
 			return node, nil
 		}
 		m.id = &node.ID
@@ -139,7 +113,7 @@ func withAnalyzeTask(node *AnalyzeTask) analyzetaskOption {
 
 // Client returns a new `ent.Client` from the mutation. If the mutation was
 // executed in a transaction (ent.Tx), a transactional client is returned.
-func (m AnalyzeTaskMutation) Client() *Client {
+func (m BilibiliHighlightPublicationMutation) Client() *Client {
 	client := &Client{config: m.config}
 	client.init()
 	return client
@@ -147,7 +121,7 @@ func (m AnalyzeTaskMutation) Client() *Client {
 
 // Tx returns an `ent.Tx` for mutations that were executed in transactions;
 // it returns an error otherwise.
-func (m AnalyzeTaskMutation) Tx() (*Tx, error) {
+func (m BilibiliHighlightPublicationMutation) Tx() (*Tx, error) {
 	if _, ok := m.driver.(*txDriver); !ok {
 		return nil, errors.New("ent: mutation is not running in a transaction")
 	}
@@ -158,7 +132,7 @@ func (m AnalyzeTaskMutation) Tx() (*Tx, error) {
 
 // ID returns the ID value in the mutation. Note that the ID is only available
 // if it was provided to the builder or after it was returned from the database.
-func (m *AnalyzeTaskMutation) ID() (id int, exists bool) {
+func (m *BilibiliHighlightPublicationMutation) ID() (id int, exists bool) {
 	if m.id == nil {
 		return
 	}
@@ -169,7 +143,7 @@ func (m *AnalyzeTaskMutation) ID() (id int, exists bool) {
 // That means, if the mutation is applied within a transaction with an isolation level such
 // as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
 // or updated by the mutation.
-func (m *AnalyzeTaskMutation) IDs(ctx context.Context) ([]int, error) {
+func (m *BilibiliHighlightPublicationMutation) IDs(ctx context.Context) ([]int, error) {
 	switch {
 	case m.op.Is(OpUpdateOne | OpDeleteOne):
 		id, exists := m.ID()
@@ -178,539 +152,166 @@ func (m *AnalyzeTaskMutation) IDs(ctx context.Context) ([]int, error) {
 		}
 		fallthrough
 	case m.op.Is(OpUpdate | OpDelete):
-		return m.Client().AnalyzeTask.Query().Where(m.predicates...).IDs(ctx)
+		return m.Client().BilibiliHighlightPublication.Query().Where(m.predicates...).IDs(ctx)
 	default:
 		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
 	}
 }
 
-// SetRole sets the "role" field.
-func (m *AnalyzeTaskMutation) SetRole(s string) {
-	m.role = &s
+// SetExternalID sets the "external_id" field.
+func (m *BilibiliHighlightPublicationMutation) SetExternalID(s string) {
+	m.external_id = &s
 }
 
-// Role returns the value of the "role" field in the mutation.
-func (m *AnalyzeTaskMutation) Role() (r string, exists bool) {
-	v := m.role
+// ExternalID returns the value of the "external_id" field in the mutation.
+func (m *BilibiliHighlightPublicationMutation) ExternalID() (r string, exists bool) {
+	v := m.external_id
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// OldRole returns the old "role" field's value of the AnalyzeTask entity.
-// If the AnalyzeTask object wasn't provided to the builder, the object is fetched from the database.
+// OldExternalID returns the old "external_id" field's value of the BilibiliHighlightPublication entity.
+// If the BilibiliHighlightPublication object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *AnalyzeTaskMutation) OldRole(ctx context.Context) (v string, err error) {
+func (m *BilibiliHighlightPublicationMutation) OldExternalID(ctx context.Context) (v *string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldRole is only allowed on UpdateOne operations")
+		return v, errors.New("OldExternalID is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldRole requires an ID field in the mutation")
+		return v, errors.New("OldExternalID requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldRole: %w", err)
+		return v, fmt.Errorf("querying old value for OldExternalID: %w", err)
 	}
-	return oldValue.Role, nil
+	return oldValue.ExternalID, nil
 }
 
-// ResetRole resets all changes to the "role" field.
-func (m *AnalyzeTaskMutation) ResetRole() {
-	m.role = nil
+// ClearExternalID clears the value of the "external_id" field.
+func (m *BilibiliHighlightPublicationMutation) ClearExternalID() {
+	m.external_id = nil
+	m.clearedFields[bilibilihighlightpublication.FieldExternalID] = struct{}{}
 }
 
-// SetStatus sets the "status" field.
-func (m *AnalyzeTaskMutation) SetStatus(a analyzetask.Status) {
-	m.status = &a
-}
-
-// Status returns the value of the "status" field in the mutation.
-func (m *AnalyzeTaskMutation) Status() (r analyzetask.Status, exists bool) {
-	v := m.status
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldStatus returns the old "status" field's value of the AnalyzeTask entity.
-// If the AnalyzeTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *AnalyzeTaskMutation) OldStatus(ctx context.Context) (v analyzetask.Status, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldStatus requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldStatus: %w", err)
-	}
-	return oldValue.Status, nil
-}
-
-// ResetStatus resets all changes to the "status" field.
-func (m *AnalyzeTaskMutation) ResetStatus() {
-	m.status = nil
-}
-
-// SetPriority sets the "priority" field.
-func (m *AnalyzeTaskMutation) SetPriority(i int) {
-	m.priority = &i
-	m.addpriority = nil
-}
-
-// Priority returns the value of the "priority" field in the mutation.
-func (m *AnalyzeTaskMutation) Priority() (r int, exists bool) {
-	v := m.priority
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldPriority returns the old "priority" field's value of the AnalyzeTask entity.
-// If the AnalyzeTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *AnalyzeTaskMutation) OldPriority(ctx context.Context) (v int, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldPriority is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldPriority requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldPriority: %w", err)
-	}
-	return oldValue.Priority, nil
-}
-
-// AddPriority adds i to the "priority" field.
-func (m *AnalyzeTaskMutation) AddPriority(i int) {
-	if m.addpriority != nil {
-		*m.addpriority += i
-	} else {
-		m.addpriority = &i
-	}
-}
-
-// AddedPriority returns the value that was added to the "priority" field in this mutation.
-func (m *AnalyzeTaskMutation) AddedPriority() (r int, exists bool) {
-	v := m.addpriority
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// ResetPriority resets all changes to the "priority" field.
-func (m *AnalyzeTaskMutation) ResetPriority() {
-	m.priority = nil
-	m.addpriority = nil
-}
-
-// SetK8sJobName sets the "k8s_job_name" field.
-func (m *AnalyzeTaskMutation) SetK8sJobName(s string) {
-	m.k8s_job_name = &s
-}
-
-// K8sJobName returns the value of the "k8s_job_name" field in the mutation.
-func (m *AnalyzeTaskMutation) K8sJobName() (r string, exists bool) {
-	v := m.k8s_job_name
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldK8sJobName returns the old "k8s_job_name" field's value of the AnalyzeTask entity.
-// If the AnalyzeTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *AnalyzeTaskMutation) OldK8sJobName(ctx context.Context) (v *string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldK8sJobName is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldK8sJobName requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldK8sJobName: %w", err)
-	}
-	return oldValue.K8sJobName, nil
-}
-
-// ClearK8sJobName clears the value of the "k8s_job_name" field.
-func (m *AnalyzeTaskMutation) ClearK8sJobName() {
-	m.k8s_job_name = nil
-	m.clearedFields[analyzetask.FieldK8sJobName] = struct{}{}
-}
-
-// K8sJobNameCleared returns if the "k8s_job_name" field was cleared in this mutation.
-func (m *AnalyzeTaskMutation) K8sJobNameCleared() bool {
-	_, ok := m.clearedFields[analyzetask.FieldK8sJobName]
+// ExternalIDCleared returns if the "external_id" field was cleared in this mutation.
+func (m *BilibiliHighlightPublicationMutation) ExternalIDCleared() bool {
+	_, ok := m.clearedFields[bilibilihighlightpublication.FieldExternalID]
 	return ok
 }
 
-// ResetK8sJobName resets all changes to the "k8s_job_name" field.
-func (m *AnalyzeTaskMutation) ResetK8sJobName() {
-	m.k8s_job_name = nil
-	delete(m.clearedFields, analyzetask.FieldK8sJobName)
+// ResetExternalID resets all changes to the "external_id" field.
+func (m *BilibiliHighlightPublicationMutation) ResetExternalID() {
+	m.external_id = nil
+	delete(m.clearedFields, bilibilihighlightpublication.FieldExternalID)
 }
 
-// SetAttempts sets the "attempts" field.
-func (m *AnalyzeTaskMutation) SetAttempts(i int) {
-	m.attempts = &i
-	m.addattempts = nil
+// SetURL sets the "url" field.
+func (m *BilibiliHighlightPublicationMutation) SetURL(s string) {
+	m.url = &s
 }
 
-// Attempts returns the value of the "attempts" field in the mutation.
-func (m *AnalyzeTaskMutation) Attempts() (r int, exists bool) {
-	v := m.attempts
+// URL returns the value of the "url" field in the mutation.
+func (m *BilibiliHighlightPublicationMutation) URL() (r string, exists bool) {
+	v := m.url
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// OldAttempts returns the old "attempts" field's value of the AnalyzeTask entity.
-// If the AnalyzeTask object wasn't provided to the builder, the object is fetched from the database.
+// OldURL returns the old "url" field's value of the BilibiliHighlightPublication entity.
+// If the BilibiliHighlightPublication object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *AnalyzeTaskMutation) OldAttempts(ctx context.Context) (v int, err error) {
+func (m *BilibiliHighlightPublicationMutation) OldURL(ctx context.Context) (v *string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldAttempts is only allowed on UpdateOne operations")
+		return v, errors.New("OldURL is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldAttempts requires an ID field in the mutation")
+		return v, errors.New("OldURL requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldAttempts: %w", err)
+		return v, fmt.Errorf("querying old value for OldURL: %w", err)
 	}
-	return oldValue.Attempts, nil
+	return oldValue.URL, nil
 }
 
-// AddAttempts adds i to the "attempts" field.
-func (m *AnalyzeTaskMutation) AddAttempts(i int) {
-	if m.addattempts != nil {
-		*m.addattempts += i
-	} else {
-		m.addattempts = &i
-	}
+// ClearURL clears the value of the "url" field.
+func (m *BilibiliHighlightPublicationMutation) ClearURL() {
+	m.url = nil
+	m.clearedFields[bilibilihighlightpublication.FieldURL] = struct{}{}
 }
 
-// AddedAttempts returns the value that was added to the "attempts" field in this mutation.
-func (m *AnalyzeTaskMutation) AddedAttempts() (r int, exists bool) {
-	v := m.addattempts
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// ResetAttempts resets all changes to the "attempts" field.
-func (m *AnalyzeTaskMutation) ResetAttempts() {
-	m.attempts = nil
-	m.addattempts = nil
-}
-
-// SetRoundJSONPath sets the "round_json_path" field.
-func (m *AnalyzeTaskMutation) SetRoundJSONPath(s string) {
-	m.round_json_path = &s
-}
-
-// RoundJSONPath returns the value of the "round_json_path" field in the mutation.
-func (m *AnalyzeTaskMutation) RoundJSONPath() (r string, exists bool) {
-	v := m.round_json_path
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldRoundJSONPath returns the old "round_json_path" field's value of the AnalyzeTask entity.
-// If the AnalyzeTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *AnalyzeTaskMutation) OldRoundJSONPath(ctx context.Context) (v *string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldRoundJSONPath is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldRoundJSONPath requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldRoundJSONPath: %w", err)
-	}
-	return oldValue.RoundJSONPath, nil
-}
-
-// ClearRoundJSONPath clears the value of the "round_json_path" field.
-func (m *AnalyzeTaskMutation) ClearRoundJSONPath() {
-	m.round_json_path = nil
-	m.clearedFields[analyzetask.FieldRoundJSONPath] = struct{}{}
-}
-
-// RoundJSONPathCleared returns if the "round_json_path" field was cleared in this mutation.
-func (m *AnalyzeTaskMutation) RoundJSONPathCleared() bool {
-	_, ok := m.clearedFields[analyzetask.FieldRoundJSONPath]
+// URLCleared returns if the "url" field was cleared in this mutation.
+func (m *BilibiliHighlightPublicationMutation) URLCleared() bool {
+	_, ok := m.clearedFields[bilibilihighlightpublication.FieldURL]
 	return ok
 }
 
-// ResetRoundJSONPath resets all changes to the "round_json_path" field.
-func (m *AnalyzeTaskMutation) ResetRoundJSONPath() {
-	m.round_json_path = nil
-	delete(m.clearedFields, analyzetask.FieldRoundJSONPath)
+// ResetURL resets all changes to the "url" field.
+func (m *BilibiliHighlightPublicationMutation) ResetURL() {
+	m.url = nil
+	delete(m.clearedFields, bilibilihighlightpublication.FieldURL)
 }
 
-// SetSettlementImagePath sets the "settlement_image_path" field.
-func (m *AnalyzeTaskMutation) SetSettlementImagePath(s string) {
-	m.settlement_image_path = &s
+// SetPayload sets the "payload" field.
+func (m *BilibiliHighlightPublicationMutation) SetPayload(value map[string]interface{}) {
+	m.payload = &value
 }
 
-// SettlementImagePath returns the value of the "settlement_image_path" field in the mutation.
-func (m *AnalyzeTaskMutation) SettlementImagePath() (r string, exists bool) {
-	v := m.settlement_image_path
+// Payload returns the value of the "payload" field in the mutation.
+func (m *BilibiliHighlightPublicationMutation) Payload() (r map[string]interface{}, exists bool) {
+	v := m.payload
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// OldSettlementImagePath returns the old "settlement_image_path" field's value of the AnalyzeTask entity.
-// If the AnalyzeTask object wasn't provided to the builder, the object is fetched from the database.
+// OldPayload returns the old "payload" field's value of the BilibiliHighlightPublication entity.
+// If the BilibiliHighlightPublication object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *AnalyzeTaskMutation) OldSettlementImagePath(ctx context.Context) (v *string, err error) {
+func (m *BilibiliHighlightPublicationMutation) OldPayload(ctx context.Context) (v map[string]interface{}, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldSettlementImagePath is only allowed on UpdateOne operations")
+		return v, errors.New("OldPayload is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldSettlementImagePath requires an ID field in the mutation")
+		return v, errors.New("OldPayload requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldSettlementImagePath: %w", err)
+		return v, fmt.Errorf("querying old value for OldPayload: %w", err)
 	}
-	return oldValue.SettlementImagePath, nil
+	return oldValue.Payload, nil
 }
 
-// ClearSettlementImagePath clears the value of the "settlement_image_path" field.
-func (m *AnalyzeTaskMutation) ClearSettlementImagePath() {
-	m.settlement_image_path = nil
-	m.clearedFields[analyzetask.FieldSettlementImagePath] = struct{}{}
+// ClearPayload clears the value of the "payload" field.
+func (m *BilibiliHighlightPublicationMutation) ClearPayload() {
+	m.payload = nil
+	m.clearedFields[bilibilihighlightpublication.FieldPayload] = struct{}{}
 }
 
-// SettlementImagePathCleared returns if the "settlement_image_path" field was cleared in this mutation.
-func (m *AnalyzeTaskMutation) SettlementImagePathCleared() bool {
-	_, ok := m.clearedFields[analyzetask.FieldSettlementImagePath]
+// PayloadCleared returns if the "payload" field was cleared in this mutation.
+func (m *BilibiliHighlightPublicationMutation) PayloadCleared() bool {
+	_, ok := m.clearedFields[bilibilihighlightpublication.FieldPayload]
 	return ok
 }
 
-// ResetSettlementImagePath resets all changes to the "settlement_image_path" field.
-func (m *AnalyzeTaskMutation) ResetSettlementImagePath() {
-	m.settlement_image_path = nil
-	delete(m.clearedFields, analyzetask.FieldSettlementImagePath)
-}
-
-// SetSettlementStatus sets the "settlement_status" field.
-func (m *AnalyzeTaskMutation) SetSettlementStatus(as analyzetask.SettlementStatus) {
-	m.settlement_status = &as
-}
-
-// SettlementStatus returns the value of the "settlement_status" field in the mutation.
-func (m *AnalyzeTaskMutation) SettlementStatus() (r analyzetask.SettlementStatus, exists bool) {
-	v := m.settlement_status
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldSettlementStatus returns the old "settlement_status" field's value of the AnalyzeTask entity.
-// If the AnalyzeTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *AnalyzeTaskMutation) OldSettlementStatus(ctx context.Context) (v *analyzetask.SettlementStatus, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldSettlementStatus is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldSettlementStatus requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldSettlementStatus: %w", err)
-	}
-	return oldValue.SettlementStatus, nil
-}
-
-// ClearSettlementStatus clears the value of the "settlement_status" field.
-func (m *AnalyzeTaskMutation) ClearSettlementStatus() {
-	m.settlement_status = nil
-	m.clearedFields[analyzetask.FieldSettlementStatus] = struct{}{}
-}
-
-// SettlementStatusCleared returns if the "settlement_status" field was cleared in this mutation.
-func (m *AnalyzeTaskMutation) SettlementStatusCleared() bool {
-	_, ok := m.clearedFields[analyzetask.FieldSettlementStatus]
-	return ok
-}
-
-// ResetSettlementStatus resets all changes to the "settlement_status" field.
-func (m *AnalyzeTaskMutation) ResetSettlementStatus() {
-	m.settlement_status = nil
-	delete(m.clearedFields, analyzetask.FieldSettlementStatus)
-}
-
-// SetEffectiveStartSeconds sets the "effective_start_seconds" field.
-func (m *AnalyzeTaskMutation) SetEffectiveStartSeconds(f float64) {
-	m.effective_start_seconds = &f
-	m.addeffective_start_seconds = nil
-}
-
-// EffectiveStartSeconds returns the value of the "effective_start_seconds" field in the mutation.
-func (m *AnalyzeTaskMutation) EffectiveStartSeconds() (r float64, exists bool) {
-	v := m.effective_start_seconds
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldEffectiveStartSeconds returns the old "effective_start_seconds" field's value of the AnalyzeTask entity.
-// If the AnalyzeTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *AnalyzeTaskMutation) OldEffectiveStartSeconds(ctx context.Context) (v *float64, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldEffectiveStartSeconds is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldEffectiveStartSeconds requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldEffectiveStartSeconds: %w", err)
-	}
-	return oldValue.EffectiveStartSeconds, nil
-}
-
-// AddEffectiveStartSeconds adds f to the "effective_start_seconds" field.
-func (m *AnalyzeTaskMutation) AddEffectiveStartSeconds(f float64) {
-	if m.addeffective_start_seconds != nil {
-		*m.addeffective_start_seconds += f
-	} else {
-		m.addeffective_start_seconds = &f
-	}
-}
-
-// AddedEffectiveStartSeconds returns the value that was added to the "effective_start_seconds" field in this mutation.
-func (m *AnalyzeTaskMutation) AddedEffectiveStartSeconds() (r float64, exists bool) {
-	v := m.addeffective_start_seconds
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// ClearEffectiveStartSeconds clears the value of the "effective_start_seconds" field.
-func (m *AnalyzeTaskMutation) ClearEffectiveStartSeconds() {
-	m.effective_start_seconds = nil
-	m.addeffective_start_seconds = nil
-	m.clearedFields[analyzetask.FieldEffectiveStartSeconds] = struct{}{}
-}
-
-// EffectiveStartSecondsCleared returns if the "effective_start_seconds" field was cleared in this mutation.
-func (m *AnalyzeTaskMutation) EffectiveStartSecondsCleared() bool {
-	_, ok := m.clearedFields[analyzetask.FieldEffectiveStartSeconds]
-	return ok
-}
-
-// ResetEffectiveStartSeconds resets all changes to the "effective_start_seconds" field.
-func (m *AnalyzeTaskMutation) ResetEffectiveStartSeconds() {
-	m.effective_start_seconds = nil
-	m.addeffective_start_seconds = nil
-	delete(m.clearedFields, analyzetask.FieldEffectiveStartSeconds)
-}
-
-// SetEffectiveEndSeconds sets the "effective_end_seconds" field.
-func (m *AnalyzeTaskMutation) SetEffectiveEndSeconds(f float64) {
-	m.effective_end_seconds = &f
-	m.addeffective_end_seconds = nil
-}
-
-// EffectiveEndSeconds returns the value of the "effective_end_seconds" field in the mutation.
-func (m *AnalyzeTaskMutation) EffectiveEndSeconds() (r float64, exists bool) {
-	v := m.effective_end_seconds
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldEffectiveEndSeconds returns the old "effective_end_seconds" field's value of the AnalyzeTask entity.
-// If the AnalyzeTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *AnalyzeTaskMutation) OldEffectiveEndSeconds(ctx context.Context) (v *float64, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldEffectiveEndSeconds is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldEffectiveEndSeconds requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldEffectiveEndSeconds: %w", err)
-	}
-	return oldValue.EffectiveEndSeconds, nil
-}
-
-// AddEffectiveEndSeconds adds f to the "effective_end_seconds" field.
-func (m *AnalyzeTaskMutation) AddEffectiveEndSeconds(f float64) {
-	if m.addeffective_end_seconds != nil {
-		*m.addeffective_end_seconds += f
-	} else {
-		m.addeffective_end_seconds = &f
-	}
-}
-
-// AddedEffectiveEndSeconds returns the value that was added to the "effective_end_seconds" field in this mutation.
-func (m *AnalyzeTaskMutation) AddedEffectiveEndSeconds() (r float64, exists bool) {
-	v := m.addeffective_end_seconds
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// ClearEffectiveEndSeconds clears the value of the "effective_end_seconds" field.
-func (m *AnalyzeTaskMutation) ClearEffectiveEndSeconds() {
-	m.effective_end_seconds = nil
-	m.addeffective_end_seconds = nil
-	m.clearedFields[analyzetask.FieldEffectiveEndSeconds] = struct{}{}
-}
-
-// EffectiveEndSecondsCleared returns if the "effective_end_seconds" field was cleared in this mutation.
-func (m *AnalyzeTaskMutation) EffectiveEndSecondsCleared() bool {
-	_, ok := m.clearedFields[analyzetask.FieldEffectiveEndSeconds]
-	return ok
-}
-
-// ResetEffectiveEndSeconds resets all changes to the "effective_end_seconds" field.
-func (m *AnalyzeTaskMutation) ResetEffectiveEndSeconds() {
-	m.effective_end_seconds = nil
-	m.addeffective_end_seconds = nil
-	delete(m.clearedFields, analyzetask.FieldEffectiveEndSeconds)
+// ResetPayload resets all changes to the "payload" field.
+func (m *BilibiliHighlightPublicationMutation) ResetPayload() {
+	m.payload = nil
+	delete(m.clearedFields, bilibilihighlightpublication.FieldPayload)
 }
 
 // SetErrorMessage sets the "error_message" field.
-func (m *AnalyzeTaskMutation) SetErrorMessage(s string) {
+func (m *BilibiliHighlightPublicationMutation) SetErrorMessage(s string) {
 	m.error_message = &s
 }
 
 // ErrorMessage returns the value of the "error_message" field in the mutation.
-func (m *AnalyzeTaskMutation) ErrorMessage() (r string, exists bool) {
+func (m *BilibiliHighlightPublicationMutation) ErrorMessage() (r string, exists bool) {
 	v := m.error_message
 	if v == nil {
 		return
@@ -718,10 +319,10 @@ func (m *AnalyzeTaskMutation) ErrorMessage() (r string, exists bool) {
 	return *v, true
 }
 
-// OldErrorMessage returns the old "error_message" field's value of the AnalyzeTask entity.
-// If the AnalyzeTask object wasn't provided to the builder, the object is fetched from the database.
+// OldErrorMessage returns the old "error_message" field's value of the BilibiliHighlightPublication entity.
+// If the BilibiliHighlightPublication object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *AnalyzeTaskMutation) OldErrorMessage(ctx context.Context) (v *string, err error) {
+func (m *BilibiliHighlightPublicationMutation) OldErrorMessage(ctx context.Context) (v *string, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldErrorMessage is only allowed on UpdateOne operations")
 	}
@@ -736,128 +337,79 @@ func (m *AnalyzeTaskMutation) OldErrorMessage(ctx context.Context) (v *string, e
 }
 
 // ClearErrorMessage clears the value of the "error_message" field.
-func (m *AnalyzeTaskMutation) ClearErrorMessage() {
+func (m *BilibiliHighlightPublicationMutation) ClearErrorMessage() {
 	m.error_message = nil
-	m.clearedFields[analyzetask.FieldErrorMessage] = struct{}{}
+	m.clearedFields[bilibilihighlightpublication.FieldErrorMessage] = struct{}{}
 }
 
 // ErrorMessageCleared returns if the "error_message" field was cleared in this mutation.
-func (m *AnalyzeTaskMutation) ErrorMessageCleared() bool {
-	_, ok := m.clearedFields[analyzetask.FieldErrorMessage]
+func (m *BilibiliHighlightPublicationMutation) ErrorMessageCleared() bool {
+	_, ok := m.clearedFields[bilibilihighlightpublication.FieldErrorMessage]
 	return ok
 }
 
 // ResetErrorMessage resets all changes to the "error_message" field.
-func (m *AnalyzeTaskMutation) ResetErrorMessage() {
+func (m *BilibiliHighlightPublicationMutation) ResetErrorMessage() {
 	m.error_message = nil
-	delete(m.clearedFields, analyzetask.FieldErrorMessage)
+	delete(m.clearedFields, bilibilihighlightpublication.FieldErrorMessage)
 }
 
-// SetStartedAt sets the "started_at" field.
-func (m *AnalyzeTaskMutation) SetStartedAt(t time.Time) {
-	m.started_at = &t
+// SetPublishedAt sets the "published_at" field.
+func (m *BilibiliHighlightPublicationMutation) SetPublishedAt(t time.Time) {
+	m.published_at = &t
 }
 
-// StartedAt returns the value of the "started_at" field in the mutation.
-func (m *AnalyzeTaskMutation) StartedAt() (r time.Time, exists bool) {
-	v := m.started_at
+// PublishedAt returns the value of the "published_at" field in the mutation.
+func (m *BilibiliHighlightPublicationMutation) PublishedAt() (r time.Time, exists bool) {
+	v := m.published_at
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// OldStartedAt returns the old "started_at" field's value of the AnalyzeTask entity.
-// If the AnalyzeTask object wasn't provided to the builder, the object is fetched from the database.
+// OldPublishedAt returns the old "published_at" field's value of the BilibiliHighlightPublication entity.
+// If the BilibiliHighlightPublication object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *AnalyzeTaskMutation) OldStartedAt(ctx context.Context) (v *time.Time, err error) {
+func (m *BilibiliHighlightPublicationMutation) OldPublishedAt(ctx context.Context) (v *time.Time, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldStartedAt is only allowed on UpdateOne operations")
+		return v, errors.New("OldPublishedAt is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldStartedAt requires an ID field in the mutation")
+		return v, errors.New("OldPublishedAt requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldStartedAt: %w", err)
+		return v, fmt.Errorf("querying old value for OldPublishedAt: %w", err)
 	}
-	return oldValue.StartedAt, nil
+	return oldValue.PublishedAt, nil
 }
 
-// ClearStartedAt clears the value of the "started_at" field.
-func (m *AnalyzeTaskMutation) ClearStartedAt() {
-	m.started_at = nil
-	m.clearedFields[analyzetask.FieldStartedAt] = struct{}{}
+// ClearPublishedAt clears the value of the "published_at" field.
+func (m *BilibiliHighlightPublicationMutation) ClearPublishedAt() {
+	m.published_at = nil
+	m.clearedFields[bilibilihighlightpublication.FieldPublishedAt] = struct{}{}
 }
 
-// StartedAtCleared returns if the "started_at" field was cleared in this mutation.
-func (m *AnalyzeTaskMutation) StartedAtCleared() bool {
-	_, ok := m.clearedFields[analyzetask.FieldStartedAt]
+// PublishedAtCleared returns if the "published_at" field was cleared in this mutation.
+func (m *BilibiliHighlightPublicationMutation) PublishedAtCleared() bool {
+	_, ok := m.clearedFields[bilibilihighlightpublication.FieldPublishedAt]
 	return ok
 }
 
-// ResetStartedAt resets all changes to the "started_at" field.
-func (m *AnalyzeTaskMutation) ResetStartedAt() {
-	m.started_at = nil
-	delete(m.clearedFields, analyzetask.FieldStartedAt)
-}
-
-// SetCompletedAt sets the "completed_at" field.
-func (m *AnalyzeTaskMutation) SetCompletedAt(t time.Time) {
-	m.completed_at = &t
-}
-
-// CompletedAt returns the value of the "completed_at" field in the mutation.
-func (m *AnalyzeTaskMutation) CompletedAt() (r time.Time, exists bool) {
-	v := m.completed_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldCompletedAt returns the old "completed_at" field's value of the AnalyzeTask entity.
-// If the AnalyzeTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *AnalyzeTaskMutation) OldCompletedAt(ctx context.Context) (v *time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldCompletedAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldCompletedAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldCompletedAt: %w", err)
-	}
-	return oldValue.CompletedAt, nil
-}
-
-// ClearCompletedAt clears the value of the "completed_at" field.
-func (m *AnalyzeTaskMutation) ClearCompletedAt() {
-	m.completed_at = nil
-	m.clearedFields[analyzetask.FieldCompletedAt] = struct{}{}
-}
-
-// CompletedAtCleared returns if the "completed_at" field was cleared in this mutation.
-func (m *AnalyzeTaskMutation) CompletedAtCleared() bool {
-	_, ok := m.clearedFields[analyzetask.FieldCompletedAt]
-	return ok
-}
-
-// ResetCompletedAt resets all changes to the "completed_at" field.
-func (m *AnalyzeTaskMutation) ResetCompletedAt() {
-	m.completed_at = nil
-	delete(m.clearedFields, analyzetask.FieldCompletedAt)
+// ResetPublishedAt resets all changes to the "published_at" field.
+func (m *BilibiliHighlightPublicationMutation) ResetPublishedAt() {
+	m.published_at = nil
+	delete(m.clearedFields, bilibilihighlightpublication.FieldPublishedAt)
 }
 
 // SetCreatedAt sets the "created_at" field.
-func (m *AnalyzeTaskMutation) SetCreatedAt(t time.Time) {
+func (m *BilibiliHighlightPublicationMutation) SetCreatedAt(t time.Time) {
 	m.created_at = &t
 }
 
 // CreatedAt returns the value of the "created_at" field in the mutation.
-func (m *AnalyzeTaskMutation) CreatedAt() (r time.Time, exists bool) {
+func (m *BilibiliHighlightPublicationMutation) CreatedAt() (r time.Time, exists bool) {
 	v := m.created_at
 	if v == nil {
 		return
@@ -865,10 +417,10 @@ func (m *AnalyzeTaskMutation) CreatedAt() (r time.Time, exists bool) {
 	return *v, true
 }
 
-// OldCreatedAt returns the old "created_at" field's value of the AnalyzeTask entity.
-// If the AnalyzeTask object wasn't provided to the builder, the object is fetched from the database.
+// OldCreatedAt returns the old "created_at" field's value of the BilibiliHighlightPublication entity.
+// If the BilibiliHighlightPublication object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *AnalyzeTaskMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+func (m *BilibiliHighlightPublicationMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
 	}
@@ -883,17 +435,17 @@ func (m *AnalyzeTaskMutation) OldCreatedAt(ctx context.Context) (v time.Time, er
 }
 
 // ResetCreatedAt resets all changes to the "created_at" field.
-func (m *AnalyzeTaskMutation) ResetCreatedAt() {
+func (m *BilibiliHighlightPublicationMutation) ResetCreatedAt() {
 	m.created_at = nil
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (m *AnalyzeTaskMutation) SetUpdatedAt(t time.Time) {
+func (m *BilibiliHighlightPublicationMutation) SetUpdatedAt(t time.Time) {
 	m.updated_at = &t
 }
 
 // UpdatedAt returns the value of the "updated_at" field in the mutation.
-func (m *AnalyzeTaskMutation) UpdatedAt() (r time.Time, exists bool) {
+func (m *BilibiliHighlightPublicationMutation) UpdatedAt() (r time.Time, exists bool) {
 	v := m.updated_at
 	if v == nil {
 		return
@@ -901,10 +453,10 @@ func (m *AnalyzeTaskMutation) UpdatedAt() (r time.Time, exists bool) {
 	return *v, true
 }
 
-// OldUpdatedAt returns the old "updated_at" field's value of the AnalyzeTask entity.
-// If the AnalyzeTask object wasn't provided to the builder, the object is fetched from the database.
+// OldUpdatedAt returns the old "updated_at" field's value of the BilibiliHighlightPublication entity.
+// If the BilibiliHighlightPublication object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *AnalyzeTaskMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+func (m *BilibiliHighlightPublicationMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
 	}
@@ -919,97 +471,58 @@ func (m *AnalyzeTaskMutation) OldUpdatedAt(ctx context.Context) (v time.Time, er
 }
 
 // ResetUpdatedAt resets all changes to the "updated_at" field.
-func (m *AnalyzeTaskMutation) ResetUpdatedAt() {
+func (m *BilibiliHighlightPublicationMutation) ResetUpdatedAt() {
 	m.updated_at = nil
 }
 
-// SetMatchRoundID sets the "match_round" edge to the MatchRound entity by id.
-func (m *AnalyzeTaskMutation) SetMatchRoundID(id int) {
-	m.match_round = &id
+// SetHighlightClipID sets the "highlight_clip" edge to the HighlightClip entity by id.
+func (m *BilibiliHighlightPublicationMutation) SetHighlightClipID(id int) {
+	m.highlight_clip = &id
 }
 
-// ClearMatchRound clears the "match_round" edge to the MatchRound entity.
-func (m *AnalyzeTaskMutation) ClearMatchRound() {
-	m.clearedmatch_round = true
+// ClearHighlightClip clears the "highlight_clip" edge to the HighlightClip entity.
+func (m *BilibiliHighlightPublicationMutation) ClearHighlightClip() {
+	m.clearedhighlight_clip = true
 }
 
-// MatchRoundCleared reports if the "match_round" edge to the MatchRound entity was cleared.
-func (m *AnalyzeTaskMutation) MatchRoundCleared() bool {
-	return m.clearedmatch_round
+// HighlightClipCleared reports if the "highlight_clip" edge to the HighlightClip entity was cleared.
+func (m *BilibiliHighlightPublicationMutation) HighlightClipCleared() bool {
+	return m.clearedhighlight_clip
 }
 
-// MatchRoundID returns the "match_round" edge ID in the mutation.
-func (m *AnalyzeTaskMutation) MatchRoundID() (id int, exists bool) {
-	if m.match_round != nil {
-		return *m.match_round, true
+// HighlightClipID returns the "highlight_clip" edge ID in the mutation.
+func (m *BilibiliHighlightPublicationMutation) HighlightClipID() (id int, exists bool) {
+	if m.highlight_clip != nil {
+		return *m.highlight_clip, true
 	}
 	return
 }
 
-// MatchRoundIDs returns the "match_round" edge IDs in the mutation.
+// HighlightClipIDs returns the "highlight_clip" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// MatchRoundID instead. It exists only for internal usage by the builders.
-func (m *AnalyzeTaskMutation) MatchRoundIDs() (ids []int) {
-	if id := m.match_round; id != nil {
+// HighlightClipID instead. It exists only for internal usage by the builders.
+func (m *BilibiliHighlightPublicationMutation) HighlightClipIDs() (ids []int) {
+	if id := m.highlight_clip; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetMatchRound resets all changes to the "match_round" edge.
-func (m *AnalyzeTaskMutation) ResetMatchRound() {
-	m.match_round = nil
-	m.clearedmatch_round = false
+// ResetHighlightClip resets all changes to the "highlight_clip" edge.
+func (m *BilibiliHighlightPublicationMutation) ResetHighlightClip() {
+	m.highlight_clip = nil
+	m.clearedhighlight_clip = false
 }
 
-// SetSourceArtifactID sets the "source_artifact" edge to the MediaArtifact entity by id.
-func (m *AnalyzeTaskMutation) SetSourceArtifactID(id int) {
-	m.source_artifact = &id
-}
-
-// ClearSourceArtifact clears the "source_artifact" edge to the MediaArtifact entity.
-func (m *AnalyzeTaskMutation) ClearSourceArtifact() {
-	m.clearedsource_artifact = true
-}
-
-// SourceArtifactCleared reports if the "source_artifact" edge to the MediaArtifact entity was cleared.
-func (m *AnalyzeTaskMutation) SourceArtifactCleared() bool {
-	return m.clearedsource_artifact
-}
-
-// SourceArtifactID returns the "source_artifact" edge ID in the mutation.
-func (m *AnalyzeTaskMutation) SourceArtifactID() (id int, exists bool) {
-	if m.source_artifact != nil {
-		return *m.source_artifact, true
-	}
-	return
-}
-
-// SourceArtifactIDs returns the "source_artifact" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// SourceArtifactID instead. It exists only for internal usage by the builders.
-func (m *AnalyzeTaskMutation) SourceArtifactIDs() (ids []int) {
-	if id := m.source_artifact; id != nil {
-		ids = append(ids, *id)
-	}
-	return
-}
-
-// ResetSourceArtifact resets all changes to the "source_artifact" edge.
-func (m *AnalyzeTaskMutation) ResetSourceArtifact() {
-	m.source_artifact = nil
-	m.clearedsource_artifact = false
-}
-
-// Where appends a list predicates to the AnalyzeTaskMutation builder.
-func (m *AnalyzeTaskMutation) Where(ps ...predicate.AnalyzeTask) {
+// Where appends a list predicates to the BilibiliHighlightPublicationMutation builder.
+func (m *BilibiliHighlightPublicationMutation) Where(ps ...predicate.BilibiliHighlightPublication) {
 	m.predicates = append(m.predicates, ps...)
 }
 
-// WhereP appends storage-level predicates to the AnalyzeTaskMutation builder. Using this method,
+// WhereP appends storage-level predicates to the BilibiliHighlightPublicationMutation builder. Using this method,
 // users can use type-assertion to append predicates that do not depend on any generated package.
-func (m *AnalyzeTaskMutation) WhereP(ps ...func(*sql.Selector)) {
-	p := make([]predicate.AnalyzeTask, len(ps))
+func (m *BilibiliHighlightPublicationMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.BilibiliHighlightPublication, len(ps))
 	for i := range ps {
 		p[i] = ps[i]
 	}
@@ -1017,69 +530,45 @@ func (m *AnalyzeTaskMutation) WhereP(ps ...func(*sql.Selector)) {
 }
 
 // Op returns the operation name.
-func (m *AnalyzeTaskMutation) Op() Op {
+func (m *BilibiliHighlightPublicationMutation) Op() Op {
 	return m.op
 }
 
 // SetOp allows setting the mutation operation.
-func (m *AnalyzeTaskMutation) SetOp(op Op) {
+func (m *BilibiliHighlightPublicationMutation) SetOp(op Op) {
 	m.op = op
 }
 
-// Type returns the node type of this mutation (AnalyzeTask).
-func (m *AnalyzeTaskMutation) Type() string {
+// Type returns the node type of this mutation (BilibiliHighlightPublication).
+func (m *BilibiliHighlightPublicationMutation) Type() string {
 	return m.typ
 }
 
 // Fields returns all fields that were changed during this mutation. Note that in
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
-func (m *AnalyzeTaskMutation) Fields() []string {
-	fields := make([]string, 0, 15)
-	if m.role != nil {
-		fields = append(fields, analyzetask.FieldRole)
+func (m *BilibiliHighlightPublicationMutation) Fields() []string {
+	fields := make([]string, 0, 7)
+	if m.external_id != nil {
+		fields = append(fields, bilibilihighlightpublication.FieldExternalID)
 	}
-	if m.status != nil {
-		fields = append(fields, analyzetask.FieldStatus)
+	if m.url != nil {
+		fields = append(fields, bilibilihighlightpublication.FieldURL)
 	}
-	if m.priority != nil {
-		fields = append(fields, analyzetask.FieldPriority)
-	}
-	if m.k8s_job_name != nil {
-		fields = append(fields, analyzetask.FieldK8sJobName)
-	}
-	if m.attempts != nil {
-		fields = append(fields, analyzetask.FieldAttempts)
-	}
-	if m.round_json_path != nil {
-		fields = append(fields, analyzetask.FieldRoundJSONPath)
-	}
-	if m.settlement_image_path != nil {
-		fields = append(fields, analyzetask.FieldSettlementImagePath)
-	}
-	if m.settlement_status != nil {
-		fields = append(fields, analyzetask.FieldSettlementStatus)
-	}
-	if m.effective_start_seconds != nil {
-		fields = append(fields, analyzetask.FieldEffectiveStartSeconds)
-	}
-	if m.effective_end_seconds != nil {
-		fields = append(fields, analyzetask.FieldEffectiveEndSeconds)
+	if m.payload != nil {
+		fields = append(fields, bilibilihighlightpublication.FieldPayload)
 	}
 	if m.error_message != nil {
-		fields = append(fields, analyzetask.FieldErrorMessage)
+		fields = append(fields, bilibilihighlightpublication.FieldErrorMessage)
 	}
-	if m.started_at != nil {
-		fields = append(fields, analyzetask.FieldStartedAt)
-	}
-	if m.completed_at != nil {
-		fields = append(fields, analyzetask.FieldCompletedAt)
+	if m.published_at != nil {
+		fields = append(fields, bilibilihighlightpublication.FieldPublishedAt)
 	}
 	if m.created_at != nil {
-		fields = append(fields, analyzetask.FieldCreatedAt)
+		fields = append(fields, bilibilihighlightpublication.FieldCreatedAt)
 	}
 	if m.updated_at != nil {
-		fields = append(fields, analyzetask.FieldUpdatedAt)
+		fields = append(fields, bilibilihighlightpublication.FieldUpdatedAt)
 	}
 	return fields
 }
@@ -1087,37 +576,21 @@ func (m *AnalyzeTaskMutation) Fields() []string {
 // Field returns the value of a field with the given name. The second boolean
 // return value indicates that this field was not set, or was not defined in the
 // schema.
-func (m *AnalyzeTaskMutation) Field(name string) (ent.Value, bool) {
+func (m *BilibiliHighlightPublicationMutation) Field(name string) (ent.Value, bool) {
 	switch name {
-	case analyzetask.FieldRole:
-		return m.Role()
-	case analyzetask.FieldStatus:
-		return m.Status()
-	case analyzetask.FieldPriority:
-		return m.Priority()
-	case analyzetask.FieldK8sJobName:
-		return m.K8sJobName()
-	case analyzetask.FieldAttempts:
-		return m.Attempts()
-	case analyzetask.FieldRoundJSONPath:
-		return m.RoundJSONPath()
-	case analyzetask.FieldSettlementImagePath:
-		return m.SettlementImagePath()
-	case analyzetask.FieldSettlementStatus:
-		return m.SettlementStatus()
-	case analyzetask.FieldEffectiveStartSeconds:
-		return m.EffectiveStartSeconds()
-	case analyzetask.FieldEffectiveEndSeconds:
-		return m.EffectiveEndSeconds()
-	case analyzetask.FieldErrorMessage:
+	case bilibilihighlightpublication.FieldExternalID:
+		return m.ExternalID()
+	case bilibilihighlightpublication.FieldURL:
+		return m.URL()
+	case bilibilihighlightpublication.FieldPayload:
+		return m.Payload()
+	case bilibilihighlightpublication.FieldErrorMessage:
 		return m.ErrorMessage()
-	case analyzetask.FieldStartedAt:
-		return m.StartedAt()
-	case analyzetask.FieldCompletedAt:
-		return m.CompletedAt()
-	case analyzetask.FieldCreatedAt:
+	case bilibilihighlightpublication.FieldPublishedAt:
+		return m.PublishedAt()
+	case bilibilihighlightpublication.FieldCreatedAt:
 		return m.CreatedAt()
-	case analyzetask.FieldUpdatedAt:
+	case bilibilihighlightpublication.FieldUpdatedAt:
 		return m.UpdatedAt()
 	}
 	return nil, false
@@ -1126,146 +599,74 @@ func (m *AnalyzeTaskMutation) Field(name string) (ent.Value, bool) {
 // OldField returns the old value of the field from the database. An error is
 // returned if the mutation operation is not UpdateOne, or the query to the
 // database failed.
-func (m *AnalyzeTaskMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+func (m *BilibiliHighlightPublicationMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
-	case analyzetask.FieldRole:
-		return m.OldRole(ctx)
-	case analyzetask.FieldStatus:
-		return m.OldStatus(ctx)
-	case analyzetask.FieldPriority:
-		return m.OldPriority(ctx)
-	case analyzetask.FieldK8sJobName:
-		return m.OldK8sJobName(ctx)
-	case analyzetask.FieldAttempts:
-		return m.OldAttempts(ctx)
-	case analyzetask.FieldRoundJSONPath:
-		return m.OldRoundJSONPath(ctx)
-	case analyzetask.FieldSettlementImagePath:
-		return m.OldSettlementImagePath(ctx)
-	case analyzetask.FieldSettlementStatus:
-		return m.OldSettlementStatus(ctx)
-	case analyzetask.FieldEffectiveStartSeconds:
-		return m.OldEffectiveStartSeconds(ctx)
-	case analyzetask.FieldEffectiveEndSeconds:
-		return m.OldEffectiveEndSeconds(ctx)
-	case analyzetask.FieldErrorMessage:
+	case bilibilihighlightpublication.FieldExternalID:
+		return m.OldExternalID(ctx)
+	case bilibilihighlightpublication.FieldURL:
+		return m.OldURL(ctx)
+	case bilibilihighlightpublication.FieldPayload:
+		return m.OldPayload(ctx)
+	case bilibilihighlightpublication.FieldErrorMessage:
 		return m.OldErrorMessage(ctx)
-	case analyzetask.FieldStartedAt:
-		return m.OldStartedAt(ctx)
-	case analyzetask.FieldCompletedAt:
-		return m.OldCompletedAt(ctx)
-	case analyzetask.FieldCreatedAt:
+	case bilibilihighlightpublication.FieldPublishedAt:
+		return m.OldPublishedAt(ctx)
+	case bilibilihighlightpublication.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
-	case analyzetask.FieldUpdatedAt:
+	case bilibilihighlightpublication.FieldUpdatedAt:
 		return m.OldUpdatedAt(ctx)
 	}
-	return nil, fmt.Errorf("unknown AnalyzeTask field %s", name)
+	return nil, fmt.Errorf("unknown BilibiliHighlightPublication field %s", name)
 }
 
 // SetField sets the value of a field with the given name. It returns an error if
 // the field is not defined in the schema, or if the type mismatched the field
 // type.
-func (m *AnalyzeTaskMutation) SetField(name string, value ent.Value) error {
+func (m *BilibiliHighlightPublicationMutation) SetField(name string, value ent.Value) error {
 	switch name {
-	case analyzetask.FieldRole:
+	case bilibilihighlightpublication.FieldExternalID:
 		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetRole(v)
+		m.SetExternalID(v)
 		return nil
-	case analyzetask.FieldStatus:
-		v, ok := value.(analyzetask.Status)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetStatus(v)
-		return nil
-	case analyzetask.FieldPriority:
-		v, ok := value.(int)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetPriority(v)
-		return nil
-	case analyzetask.FieldK8sJobName:
+	case bilibilihighlightpublication.FieldURL:
 		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetK8sJobName(v)
+		m.SetURL(v)
 		return nil
-	case analyzetask.FieldAttempts:
-		v, ok := value.(int)
+	case bilibilihighlightpublication.FieldPayload:
+		v, ok := value.(map[string]interface{})
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetAttempts(v)
+		m.SetPayload(v)
 		return nil
-	case analyzetask.FieldRoundJSONPath:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetRoundJSONPath(v)
-		return nil
-	case analyzetask.FieldSettlementImagePath:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetSettlementImagePath(v)
-		return nil
-	case analyzetask.FieldSettlementStatus:
-		v, ok := value.(analyzetask.SettlementStatus)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetSettlementStatus(v)
-		return nil
-	case analyzetask.FieldEffectiveStartSeconds:
-		v, ok := value.(float64)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetEffectiveStartSeconds(v)
-		return nil
-	case analyzetask.FieldEffectiveEndSeconds:
-		v, ok := value.(float64)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetEffectiveEndSeconds(v)
-		return nil
-	case analyzetask.FieldErrorMessage:
+	case bilibilihighlightpublication.FieldErrorMessage:
 		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetErrorMessage(v)
 		return nil
-	case analyzetask.FieldStartedAt:
+	case bilibilihighlightpublication.FieldPublishedAt:
 		v, ok := value.(time.Time)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetStartedAt(v)
+		m.SetPublishedAt(v)
 		return nil
-	case analyzetask.FieldCompletedAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetCompletedAt(v)
-		return nil
-	case analyzetask.FieldCreatedAt:
+	case bilibilihighlightpublication.FieldCreatedAt:
 		v, ok := value.(time.Time)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetCreatedAt(v)
 		return nil
-	case analyzetask.FieldUpdatedAt:
+	case bilibilihighlightpublication.FieldUpdatedAt:
 		v, ok := value.(time.Time)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
@@ -1273,233 +674,127 @@ func (m *AnalyzeTaskMutation) SetField(name string, value ent.Value) error {
 		m.SetUpdatedAt(v)
 		return nil
 	}
-	return fmt.Errorf("unknown AnalyzeTask field %s", name)
+	return fmt.Errorf("unknown BilibiliHighlightPublication field %s", name)
 }
 
 // AddedFields returns all numeric fields that were incremented/decremented during
 // this mutation.
-func (m *AnalyzeTaskMutation) AddedFields() []string {
-	var fields []string
-	if m.addpriority != nil {
-		fields = append(fields, analyzetask.FieldPriority)
-	}
-	if m.addattempts != nil {
-		fields = append(fields, analyzetask.FieldAttempts)
-	}
-	if m.addeffective_start_seconds != nil {
-		fields = append(fields, analyzetask.FieldEffectiveStartSeconds)
-	}
-	if m.addeffective_end_seconds != nil {
-		fields = append(fields, analyzetask.FieldEffectiveEndSeconds)
-	}
-	return fields
+func (m *BilibiliHighlightPublicationMutation) AddedFields() []string {
+	return nil
 }
 
 // AddedField returns the numeric value that was incremented/decremented on a field
 // with the given name. The second boolean return value indicates that this field
 // was not set, or was not defined in the schema.
-func (m *AnalyzeTaskMutation) AddedField(name string) (ent.Value, bool) {
-	switch name {
-	case analyzetask.FieldPriority:
-		return m.AddedPriority()
-	case analyzetask.FieldAttempts:
-		return m.AddedAttempts()
-	case analyzetask.FieldEffectiveStartSeconds:
-		return m.AddedEffectiveStartSeconds()
-	case analyzetask.FieldEffectiveEndSeconds:
-		return m.AddedEffectiveEndSeconds()
-	}
+func (m *BilibiliHighlightPublicationMutation) AddedField(name string) (ent.Value, bool) {
 	return nil, false
 }
 
 // AddField adds the value to the field with the given name. It returns an error if
 // the field is not defined in the schema, or if the type mismatched the field
 // type.
-func (m *AnalyzeTaskMutation) AddField(name string, value ent.Value) error {
+func (m *BilibiliHighlightPublicationMutation) AddField(name string, value ent.Value) error {
 	switch name {
-	case analyzetask.FieldPriority:
-		v, ok := value.(int)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddPriority(v)
-		return nil
-	case analyzetask.FieldAttempts:
-		v, ok := value.(int)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddAttempts(v)
-		return nil
-	case analyzetask.FieldEffectiveStartSeconds:
-		v, ok := value.(float64)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddEffectiveStartSeconds(v)
-		return nil
-	case analyzetask.FieldEffectiveEndSeconds:
-		v, ok := value.(float64)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddEffectiveEndSeconds(v)
-		return nil
 	}
-	return fmt.Errorf("unknown AnalyzeTask numeric field %s", name)
+	return fmt.Errorf("unknown BilibiliHighlightPublication numeric field %s", name)
 }
 
 // ClearedFields returns all nullable fields that were cleared during this
 // mutation.
-func (m *AnalyzeTaskMutation) ClearedFields() []string {
+func (m *BilibiliHighlightPublicationMutation) ClearedFields() []string {
 	var fields []string
-	if m.FieldCleared(analyzetask.FieldK8sJobName) {
-		fields = append(fields, analyzetask.FieldK8sJobName)
+	if m.FieldCleared(bilibilihighlightpublication.FieldExternalID) {
+		fields = append(fields, bilibilihighlightpublication.FieldExternalID)
 	}
-	if m.FieldCleared(analyzetask.FieldRoundJSONPath) {
-		fields = append(fields, analyzetask.FieldRoundJSONPath)
+	if m.FieldCleared(bilibilihighlightpublication.FieldURL) {
+		fields = append(fields, bilibilihighlightpublication.FieldURL)
 	}
-	if m.FieldCleared(analyzetask.FieldSettlementImagePath) {
-		fields = append(fields, analyzetask.FieldSettlementImagePath)
+	if m.FieldCleared(bilibilihighlightpublication.FieldPayload) {
+		fields = append(fields, bilibilihighlightpublication.FieldPayload)
 	}
-	if m.FieldCleared(analyzetask.FieldSettlementStatus) {
-		fields = append(fields, analyzetask.FieldSettlementStatus)
+	if m.FieldCleared(bilibilihighlightpublication.FieldErrorMessage) {
+		fields = append(fields, bilibilihighlightpublication.FieldErrorMessage)
 	}
-	if m.FieldCleared(analyzetask.FieldEffectiveStartSeconds) {
-		fields = append(fields, analyzetask.FieldEffectiveStartSeconds)
-	}
-	if m.FieldCleared(analyzetask.FieldEffectiveEndSeconds) {
-		fields = append(fields, analyzetask.FieldEffectiveEndSeconds)
-	}
-	if m.FieldCleared(analyzetask.FieldErrorMessage) {
-		fields = append(fields, analyzetask.FieldErrorMessage)
-	}
-	if m.FieldCleared(analyzetask.FieldStartedAt) {
-		fields = append(fields, analyzetask.FieldStartedAt)
-	}
-	if m.FieldCleared(analyzetask.FieldCompletedAt) {
-		fields = append(fields, analyzetask.FieldCompletedAt)
+	if m.FieldCleared(bilibilihighlightpublication.FieldPublishedAt) {
+		fields = append(fields, bilibilihighlightpublication.FieldPublishedAt)
 	}
 	return fields
 }
 
 // FieldCleared returns a boolean indicating if a field with the given name was
 // cleared in this mutation.
-func (m *AnalyzeTaskMutation) FieldCleared(name string) bool {
+func (m *BilibiliHighlightPublicationMutation) FieldCleared(name string) bool {
 	_, ok := m.clearedFields[name]
 	return ok
 }
 
 // ClearField clears the value of the field with the given name. It returns an
 // error if the field is not defined in the schema.
-func (m *AnalyzeTaskMutation) ClearField(name string) error {
+func (m *BilibiliHighlightPublicationMutation) ClearField(name string) error {
 	switch name {
-	case analyzetask.FieldK8sJobName:
-		m.ClearK8sJobName()
+	case bilibilihighlightpublication.FieldExternalID:
+		m.ClearExternalID()
 		return nil
-	case analyzetask.FieldRoundJSONPath:
-		m.ClearRoundJSONPath()
+	case bilibilihighlightpublication.FieldURL:
+		m.ClearURL()
 		return nil
-	case analyzetask.FieldSettlementImagePath:
-		m.ClearSettlementImagePath()
+	case bilibilihighlightpublication.FieldPayload:
+		m.ClearPayload()
 		return nil
-	case analyzetask.FieldSettlementStatus:
-		m.ClearSettlementStatus()
-		return nil
-	case analyzetask.FieldEffectiveStartSeconds:
-		m.ClearEffectiveStartSeconds()
-		return nil
-	case analyzetask.FieldEffectiveEndSeconds:
-		m.ClearEffectiveEndSeconds()
-		return nil
-	case analyzetask.FieldErrorMessage:
+	case bilibilihighlightpublication.FieldErrorMessage:
 		m.ClearErrorMessage()
 		return nil
-	case analyzetask.FieldStartedAt:
-		m.ClearStartedAt()
-		return nil
-	case analyzetask.FieldCompletedAt:
-		m.ClearCompletedAt()
+	case bilibilihighlightpublication.FieldPublishedAt:
+		m.ClearPublishedAt()
 		return nil
 	}
-	return fmt.Errorf("unknown AnalyzeTask nullable field %s", name)
+	return fmt.Errorf("unknown BilibiliHighlightPublication nullable field %s", name)
 }
 
 // ResetField resets all changes in the mutation for the field with the given name.
 // It returns an error if the field is not defined in the schema.
-func (m *AnalyzeTaskMutation) ResetField(name string) error {
+func (m *BilibiliHighlightPublicationMutation) ResetField(name string) error {
 	switch name {
-	case analyzetask.FieldRole:
-		m.ResetRole()
+	case bilibilihighlightpublication.FieldExternalID:
+		m.ResetExternalID()
 		return nil
-	case analyzetask.FieldStatus:
-		m.ResetStatus()
+	case bilibilihighlightpublication.FieldURL:
+		m.ResetURL()
 		return nil
-	case analyzetask.FieldPriority:
-		m.ResetPriority()
+	case bilibilihighlightpublication.FieldPayload:
+		m.ResetPayload()
 		return nil
-	case analyzetask.FieldK8sJobName:
-		m.ResetK8sJobName()
-		return nil
-	case analyzetask.FieldAttempts:
-		m.ResetAttempts()
-		return nil
-	case analyzetask.FieldRoundJSONPath:
-		m.ResetRoundJSONPath()
-		return nil
-	case analyzetask.FieldSettlementImagePath:
-		m.ResetSettlementImagePath()
-		return nil
-	case analyzetask.FieldSettlementStatus:
-		m.ResetSettlementStatus()
-		return nil
-	case analyzetask.FieldEffectiveStartSeconds:
-		m.ResetEffectiveStartSeconds()
-		return nil
-	case analyzetask.FieldEffectiveEndSeconds:
-		m.ResetEffectiveEndSeconds()
-		return nil
-	case analyzetask.FieldErrorMessage:
+	case bilibilihighlightpublication.FieldErrorMessage:
 		m.ResetErrorMessage()
 		return nil
-	case analyzetask.FieldStartedAt:
-		m.ResetStartedAt()
+	case bilibilihighlightpublication.FieldPublishedAt:
+		m.ResetPublishedAt()
 		return nil
-	case analyzetask.FieldCompletedAt:
-		m.ResetCompletedAt()
-		return nil
-	case analyzetask.FieldCreatedAt:
+	case bilibilihighlightpublication.FieldCreatedAt:
 		m.ResetCreatedAt()
 		return nil
-	case analyzetask.FieldUpdatedAt:
+	case bilibilihighlightpublication.FieldUpdatedAt:
 		m.ResetUpdatedAt()
 		return nil
 	}
-	return fmt.Errorf("unknown AnalyzeTask field %s", name)
+	return fmt.Errorf("unknown BilibiliHighlightPublication field %s", name)
 }
 
 // AddedEdges returns all edge names that were set/added in this mutation.
-func (m *AnalyzeTaskMutation) AddedEdges() []string {
-	edges := make([]string, 0, 2)
-	if m.match_round != nil {
-		edges = append(edges, analyzetask.EdgeMatchRound)
-	}
-	if m.source_artifact != nil {
-		edges = append(edges, analyzetask.EdgeSourceArtifact)
+func (m *BilibiliHighlightPublicationMutation) AddedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.highlight_clip != nil {
+		edges = append(edges, bilibilihighlightpublication.EdgeHighlightClip)
 	}
 	return edges
 }
 
 // AddedIDs returns all IDs (to other nodes) that were added for the given edge
 // name in this mutation.
-func (m *AnalyzeTaskMutation) AddedIDs(name string) []ent.Value {
+func (m *BilibiliHighlightPublicationMutation) AddedIDs(name string) []ent.Value {
 	switch name {
-	case analyzetask.EdgeMatchRound:
-		if id := m.match_round; id != nil {
-			return []ent.Value{*id}
-		}
-	case analyzetask.EdgeSourceArtifact:
-		if id := m.source_artifact; id != nil {
+	case bilibilihighlightpublication.EdgeHighlightClip:
+		if id := m.highlight_clip; id != nil {
 			return []ent.Value{*id}
 		}
 	}
@@ -1507,115 +802,98 @@ func (m *AnalyzeTaskMutation) AddedIDs(name string) []ent.Value {
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
-func (m *AnalyzeTaskMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 2)
+func (m *BilibiliHighlightPublicationMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 1)
 	return edges
 }
 
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
-func (m *AnalyzeTaskMutation) RemovedIDs(name string) []ent.Value {
+func (m *BilibiliHighlightPublicationMutation) RemovedIDs(name string) []ent.Value {
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
-func (m *AnalyzeTaskMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 2)
-	if m.clearedmatch_round {
-		edges = append(edges, analyzetask.EdgeMatchRound)
-	}
-	if m.clearedsource_artifact {
-		edges = append(edges, analyzetask.EdgeSourceArtifact)
+func (m *BilibiliHighlightPublicationMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.clearedhighlight_clip {
+		edges = append(edges, bilibilihighlightpublication.EdgeHighlightClip)
 	}
 	return edges
 }
 
 // EdgeCleared returns a boolean which indicates if the edge with the given name
 // was cleared in this mutation.
-func (m *AnalyzeTaskMutation) EdgeCleared(name string) bool {
+func (m *BilibiliHighlightPublicationMutation) EdgeCleared(name string) bool {
 	switch name {
-	case analyzetask.EdgeMatchRound:
-		return m.clearedmatch_round
-	case analyzetask.EdgeSourceArtifact:
-		return m.clearedsource_artifact
+	case bilibilihighlightpublication.EdgeHighlightClip:
+		return m.clearedhighlight_clip
 	}
 	return false
 }
 
 // ClearEdge clears the value of the edge with the given name. It returns an error
 // if that edge is not defined in the schema.
-func (m *AnalyzeTaskMutation) ClearEdge(name string) error {
+func (m *BilibiliHighlightPublicationMutation) ClearEdge(name string) error {
 	switch name {
-	case analyzetask.EdgeMatchRound:
-		m.ClearMatchRound()
-		return nil
-	case analyzetask.EdgeSourceArtifact:
-		m.ClearSourceArtifact()
+	case bilibilihighlightpublication.EdgeHighlightClip:
+		m.ClearHighlightClip()
 		return nil
 	}
-	return fmt.Errorf("unknown AnalyzeTask unique edge %s", name)
+	return fmt.Errorf("unknown BilibiliHighlightPublication unique edge %s", name)
 }
 
 // ResetEdge resets all changes to the edge with the given name in this mutation.
 // It returns an error if the edge is not defined in the schema.
-func (m *AnalyzeTaskMutation) ResetEdge(name string) error {
+func (m *BilibiliHighlightPublicationMutation) ResetEdge(name string) error {
 	switch name {
-	case analyzetask.EdgeMatchRound:
-		m.ResetMatchRound()
-		return nil
-	case analyzetask.EdgeSourceArtifact:
-		m.ResetSourceArtifact()
+	case bilibilihighlightpublication.EdgeHighlightClip:
+		m.ResetHighlightClip()
 		return nil
 	}
-	return fmt.Errorf("unknown AnalyzeTask edge %s", name)
+	return fmt.Errorf("unknown BilibiliHighlightPublication edge %s", name)
 }
 
 // HighlightClipMutation represents an operation that mutates the HighlightClip nodes in the graph.
 type HighlightClipMutation struct {
 	config
-	op                     Op
-	typ                    string
-	id                     *int
-	highlight_index        *int
-	addhighlight_index     *int
-	role                   *string
-	algorithm_version      *string
-	status                 *highlightclip.Status
-	priority               *int
-	addpriority            *int
-	k8s_job_name           *string
-	attempts               *int
-	addattempts            *int
-	start_seconds          *float64
-	addstart_seconds       *float64
-	end_seconds            *float64
-	addend_seconds         *float64
-	peak_seconds           *float64
-	addpeak_seconds        *float64
-	output_dir             *string
-	title                  *string
-	description            *string
-	tags                   *[]string
-	appendtags             []string
-	score                  *float64
-	addscore               *float64
-	model_payload          *string
-	error_message          *string
-	started_at             *time.Time
-	completed_at           *time.Time
-	created_at             *time.Time
-	updated_at             *time.Time
-	clearedFields          map[string]struct{}
-	match_round            *int
-	clearedmatch_round     bool
-	source_artifact        *int
-	clearedsource_artifact bool
-	publish_tasks          map[int]struct{}
-	removedpublish_tasks   map[int]struct{}
-	clearedpublish_tasks   bool
-	done                   bool
-	oldValue               func(context.Context) (*HighlightClip, error)
-	predicates             []predicate.HighlightClip
+	op                           Op
+	typ                          string
+	id                           *int
+	highlight_index              *int
+	addhighlight_index           *int
+	role                         *string
+	algorithm_version            *string
+	status                       *highlightclip.Status
+	priority                     *int
+	addpriority                  *int
+	start_seconds                *float64
+	addstart_seconds             *float64
+	end_seconds                  *float64
+	addend_seconds               *float64
+	peak_seconds                 *float64
+	addpeak_seconds              *float64
+	source_path                  *string
+	output_dir                   *string
+	title                        *string
+	description                  *string
+	tags                         *[]string
+	appendtags                   []string
+	score                        *float64
+	addscore                     *float64
+	model_payload                *string
+	completed_at                 *time.Time
+	created_at                   *time.Time
+	updated_at                   *time.Time
+	clearedFields                map[string]struct{}
+	match_round                  *int
+	clearedmatch_round           bool
+	bilibili_publications        map[int]struct{}
+	removedbilibili_publications map[int]struct{}
+	clearedbilibili_publications bool
+	done                         bool
+	oldValue                     func(context.Context) (*HighlightClip, error)
+	predicates                   []predicate.HighlightClip
 }
 
 var _ ent.Mutation = (*HighlightClipMutation)(nil)
@@ -1936,111 +1214,6 @@ func (m *HighlightClipMutation) ResetPriority() {
 	m.addpriority = nil
 }
 
-// SetK8sJobName sets the "k8s_job_name" field.
-func (m *HighlightClipMutation) SetK8sJobName(s string) {
-	m.k8s_job_name = &s
-}
-
-// K8sJobName returns the value of the "k8s_job_name" field in the mutation.
-func (m *HighlightClipMutation) K8sJobName() (r string, exists bool) {
-	v := m.k8s_job_name
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldK8sJobName returns the old "k8s_job_name" field's value of the HighlightClip entity.
-// If the HighlightClip object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *HighlightClipMutation) OldK8sJobName(ctx context.Context) (v *string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldK8sJobName is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldK8sJobName requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldK8sJobName: %w", err)
-	}
-	return oldValue.K8sJobName, nil
-}
-
-// ClearK8sJobName clears the value of the "k8s_job_name" field.
-func (m *HighlightClipMutation) ClearK8sJobName() {
-	m.k8s_job_name = nil
-	m.clearedFields[highlightclip.FieldK8sJobName] = struct{}{}
-}
-
-// K8sJobNameCleared returns if the "k8s_job_name" field was cleared in this mutation.
-func (m *HighlightClipMutation) K8sJobNameCleared() bool {
-	_, ok := m.clearedFields[highlightclip.FieldK8sJobName]
-	return ok
-}
-
-// ResetK8sJobName resets all changes to the "k8s_job_name" field.
-func (m *HighlightClipMutation) ResetK8sJobName() {
-	m.k8s_job_name = nil
-	delete(m.clearedFields, highlightclip.FieldK8sJobName)
-}
-
-// SetAttempts sets the "attempts" field.
-func (m *HighlightClipMutation) SetAttempts(i int) {
-	m.attempts = &i
-	m.addattempts = nil
-}
-
-// Attempts returns the value of the "attempts" field in the mutation.
-func (m *HighlightClipMutation) Attempts() (r int, exists bool) {
-	v := m.attempts
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldAttempts returns the old "attempts" field's value of the HighlightClip entity.
-// If the HighlightClip object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *HighlightClipMutation) OldAttempts(ctx context.Context) (v int, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldAttempts is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldAttempts requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldAttempts: %w", err)
-	}
-	return oldValue.Attempts, nil
-}
-
-// AddAttempts adds i to the "attempts" field.
-func (m *HighlightClipMutation) AddAttempts(i int) {
-	if m.addattempts != nil {
-		*m.addattempts += i
-	} else {
-		m.addattempts = &i
-	}
-}
-
-// AddedAttempts returns the value that was added to the "attempts" field in this mutation.
-func (m *HighlightClipMutation) AddedAttempts() (r int, exists bool) {
-	v := m.addattempts
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// ResetAttempts resets all changes to the "attempts" field.
-func (m *HighlightClipMutation) ResetAttempts() {
-	m.attempts = nil
-	m.addattempts = nil
-}
-
 // SetStartSeconds sets the "start_seconds" field.
 func (m *HighlightClipMutation) SetStartSeconds(f float64) {
 	m.start_seconds = &f
@@ -2207,6 +1380,42 @@ func (m *HighlightClipMutation) AddedPeakSeconds() (r float64, exists bool) {
 func (m *HighlightClipMutation) ResetPeakSeconds() {
 	m.peak_seconds = nil
 	m.addpeak_seconds = nil
+}
+
+// SetSourcePath sets the "source_path" field.
+func (m *HighlightClipMutation) SetSourcePath(s string) {
+	m.source_path = &s
+}
+
+// SourcePath returns the value of the "source_path" field in the mutation.
+func (m *HighlightClipMutation) SourcePath() (r string, exists bool) {
+	v := m.source_path
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSourcePath returns the old "source_path" field's value of the HighlightClip entity.
+// If the HighlightClip object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *HighlightClipMutation) OldSourcePath(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSourcePath is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSourcePath requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSourcePath: %w", err)
+	}
+	return oldValue.SourcePath, nil
+}
+
+// ResetSourcePath resets all changes to the "source_path" field.
+func (m *HighlightClipMutation) ResetSourcePath() {
+	m.source_path = nil
 }
 
 // SetOutputDir sets the "output_dir" field.
@@ -2513,104 +1722,6 @@ func (m *HighlightClipMutation) ResetModelPayload() {
 	delete(m.clearedFields, highlightclip.FieldModelPayload)
 }
 
-// SetErrorMessage sets the "error_message" field.
-func (m *HighlightClipMutation) SetErrorMessage(s string) {
-	m.error_message = &s
-}
-
-// ErrorMessage returns the value of the "error_message" field in the mutation.
-func (m *HighlightClipMutation) ErrorMessage() (r string, exists bool) {
-	v := m.error_message
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldErrorMessage returns the old "error_message" field's value of the HighlightClip entity.
-// If the HighlightClip object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *HighlightClipMutation) OldErrorMessage(ctx context.Context) (v *string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldErrorMessage is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldErrorMessage requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldErrorMessage: %w", err)
-	}
-	return oldValue.ErrorMessage, nil
-}
-
-// ClearErrorMessage clears the value of the "error_message" field.
-func (m *HighlightClipMutation) ClearErrorMessage() {
-	m.error_message = nil
-	m.clearedFields[highlightclip.FieldErrorMessage] = struct{}{}
-}
-
-// ErrorMessageCleared returns if the "error_message" field was cleared in this mutation.
-func (m *HighlightClipMutation) ErrorMessageCleared() bool {
-	_, ok := m.clearedFields[highlightclip.FieldErrorMessage]
-	return ok
-}
-
-// ResetErrorMessage resets all changes to the "error_message" field.
-func (m *HighlightClipMutation) ResetErrorMessage() {
-	m.error_message = nil
-	delete(m.clearedFields, highlightclip.FieldErrorMessage)
-}
-
-// SetStartedAt sets the "started_at" field.
-func (m *HighlightClipMutation) SetStartedAt(t time.Time) {
-	m.started_at = &t
-}
-
-// StartedAt returns the value of the "started_at" field in the mutation.
-func (m *HighlightClipMutation) StartedAt() (r time.Time, exists bool) {
-	v := m.started_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldStartedAt returns the old "started_at" field's value of the HighlightClip entity.
-// If the HighlightClip object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *HighlightClipMutation) OldStartedAt(ctx context.Context) (v *time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldStartedAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldStartedAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldStartedAt: %w", err)
-	}
-	return oldValue.StartedAt, nil
-}
-
-// ClearStartedAt clears the value of the "started_at" field.
-func (m *HighlightClipMutation) ClearStartedAt() {
-	m.started_at = nil
-	m.clearedFields[highlightclip.FieldStartedAt] = struct{}{}
-}
-
-// StartedAtCleared returns if the "started_at" field was cleared in this mutation.
-func (m *HighlightClipMutation) StartedAtCleared() bool {
-	_, ok := m.clearedFields[highlightclip.FieldStartedAt]
-	return ok
-}
-
-// ResetStartedAt resets all changes to the "started_at" field.
-func (m *HighlightClipMutation) ResetStartedAt() {
-	m.started_at = nil
-	delete(m.clearedFields, highlightclip.FieldStartedAt)
-}
-
 // SetCompletedAt sets the "completed_at" field.
 func (m *HighlightClipMutation) SetCompletedAt(t time.Time) {
 	m.completed_at = &t
@@ -2771,97 +1882,58 @@ func (m *HighlightClipMutation) ResetMatchRound() {
 	m.clearedmatch_round = false
 }
 
-// SetSourceArtifactID sets the "source_artifact" edge to the MediaArtifact entity by id.
-func (m *HighlightClipMutation) SetSourceArtifactID(id int) {
-	m.source_artifact = &id
-}
-
-// ClearSourceArtifact clears the "source_artifact" edge to the MediaArtifact entity.
-func (m *HighlightClipMutation) ClearSourceArtifact() {
-	m.clearedsource_artifact = true
-}
-
-// SourceArtifactCleared reports if the "source_artifact" edge to the MediaArtifact entity was cleared.
-func (m *HighlightClipMutation) SourceArtifactCleared() bool {
-	return m.clearedsource_artifact
-}
-
-// SourceArtifactID returns the "source_artifact" edge ID in the mutation.
-func (m *HighlightClipMutation) SourceArtifactID() (id int, exists bool) {
-	if m.source_artifact != nil {
-		return *m.source_artifact, true
-	}
-	return
-}
-
-// SourceArtifactIDs returns the "source_artifact" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// SourceArtifactID instead. It exists only for internal usage by the builders.
-func (m *HighlightClipMutation) SourceArtifactIDs() (ids []int) {
-	if id := m.source_artifact; id != nil {
-		ids = append(ids, *id)
-	}
-	return
-}
-
-// ResetSourceArtifact resets all changes to the "source_artifact" edge.
-func (m *HighlightClipMutation) ResetSourceArtifact() {
-	m.source_artifact = nil
-	m.clearedsource_artifact = false
-}
-
-// AddPublishTaskIDs adds the "publish_tasks" edge to the HighlightPublishTask entity by ids.
-func (m *HighlightClipMutation) AddPublishTaskIDs(ids ...int) {
-	if m.publish_tasks == nil {
-		m.publish_tasks = make(map[int]struct{})
+// AddBilibiliPublicationIDs adds the "bilibili_publications" edge to the BilibiliHighlightPublication entity by ids.
+func (m *HighlightClipMutation) AddBilibiliPublicationIDs(ids ...int) {
+	if m.bilibili_publications == nil {
+		m.bilibili_publications = make(map[int]struct{})
 	}
 	for i := range ids {
-		m.publish_tasks[ids[i]] = struct{}{}
+		m.bilibili_publications[ids[i]] = struct{}{}
 	}
 }
 
-// ClearPublishTasks clears the "publish_tasks" edge to the HighlightPublishTask entity.
-func (m *HighlightClipMutation) ClearPublishTasks() {
-	m.clearedpublish_tasks = true
+// ClearBilibiliPublications clears the "bilibili_publications" edge to the BilibiliHighlightPublication entity.
+func (m *HighlightClipMutation) ClearBilibiliPublications() {
+	m.clearedbilibili_publications = true
 }
 
-// PublishTasksCleared reports if the "publish_tasks" edge to the HighlightPublishTask entity was cleared.
-func (m *HighlightClipMutation) PublishTasksCleared() bool {
-	return m.clearedpublish_tasks
+// BilibiliPublicationsCleared reports if the "bilibili_publications" edge to the BilibiliHighlightPublication entity was cleared.
+func (m *HighlightClipMutation) BilibiliPublicationsCleared() bool {
+	return m.clearedbilibili_publications
 }
 
-// RemovePublishTaskIDs removes the "publish_tasks" edge to the HighlightPublishTask entity by IDs.
-func (m *HighlightClipMutation) RemovePublishTaskIDs(ids ...int) {
-	if m.removedpublish_tasks == nil {
-		m.removedpublish_tasks = make(map[int]struct{})
+// RemoveBilibiliPublicationIDs removes the "bilibili_publications" edge to the BilibiliHighlightPublication entity by IDs.
+func (m *HighlightClipMutation) RemoveBilibiliPublicationIDs(ids ...int) {
+	if m.removedbilibili_publications == nil {
+		m.removedbilibili_publications = make(map[int]struct{})
 	}
 	for i := range ids {
-		delete(m.publish_tasks, ids[i])
-		m.removedpublish_tasks[ids[i]] = struct{}{}
+		delete(m.bilibili_publications, ids[i])
+		m.removedbilibili_publications[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedPublishTasks returns the removed IDs of the "publish_tasks" edge to the HighlightPublishTask entity.
-func (m *HighlightClipMutation) RemovedPublishTasksIDs() (ids []int) {
-	for id := range m.removedpublish_tasks {
+// RemovedBilibiliPublications returns the removed IDs of the "bilibili_publications" edge to the BilibiliHighlightPublication entity.
+func (m *HighlightClipMutation) RemovedBilibiliPublicationsIDs() (ids []int) {
+	for id := range m.removedbilibili_publications {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// PublishTasksIDs returns the "publish_tasks" edge IDs in the mutation.
-func (m *HighlightClipMutation) PublishTasksIDs() (ids []int) {
-	for id := range m.publish_tasks {
+// BilibiliPublicationsIDs returns the "bilibili_publications" edge IDs in the mutation.
+func (m *HighlightClipMutation) BilibiliPublicationsIDs() (ids []int) {
+	for id := range m.bilibili_publications {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetPublishTasks resets all changes to the "publish_tasks" edge.
-func (m *HighlightClipMutation) ResetPublishTasks() {
-	m.publish_tasks = nil
-	m.clearedpublish_tasks = false
-	m.removedpublish_tasks = nil
+// ResetBilibiliPublications resets all changes to the "bilibili_publications" edge.
+func (m *HighlightClipMutation) ResetBilibiliPublications() {
+	m.bilibili_publications = nil
+	m.clearedbilibili_publications = false
+	m.removedbilibili_publications = nil
 }
 
 // Where appends a list predicates to the HighlightClipMutation builder.
@@ -2898,7 +1970,7 @@ func (m *HighlightClipMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *HighlightClipMutation) Fields() []string {
-	fields := make([]string, 0, 21)
+	fields := make([]string, 0, 18)
 	if m.highlight_index != nil {
 		fields = append(fields, highlightclip.FieldHighlightIndex)
 	}
@@ -2914,12 +1986,6 @@ func (m *HighlightClipMutation) Fields() []string {
 	if m.priority != nil {
 		fields = append(fields, highlightclip.FieldPriority)
 	}
-	if m.k8s_job_name != nil {
-		fields = append(fields, highlightclip.FieldK8sJobName)
-	}
-	if m.attempts != nil {
-		fields = append(fields, highlightclip.FieldAttempts)
-	}
 	if m.start_seconds != nil {
 		fields = append(fields, highlightclip.FieldStartSeconds)
 	}
@@ -2928,6 +1994,9 @@ func (m *HighlightClipMutation) Fields() []string {
 	}
 	if m.peak_seconds != nil {
 		fields = append(fields, highlightclip.FieldPeakSeconds)
+	}
+	if m.source_path != nil {
+		fields = append(fields, highlightclip.FieldSourcePath)
 	}
 	if m.output_dir != nil {
 		fields = append(fields, highlightclip.FieldOutputDir)
@@ -2946,12 +2015,6 @@ func (m *HighlightClipMutation) Fields() []string {
 	}
 	if m.model_payload != nil {
 		fields = append(fields, highlightclip.FieldModelPayload)
-	}
-	if m.error_message != nil {
-		fields = append(fields, highlightclip.FieldErrorMessage)
-	}
-	if m.started_at != nil {
-		fields = append(fields, highlightclip.FieldStartedAt)
 	}
 	if m.completed_at != nil {
 		fields = append(fields, highlightclip.FieldCompletedAt)
@@ -2980,16 +2043,14 @@ func (m *HighlightClipMutation) Field(name string) (ent.Value, bool) {
 		return m.Status()
 	case highlightclip.FieldPriority:
 		return m.Priority()
-	case highlightclip.FieldK8sJobName:
-		return m.K8sJobName()
-	case highlightclip.FieldAttempts:
-		return m.Attempts()
 	case highlightclip.FieldStartSeconds:
 		return m.StartSeconds()
 	case highlightclip.FieldEndSeconds:
 		return m.EndSeconds()
 	case highlightclip.FieldPeakSeconds:
 		return m.PeakSeconds()
+	case highlightclip.FieldSourcePath:
+		return m.SourcePath()
 	case highlightclip.FieldOutputDir:
 		return m.OutputDir()
 	case highlightclip.FieldTitle:
@@ -3002,10 +2063,6 @@ func (m *HighlightClipMutation) Field(name string) (ent.Value, bool) {
 		return m.Score()
 	case highlightclip.FieldModelPayload:
 		return m.ModelPayload()
-	case highlightclip.FieldErrorMessage:
-		return m.ErrorMessage()
-	case highlightclip.FieldStartedAt:
-		return m.StartedAt()
 	case highlightclip.FieldCompletedAt:
 		return m.CompletedAt()
 	case highlightclip.FieldCreatedAt:
@@ -3031,16 +2088,14 @@ func (m *HighlightClipMutation) OldField(ctx context.Context, name string) (ent.
 		return m.OldStatus(ctx)
 	case highlightclip.FieldPriority:
 		return m.OldPriority(ctx)
-	case highlightclip.FieldK8sJobName:
-		return m.OldK8sJobName(ctx)
-	case highlightclip.FieldAttempts:
-		return m.OldAttempts(ctx)
 	case highlightclip.FieldStartSeconds:
 		return m.OldStartSeconds(ctx)
 	case highlightclip.FieldEndSeconds:
 		return m.OldEndSeconds(ctx)
 	case highlightclip.FieldPeakSeconds:
 		return m.OldPeakSeconds(ctx)
+	case highlightclip.FieldSourcePath:
+		return m.OldSourcePath(ctx)
 	case highlightclip.FieldOutputDir:
 		return m.OldOutputDir(ctx)
 	case highlightclip.FieldTitle:
@@ -3053,10 +2108,6 @@ func (m *HighlightClipMutation) OldField(ctx context.Context, name string) (ent.
 		return m.OldScore(ctx)
 	case highlightclip.FieldModelPayload:
 		return m.OldModelPayload(ctx)
-	case highlightclip.FieldErrorMessage:
-		return m.OldErrorMessage(ctx)
-	case highlightclip.FieldStartedAt:
-		return m.OldStartedAt(ctx)
 	case highlightclip.FieldCompletedAt:
 		return m.OldCompletedAt(ctx)
 	case highlightclip.FieldCreatedAt:
@@ -3107,20 +2158,6 @@ func (m *HighlightClipMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetPriority(v)
 		return nil
-	case highlightclip.FieldK8sJobName:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetK8sJobName(v)
-		return nil
-	case highlightclip.FieldAttempts:
-		v, ok := value.(int)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetAttempts(v)
-		return nil
 	case highlightclip.FieldStartSeconds:
 		v, ok := value.(float64)
 		if !ok {
@@ -3141,6 +2178,13 @@ func (m *HighlightClipMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetPeakSeconds(v)
+		return nil
+	case highlightclip.FieldSourcePath:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSourcePath(v)
 		return nil
 	case highlightclip.FieldOutputDir:
 		v, ok := value.(string)
@@ -3184,20 +2228,6 @@ func (m *HighlightClipMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetModelPayload(v)
 		return nil
-	case highlightclip.FieldErrorMessage:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetErrorMessage(v)
-		return nil
-	case highlightclip.FieldStartedAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetStartedAt(v)
-		return nil
 	case highlightclip.FieldCompletedAt:
 		v, ok := value.(time.Time)
 		if !ok {
@@ -3233,9 +2263,6 @@ func (m *HighlightClipMutation) AddedFields() []string {
 	if m.addpriority != nil {
 		fields = append(fields, highlightclip.FieldPriority)
 	}
-	if m.addattempts != nil {
-		fields = append(fields, highlightclip.FieldAttempts)
-	}
 	if m.addstart_seconds != nil {
 		fields = append(fields, highlightclip.FieldStartSeconds)
 	}
@@ -3260,8 +2287,6 @@ func (m *HighlightClipMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedHighlightIndex()
 	case highlightclip.FieldPriority:
 		return m.AddedPriority()
-	case highlightclip.FieldAttempts:
-		return m.AddedAttempts()
 	case highlightclip.FieldStartSeconds:
 		return m.AddedStartSeconds()
 	case highlightclip.FieldEndSeconds:
@@ -3292,13 +2317,6 @@ func (m *HighlightClipMutation) AddField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddPriority(v)
-		return nil
-	case highlightclip.FieldAttempts:
-		v, ok := value.(int)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddAttempts(v)
 		return nil
 	case highlightclip.FieldStartSeconds:
 		v, ok := value.(float64)
@@ -3336,9 +2354,6 @@ func (m *HighlightClipMutation) AddField(name string, value ent.Value) error {
 // mutation.
 func (m *HighlightClipMutation) ClearedFields() []string {
 	var fields []string
-	if m.FieldCleared(highlightclip.FieldK8sJobName) {
-		fields = append(fields, highlightclip.FieldK8sJobName)
-	}
 	if m.FieldCleared(highlightclip.FieldTitle) {
 		fields = append(fields, highlightclip.FieldTitle)
 	}
@@ -3350,12 +2365,6 @@ func (m *HighlightClipMutation) ClearedFields() []string {
 	}
 	if m.FieldCleared(highlightclip.FieldModelPayload) {
 		fields = append(fields, highlightclip.FieldModelPayload)
-	}
-	if m.FieldCleared(highlightclip.FieldErrorMessage) {
-		fields = append(fields, highlightclip.FieldErrorMessage)
-	}
-	if m.FieldCleared(highlightclip.FieldStartedAt) {
-		fields = append(fields, highlightclip.FieldStartedAt)
 	}
 	if m.FieldCleared(highlightclip.FieldCompletedAt) {
 		fields = append(fields, highlightclip.FieldCompletedAt)
@@ -3374,9 +2383,6 @@ func (m *HighlightClipMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *HighlightClipMutation) ClearField(name string) error {
 	switch name {
-	case highlightclip.FieldK8sJobName:
-		m.ClearK8sJobName()
-		return nil
 	case highlightclip.FieldTitle:
 		m.ClearTitle()
 		return nil
@@ -3388,12 +2394,6 @@ func (m *HighlightClipMutation) ClearField(name string) error {
 		return nil
 	case highlightclip.FieldModelPayload:
 		m.ClearModelPayload()
-		return nil
-	case highlightclip.FieldErrorMessage:
-		m.ClearErrorMessage()
-		return nil
-	case highlightclip.FieldStartedAt:
-		m.ClearStartedAt()
 		return nil
 	case highlightclip.FieldCompletedAt:
 		m.ClearCompletedAt()
@@ -3421,12 +2421,6 @@ func (m *HighlightClipMutation) ResetField(name string) error {
 	case highlightclip.FieldPriority:
 		m.ResetPriority()
 		return nil
-	case highlightclip.FieldK8sJobName:
-		m.ResetK8sJobName()
-		return nil
-	case highlightclip.FieldAttempts:
-		m.ResetAttempts()
-		return nil
 	case highlightclip.FieldStartSeconds:
 		m.ResetStartSeconds()
 		return nil
@@ -3435,6 +2429,9 @@ func (m *HighlightClipMutation) ResetField(name string) error {
 		return nil
 	case highlightclip.FieldPeakSeconds:
 		m.ResetPeakSeconds()
+		return nil
+	case highlightclip.FieldSourcePath:
+		m.ResetSourcePath()
 		return nil
 	case highlightclip.FieldOutputDir:
 		m.ResetOutputDir()
@@ -3454,12 +2451,6 @@ func (m *HighlightClipMutation) ResetField(name string) error {
 	case highlightclip.FieldModelPayload:
 		m.ResetModelPayload()
 		return nil
-	case highlightclip.FieldErrorMessage:
-		m.ResetErrorMessage()
-		return nil
-	case highlightclip.FieldStartedAt:
-		m.ResetStartedAt()
-		return nil
 	case highlightclip.FieldCompletedAt:
 		m.ResetCompletedAt()
 		return nil
@@ -3475,15 +2466,12 @@ func (m *HighlightClipMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *HighlightClipMutation) AddedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 2)
 	if m.match_round != nil {
 		edges = append(edges, highlightclip.EdgeMatchRound)
 	}
-	if m.source_artifact != nil {
-		edges = append(edges, highlightclip.EdgeSourceArtifact)
-	}
-	if m.publish_tasks != nil {
-		edges = append(edges, highlightclip.EdgePublishTasks)
+	if m.bilibili_publications != nil {
+		edges = append(edges, highlightclip.EdgeBilibiliPublications)
 	}
 	return edges
 }
@@ -3496,13 +2484,9 @@ func (m *HighlightClipMutation) AddedIDs(name string) []ent.Value {
 		if id := m.match_round; id != nil {
 			return []ent.Value{*id}
 		}
-	case highlightclip.EdgeSourceArtifact:
-		if id := m.source_artifact; id != nil {
-			return []ent.Value{*id}
-		}
-	case highlightclip.EdgePublishTasks:
-		ids := make([]ent.Value, 0, len(m.publish_tasks))
-		for id := range m.publish_tasks {
+	case highlightclip.EdgeBilibiliPublications:
+		ids := make([]ent.Value, 0, len(m.bilibili_publications))
+		for id := range m.bilibili_publications {
 			ids = append(ids, id)
 		}
 		return ids
@@ -3512,9 +2496,9 @@ func (m *HighlightClipMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *HighlightClipMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 3)
-	if m.removedpublish_tasks != nil {
-		edges = append(edges, highlightclip.EdgePublishTasks)
+	edges := make([]string, 0, 2)
+	if m.removedbilibili_publications != nil {
+		edges = append(edges, highlightclip.EdgeBilibiliPublications)
 	}
 	return edges
 }
@@ -3523,9 +2507,9 @@ func (m *HighlightClipMutation) RemovedEdges() []string {
 // the given name in this mutation.
 func (m *HighlightClipMutation) RemovedIDs(name string) []ent.Value {
 	switch name {
-	case highlightclip.EdgePublishTasks:
-		ids := make([]ent.Value, 0, len(m.removedpublish_tasks))
-		for id := range m.removedpublish_tasks {
+	case highlightclip.EdgeBilibiliPublications:
+		ids := make([]ent.Value, 0, len(m.removedbilibili_publications))
+		for id := range m.removedbilibili_publications {
 			ids = append(ids, id)
 		}
 		return ids
@@ -3535,15 +2519,12 @@ func (m *HighlightClipMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *HighlightClipMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 2)
 	if m.clearedmatch_round {
 		edges = append(edges, highlightclip.EdgeMatchRound)
 	}
-	if m.clearedsource_artifact {
-		edges = append(edges, highlightclip.EdgeSourceArtifact)
-	}
-	if m.clearedpublish_tasks {
-		edges = append(edges, highlightclip.EdgePublishTasks)
+	if m.clearedbilibili_publications {
+		edges = append(edges, highlightclip.EdgeBilibiliPublications)
 	}
 	return edges
 }
@@ -3554,10 +2535,8 @@ func (m *HighlightClipMutation) EdgeCleared(name string) bool {
 	switch name {
 	case highlightclip.EdgeMatchRound:
 		return m.clearedmatch_round
-	case highlightclip.EdgeSourceArtifact:
-		return m.clearedsource_artifact
-	case highlightclip.EdgePublishTasks:
-		return m.clearedpublish_tasks
+	case highlightclip.EdgeBilibiliPublications:
+		return m.clearedbilibili_publications
 	}
 	return false
 }
@@ -3568,9 +2547,6 @@ func (m *HighlightClipMutation) ClearEdge(name string) error {
 	switch name {
 	case highlightclip.EdgeMatchRound:
 		m.ClearMatchRound()
-		return nil
-	case highlightclip.EdgeSourceArtifact:
-		m.ClearSourceArtifact()
 		return nil
 	}
 	return fmt.Errorf("unknown HighlightClip unique edge %s", name)
@@ -3583,55 +2559,50 @@ func (m *HighlightClipMutation) ResetEdge(name string) error {
 	case highlightclip.EdgeMatchRound:
 		m.ResetMatchRound()
 		return nil
-	case highlightclip.EdgeSourceArtifact:
-		m.ResetSourceArtifact()
-		return nil
-	case highlightclip.EdgePublishTasks:
-		m.ResetPublishTasks()
+	case highlightclip.EdgeBilibiliPublications:
+		m.ResetBilibiliPublications()
 		return nil
 	}
 	return fmt.Errorf("unknown HighlightClip edge %s", name)
 }
 
-// HighlightPublishTaskMutation represents an operation that mutates the HighlightPublishTask nodes in the graph.
-type HighlightPublishTaskMutation struct {
+// LarkBitableRecordMutation represents an operation that mutates the LarkBitableRecord nodes in the graph.
+type LarkBitableRecordMutation struct {
 	config
 	op                    Op
 	typ                   string
 	id                    *int
-	platform              *highlightpublishtask.Platform
-	status                *highlightpublishtask.Status
-	priority              *int
-	addpriority           *int
-	k8s_job_name          *string
-	attempts              *int
-	addattempts           *int
-	publish_url           *string
-	external_id           *string
-	error_message         *string
-	started_at            *time.Time
-	completed_at          *time.Time
+	role                  *string
+	app_token             *string
+	table_id              *string
+	record_id             *string
+	record_url            *string
+	attachment_file_token *string
+	source_path           *string
+	file_size             *int64
+	addfile_size          *int64
+	source_deleted_at     *time.Time
 	created_at            *time.Time
 	updated_at            *time.Time
 	clearedFields         map[string]struct{}
-	highlight_clip        *int
-	clearedhighlight_clip bool
+	match_round           *int
+	clearedmatch_round    bool
 	done                  bool
-	oldValue              func(context.Context) (*HighlightPublishTask, error)
-	predicates            []predicate.HighlightPublishTask
+	oldValue              func(context.Context) (*LarkBitableRecord, error)
+	predicates            []predicate.LarkBitableRecord
 }
 
-var _ ent.Mutation = (*HighlightPublishTaskMutation)(nil)
+var _ ent.Mutation = (*LarkBitableRecordMutation)(nil)
 
-// highlightpublishtaskOption allows management of the mutation configuration using functional options.
-type highlightpublishtaskOption func(*HighlightPublishTaskMutation)
+// larkbitablerecordOption allows management of the mutation configuration using functional options.
+type larkbitablerecordOption func(*LarkBitableRecordMutation)
 
-// newHighlightPublishTaskMutation creates new mutation for the HighlightPublishTask entity.
-func newHighlightPublishTaskMutation(c config, op Op, opts ...highlightpublishtaskOption) *HighlightPublishTaskMutation {
-	m := &HighlightPublishTaskMutation{
+// newLarkBitableRecordMutation creates new mutation for the LarkBitableRecord entity.
+func newLarkBitableRecordMutation(c config, op Op, opts ...larkbitablerecordOption) *LarkBitableRecordMutation {
+	m := &LarkBitableRecordMutation{
 		config:        c,
 		op:            op,
-		typ:           TypeHighlightPublishTask,
+		typ:           TypeLarkBitableRecord,
 		clearedFields: make(map[string]struct{}),
 	}
 	for _, opt := range opts {
@@ -3640,20 +2611,20 @@ func newHighlightPublishTaskMutation(c config, op Op, opts ...highlightpublishta
 	return m
 }
 
-// withHighlightPublishTaskID sets the ID field of the mutation.
-func withHighlightPublishTaskID(id int) highlightpublishtaskOption {
-	return func(m *HighlightPublishTaskMutation) {
+// withLarkBitableRecordID sets the ID field of the mutation.
+func withLarkBitableRecordID(id int) larkbitablerecordOption {
+	return func(m *LarkBitableRecordMutation) {
 		var (
 			err   error
 			once  sync.Once
-			value *HighlightPublishTask
+			value *LarkBitableRecord
 		)
-		m.oldValue = func(ctx context.Context) (*HighlightPublishTask, error) {
+		m.oldValue = func(ctx context.Context) (*LarkBitableRecord, error) {
 			once.Do(func() {
 				if m.done {
 					err = errors.New("querying old values post mutation is not allowed")
 				} else {
-					value, err = m.Client().HighlightPublishTask.Get(ctx, id)
+					value, err = m.Client().LarkBitableRecord.Get(ctx, id)
 				}
 			})
 			return value, err
@@ -3662,10 +2633,10 @@ func withHighlightPublishTaskID(id int) highlightpublishtaskOption {
 	}
 }
 
-// withHighlightPublishTask sets the old HighlightPublishTask of the mutation.
-func withHighlightPublishTask(node *HighlightPublishTask) highlightpublishtaskOption {
-	return func(m *HighlightPublishTaskMutation) {
-		m.oldValue = func(context.Context) (*HighlightPublishTask, error) {
+// withLarkBitableRecord sets the old LarkBitableRecord of the mutation.
+func withLarkBitableRecord(node *LarkBitableRecord) larkbitablerecordOption {
+	return func(m *LarkBitableRecordMutation) {
+		m.oldValue = func(context.Context) (*LarkBitableRecord, error) {
 			return node, nil
 		}
 		m.id = &node.ID
@@ -3674,7 +2645,7 @@ func withHighlightPublishTask(node *HighlightPublishTask) highlightpublishtaskOp
 
 // Client returns a new `ent.Client` from the mutation. If the mutation was
 // executed in a transaction (ent.Tx), a transactional client is returned.
-func (m HighlightPublishTaskMutation) Client() *Client {
+func (m LarkBitableRecordMutation) Client() *Client {
 	client := &Client{config: m.config}
 	client.init()
 	return client
@@ -3682,7 +2653,7 @@ func (m HighlightPublishTaskMutation) Client() *Client {
 
 // Tx returns an `ent.Tx` for mutations that were executed in transactions;
 // it returns an error otherwise.
-func (m HighlightPublishTaskMutation) Tx() (*Tx, error) {
+func (m LarkBitableRecordMutation) Tx() (*Tx, error) {
 	if _, ok := m.driver.(*txDriver); !ok {
 		return nil, errors.New("ent: mutation is not running in a transaction")
 	}
@@ -3693,7 +2664,7 @@ func (m HighlightPublishTaskMutation) Tx() (*Tx, error) {
 
 // ID returns the ID value in the mutation. Note that the ID is only available
 // if it was provided to the builder or after it was returned from the database.
-func (m *HighlightPublishTaskMutation) ID() (id int, exists bool) {
+func (m *LarkBitableRecordMutation) ID() (id int, exists bool) {
 	if m.id == nil {
 		return
 	}
@@ -3704,7 +2675,7 @@ func (m *HighlightPublishTaskMutation) ID() (id int, exists bool) {
 // That means, if the mutation is applied within a transaction with an isolation level such
 // as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
 // or updated by the mutation.
-func (m *HighlightPublishTaskMutation) IDs(ctx context.Context) ([]int, error) {
+func (m *LarkBitableRecordMutation) IDs(ctx context.Context) ([]int, error) {
 	switch {
 	case m.op.Is(OpUpdateOne | OpDeleteOne):
 		id, exists := m.ID()
@@ -3713,1186 +2684,19 @@ func (m *HighlightPublishTaskMutation) IDs(ctx context.Context) ([]int, error) {
 		}
 		fallthrough
 	case m.op.Is(OpUpdate | OpDelete):
-		return m.Client().HighlightPublishTask.Query().Where(m.predicates...).IDs(ctx)
-	default:
-		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
-	}
-}
-
-// SetPlatform sets the "platform" field.
-func (m *HighlightPublishTaskMutation) SetPlatform(h highlightpublishtask.Platform) {
-	m.platform = &h
-}
-
-// Platform returns the value of the "platform" field in the mutation.
-func (m *HighlightPublishTaskMutation) Platform() (r highlightpublishtask.Platform, exists bool) {
-	v := m.platform
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldPlatform returns the old "platform" field's value of the HighlightPublishTask entity.
-// If the HighlightPublishTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *HighlightPublishTaskMutation) OldPlatform(ctx context.Context) (v highlightpublishtask.Platform, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldPlatform is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldPlatform requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldPlatform: %w", err)
-	}
-	return oldValue.Platform, nil
-}
-
-// ResetPlatform resets all changes to the "platform" field.
-func (m *HighlightPublishTaskMutation) ResetPlatform() {
-	m.platform = nil
-}
-
-// SetStatus sets the "status" field.
-func (m *HighlightPublishTaskMutation) SetStatus(h highlightpublishtask.Status) {
-	m.status = &h
-}
-
-// Status returns the value of the "status" field in the mutation.
-func (m *HighlightPublishTaskMutation) Status() (r highlightpublishtask.Status, exists bool) {
-	v := m.status
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldStatus returns the old "status" field's value of the HighlightPublishTask entity.
-// If the HighlightPublishTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *HighlightPublishTaskMutation) OldStatus(ctx context.Context) (v highlightpublishtask.Status, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldStatus requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldStatus: %w", err)
-	}
-	return oldValue.Status, nil
-}
-
-// ResetStatus resets all changes to the "status" field.
-func (m *HighlightPublishTaskMutation) ResetStatus() {
-	m.status = nil
-}
-
-// SetPriority sets the "priority" field.
-func (m *HighlightPublishTaskMutation) SetPriority(i int) {
-	m.priority = &i
-	m.addpriority = nil
-}
-
-// Priority returns the value of the "priority" field in the mutation.
-func (m *HighlightPublishTaskMutation) Priority() (r int, exists bool) {
-	v := m.priority
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldPriority returns the old "priority" field's value of the HighlightPublishTask entity.
-// If the HighlightPublishTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *HighlightPublishTaskMutation) OldPriority(ctx context.Context) (v int, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldPriority is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldPriority requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldPriority: %w", err)
-	}
-	return oldValue.Priority, nil
-}
-
-// AddPriority adds i to the "priority" field.
-func (m *HighlightPublishTaskMutation) AddPriority(i int) {
-	if m.addpriority != nil {
-		*m.addpriority += i
-	} else {
-		m.addpriority = &i
-	}
-}
-
-// AddedPriority returns the value that was added to the "priority" field in this mutation.
-func (m *HighlightPublishTaskMutation) AddedPriority() (r int, exists bool) {
-	v := m.addpriority
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// ResetPriority resets all changes to the "priority" field.
-func (m *HighlightPublishTaskMutation) ResetPriority() {
-	m.priority = nil
-	m.addpriority = nil
-}
-
-// SetK8sJobName sets the "k8s_job_name" field.
-func (m *HighlightPublishTaskMutation) SetK8sJobName(s string) {
-	m.k8s_job_name = &s
-}
-
-// K8sJobName returns the value of the "k8s_job_name" field in the mutation.
-func (m *HighlightPublishTaskMutation) K8sJobName() (r string, exists bool) {
-	v := m.k8s_job_name
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldK8sJobName returns the old "k8s_job_name" field's value of the HighlightPublishTask entity.
-// If the HighlightPublishTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *HighlightPublishTaskMutation) OldK8sJobName(ctx context.Context) (v *string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldK8sJobName is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldK8sJobName requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldK8sJobName: %w", err)
-	}
-	return oldValue.K8sJobName, nil
-}
-
-// ClearK8sJobName clears the value of the "k8s_job_name" field.
-func (m *HighlightPublishTaskMutation) ClearK8sJobName() {
-	m.k8s_job_name = nil
-	m.clearedFields[highlightpublishtask.FieldK8sJobName] = struct{}{}
-}
-
-// K8sJobNameCleared returns if the "k8s_job_name" field was cleared in this mutation.
-func (m *HighlightPublishTaskMutation) K8sJobNameCleared() bool {
-	_, ok := m.clearedFields[highlightpublishtask.FieldK8sJobName]
-	return ok
-}
-
-// ResetK8sJobName resets all changes to the "k8s_job_name" field.
-func (m *HighlightPublishTaskMutation) ResetK8sJobName() {
-	m.k8s_job_name = nil
-	delete(m.clearedFields, highlightpublishtask.FieldK8sJobName)
-}
-
-// SetAttempts sets the "attempts" field.
-func (m *HighlightPublishTaskMutation) SetAttempts(i int) {
-	m.attempts = &i
-	m.addattempts = nil
-}
-
-// Attempts returns the value of the "attempts" field in the mutation.
-func (m *HighlightPublishTaskMutation) Attempts() (r int, exists bool) {
-	v := m.attempts
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldAttempts returns the old "attempts" field's value of the HighlightPublishTask entity.
-// If the HighlightPublishTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *HighlightPublishTaskMutation) OldAttempts(ctx context.Context) (v int, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldAttempts is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldAttempts requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldAttempts: %w", err)
-	}
-	return oldValue.Attempts, nil
-}
-
-// AddAttempts adds i to the "attempts" field.
-func (m *HighlightPublishTaskMutation) AddAttempts(i int) {
-	if m.addattempts != nil {
-		*m.addattempts += i
-	} else {
-		m.addattempts = &i
-	}
-}
-
-// AddedAttempts returns the value that was added to the "attempts" field in this mutation.
-func (m *HighlightPublishTaskMutation) AddedAttempts() (r int, exists bool) {
-	v := m.addattempts
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// ResetAttempts resets all changes to the "attempts" field.
-func (m *HighlightPublishTaskMutation) ResetAttempts() {
-	m.attempts = nil
-	m.addattempts = nil
-}
-
-// SetPublishURL sets the "publish_url" field.
-func (m *HighlightPublishTaskMutation) SetPublishURL(s string) {
-	m.publish_url = &s
-}
-
-// PublishURL returns the value of the "publish_url" field in the mutation.
-func (m *HighlightPublishTaskMutation) PublishURL() (r string, exists bool) {
-	v := m.publish_url
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldPublishURL returns the old "publish_url" field's value of the HighlightPublishTask entity.
-// If the HighlightPublishTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *HighlightPublishTaskMutation) OldPublishURL(ctx context.Context) (v *string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldPublishURL is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldPublishURL requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldPublishURL: %w", err)
-	}
-	return oldValue.PublishURL, nil
-}
-
-// ClearPublishURL clears the value of the "publish_url" field.
-func (m *HighlightPublishTaskMutation) ClearPublishURL() {
-	m.publish_url = nil
-	m.clearedFields[highlightpublishtask.FieldPublishURL] = struct{}{}
-}
-
-// PublishURLCleared returns if the "publish_url" field was cleared in this mutation.
-func (m *HighlightPublishTaskMutation) PublishURLCleared() bool {
-	_, ok := m.clearedFields[highlightpublishtask.FieldPublishURL]
-	return ok
-}
-
-// ResetPublishURL resets all changes to the "publish_url" field.
-func (m *HighlightPublishTaskMutation) ResetPublishURL() {
-	m.publish_url = nil
-	delete(m.clearedFields, highlightpublishtask.FieldPublishURL)
-}
-
-// SetExternalID sets the "external_id" field.
-func (m *HighlightPublishTaskMutation) SetExternalID(s string) {
-	m.external_id = &s
-}
-
-// ExternalID returns the value of the "external_id" field in the mutation.
-func (m *HighlightPublishTaskMutation) ExternalID() (r string, exists bool) {
-	v := m.external_id
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldExternalID returns the old "external_id" field's value of the HighlightPublishTask entity.
-// If the HighlightPublishTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *HighlightPublishTaskMutation) OldExternalID(ctx context.Context) (v *string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldExternalID is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldExternalID requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldExternalID: %w", err)
-	}
-	return oldValue.ExternalID, nil
-}
-
-// ClearExternalID clears the value of the "external_id" field.
-func (m *HighlightPublishTaskMutation) ClearExternalID() {
-	m.external_id = nil
-	m.clearedFields[highlightpublishtask.FieldExternalID] = struct{}{}
-}
-
-// ExternalIDCleared returns if the "external_id" field was cleared in this mutation.
-func (m *HighlightPublishTaskMutation) ExternalIDCleared() bool {
-	_, ok := m.clearedFields[highlightpublishtask.FieldExternalID]
-	return ok
-}
-
-// ResetExternalID resets all changes to the "external_id" field.
-func (m *HighlightPublishTaskMutation) ResetExternalID() {
-	m.external_id = nil
-	delete(m.clearedFields, highlightpublishtask.FieldExternalID)
-}
-
-// SetErrorMessage sets the "error_message" field.
-func (m *HighlightPublishTaskMutation) SetErrorMessage(s string) {
-	m.error_message = &s
-}
-
-// ErrorMessage returns the value of the "error_message" field in the mutation.
-func (m *HighlightPublishTaskMutation) ErrorMessage() (r string, exists bool) {
-	v := m.error_message
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldErrorMessage returns the old "error_message" field's value of the HighlightPublishTask entity.
-// If the HighlightPublishTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *HighlightPublishTaskMutation) OldErrorMessage(ctx context.Context) (v *string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldErrorMessage is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldErrorMessage requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldErrorMessage: %w", err)
-	}
-	return oldValue.ErrorMessage, nil
-}
-
-// ClearErrorMessage clears the value of the "error_message" field.
-func (m *HighlightPublishTaskMutation) ClearErrorMessage() {
-	m.error_message = nil
-	m.clearedFields[highlightpublishtask.FieldErrorMessage] = struct{}{}
-}
-
-// ErrorMessageCleared returns if the "error_message" field was cleared in this mutation.
-func (m *HighlightPublishTaskMutation) ErrorMessageCleared() bool {
-	_, ok := m.clearedFields[highlightpublishtask.FieldErrorMessage]
-	return ok
-}
-
-// ResetErrorMessage resets all changes to the "error_message" field.
-func (m *HighlightPublishTaskMutation) ResetErrorMessage() {
-	m.error_message = nil
-	delete(m.clearedFields, highlightpublishtask.FieldErrorMessage)
-}
-
-// SetStartedAt sets the "started_at" field.
-func (m *HighlightPublishTaskMutation) SetStartedAt(t time.Time) {
-	m.started_at = &t
-}
-
-// StartedAt returns the value of the "started_at" field in the mutation.
-func (m *HighlightPublishTaskMutation) StartedAt() (r time.Time, exists bool) {
-	v := m.started_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldStartedAt returns the old "started_at" field's value of the HighlightPublishTask entity.
-// If the HighlightPublishTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *HighlightPublishTaskMutation) OldStartedAt(ctx context.Context) (v *time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldStartedAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldStartedAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldStartedAt: %w", err)
-	}
-	return oldValue.StartedAt, nil
-}
-
-// ClearStartedAt clears the value of the "started_at" field.
-func (m *HighlightPublishTaskMutation) ClearStartedAt() {
-	m.started_at = nil
-	m.clearedFields[highlightpublishtask.FieldStartedAt] = struct{}{}
-}
-
-// StartedAtCleared returns if the "started_at" field was cleared in this mutation.
-func (m *HighlightPublishTaskMutation) StartedAtCleared() bool {
-	_, ok := m.clearedFields[highlightpublishtask.FieldStartedAt]
-	return ok
-}
-
-// ResetStartedAt resets all changes to the "started_at" field.
-func (m *HighlightPublishTaskMutation) ResetStartedAt() {
-	m.started_at = nil
-	delete(m.clearedFields, highlightpublishtask.FieldStartedAt)
-}
-
-// SetCompletedAt sets the "completed_at" field.
-func (m *HighlightPublishTaskMutation) SetCompletedAt(t time.Time) {
-	m.completed_at = &t
-}
-
-// CompletedAt returns the value of the "completed_at" field in the mutation.
-func (m *HighlightPublishTaskMutation) CompletedAt() (r time.Time, exists bool) {
-	v := m.completed_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldCompletedAt returns the old "completed_at" field's value of the HighlightPublishTask entity.
-// If the HighlightPublishTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *HighlightPublishTaskMutation) OldCompletedAt(ctx context.Context) (v *time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldCompletedAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldCompletedAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldCompletedAt: %w", err)
-	}
-	return oldValue.CompletedAt, nil
-}
-
-// ClearCompletedAt clears the value of the "completed_at" field.
-func (m *HighlightPublishTaskMutation) ClearCompletedAt() {
-	m.completed_at = nil
-	m.clearedFields[highlightpublishtask.FieldCompletedAt] = struct{}{}
-}
-
-// CompletedAtCleared returns if the "completed_at" field was cleared in this mutation.
-func (m *HighlightPublishTaskMutation) CompletedAtCleared() bool {
-	_, ok := m.clearedFields[highlightpublishtask.FieldCompletedAt]
-	return ok
-}
-
-// ResetCompletedAt resets all changes to the "completed_at" field.
-func (m *HighlightPublishTaskMutation) ResetCompletedAt() {
-	m.completed_at = nil
-	delete(m.clearedFields, highlightpublishtask.FieldCompletedAt)
-}
-
-// SetCreatedAt sets the "created_at" field.
-func (m *HighlightPublishTaskMutation) SetCreatedAt(t time.Time) {
-	m.created_at = &t
-}
-
-// CreatedAt returns the value of the "created_at" field in the mutation.
-func (m *HighlightPublishTaskMutation) CreatedAt() (r time.Time, exists bool) {
-	v := m.created_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldCreatedAt returns the old "created_at" field's value of the HighlightPublishTask entity.
-// If the HighlightPublishTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *HighlightPublishTaskMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
-	}
-	return oldValue.CreatedAt, nil
-}
-
-// ResetCreatedAt resets all changes to the "created_at" field.
-func (m *HighlightPublishTaskMutation) ResetCreatedAt() {
-	m.created_at = nil
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (m *HighlightPublishTaskMutation) SetUpdatedAt(t time.Time) {
-	m.updated_at = &t
-}
-
-// UpdatedAt returns the value of the "updated_at" field in the mutation.
-func (m *HighlightPublishTaskMutation) UpdatedAt() (r time.Time, exists bool) {
-	v := m.updated_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldUpdatedAt returns the old "updated_at" field's value of the HighlightPublishTask entity.
-// If the HighlightPublishTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *HighlightPublishTaskMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
-	}
-	return oldValue.UpdatedAt, nil
-}
-
-// ResetUpdatedAt resets all changes to the "updated_at" field.
-func (m *HighlightPublishTaskMutation) ResetUpdatedAt() {
-	m.updated_at = nil
-}
-
-// SetHighlightClipID sets the "highlight_clip" edge to the HighlightClip entity by id.
-func (m *HighlightPublishTaskMutation) SetHighlightClipID(id int) {
-	m.highlight_clip = &id
-}
-
-// ClearHighlightClip clears the "highlight_clip" edge to the HighlightClip entity.
-func (m *HighlightPublishTaskMutation) ClearHighlightClip() {
-	m.clearedhighlight_clip = true
-}
-
-// HighlightClipCleared reports if the "highlight_clip" edge to the HighlightClip entity was cleared.
-func (m *HighlightPublishTaskMutation) HighlightClipCleared() bool {
-	return m.clearedhighlight_clip
-}
-
-// HighlightClipID returns the "highlight_clip" edge ID in the mutation.
-func (m *HighlightPublishTaskMutation) HighlightClipID() (id int, exists bool) {
-	if m.highlight_clip != nil {
-		return *m.highlight_clip, true
-	}
-	return
-}
-
-// HighlightClipIDs returns the "highlight_clip" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// HighlightClipID instead. It exists only for internal usage by the builders.
-func (m *HighlightPublishTaskMutation) HighlightClipIDs() (ids []int) {
-	if id := m.highlight_clip; id != nil {
-		ids = append(ids, *id)
-	}
-	return
-}
-
-// ResetHighlightClip resets all changes to the "highlight_clip" edge.
-func (m *HighlightPublishTaskMutation) ResetHighlightClip() {
-	m.highlight_clip = nil
-	m.clearedhighlight_clip = false
-}
-
-// Where appends a list predicates to the HighlightPublishTaskMutation builder.
-func (m *HighlightPublishTaskMutation) Where(ps ...predicate.HighlightPublishTask) {
-	m.predicates = append(m.predicates, ps...)
-}
-
-// WhereP appends storage-level predicates to the HighlightPublishTaskMutation builder. Using this method,
-// users can use type-assertion to append predicates that do not depend on any generated package.
-func (m *HighlightPublishTaskMutation) WhereP(ps ...func(*sql.Selector)) {
-	p := make([]predicate.HighlightPublishTask, len(ps))
-	for i := range ps {
-		p[i] = ps[i]
-	}
-	m.Where(p...)
-}
-
-// Op returns the operation name.
-func (m *HighlightPublishTaskMutation) Op() Op {
-	return m.op
-}
-
-// SetOp allows setting the mutation operation.
-func (m *HighlightPublishTaskMutation) SetOp(op Op) {
-	m.op = op
-}
-
-// Type returns the node type of this mutation (HighlightPublishTask).
-func (m *HighlightPublishTaskMutation) Type() string {
-	return m.typ
-}
-
-// Fields returns all fields that were changed during this mutation. Note that in
-// order to get all numeric fields that were incremented/decremented, call
-// AddedFields().
-func (m *HighlightPublishTaskMutation) Fields() []string {
-	fields := make([]string, 0, 12)
-	if m.platform != nil {
-		fields = append(fields, highlightpublishtask.FieldPlatform)
-	}
-	if m.status != nil {
-		fields = append(fields, highlightpublishtask.FieldStatus)
-	}
-	if m.priority != nil {
-		fields = append(fields, highlightpublishtask.FieldPriority)
-	}
-	if m.k8s_job_name != nil {
-		fields = append(fields, highlightpublishtask.FieldK8sJobName)
-	}
-	if m.attempts != nil {
-		fields = append(fields, highlightpublishtask.FieldAttempts)
-	}
-	if m.publish_url != nil {
-		fields = append(fields, highlightpublishtask.FieldPublishURL)
-	}
-	if m.external_id != nil {
-		fields = append(fields, highlightpublishtask.FieldExternalID)
-	}
-	if m.error_message != nil {
-		fields = append(fields, highlightpublishtask.FieldErrorMessage)
-	}
-	if m.started_at != nil {
-		fields = append(fields, highlightpublishtask.FieldStartedAt)
-	}
-	if m.completed_at != nil {
-		fields = append(fields, highlightpublishtask.FieldCompletedAt)
-	}
-	if m.created_at != nil {
-		fields = append(fields, highlightpublishtask.FieldCreatedAt)
-	}
-	if m.updated_at != nil {
-		fields = append(fields, highlightpublishtask.FieldUpdatedAt)
-	}
-	return fields
-}
-
-// Field returns the value of a field with the given name. The second boolean
-// return value indicates that this field was not set, or was not defined in the
-// schema.
-func (m *HighlightPublishTaskMutation) Field(name string) (ent.Value, bool) {
-	switch name {
-	case highlightpublishtask.FieldPlatform:
-		return m.Platform()
-	case highlightpublishtask.FieldStatus:
-		return m.Status()
-	case highlightpublishtask.FieldPriority:
-		return m.Priority()
-	case highlightpublishtask.FieldK8sJobName:
-		return m.K8sJobName()
-	case highlightpublishtask.FieldAttempts:
-		return m.Attempts()
-	case highlightpublishtask.FieldPublishURL:
-		return m.PublishURL()
-	case highlightpublishtask.FieldExternalID:
-		return m.ExternalID()
-	case highlightpublishtask.FieldErrorMessage:
-		return m.ErrorMessage()
-	case highlightpublishtask.FieldStartedAt:
-		return m.StartedAt()
-	case highlightpublishtask.FieldCompletedAt:
-		return m.CompletedAt()
-	case highlightpublishtask.FieldCreatedAt:
-		return m.CreatedAt()
-	case highlightpublishtask.FieldUpdatedAt:
-		return m.UpdatedAt()
-	}
-	return nil, false
-}
-
-// OldField returns the old value of the field from the database. An error is
-// returned if the mutation operation is not UpdateOne, or the query to the
-// database failed.
-func (m *HighlightPublishTaskMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
-	switch name {
-	case highlightpublishtask.FieldPlatform:
-		return m.OldPlatform(ctx)
-	case highlightpublishtask.FieldStatus:
-		return m.OldStatus(ctx)
-	case highlightpublishtask.FieldPriority:
-		return m.OldPriority(ctx)
-	case highlightpublishtask.FieldK8sJobName:
-		return m.OldK8sJobName(ctx)
-	case highlightpublishtask.FieldAttempts:
-		return m.OldAttempts(ctx)
-	case highlightpublishtask.FieldPublishURL:
-		return m.OldPublishURL(ctx)
-	case highlightpublishtask.FieldExternalID:
-		return m.OldExternalID(ctx)
-	case highlightpublishtask.FieldErrorMessage:
-		return m.OldErrorMessage(ctx)
-	case highlightpublishtask.FieldStartedAt:
-		return m.OldStartedAt(ctx)
-	case highlightpublishtask.FieldCompletedAt:
-		return m.OldCompletedAt(ctx)
-	case highlightpublishtask.FieldCreatedAt:
-		return m.OldCreatedAt(ctx)
-	case highlightpublishtask.FieldUpdatedAt:
-		return m.OldUpdatedAt(ctx)
-	}
-	return nil, fmt.Errorf("unknown HighlightPublishTask field %s", name)
-}
-
-// SetField sets the value of a field with the given name. It returns an error if
-// the field is not defined in the schema, or if the type mismatched the field
-// type.
-func (m *HighlightPublishTaskMutation) SetField(name string, value ent.Value) error {
-	switch name {
-	case highlightpublishtask.FieldPlatform:
-		v, ok := value.(highlightpublishtask.Platform)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetPlatform(v)
-		return nil
-	case highlightpublishtask.FieldStatus:
-		v, ok := value.(highlightpublishtask.Status)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetStatus(v)
-		return nil
-	case highlightpublishtask.FieldPriority:
-		v, ok := value.(int)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetPriority(v)
-		return nil
-	case highlightpublishtask.FieldK8sJobName:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetK8sJobName(v)
-		return nil
-	case highlightpublishtask.FieldAttempts:
-		v, ok := value.(int)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetAttempts(v)
-		return nil
-	case highlightpublishtask.FieldPublishURL:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetPublishURL(v)
-		return nil
-	case highlightpublishtask.FieldExternalID:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetExternalID(v)
-		return nil
-	case highlightpublishtask.FieldErrorMessage:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetErrorMessage(v)
-		return nil
-	case highlightpublishtask.FieldStartedAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetStartedAt(v)
-		return nil
-	case highlightpublishtask.FieldCompletedAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetCompletedAt(v)
-		return nil
-	case highlightpublishtask.FieldCreatedAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetCreatedAt(v)
-		return nil
-	case highlightpublishtask.FieldUpdatedAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetUpdatedAt(v)
-		return nil
-	}
-	return fmt.Errorf("unknown HighlightPublishTask field %s", name)
-}
-
-// AddedFields returns all numeric fields that were incremented/decremented during
-// this mutation.
-func (m *HighlightPublishTaskMutation) AddedFields() []string {
-	var fields []string
-	if m.addpriority != nil {
-		fields = append(fields, highlightpublishtask.FieldPriority)
-	}
-	if m.addattempts != nil {
-		fields = append(fields, highlightpublishtask.FieldAttempts)
-	}
-	return fields
-}
-
-// AddedField returns the numeric value that was incremented/decremented on a field
-// with the given name. The second boolean return value indicates that this field
-// was not set, or was not defined in the schema.
-func (m *HighlightPublishTaskMutation) AddedField(name string) (ent.Value, bool) {
-	switch name {
-	case highlightpublishtask.FieldPriority:
-		return m.AddedPriority()
-	case highlightpublishtask.FieldAttempts:
-		return m.AddedAttempts()
-	}
-	return nil, false
-}
-
-// AddField adds the value to the field with the given name. It returns an error if
-// the field is not defined in the schema, or if the type mismatched the field
-// type.
-func (m *HighlightPublishTaskMutation) AddField(name string, value ent.Value) error {
-	switch name {
-	case highlightpublishtask.FieldPriority:
-		v, ok := value.(int)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddPriority(v)
-		return nil
-	case highlightpublishtask.FieldAttempts:
-		v, ok := value.(int)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddAttempts(v)
-		return nil
-	}
-	return fmt.Errorf("unknown HighlightPublishTask numeric field %s", name)
-}
-
-// ClearedFields returns all nullable fields that were cleared during this
-// mutation.
-func (m *HighlightPublishTaskMutation) ClearedFields() []string {
-	var fields []string
-	if m.FieldCleared(highlightpublishtask.FieldK8sJobName) {
-		fields = append(fields, highlightpublishtask.FieldK8sJobName)
-	}
-	if m.FieldCleared(highlightpublishtask.FieldPublishURL) {
-		fields = append(fields, highlightpublishtask.FieldPublishURL)
-	}
-	if m.FieldCleared(highlightpublishtask.FieldExternalID) {
-		fields = append(fields, highlightpublishtask.FieldExternalID)
-	}
-	if m.FieldCleared(highlightpublishtask.FieldErrorMessage) {
-		fields = append(fields, highlightpublishtask.FieldErrorMessage)
-	}
-	if m.FieldCleared(highlightpublishtask.FieldStartedAt) {
-		fields = append(fields, highlightpublishtask.FieldStartedAt)
-	}
-	if m.FieldCleared(highlightpublishtask.FieldCompletedAt) {
-		fields = append(fields, highlightpublishtask.FieldCompletedAt)
-	}
-	return fields
-}
-
-// FieldCleared returns a boolean indicating if a field with the given name was
-// cleared in this mutation.
-func (m *HighlightPublishTaskMutation) FieldCleared(name string) bool {
-	_, ok := m.clearedFields[name]
-	return ok
-}
-
-// ClearField clears the value of the field with the given name. It returns an
-// error if the field is not defined in the schema.
-func (m *HighlightPublishTaskMutation) ClearField(name string) error {
-	switch name {
-	case highlightpublishtask.FieldK8sJobName:
-		m.ClearK8sJobName()
-		return nil
-	case highlightpublishtask.FieldPublishURL:
-		m.ClearPublishURL()
-		return nil
-	case highlightpublishtask.FieldExternalID:
-		m.ClearExternalID()
-		return nil
-	case highlightpublishtask.FieldErrorMessage:
-		m.ClearErrorMessage()
-		return nil
-	case highlightpublishtask.FieldStartedAt:
-		m.ClearStartedAt()
-		return nil
-	case highlightpublishtask.FieldCompletedAt:
-		m.ClearCompletedAt()
-		return nil
-	}
-	return fmt.Errorf("unknown HighlightPublishTask nullable field %s", name)
-}
-
-// ResetField resets all changes in the mutation for the field with the given name.
-// It returns an error if the field is not defined in the schema.
-func (m *HighlightPublishTaskMutation) ResetField(name string) error {
-	switch name {
-	case highlightpublishtask.FieldPlatform:
-		m.ResetPlatform()
-		return nil
-	case highlightpublishtask.FieldStatus:
-		m.ResetStatus()
-		return nil
-	case highlightpublishtask.FieldPriority:
-		m.ResetPriority()
-		return nil
-	case highlightpublishtask.FieldK8sJobName:
-		m.ResetK8sJobName()
-		return nil
-	case highlightpublishtask.FieldAttempts:
-		m.ResetAttempts()
-		return nil
-	case highlightpublishtask.FieldPublishURL:
-		m.ResetPublishURL()
-		return nil
-	case highlightpublishtask.FieldExternalID:
-		m.ResetExternalID()
-		return nil
-	case highlightpublishtask.FieldErrorMessage:
-		m.ResetErrorMessage()
-		return nil
-	case highlightpublishtask.FieldStartedAt:
-		m.ResetStartedAt()
-		return nil
-	case highlightpublishtask.FieldCompletedAt:
-		m.ResetCompletedAt()
-		return nil
-	case highlightpublishtask.FieldCreatedAt:
-		m.ResetCreatedAt()
-		return nil
-	case highlightpublishtask.FieldUpdatedAt:
-		m.ResetUpdatedAt()
-		return nil
-	}
-	return fmt.Errorf("unknown HighlightPublishTask field %s", name)
-}
-
-// AddedEdges returns all edge names that were set/added in this mutation.
-func (m *HighlightPublishTaskMutation) AddedEdges() []string {
-	edges := make([]string, 0, 1)
-	if m.highlight_clip != nil {
-		edges = append(edges, highlightpublishtask.EdgeHighlightClip)
-	}
-	return edges
-}
-
-// AddedIDs returns all IDs (to other nodes) that were added for the given edge
-// name in this mutation.
-func (m *HighlightPublishTaskMutation) AddedIDs(name string) []ent.Value {
-	switch name {
-	case highlightpublishtask.EdgeHighlightClip:
-		if id := m.highlight_clip; id != nil {
-			return []ent.Value{*id}
-		}
-	}
-	return nil
-}
-
-// RemovedEdges returns all edge names that were removed in this mutation.
-func (m *HighlightPublishTaskMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 1)
-	return edges
-}
-
-// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
-// the given name in this mutation.
-func (m *HighlightPublishTaskMutation) RemovedIDs(name string) []ent.Value {
-	return nil
-}
-
-// ClearedEdges returns all edge names that were cleared in this mutation.
-func (m *HighlightPublishTaskMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 1)
-	if m.clearedhighlight_clip {
-		edges = append(edges, highlightpublishtask.EdgeHighlightClip)
-	}
-	return edges
-}
-
-// EdgeCleared returns a boolean which indicates if the edge with the given name
-// was cleared in this mutation.
-func (m *HighlightPublishTaskMutation) EdgeCleared(name string) bool {
-	switch name {
-	case highlightpublishtask.EdgeHighlightClip:
-		return m.clearedhighlight_clip
-	}
-	return false
-}
-
-// ClearEdge clears the value of the edge with the given name. It returns an error
-// if that edge is not defined in the schema.
-func (m *HighlightPublishTaskMutation) ClearEdge(name string) error {
-	switch name {
-	case highlightpublishtask.EdgeHighlightClip:
-		m.ClearHighlightClip()
-		return nil
-	}
-	return fmt.Errorf("unknown HighlightPublishTask unique edge %s", name)
-}
-
-// ResetEdge resets all changes to the edge with the given name in this mutation.
-// It returns an error if the edge is not defined in the schema.
-func (m *HighlightPublishTaskMutation) ResetEdge(name string) error {
-	switch name {
-	case highlightpublishtask.EdgeHighlightClip:
-		m.ResetHighlightClip()
-		return nil
-	}
-	return fmt.Errorf("unknown HighlightPublishTask edge %s", name)
-}
-
-// HighlightRoundStateMutation represents an operation that mutates the HighlightRoundState nodes in the graph.
-type HighlightRoundStateMutation struct {
-	config
-	op                 Op
-	typ                string
-	id                 *int
-	role               *string
-	algorithm_version  *string
-	status             *highlightroundstate.Status
-	candidate_count    *int
-	addcandidate_count *int
-	completed_at       *time.Time
-	created_at         *time.Time
-	updated_at         *time.Time
-	clearedFields      map[string]struct{}
-	match_round        *int
-	clearedmatch_round bool
-	done               bool
-	oldValue           func(context.Context) (*HighlightRoundState, error)
-	predicates         []predicate.HighlightRoundState
-}
-
-var _ ent.Mutation = (*HighlightRoundStateMutation)(nil)
-
-// highlightroundstateOption allows management of the mutation configuration using functional options.
-type highlightroundstateOption func(*HighlightRoundStateMutation)
-
-// newHighlightRoundStateMutation creates new mutation for the HighlightRoundState entity.
-func newHighlightRoundStateMutation(c config, op Op, opts ...highlightroundstateOption) *HighlightRoundStateMutation {
-	m := &HighlightRoundStateMutation{
-		config:        c,
-		op:            op,
-		typ:           TypeHighlightRoundState,
-		clearedFields: make(map[string]struct{}),
-	}
-	for _, opt := range opts {
-		opt(m)
-	}
-	return m
-}
-
-// withHighlightRoundStateID sets the ID field of the mutation.
-func withHighlightRoundStateID(id int) highlightroundstateOption {
-	return func(m *HighlightRoundStateMutation) {
-		var (
-			err   error
-			once  sync.Once
-			value *HighlightRoundState
-		)
-		m.oldValue = func(ctx context.Context) (*HighlightRoundState, error) {
-			once.Do(func() {
-				if m.done {
-					err = errors.New("querying old values post mutation is not allowed")
-				} else {
-					value, err = m.Client().HighlightRoundState.Get(ctx, id)
-				}
-			})
-			return value, err
-		}
-		m.id = &id
-	}
-}
-
-// withHighlightRoundState sets the old HighlightRoundState of the mutation.
-func withHighlightRoundState(node *HighlightRoundState) highlightroundstateOption {
-	return func(m *HighlightRoundStateMutation) {
-		m.oldValue = func(context.Context) (*HighlightRoundState, error) {
-			return node, nil
-		}
-		m.id = &node.ID
-	}
-}
-
-// Client returns a new `ent.Client` from the mutation. If the mutation was
-// executed in a transaction (ent.Tx), a transactional client is returned.
-func (m HighlightRoundStateMutation) Client() *Client {
-	client := &Client{config: m.config}
-	client.init()
-	return client
-}
-
-// Tx returns an `ent.Tx` for mutations that were executed in transactions;
-// it returns an error otherwise.
-func (m HighlightRoundStateMutation) Tx() (*Tx, error) {
-	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, errors.New("ent: mutation is not running in a transaction")
-	}
-	tx := &Tx{config: m.config}
-	tx.init()
-	return tx, nil
-}
-
-// ID returns the ID value in the mutation. Note that the ID is only available
-// if it was provided to the builder or after it was returned from the database.
-func (m *HighlightRoundStateMutation) ID() (id int, exists bool) {
-	if m.id == nil {
-		return
-	}
-	return *m.id, true
-}
-
-// IDs queries the database and returns the entity ids that match the mutation's predicate.
-// That means, if the mutation is applied within a transaction with an isolation level such
-// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
-// or updated by the mutation.
-func (m *HighlightRoundStateMutation) IDs(ctx context.Context) ([]int, error) {
-	switch {
-	case m.op.Is(OpUpdateOne | OpDeleteOne):
-		id, exists := m.ID()
-		if exists {
-			return []int{id}, nil
-		}
-		fallthrough
-	case m.op.Is(OpUpdate | OpDelete):
-		return m.Client().HighlightRoundState.Query().Where(m.predicates...).IDs(ctx)
+		return m.Client().LarkBitableRecord.Query().Where(m.predicates...).IDs(ctx)
 	default:
 		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
 	}
 }
 
 // SetRole sets the "role" field.
-func (m *HighlightRoundStateMutation) SetRole(s string) {
+func (m *LarkBitableRecordMutation) SetRole(s string) {
 	m.role = &s
 }
 
 // Role returns the value of the "role" field in the mutation.
-func (m *HighlightRoundStateMutation) Role() (r string, exists bool) {
+func (m *LarkBitableRecordMutation) Role() (r string, exists bool) {
 	v := m.role
 	if v == nil {
 		return
@@ -4900,10 +2704,10 @@ func (m *HighlightRoundStateMutation) Role() (r string, exists bool) {
 	return *v, true
 }
 
-// OldRole returns the old "role" field's value of the HighlightRoundState entity.
-// If the HighlightRoundState object wasn't provided to the builder, the object is fetched from the database.
+// OldRole returns the old "role" field's value of the LarkBitableRecord entity.
+// If the LarkBitableRecord object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *HighlightRoundStateMutation) OldRole(ctx context.Context) (v string, err error) {
+func (m *LarkBitableRecordMutation) OldRole(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldRole is only allowed on UpdateOne operations")
 	}
@@ -4918,194 +2722,364 @@ func (m *HighlightRoundStateMutation) OldRole(ctx context.Context) (v string, er
 }
 
 // ResetRole resets all changes to the "role" field.
-func (m *HighlightRoundStateMutation) ResetRole() {
+func (m *LarkBitableRecordMutation) ResetRole() {
 	m.role = nil
 }
 
-// SetAlgorithmVersion sets the "algorithm_version" field.
-func (m *HighlightRoundStateMutation) SetAlgorithmVersion(s string) {
-	m.algorithm_version = &s
+// SetAppToken sets the "app_token" field.
+func (m *LarkBitableRecordMutation) SetAppToken(s string) {
+	m.app_token = &s
 }
 
-// AlgorithmVersion returns the value of the "algorithm_version" field in the mutation.
-func (m *HighlightRoundStateMutation) AlgorithmVersion() (r string, exists bool) {
-	v := m.algorithm_version
+// AppToken returns the value of the "app_token" field in the mutation.
+func (m *LarkBitableRecordMutation) AppToken() (r string, exists bool) {
+	v := m.app_token
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// OldAlgorithmVersion returns the old "algorithm_version" field's value of the HighlightRoundState entity.
-// If the HighlightRoundState object wasn't provided to the builder, the object is fetched from the database.
+// OldAppToken returns the old "app_token" field's value of the LarkBitableRecord entity.
+// If the LarkBitableRecord object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *HighlightRoundStateMutation) OldAlgorithmVersion(ctx context.Context) (v string, err error) {
+func (m *LarkBitableRecordMutation) OldAppToken(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldAlgorithmVersion is only allowed on UpdateOne operations")
+		return v, errors.New("OldAppToken is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldAlgorithmVersion requires an ID field in the mutation")
+		return v, errors.New("OldAppToken requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldAlgorithmVersion: %w", err)
+		return v, fmt.Errorf("querying old value for OldAppToken: %w", err)
 	}
-	return oldValue.AlgorithmVersion, nil
+	return oldValue.AppToken, nil
 }
 
-// ResetAlgorithmVersion resets all changes to the "algorithm_version" field.
-func (m *HighlightRoundStateMutation) ResetAlgorithmVersion() {
-	m.algorithm_version = nil
+// ResetAppToken resets all changes to the "app_token" field.
+func (m *LarkBitableRecordMutation) ResetAppToken() {
+	m.app_token = nil
 }
 
-// SetStatus sets the "status" field.
-func (m *HighlightRoundStateMutation) SetStatus(h highlightroundstate.Status) {
-	m.status = &h
+// SetTableID sets the "table_id" field.
+func (m *LarkBitableRecordMutation) SetTableID(s string) {
+	m.table_id = &s
 }
 
-// Status returns the value of the "status" field in the mutation.
-func (m *HighlightRoundStateMutation) Status() (r highlightroundstate.Status, exists bool) {
-	v := m.status
+// TableID returns the value of the "table_id" field in the mutation.
+func (m *LarkBitableRecordMutation) TableID() (r string, exists bool) {
+	v := m.table_id
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// OldStatus returns the old "status" field's value of the HighlightRoundState entity.
-// If the HighlightRoundState object wasn't provided to the builder, the object is fetched from the database.
+// OldTableID returns the old "table_id" field's value of the LarkBitableRecord entity.
+// If the LarkBitableRecord object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *HighlightRoundStateMutation) OldStatus(ctx context.Context) (v highlightroundstate.Status, err error) {
+func (m *LarkBitableRecordMutation) OldTableID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
+		return v, errors.New("OldTableID is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldStatus requires an ID field in the mutation")
+		return v, errors.New("OldTableID requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldStatus: %w", err)
+		return v, fmt.Errorf("querying old value for OldTableID: %w", err)
 	}
-	return oldValue.Status, nil
+	return oldValue.TableID, nil
 }
 
-// ResetStatus resets all changes to the "status" field.
-func (m *HighlightRoundStateMutation) ResetStatus() {
-	m.status = nil
+// ResetTableID resets all changes to the "table_id" field.
+func (m *LarkBitableRecordMutation) ResetTableID() {
+	m.table_id = nil
 }
 
-// SetCandidateCount sets the "candidate_count" field.
-func (m *HighlightRoundStateMutation) SetCandidateCount(i int) {
-	m.candidate_count = &i
-	m.addcandidate_count = nil
+// SetRecordID sets the "record_id" field.
+func (m *LarkBitableRecordMutation) SetRecordID(s string) {
+	m.record_id = &s
 }
 
-// CandidateCount returns the value of the "candidate_count" field in the mutation.
-func (m *HighlightRoundStateMutation) CandidateCount() (r int, exists bool) {
-	v := m.candidate_count
+// RecordID returns the value of the "record_id" field in the mutation.
+func (m *LarkBitableRecordMutation) RecordID() (r string, exists bool) {
+	v := m.record_id
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// OldCandidateCount returns the old "candidate_count" field's value of the HighlightRoundState entity.
-// If the HighlightRoundState object wasn't provided to the builder, the object is fetched from the database.
+// OldRecordID returns the old "record_id" field's value of the LarkBitableRecord entity.
+// If the LarkBitableRecord object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *HighlightRoundStateMutation) OldCandidateCount(ctx context.Context) (v int, err error) {
+func (m *LarkBitableRecordMutation) OldRecordID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldCandidateCount is only allowed on UpdateOne operations")
+		return v, errors.New("OldRecordID is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldCandidateCount requires an ID field in the mutation")
+		return v, errors.New("OldRecordID requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldCandidateCount: %w", err)
+		return v, fmt.Errorf("querying old value for OldRecordID: %w", err)
 	}
-	return oldValue.CandidateCount, nil
+	return oldValue.RecordID, nil
 }
 
-// AddCandidateCount adds i to the "candidate_count" field.
-func (m *HighlightRoundStateMutation) AddCandidateCount(i int) {
-	if m.addcandidate_count != nil {
-		*m.addcandidate_count += i
-	} else {
-		m.addcandidate_count = &i
-	}
+// ResetRecordID resets all changes to the "record_id" field.
+func (m *LarkBitableRecordMutation) ResetRecordID() {
+	m.record_id = nil
 }
 
-// AddedCandidateCount returns the value that was added to the "candidate_count" field in this mutation.
-func (m *HighlightRoundStateMutation) AddedCandidateCount() (r int, exists bool) {
-	v := m.addcandidate_count
+// SetRecordURL sets the "record_url" field.
+func (m *LarkBitableRecordMutation) SetRecordURL(s string) {
+	m.record_url = &s
+}
+
+// RecordURL returns the value of the "record_url" field in the mutation.
+func (m *LarkBitableRecordMutation) RecordURL() (r string, exists bool) {
+	v := m.record_url
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// ResetCandidateCount resets all changes to the "candidate_count" field.
-func (m *HighlightRoundStateMutation) ResetCandidateCount() {
-	m.candidate_count = nil
-	m.addcandidate_count = nil
-}
-
-// SetCompletedAt sets the "completed_at" field.
-func (m *HighlightRoundStateMutation) SetCompletedAt(t time.Time) {
-	m.completed_at = &t
-}
-
-// CompletedAt returns the value of the "completed_at" field in the mutation.
-func (m *HighlightRoundStateMutation) CompletedAt() (r time.Time, exists bool) {
-	v := m.completed_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldCompletedAt returns the old "completed_at" field's value of the HighlightRoundState entity.
-// If the HighlightRoundState object wasn't provided to the builder, the object is fetched from the database.
+// OldRecordURL returns the old "record_url" field's value of the LarkBitableRecord entity.
+// If the LarkBitableRecord object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *HighlightRoundStateMutation) OldCompletedAt(ctx context.Context) (v *time.Time, err error) {
+func (m *LarkBitableRecordMutation) OldRecordURL(ctx context.Context) (v *string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldCompletedAt is only allowed on UpdateOne operations")
+		return v, errors.New("OldRecordURL is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldCompletedAt requires an ID field in the mutation")
+		return v, errors.New("OldRecordURL requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldCompletedAt: %w", err)
+		return v, fmt.Errorf("querying old value for OldRecordURL: %w", err)
 	}
-	return oldValue.CompletedAt, nil
+	return oldValue.RecordURL, nil
 }
 
-// ClearCompletedAt clears the value of the "completed_at" field.
-func (m *HighlightRoundStateMutation) ClearCompletedAt() {
-	m.completed_at = nil
-	m.clearedFields[highlightroundstate.FieldCompletedAt] = struct{}{}
+// ClearRecordURL clears the value of the "record_url" field.
+func (m *LarkBitableRecordMutation) ClearRecordURL() {
+	m.record_url = nil
+	m.clearedFields[larkbitablerecord.FieldRecordURL] = struct{}{}
 }
 
-// CompletedAtCleared returns if the "completed_at" field was cleared in this mutation.
-func (m *HighlightRoundStateMutation) CompletedAtCleared() bool {
-	_, ok := m.clearedFields[highlightroundstate.FieldCompletedAt]
+// RecordURLCleared returns if the "record_url" field was cleared in this mutation.
+func (m *LarkBitableRecordMutation) RecordURLCleared() bool {
+	_, ok := m.clearedFields[larkbitablerecord.FieldRecordURL]
 	return ok
 }
 
-// ResetCompletedAt resets all changes to the "completed_at" field.
-func (m *HighlightRoundStateMutation) ResetCompletedAt() {
-	m.completed_at = nil
-	delete(m.clearedFields, highlightroundstate.FieldCompletedAt)
+// ResetRecordURL resets all changes to the "record_url" field.
+func (m *LarkBitableRecordMutation) ResetRecordURL() {
+	m.record_url = nil
+	delete(m.clearedFields, larkbitablerecord.FieldRecordURL)
+}
+
+// SetAttachmentFileToken sets the "attachment_file_token" field.
+func (m *LarkBitableRecordMutation) SetAttachmentFileToken(s string) {
+	m.attachment_file_token = &s
+}
+
+// AttachmentFileToken returns the value of the "attachment_file_token" field in the mutation.
+func (m *LarkBitableRecordMutation) AttachmentFileToken() (r string, exists bool) {
+	v := m.attachment_file_token
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAttachmentFileToken returns the old "attachment_file_token" field's value of the LarkBitableRecord entity.
+// If the LarkBitableRecord object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LarkBitableRecordMutation) OldAttachmentFileToken(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAttachmentFileToken is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAttachmentFileToken requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAttachmentFileToken: %w", err)
+	}
+	return oldValue.AttachmentFileToken, nil
+}
+
+// ClearAttachmentFileToken clears the value of the "attachment_file_token" field.
+func (m *LarkBitableRecordMutation) ClearAttachmentFileToken() {
+	m.attachment_file_token = nil
+	m.clearedFields[larkbitablerecord.FieldAttachmentFileToken] = struct{}{}
+}
+
+// AttachmentFileTokenCleared returns if the "attachment_file_token" field was cleared in this mutation.
+func (m *LarkBitableRecordMutation) AttachmentFileTokenCleared() bool {
+	_, ok := m.clearedFields[larkbitablerecord.FieldAttachmentFileToken]
+	return ok
+}
+
+// ResetAttachmentFileToken resets all changes to the "attachment_file_token" field.
+func (m *LarkBitableRecordMutation) ResetAttachmentFileToken() {
+	m.attachment_file_token = nil
+	delete(m.clearedFields, larkbitablerecord.FieldAttachmentFileToken)
+}
+
+// SetSourcePath sets the "source_path" field.
+func (m *LarkBitableRecordMutation) SetSourcePath(s string) {
+	m.source_path = &s
+}
+
+// SourcePath returns the value of the "source_path" field in the mutation.
+func (m *LarkBitableRecordMutation) SourcePath() (r string, exists bool) {
+	v := m.source_path
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSourcePath returns the old "source_path" field's value of the LarkBitableRecord entity.
+// If the LarkBitableRecord object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LarkBitableRecordMutation) OldSourcePath(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSourcePath is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSourcePath requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSourcePath: %w", err)
+	}
+	return oldValue.SourcePath, nil
+}
+
+// ResetSourcePath resets all changes to the "source_path" field.
+func (m *LarkBitableRecordMutation) ResetSourcePath() {
+	m.source_path = nil
+}
+
+// SetFileSize sets the "file_size" field.
+func (m *LarkBitableRecordMutation) SetFileSize(i int64) {
+	m.file_size = &i
+	m.addfile_size = nil
+}
+
+// FileSize returns the value of the "file_size" field in the mutation.
+func (m *LarkBitableRecordMutation) FileSize() (r int64, exists bool) {
+	v := m.file_size
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldFileSize returns the old "file_size" field's value of the LarkBitableRecord entity.
+// If the LarkBitableRecord object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LarkBitableRecordMutation) OldFileSize(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldFileSize is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldFileSize requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldFileSize: %w", err)
+	}
+	return oldValue.FileSize, nil
+}
+
+// AddFileSize adds i to the "file_size" field.
+func (m *LarkBitableRecordMutation) AddFileSize(i int64) {
+	if m.addfile_size != nil {
+		*m.addfile_size += i
+	} else {
+		m.addfile_size = &i
+	}
+}
+
+// AddedFileSize returns the value that was added to the "file_size" field in this mutation.
+func (m *LarkBitableRecordMutation) AddedFileSize() (r int64, exists bool) {
+	v := m.addfile_size
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetFileSize resets all changes to the "file_size" field.
+func (m *LarkBitableRecordMutation) ResetFileSize() {
+	m.file_size = nil
+	m.addfile_size = nil
+}
+
+// SetSourceDeletedAt sets the "source_deleted_at" field.
+func (m *LarkBitableRecordMutation) SetSourceDeletedAt(t time.Time) {
+	m.source_deleted_at = &t
+}
+
+// SourceDeletedAt returns the value of the "source_deleted_at" field in the mutation.
+func (m *LarkBitableRecordMutation) SourceDeletedAt() (r time.Time, exists bool) {
+	v := m.source_deleted_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSourceDeletedAt returns the old "source_deleted_at" field's value of the LarkBitableRecord entity.
+// If the LarkBitableRecord object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LarkBitableRecordMutation) OldSourceDeletedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSourceDeletedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSourceDeletedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSourceDeletedAt: %w", err)
+	}
+	return oldValue.SourceDeletedAt, nil
+}
+
+// ClearSourceDeletedAt clears the value of the "source_deleted_at" field.
+func (m *LarkBitableRecordMutation) ClearSourceDeletedAt() {
+	m.source_deleted_at = nil
+	m.clearedFields[larkbitablerecord.FieldSourceDeletedAt] = struct{}{}
+}
+
+// SourceDeletedAtCleared returns if the "source_deleted_at" field was cleared in this mutation.
+func (m *LarkBitableRecordMutation) SourceDeletedAtCleared() bool {
+	_, ok := m.clearedFields[larkbitablerecord.FieldSourceDeletedAt]
+	return ok
+}
+
+// ResetSourceDeletedAt resets all changes to the "source_deleted_at" field.
+func (m *LarkBitableRecordMutation) ResetSourceDeletedAt() {
+	m.source_deleted_at = nil
+	delete(m.clearedFields, larkbitablerecord.FieldSourceDeletedAt)
 }
 
 // SetCreatedAt sets the "created_at" field.
-func (m *HighlightRoundStateMutation) SetCreatedAt(t time.Time) {
+func (m *LarkBitableRecordMutation) SetCreatedAt(t time.Time) {
 	m.created_at = &t
 }
 
 // CreatedAt returns the value of the "created_at" field in the mutation.
-func (m *HighlightRoundStateMutation) CreatedAt() (r time.Time, exists bool) {
+func (m *LarkBitableRecordMutation) CreatedAt() (r time.Time, exists bool) {
 	v := m.created_at
 	if v == nil {
 		return
@@ -5113,10 +3087,10 @@ func (m *HighlightRoundStateMutation) CreatedAt() (r time.Time, exists bool) {
 	return *v, true
 }
 
-// OldCreatedAt returns the old "created_at" field's value of the HighlightRoundState entity.
-// If the HighlightRoundState object wasn't provided to the builder, the object is fetched from the database.
+// OldCreatedAt returns the old "created_at" field's value of the LarkBitableRecord entity.
+// If the LarkBitableRecord object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *HighlightRoundStateMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+func (m *LarkBitableRecordMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
 	}
@@ -5131,17 +3105,17 @@ func (m *HighlightRoundStateMutation) OldCreatedAt(ctx context.Context) (v time.
 }
 
 // ResetCreatedAt resets all changes to the "created_at" field.
-func (m *HighlightRoundStateMutation) ResetCreatedAt() {
+func (m *LarkBitableRecordMutation) ResetCreatedAt() {
 	m.created_at = nil
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (m *HighlightRoundStateMutation) SetUpdatedAt(t time.Time) {
+func (m *LarkBitableRecordMutation) SetUpdatedAt(t time.Time) {
 	m.updated_at = &t
 }
 
 // UpdatedAt returns the value of the "updated_at" field in the mutation.
-func (m *HighlightRoundStateMutation) UpdatedAt() (r time.Time, exists bool) {
+func (m *LarkBitableRecordMutation) UpdatedAt() (r time.Time, exists bool) {
 	v := m.updated_at
 	if v == nil {
 		return
@@ -5149,10 +3123,10 @@ func (m *HighlightRoundStateMutation) UpdatedAt() (r time.Time, exists bool) {
 	return *v, true
 }
 
-// OldUpdatedAt returns the old "updated_at" field's value of the HighlightRoundState entity.
-// If the HighlightRoundState object wasn't provided to the builder, the object is fetched from the database.
+// OldUpdatedAt returns the old "updated_at" field's value of the LarkBitableRecord entity.
+// If the LarkBitableRecord object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *HighlightRoundStateMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+func (m *LarkBitableRecordMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
 	}
@@ -5167,27 +3141,27 @@ func (m *HighlightRoundStateMutation) OldUpdatedAt(ctx context.Context) (v time.
 }
 
 // ResetUpdatedAt resets all changes to the "updated_at" field.
-func (m *HighlightRoundStateMutation) ResetUpdatedAt() {
+func (m *LarkBitableRecordMutation) ResetUpdatedAt() {
 	m.updated_at = nil
 }
 
 // SetMatchRoundID sets the "match_round" edge to the MatchRound entity by id.
-func (m *HighlightRoundStateMutation) SetMatchRoundID(id int) {
+func (m *LarkBitableRecordMutation) SetMatchRoundID(id int) {
 	m.match_round = &id
 }
 
 // ClearMatchRound clears the "match_round" edge to the MatchRound entity.
-func (m *HighlightRoundStateMutation) ClearMatchRound() {
+func (m *LarkBitableRecordMutation) ClearMatchRound() {
 	m.clearedmatch_round = true
 }
 
 // MatchRoundCleared reports if the "match_round" edge to the MatchRound entity was cleared.
-func (m *HighlightRoundStateMutation) MatchRoundCleared() bool {
+func (m *LarkBitableRecordMutation) MatchRoundCleared() bool {
 	return m.clearedmatch_round
 }
 
 // MatchRoundID returns the "match_round" edge ID in the mutation.
-func (m *HighlightRoundStateMutation) MatchRoundID() (id int, exists bool) {
+func (m *LarkBitableRecordMutation) MatchRoundID() (id int, exists bool) {
 	if m.match_round != nil {
 		return *m.match_round, true
 	}
@@ -5197,7 +3171,7 @@ func (m *HighlightRoundStateMutation) MatchRoundID() (id int, exists bool) {
 // MatchRoundIDs returns the "match_round" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
 // MatchRoundID instead. It exists only for internal usage by the builders.
-func (m *HighlightRoundStateMutation) MatchRoundIDs() (ids []int) {
+func (m *LarkBitableRecordMutation) MatchRoundIDs() (ids []int) {
 	if id := m.match_round; id != nil {
 		ids = append(ids, *id)
 	}
@@ -5205,20 +3179,20 @@ func (m *HighlightRoundStateMutation) MatchRoundIDs() (ids []int) {
 }
 
 // ResetMatchRound resets all changes to the "match_round" edge.
-func (m *HighlightRoundStateMutation) ResetMatchRound() {
+func (m *LarkBitableRecordMutation) ResetMatchRound() {
 	m.match_round = nil
 	m.clearedmatch_round = false
 }
 
-// Where appends a list predicates to the HighlightRoundStateMutation builder.
-func (m *HighlightRoundStateMutation) Where(ps ...predicate.HighlightRoundState) {
+// Where appends a list predicates to the LarkBitableRecordMutation builder.
+func (m *LarkBitableRecordMutation) Where(ps ...predicate.LarkBitableRecord) {
 	m.predicates = append(m.predicates, ps...)
 }
 
-// WhereP appends storage-level predicates to the HighlightRoundStateMutation builder. Using this method,
+// WhereP appends storage-level predicates to the LarkBitableRecordMutation builder. Using this method,
 // users can use type-assertion to append predicates that do not depend on any generated package.
-func (m *HighlightRoundStateMutation) WhereP(ps ...func(*sql.Selector)) {
-	p := make([]predicate.HighlightRoundState, len(ps))
+func (m *LarkBitableRecordMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.LarkBitableRecord, len(ps))
 	for i := range ps {
 		p[i] = ps[i]
 	}
@@ -5226,45 +3200,57 @@ func (m *HighlightRoundStateMutation) WhereP(ps ...func(*sql.Selector)) {
 }
 
 // Op returns the operation name.
-func (m *HighlightRoundStateMutation) Op() Op {
+func (m *LarkBitableRecordMutation) Op() Op {
 	return m.op
 }
 
 // SetOp allows setting the mutation operation.
-func (m *HighlightRoundStateMutation) SetOp(op Op) {
+func (m *LarkBitableRecordMutation) SetOp(op Op) {
 	m.op = op
 }
 
-// Type returns the node type of this mutation (HighlightRoundState).
-func (m *HighlightRoundStateMutation) Type() string {
+// Type returns the node type of this mutation (LarkBitableRecord).
+func (m *LarkBitableRecordMutation) Type() string {
 	return m.typ
 }
 
 // Fields returns all fields that were changed during this mutation. Note that in
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
-func (m *HighlightRoundStateMutation) Fields() []string {
-	fields := make([]string, 0, 7)
+func (m *LarkBitableRecordMutation) Fields() []string {
+	fields := make([]string, 0, 11)
 	if m.role != nil {
-		fields = append(fields, highlightroundstate.FieldRole)
+		fields = append(fields, larkbitablerecord.FieldRole)
 	}
-	if m.algorithm_version != nil {
-		fields = append(fields, highlightroundstate.FieldAlgorithmVersion)
+	if m.app_token != nil {
+		fields = append(fields, larkbitablerecord.FieldAppToken)
 	}
-	if m.status != nil {
-		fields = append(fields, highlightroundstate.FieldStatus)
+	if m.table_id != nil {
+		fields = append(fields, larkbitablerecord.FieldTableID)
 	}
-	if m.candidate_count != nil {
-		fields = append(fields, highlightroundstate.FieldCandidateCount)
+	if m.record_id != nil {
+		fields = append(fields, larkbitablerecord.FieldRecordID)
 	}
-	if m.completed_at != nil {
-		fields = append(fields, highlightroundstate.FieldCompletedAt)
+	if m.record_url != nil {
+		fields = append(fields, larkbitablerecord.FieldRecordURL)
+	}
+	if m.attachment_file_token != nil {
+		fields = append(fields, larkbitablerecord.FieldAttachmentFileToken)
+	}
+	if m.source_path != nil {
+		fields = append(fields, larkbitablerecord.FieldSourcePath)
+	}
+	if m.file_size != nil {
+		fields = append(fields, larkbitablerecord.FieldFileSize)
+	}
+	if m.source_deleted_at != nil {
+		fields = append(fields, larkbitablerecord.FieldSourceDeletedAt)
 	}
 	if m.created_at != nil {
-		fields = append(fields, highlightroundstate.FieldCreatedAt)
+		fields = append(fields, larkbitablerecord.FieldCreatedAt)
 	}
 	if m.updated_at != nil {
-		fields = append(fields, highlightroundstate.FieldUpdatedAt)
+		fields = append(fields, larkbitablerecord.FieldUpdatedAt)
 	}
 	return fields
 }
@@ -5272,21 +3258,29 @@ func (m *HighlightRoundStateMutation) Fields() []string {
 // Field returns the value of a field with the given name. The second boolean
 // return value indicates that this field was not set, or was not defined in the
 // schema.
-func (m *HighlightRoundStateMutation) Field(name string) (ent.Value, bool) {
+func (m *LarkBitableRecordMutation) Field(name string) (ent.Value, bool) {
 	switch name {
-	case highlightroundstate.FieldRole:
+	case larkbitablerecord.FieldRole:
 		return m.Role()
-	case highlightroundstate.FieldAlgorithmVersion:
-		return m.AlgorithmVersion()
-	case highlightroundstate.FieldStatus:
-		return m.Status()
-	case highlightroundstate.FieldCandidateCount:
-		return m.CandidateCount()
-	case highlightroundstate.FieldCompletedAt:
-		return m.CompletedAt()
-	case highlightroundstate.FieldCreatedAt:
+	case larkbitablerecord.FieldAppToken:
+		return m.AppToken()
+	case larkbitablerecord.FieldTableID:
+		return m.TableID()
+	case larkbitablerecord.FieldRecordID:
+		return m.RecordID()
+	case larkbitablerecord.FieldRecordURL:
+		return m.RecordURL()
+	case larkbitablerecord.FieldAttachmentFileToken:
+		return m.AttachmentFileToken()
+	case larkbitablerecord.FieldSourcePath:
+		return m.SourcePath()
+	case larkbitablerecord.FieldFileSize:
+		return m.FileSize()
+	case larkbitablerecord.FieldSourceDeletedAt:
+		return m.SourceDeletedAt()
+	case larkbitablerecord.FieldCreatedAt:
 		return m.CreatedAt()
-	case highlightroundstate.FieldUpdatedAt:
+	case larkbitablerecord.FieldUpdatedAt:
 		return m.UpdatedAt()
 	}
 	return nil, false
@@ -5295,74 +3289,110 @@ func (m *HighlightRoundStateMutation) Field(name string) (ent.Value, bool) {
 // OldField returns the old value of the field from the database. An error is
 // returned if the mutation operation is not UpdateOne, or the query to the
 // database failed.
-func (m *HighlightRoundStateMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+func (m *LarkBitableRecordMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
-	case highlightroundstate.FieldRole:
+	case larkbitablerecord.FieldRole:
 		return m.OldRole(ctx)
-	case highlightroundstate.FieldAlgorithmVersion:
-		return m.OldAlgorithmVersion(ctx)
-	case highlightroundstate.FieldStatus:
-		return m.OldStatus(ctx)
-	case highlightroundstate.FieldCandidateCount:
-		return m.OldCandidateCount(ctx)
-	case highlightroundstate.FieldCompletedAt:
-		return m.OldCompletedAt(ctx)
-	case highlightroundstate.FieldCreatedAt:
+	case larkbitablerecord.FieldAppToken:
+		return m.OldAppToken(ctx)
+	case larkbitablerecord.FieldTableID:
+		return m.OldTableID(ctx)
+	case larkbitablerecord.FieldRecordID:
+		return m.OldRecordID(ctx)
+	case larkbitablerecord.FieldRecordURL:
+		return m.OldRecordURL(ctx)
+	case larkbitablerecord.FieldAttachmentFileToken:
+		return m.OldAttachmentFileToken(ctx)
+	case larkbitablerecord.FieldSourcePath:
+		return m.OldSourcePath(ctx)
+	case larkbitablerecord.FieldFileSize:
+		return m.OldFileSize(ctx)
+	case larkbitablerecord.FieldSourceDeletedAt:
+		return m.OldSourceDeletedAt(ctx)
+	case larkbitablerecord.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
-	case highlightroundstate.FieldUpdatedAt:
+	case larkbitablerecord.FieldUpdatedAt:
 		return m.OldUpdatedAt(ctx)
 	}
-	return nil, fmt.Errorf("unknown HighlightRoundState field %s", name)
+	return nil, fmt.Errorf("unknown LarkBitableRecord field %s", name)
 }
 
 // SetField sets the value of a field with the given name. It returns an error if
 // the field is not defined in the schema, or if the type mismatched the field
 // type.
-func (m *HighlightRoundStateMutation) SetField(name string, value ent.Value) error {
+func (m *LarkBitableRecordMutation) SetField(name string, value ent.Value) error {
 	switch name {
-	case highlightroundstate.FieldRole:
+	case larkbitablerecord.FieldRole:
 		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetRole(v)
 		return nil
-	case highlightroundstate.FieldAlgorithmVersion:
+	case larkbitablerecord.FieldAppToken:
 		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetAlgorithmVersion(v)
+		m.SetAppToken(v)
 		return nil
-	case highlightroundstate.FieldStatus:
-		v, ok := value.(highlightroundstate.Status)
+	case larkbitablerecord.FieldTableID:
+		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetStatus(v)
+		m.SetTableID(v)
 		return nil
-	case highlightroundstate.FieldCandidateCount:
-		v, ok := value.(int)
+	case larkbitablerecord.FieldRecordID:
+		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetCandidateCount(v)
+		m.SetRecordID(v)
 		return nil
-	case highlightroundstate.FieldCompletedAt:
+	case larkbitablerecord.FieldRecordURL:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRecordURL(v)
+		return nil
+	case larkbitablerecord.FieldAttachmentFileToken:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAttachmentFileToken(v)
+		return nil
+	case larkbitablerecord.FieldSourcePath:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSourcePath(v)
+		return nil
+	case larkbitablerecord.FieldFileSize:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetFileSize(v)
+		return nil
+	case larkbitablerecord.FieldSourceDeletedAt:
 		v, ok := value.(time.Time)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetCompletedAt(v)
+		m.SetSourceDeletedAt(v)
 		return nil
-	case highlightroundstate.FieldCreatedAt:
+	case larkbitablerecord.FieldCreatedAt:
 		v, ok := value.(time.Time)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetCreatedAt(v)
 		return nil
-	case highlightroundstate.FieldUpdatedAt:
+	case larkbitablerecord.FieldUpdatedAt:
 		v, ok := value.(time.Time)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
@@ -5370,15 +3400,15 @@ func (m *HighlightRoundStateMutation) SetField(name string, value ent.Value) err
 		m.SetUpdatedAt(v)
 		return nil
 	}
-	return fmt.Errorf("unknown HighlightRoundState field %s", name)
+	return fmt.Errorf("unknown LarkBitableRecord field %s", name)
 }
 
 // AddedFields returns all numeric fields that were incremented/decremented during
 // this mutation.
-func (m *HighlightRoundStateMutation) AddedFields() []string {
+func (m *LarkBitableRecordMutation) AddedFields() []string {
 	var fields []string
-	if m.addcandidate_count != nil {
-		fields = append(fields, highlightroundstate.FieldCandidateCount)
+	if m.addfile_size != nil {
+		fields = append(fields, larkbitablerecord.FieldFileSize)
 	}
 	return fields
 }
@@ -5386,10 +3416,10 @@ func (m *HighlightRoundStateMutation) AddedFields() []string {
 // AddedField returns the numeric value that was incremented/decremented on a field
 // with the given name. The second boolean return value indicates that this field
 // was not set, or was not defined in the schema.
-func (m *HighlightRoundStateMutation) AddedField(name string) (ent.Value, bool) {
+func (m *LarkBitableRecordMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
-	case highlightroundstate.FieldCandidateCount:
-		return m.AddedCandidateCount()
+	case larkbitablerecord.FieldFileSize:
+		return m.AddedFileSize()
 	}
 	return nil, false
 }
@@ -5397,90 +3427,114 @@ func (m *HighlightRoundStateMutation) AddedField(name string) (ent.Value, bool) 
 // AddField adds the value to the field with the given name. It returns an error if
 // the field is not defined in the schema, or if the type mismatched the field
 // type.
-func (m *HighlightRoundStateMutation) AddField(name string, value ent.Value) error {
+func (m *LarkBitableRecordMutation) AddField(name string, value ent.Value) error {
 	switch name {
-	case highlightroundstate.FieldCandidateCount:
-		v, ok := value.(int)
+	case larkbitablerecord.FieldFileSize:
+		v, ok := value.(int64)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.AddCandidateCount(v)
+		m.AddFileSize(v)
 		return nil
 	}
-	return fmt.Errorf("unknown HighlightRoundState numeric field %s", name)
+	return fmt.Errorf("unknown LarkBitableRecord numeric field %s", name)
 }
 
 // ClearedFields returns all nullable fields that were cleared during this
 // mutation.
-func (m *HighlightRoundStateMutation) ClearedFields() []string {
+func (m *LarkBitableRecordMutation) ClearedFields() []string {
 	var fields []string
-	if m.FieldCleared(highlightroundstate.FieldCompletedAt) {
-		fields = append(fields, highlightroundstate.FieldCompletedAt)
+	if m.FieldCleared(larkbitablerecord.FieldRecordURL) {
+		fields = append(fields, larkbitablerecord.FieldRecordURL)
+	}
+	if m.FieldCleared(larkbitablerecord.FieldAttachmentFileToken) {
+		fields = append(fields, larkbitablerecord.FieldAttachmentFileToken)
+	}
+	if m.FieldCleared(larkbitablerecord.FieldSourceDeletedAt) {
+		fields = append(fields, larkbitablerecord.FieldSourceDeletedAt)
 	}
 	return fields
 }
 
 // FieldCleared returns a boolean indicating if a field with the given name was
 // cleared in this mutation.
-func (m *HighlightRoundStateMutation) FieldCleared(name string) bool {
+func (m *LarkBitableRecordMutation) FieldCleared(name string) bool {
 	_, ok := m.clearedFields[name]
 	return ok
 }
 
 // ClearField clears the value of the field with the given name. It returns an
 // error if the field is not defined in the schema.
-func (m *HighlightRoundStateMutation) ClearField(name string) error {
+func (m *LarkBitableRecordMutation) ClearField(name string) error {
 	switch name {
-	case highlightroundstate.FieldCompletedAt:
-		m.ClearCompletedAt()
+	case larkbitablerecord.FieldRecordURL:
+		m.ClearRecordURL()
+		return nil
+	case larkbitablerecord.FieldAttachmentFileToken:
+		m.ClearAttachmentFileToken()
+		return nil
+	case larkbitablerecord.FieldSourceDeletedAt:
+		m.ClearSourceDeletedAt()
 		return nil
 	}
-	return fmt.Errorf("unknown HighlightRoundState nullable field %s", name)
+	return fmt.Errorf("unknown LarkBitableRecord nullable field %s", name)
 }
 
 // ResetField resets all changes in the mutation for the field with the given name.
 // It returns an error if the field is not defined in the schema.
-func (m *HighlightRoundStateMutation) ResetField(name string) error {
+func (m *LarkBitableRecordMutation) ResetField(name string) error {
 	switch name {
-	case highlightroundstate.FieldRole:
+	case larkbitablerecord.FieldRole:
 		m.ResetRole()
 		return nil
-	case highlightroundstate.FieldAlgorithmVersion:
-		m.ResetAlgorithmVersion()
+	case larkbitablerecord.FieldAppToken:
+		m.ResetAppToken()
 		return nil
-	case highlightroundstate.FieldStatus:
-		m.ResetStatus()
+	case larkbitablerecord.FieldTableID:
+		m.ResetTableID()
 		return nil
-	case highlightroundstate.FieldCandidateCount:
-		m.ResetCandidateCount()
+	case larkbitablerecord.FieldRecordID:
+		m.ResetRecordID()
 		return nil
-	case highlightroundstate.FieldCompletedAt:
-		m.ResetCompletedAt()
+	case larkbitablerecord.FieldRecordURL:
+		m.ResetRecordURL()
 		return nil
-	case highlightroundstate.FieldCreatedAt:
+	case larkbitablerecord.FieldAttachmentFileToken:
+		m.ResetAttachmentFileToken()
+		return nil
+	case larkbitablerecord.FieldSourcePath:
+		m.ResetSourcePath()
+		return nil
+	case larkbitablerecord.FieldFileSize:
+		m.ResetFileSize()
+		return nil
+	case larkbitablerecord.FieldSourceDeletedAt:
+		m.ResetSourceDeletedAt()
+		return nil
+	case larkbitablerecord.FieldCreatedAt:
 		m.ResetCreatedAt()
 		return nil
-	case highlightroundstate.FieldUpdatedAt:
+	case larkbitablerecord.FieldUpdatedAt:
 		m.ResetUpdatedAt()
 		return nil
 	}
-	return fmt.Errorf("unknown HighlightRoundState field %s", name)
+	return fmt.Errorf("unknown LarkBitableRecord field %s", name)
 }
 
 // AddedEdges returns all edge names that were set/added in this mutation.
-func (m *HighlightRoundStateMutation) AddedEdges() []string {
+func (m *LarkBitableRecordMutation) AddedEdges() []string {
 	edges := make([]string, 0, 1)
 	if m.match_round != nil {
-		edges = append(edges, highlightroundstate.EdgeMatchRound)
+		edges = append(edges, larkbitablerecord.EdgeMatchRound)
 	}
 	return edges
 }
 
 // AddedIDs returns all IDs (to other nodes) that were added for the given edge
 // name in this mutation.
-func (m *HighlightRoundStateMutation) AddedIDs(name string) []ent.Value {
+func (m *LarkBitableRecordMutation) AddedIDs(name string) []ent.Value {
 	switch name {
-	case highlightroundstate.EdgeMatchRound:
+	case larkbitablerecord.EdgeMatchRound:
 		if id := m.match_round; id != nil {
 			return []ent.Value{*id}
 		}
@@ -5489,31 +3543,31 @@ func (m *HighlightRoundStateMutation) AddedIDs(name string) []ent.Value {
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
-func (m *HighlightRoundStateMutation) RemovedEdges() []string {
+func (m *LarkBitableRecordMutation) RemovedEdges() []string {
 	edges := make([]string, 0, 1)
 	return edges
 }
 
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
-func (m *HighlightRoundStateMutation) RemovedIDs(name string) []ent.Value {
+func (m *LarkBitableRecordMutation) RemovedIDs(name string) []ent.Value {
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
-func (m *HighlightRoundStateMutation) ClearedEdges() []string {
+func (m *LarkBitableRecordMutation) ClearedEdges() []string {
 	edges := make([]string, 0, 1)
 	if m.clearedmatch_round {
-		edges = append(edges, highlightroundstate.EdgeMatchRound)
+		edges = append(edges, larkbitablerecord.EdgeMatchRound)
 	}
 	return edges
 }
 
 // EdgeCleared returns a boolean which indicates if the edge with the given name
 // was cleared in this mutation.
-func (m *HighlightRoundStateMutation) EdgeCleared(name string) bool {
+func (m *LarkBitableRecordMutation) EdgeCleared(name string) bool {
 	switch name {
-	case highlightroundstate.EdgeMatchRound:
+	case larkbitablerecord.EdgeMatchRound:
 		return m.clearedmatch_round
 	}
 	return false
@@ -5521,24 +3575,24 @@ func (m *HighlightRoundStateMutation) EdgeCleared(name string) bool {
 
 // ClearEdge clears the value of the edge with the given name. It returns an error
 // if that edge is not defined in the schema.
-func (m *HighlightRoundStateMutation) ClearEdge(name string) error {
+func (m *LarkBitableRecordMutation) ClearEdge(name string) error {
 	switch name {
-	case highlightroundstate.EdgeMatchRound:
+	case larkbitablerecord.EdgeMatchRound:
 		m.ClearMatchRound()
 		return nil
 	}
-	return fmt.Errorf("unknown HighlightRoundState unique edge %s", name)
+	return fmt.Errorf("unknown LarkBitableRecord unique edge %s", name)
 }
 
 // ResetEdge resets all changes to the edge with the given name in this mutation.
 // It returns an error if the edge is not defined in the schema.
-func (m *HighlightRoundStateMutation) ResetEdge(name string) error {
+func (m *LarkBitableRecordMutation) ResetEdge(name string) error {
 	switch name {
-	case highlightroundstate.EdgeMatchRound:
+	case larkbitablerecord.EdgeMatchRound:
 		m.ResetMatchRound()
 		return nil
 	}
-	return fmt.Errorf("unknown HighlightRoundState edge %s", name)
+	return fmt.Errorf("unknown LarkBitableRecord edge %s", name)
 }
 
 // LarkMessageMutation represents an operation that mutates the LarkMessage nodes in the graph.
@@ -5548,6 +3602,7 @@ type LarkMessageMutation struct {
 	typ           string
 	id            *int
 	message_id    *string
+	chat_id       *string
 	card_id       *string
 	card_payload  *map[string]interface{}
 	created_at    *time.Time
@@ -5692,6 +3747,55 @@ func (m *LarkMessageMutation) OldMessageID(ctx context.Context) (v string, err e
 // ResetMessageID resets all changes to the "message_id" field.
 func (m *LarkMessageMutation) ResetMessageID() {
 	m.message_id = nil
+}
+
+// SetChatID sets the "chat_id" field.
+func (m *LarkMessageMutation) SetChatID(s string) {
+	m.chat_id = &s
+}
+
+// ChatID returns the value of the "chat_id" field in the mutation.
+func (m *LarkMessageMutation) ChatID() (r string, exists bool) {
+	v := m.chat_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldChatID returns the old "chat_id" field's value of the LarkMessage entity.
+// If the LarkMessage object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LarkMessageMutation) OldChatID(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldChatID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldChatID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldChatID: %w", err)
+	}
+	return oldValue.ChatID, nil
+}
+
+// ClearChatID clears the value of the "chat_id" field.
+func (m *LarkMessageMutation) ClearChatID() {
+	m.chat_id = nil
+	m.clearedFields[larkmessage.FieldChatID] = struct{}{}
+}
+
+// ChatIDCleared returns if the "chat_id" field was cleared in this mutation.
+func (m *LarkMessageMutation) ChatIDCleared() bool {
+	_, ok := m.clearedFields[larkmessage.FieldChatID]
+	return ok
+}
+
+// ResetChatID resets all changes to the "chat_id" field.
+func (m *LarkMessageMutation) ResetChatID() {
+	m.chat_id = nil
+	delete(m.clearedFields, larkmessage.FieldChatID)
 }
 
 // SetCardID sets the "card_id" field.
@@ -5937,9 +4041,12 @@ func (m *LarkMessageMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *LarkMessageMutation) Fields() []string {
-	fields := make([]string, 0, 5)
+	fields := make([]string, 0, 6)
 	if m.message_id != nil {
 		fields = append(fields, larkmessage.FieldMessageID)
+	}
+	if m.chat_id != nil {
+		fields = append(fields, larkmessage.FieldChatID)
 	}
 	if m.card_id != nil {
 		fields = append(fields, larkmessage.FieldCardID)
@@ -5963,6 +4070,8 @@ func (m *LarkMessageMutation) Field(name string) (ent.Value, bool) {
 	switch name {
 	case larkmessage.FieldMessageID:
 		return m.MessageID()
+	case larkmessage.FieldChatID:
+		return m.ChatID()
 	case larkmessage.FieldCardID:
 		return m.CardID()
 	case larkmessage.FieldCardPayload:
@@ -5982,6 +4091,8 @@ func (m *LarkMessageMutation) OldField(ctx context.Context, name string) (ent.Va
 	switch name {
 	case larkmessage.FieldMessageID:
 		return m.OldMessageID(ctx)
+	case larkmessage.FieldChatID:
+		return m.OldChatID(ctx)
 	case larkmessage.FieldCardID:
 		return m.OldCardID(ctx)
 	case larkmessage.FieldCardPayload:
@@ -6005,6 +4116,13 @@ func (m *LarkMessageMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetMessageID(v)
+		return nil
+	case larkmessage.FieldChatID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetChatID(v)
 		return nil
 	case larkmessage.FieldCardID:
 		v, ok := value.(string)
@@ -6064,6 +4182,9 @@ func (m *LarkMessageMutation) AddField(name string, value ent.Value) error {
 // mutation.
 func (m *LarkMessageMutation) ClearedFields() []string {
 	var fields []string
+	if m.FieldCleared(larkmessage.FieldChatID) {
+		fields = append(fields, larkmessage.FieldChatID)
+	}
 	if m.FieldCleared(larkmessage.FieldCardID) {
 		fields = append(fields, larkmessage.FieldCardID)
 	}
@@ -6084,6 +4205,9 @@ func (m *LarkMessageMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *LarkMessageMutation) ClearField(name string) error {
 	switch name {
+	case larkmessage.FieldChatID:
+		m.ClearChatID()
+		return nil
 	case larkmessage.FieldCardID:
 		m.ClearCardID()
 		return nil
@@ -6100,6 +4224,9 @@ func (m *LarkMessageMutation) ResetField(name string) error {
 	switch name {
 	case larkmessage.FieldMessageID:
 		m.ResetMessageID()
+		return nil
+	case larkmessage.FieldChatID:
+		m.ResetChatID()
 		return nil
 	case larkmessage.FieldCardID:
 		m.ResetCardID()
@@ -6211,6 +4338,9 @@ type MatchMutation struct {
 	winner_placeholder_name *string
 	loser_placeholder_name  *string
 	latest_status           *string
+	workflow_name           *string
+	workflow_uid            *string
+	workflow_phase          *string
 	report                  *string
 	created_at              *time.Time
 	updated_at              *time.Time
@@ -6829,6 +4959,153 @@ func (m *MatchMutation) ResetLatestStatus() {
 	m.latest_status = nil
 }
 
+// SetWorkflowName sets the "workflow_name" field.
+func (m *MatchMutation) SetWorkflowName(s string) {
+	m.workflow_name = &s
+}
+
+// WorkflowName returns the value of the "workflow_name" field in the mutation.
+func (m *MatchMutation) WorkflowName() (r string, exists bool) {
+	v := m.workflow_name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldWorkflowName returns the old "workflow_name" field's value of the Match entity.
+// If the Match object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MatchMutation) OldWorkflowName(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldWorkflowName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldWorkflowName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldWorkflowName: %w", err)
+	}
+	return oldValue.WorkflowName, nil
+}
+
+// ClearWorkflowName clears the value of the "workflow_name" field.
+func (m *MatchMutation) ClearWorkflowName() {
+	m.workflow_name = nil
+	m.clearedFields[match.FieldWorkflowName] = struct{}{}
+}
+
+// WorkflowNameCleared returns if the "workflow_name" field was cleared in this mutation.
+func (m *MatchMutation) WorkflowNameCleared() bool {
+	_, ok := m.clearedFields[match.FieldWorkflowName]
+	return ok
+}
+
+// ResetWorkflowName resets all changes to the "workflow_name" field.
+func (m *MatchMutation) ResetWorkflowName() {
+	m.workflow_name = nil
+	delete(m.clearedFields, match.FieldWorkflowName)
+}
+
+// SetWorkflowUID sets the "workflow_uid" field.
+func (m *MatchMutation) SetWorkflowUID(s string) {
+	m.workflow_uid = &s
+}
+
+// WorkflowUID returns the value of the "workflow_uid" field in the mutation.
+func (m *MatchMutation) WorkflowUID() (r string, exists bool) {
+	v := m.workflow_uid
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldWorkflowUID returns the old "workflow_uid" field's value of the Match entity.
+// If the Match object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MatchMutation) OldWorkflowUID(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldWorkflowUID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldWorkflowUID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldWorkflowUID: %w", err)
+	}
+	return oldValue.WorkflowUID, nil
+}
+
+// ClearWorkflowUID clears the value of the "workflow_uid" field.
+func (m *MatchMutation) ClearWorkflowUID() {
+	m.workflow_uid = nil
+	m.clearedFields[match.FieldWorkflowUID] = struct{}{}
+}
+
+// WorkflowUIDCleared returns if the "workflow_uid" field was cleared in this mutation.
+func (m *MatchMutation) WorkflowUIDCleared() bool {
+	_, ok := m.clearedFields[match.FieldWorkflowUID]
+	return ok
+}
+
+// ResetWorkflowUID resets all changes to the "workflow_uid" field.
+func (m *MatchMutation) ResetWorkflowUID() {
+	m.workflow_uid = nil
+	delete(m.clearedFields, match.FieldWorkflowUID)
+}
+
+// SetWorkflowPhase sets the "workflow_phase" field.
+func (m *MatchMutation) SetWorkflowPhase(s string) {
+	m.workflow_phase = &s
+}
+
+// WorkflowPhase returns the value of the "workflow_phase" field in the mutation.
+func (m *MatchMutation) WorkflowPhase() (r string, exists bool) {
+	v := m.workflow_phase
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldWorkflowPhase returns the old "workflow_phase" field's value of the Match entity.
+// If the Match object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MatchMutation) OldWorkflowPhase(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldWorkflowPhase is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldWorkflowPhase requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldWorkflowPhase: %w", err)
+	}
+	return oldValue.WorkflowPhase, nil
+}
+
+// ClearWorkflowPhase clears the value of the "workflow_phase" field.
+func (m *MatchMutation) ClearWorkflowPhase() {
+	m.workflow_phase = nil
+	m.clearedFields[match.FieldWorkflowPhase] = struct{}{}
+}
+
+// WorkflowPhaseCleared returns if the "workflow_phase" field was cleared in this mutation.
+func (m *MatchMutation) WorkflowPhaseCleared() bool {
+	_, ok := m.clearedFields[match.FieldWorkflowPhase]
+	return ok
+}
+
+// ResetWorkflowPhase resets all changes to the "workflow_phase" field.
+func (m *MatchMutation) ResetWorkflowPhase() {
+	m.workflow_phase = nil
+	delete(m.clearedFields, match.FieldWorkflowPhase)
+}
+
 // SetReport sets the "report" field.
 func (m *MatchMutation) SetReport(s string) {
 	m.report = &s
@@ -7170,7 +5447,7 @@ func (m *MatchMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *MatchMutation) Fields() []string {
-	fields := make([]string, 0, 14)
+	fields := make([]string, 0, 17)
 	if m.event != nil {
 		fields = append(fields, match.FieldEvent)
 	}
@@ -7203,6 +5480,15 @@ func (m *MatchMutation) Fields() []string {
 	}
 	if m.latest_status != nil {
 		fields = append(fields, match.FieldLatestStatus)
+	}
+	if m.workflow_name != nil {
+		fields = append(fields, match.FieldWorkflowName)
+	}
+	if m.workflow_uid != nil {
+		fields = append(fields, match.FieldWorkflowUID)
+	}
+	if m.workflow_phase != nil {
+		fields = append(fields, match.FieldWorkflowPhase)
 	}
 	if m.report != nil {
 		fields = append(fields, match.FieldReport)
@@ -7243,6 +5529,12 @@ func (m *MatchMutation) Field(name string) (ent.Value, bool) {
 		return m.LoserPlaceholderName()
 	case match.FieldLatestStatus:
 		return m.LatestStatus()
+	case match.FieldWorkflowName:
+		return m.WorkflowName()
+	case match.FieldWorkflowUID:
+		return m.WorkflowUID()
+	case match.FieldWorkflowPhase:
+		return m.WorkflowPhase()
 	case match.FieldReport:
 		return m.Report()
 	case match.FieldCreatedAt:
@@ -7280,6 +5572,12 @@ func (m *MatchMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldLoserPlaceholderName(ctx)
 	case match.FieldLatestStatus:
 		return m.OldLatestStatus(ctx)
+	case match.FieldWorkflowName:
+		return m.OldWorkflowName(ctx)
+	case match.FieldWorkflowUID:
+		return m.OldWorkflowUID(ctx)
+	case match.FieldWorkflowPhase:
+		return m.OldWorkflowPhase(ctx)
 	case match.FieldReport:
 		return m.OldReport(ctx)
 	case match.FieldCreatedAt:
@@ -7371,6 +5669,27 @@ func (m *MatchMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetLatestStatus(v)
+		return nil
+	case match.FieldWorkflowName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetWorkflowName(v)
+		return nil
+	case match.FieldWorkflowUID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetWorkflowUID(v)
+		return nil
+	case match.FieldWorkflowPhase:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetWorkflowPhase(v)
 		return nil
 	case match.FieldReport:
 		v, ok := value.(string)
@@ -7471,6 +5790,15 @@ func (m *MatchMutation) ClearedFields() []string {
 	if m.FieldCleared(match.FieldLoserPlaceholderName) {
 		fields = append(fields, match.FieldLoserPlaceholderName)
 	}
+	if m.FieldCleared(match.FieldWorkflowName) {
+		fields = append(fields, match.FieldWorkflowName)
+	}
+	if m.FieldCleared(match.FieldWorkflowUID) {
+		fields = append(fields, match.FieldWorkflowUID)
+	}
+	if m.FieldCleared(match.FieldWorkflowPhase) {
+		fields = append(fields, match.FieldWorkflowPhase)
+	}
 	if m.FieldCleared(match.FieldReport) {
 		fields = append(fields, match.FieldReport)
 	}
@@ -7496,6 +5824,15 @@ func (m *MatchMutation) ClearField(name string) error {
 		return nil
 	case match.FieldLoserPlaceholderName:
 		m.ClearLoserPlaceholderName()
+		return nil
+	case match.FieldWorkflowName:
+		m.ClearWorkflowName()
+		return nil
+	case match.FieldWorkflowUID:
+		m.ClearWorkflowUID()
+		return nil
+	case match.FieldWorkflowPhase:
+		m.ClearWorkflowPhase()
 		return nil
 	case match.FieldReport:
 		m.ClearReport()
@@ -7540,6 +5877,15 @@ func (m *MatchMutation) ResetField(name string) error {
 		return nil
 	case match.FieldLatestStatus:
 		m.ResetLatestStatus()
+		return nil
+	case match.FieldWorkflowName:
+		m.ResetWorkflowName()
+		return nil
+	case match.FieldWorkflowUID:
+		m.ResetWorkflowUID()
+		return nil
+	case match.FieldWorkflowPhase:
+		m.ResetWorkflowPhase()
 		return nil
 	case match.FieldReport:
 		m.ResetReport()
@@ -7703,38 +6049,32 @@ func (m *MatchMutation) ResetEdge(name string) error {
 // MatchRoundMutation represents an operation that mutates the MatchRound nodes in the graph.
 type MatchRoundMutation struct {
 	config
-	op                      Op
-	typ                     string
-	id                      *int
-	round_no                *int
-	addround_no             *int
-	status                  *matchround.Status
-	winner                  *matchround.Winner
-	started_at              *time.Time
-	ended_at                *time.Time
-	created_at              *time.Time
-	updated_at              *time.Time
-	clearedFields           map[string]struct{}
-	match                   *string
-	clearedmatch            bool
-	record_tasks            map[int]struct{}
-	removedrecord_tasks     map[int]struct{}
-	clearedrecord_tasks     bool
-	stt_tasks               map[int]struct{}
-	removedstt_tasks        map[int]struct{}
-	clearedstt_tasks        bool
-	analyze_tasks           map[int]struct{}
-	removedanalyze_tasks    map[int]struct{}
-	clearedanalyze_tasks    bool
-	highlight_clips         map[int]struct{}
-	removedhighlight_clips  map[int]struct{}
-	clearedhighlight_clips  bool
-	highlight_states        map[int]struct{}
-	removedhighlight_states map[int]struct{}
-	clearedhighlight_states bool
-	done                    bool
-	oldValue                func(context.Context) (*MatchRound, error)
-	predicates              []predicate.MatchRound
+	op                          Op
+	typ                         string
+	id                          *int
+	round_no                    *int
+	addround_no                 *int
+	status                      *matchround.Status
+	winner                      *matchround.Winner
+	workflow_name               *string
+	workflow_uid                *string
+	workflow_phase              *string
+	started_at                  *time.Time
+	ended_at                    *time.Time
+	created_at                  *time.Time
+	updated_at                  *time.Time
+	clearedFields               map[string]struct{}
+	match                       *string
+	clearedmatch                bool
+	highlight_clips             map[int]struct{}
+	removedhighlight_clips      map[int]struct{}
+	clearedhighlight_clips      bool
+	lark_bitable_records        map[int]struct{}
+	removedlark_bitable_records map[int]struct{}
+	clearedlark_bitable_records bool
+	done                        bool
+	oldValue                    func(context.Context) (*MatchRound, error)
+	predicates                  []predicate.MatchRound
 }
 
 var _ ent.Mutation = (*MatchRoundMutation)(nil)
@@ -7976,6 +6316,153 @@ func (m *MatchRoundMutation) ResetWinner() {
 	delete(m.clearedFields, matchround.FieldWinner)
 }
 
+// SetWorkflowName sets the "workflow_name" field.
+func (m *MatchRoundMutation) SetWorkflowName(s string) {
+	m.workflow_name = &s
+}
+
+// WorkflowName returns the value of the "workflow_name" field in the mutation.
+func (m *MatchRoundMutation) WorkflowName() (r string, exists bool) {
+	v := m.workflow_name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldWorkflowName returns the old "workflow_name" field's value of the MatchRound entity.
+// If the MatchRound object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MatchRoundMutation) OldWorkflowName(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldWorkflowName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldWorkflowName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldWorkflowName: %w", err)
+	}
+	return oldValue.WorkflowName, nil
+}
+
+// ClearWorkflowName clears the value of the "workflow_name" field.
+func (m *MatchRoundMutation) ClearWorkflowName() {
+	m.workflow_name = nil
+	m.clearedFields[matchround.FieldWorkflowName] = struct{}{}
+}
+
+// WorkflowNameCleared returns if the "workflow_name" field was cleared in this mutation.
+func (m *MatchRoundMutation) WorkflowNameCleared() bool {
+	_, ok := m.clearedFields[matchround.FieldWorkflowName]
+	return ok
+}
+
+// ResetWorkflowName resets all changes to the "workflow_name" field.
+func (m *MatchRoundMutation) ResetWorkflowName() {
+	m.workflow_name = nil
+	delete(m.clearedFields, matchround.FieldWorkflowName)
+}
+
+// SetWorkflowUID sets the "workflow_uid" field.
+func (m *MatchRoundMutation) SetWorkflowUID(s string) {
+	m.workflow_uid = &s
+}
+
+// WorkflowUID returns the value of the "workflow_uid" field in the mutation.
+func (m *MatchRoundMutation) WorkflowUID() (r string, exists bool) {
+	v := m.workflow_uid
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldWorkflowUID returns the old "workflow_uid" field's value of the MatchRound entity.
+// If the MatchRound object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MatchRoundMutation) OldWorkflowUID(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldWorkflowUID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldWorkflowUID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldWorkflowUID: %w", err)
+	}
+	return oldValue.WorkflowUID, nil
+}
+
+// ClearWorkflowUID clears the value of the "workflow_uid" field.
+func (m *MatchRoundMutation) ClearWorkflowUID() {
+	m.workflow_uid = nil
+	m.clearedFields[matchround.FieldWorkflowUID] = struct{}{}
+}
+
+// WorkflowUIDCleared returns if the "workflow_uid" field was cleared in this mutation.
+func (m *MatchRoundMutation) WorkflowUIDCleared() bool {
+	_, ok := m.clearedFields[matchround.FieldWorkflowUID]
+	return ok
+}
+
+// ResetWorkflowUID resets all changes to the "workflow_uid" field.
+func (m *MatchRoundMutation) ResetWorkflowUID() {
+	m.workflow_uid = nil
+	delete(m.clearedFields, matchround.FieldWorkflowUID)
+}
+
+// SetWorkflowPhase sets the "workflow_phase" field.
+func (m *MatchRoundMutation) SetWorkflowPhase(s string) {
+	m.workflow_phase = &s
+}
+
+// WorkflowPhase returns the value of the "workflow_phase" field in the mutation.
+func (m *MatchRoundMutation) WorkflowPhase() (r string, exists bool) {
+	v := m.workflow_phase
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldWorkflowPhase returns the old "workflow_phase" field's value of the MatchRound entity.
+// If the MatchRound object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MatchRoundMutation) OldWorkflowPhase(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldWorkflowPhase is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldWorkflowPhase requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldWorkflowPhase: %w", err)
+	}
+	return oldValue.WorkflowPhase, nil
+}
+
+// ClearWorkflowPhase clears the value of the "workflow_phase" field.
+func (m *MatchRoundMutation) ClearWorkflowPhase() {
+	m.workflow_phase = nil
+	m.clearedFields[matchround.FieldWorkflowPhase] = struct{}{}
+}
+
+// WorkflowPhaseCleared returns if the "workflow_phase" field was cleared in this mutation.
+func (m *MatchRoundMutation) WorkflowPhaseCleared() bool {
+	_, ok := m.clearedFields[matchround.FieldWorkflowPhase]
+	return ok
+}
+
+// ResetWorkflowPhase resets all changes to the "workflow_phase" field.
+func (m *MatchRoundMutation) ResetWorkflowPhase() {
+	m.workflow_phase = nil
+	delete(m.clearedFields, matchround.FieldWorkflowPhase)
+}
+
 // SetStartedAt sets the "started_at" field.
 func (m *MatchRoundMutation) SetStartedAt(t time.Time) {
 	m.started_at = &t
@@ -8172,168 +6659,6 @@ func (m *MatchRoundMutation) ResetMatch() {
 	m.clearedmatch = false
 }
 
-// AddRecordTaskIDs adds the "record_tasks" edge to the RecordTask entity by ids.
-func (m *MatchRoundMutation) AddRecordTaskIDs(ids ...int) {
-	if m.record_tasks == nil {
-		m.record_tasks = make(map[int]struct{})
-	}
-	for i := range ids {
-		m.record_tasks[ids[i]] = struct{}{}
-	}
-}
-
-// ClearRecordTasks clears the "record_tasks" edge to the RecordTask entity.
-func (m *MatchRoundMutation) ClearRecordTasks() {
-	m.clearedrecord_tasks = true
-}
-
-// RecordTasksCleared reports if the "record_tasks" edge to the RecordTask entity was cleared.
-func (m *MatchRoundMutation) RecordTasksCleared() bool {
-	return m.clearedrecord_tasks
-}
-
-// RemoveRecordTaskIDs removes the "record_tasks" edge to the RecordTask entity by IDs.
-func (m *MatchRoundMutation) RemoveRecordTaskIDs(ids ...int) {
-	if m.removedrecord_tasks == nil {
-		m.removedrecord_tasks = make(map[int]struct{})
-	}
-	for i := range ids {
-		delete(m.record_tasks, ids[i])
-		m.removedrecord_tasks[ids[i]] = struct{}{}
-	}
-}
-
-// RemovedRecordTasks returns the removed IDs of the "record_tasks" edge to the RecordTask entity.
-func (m *MatchRoundMutation) RemovedRecordTasksIDs() (ids []int) {
-	for id := range m.removedrecord_tasks {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// RecordTasksIDs returns the "record_tasks" edge IDs in the mutation.
-func (m *MatchRoundMutation) RecordTasksIDs() (ids []int) {
-	for id := range m.record_tasks {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// ResetRecordTasks resets all changes to the "record_tasks" edge.
-func (m *MatchRoundMutation) ResetRecordTasks() {
-	m.record_tasks = nil
-	m.clearedrecord_tasks = false
-	m.removedrecord_tasks = nil
-}
-
-// AddSttTaskIDs adds the "stt_tasks" edge to the STTTask entity by ids.
-func (m *MatchRoundMutation) AddSttTaskIDs(ids ...int) {
-	if m.stt_tasks == nil {
-		m.stt_tasks = make(map[int]struct{})
-	}
-	for i := range ids {
-		m.stt_tasks[ids[i]] = struct{}{}
-	}
-}
-
-// ClearSttTasks clears the "stt_tasks" edge to the STTTask entity.
-func (m *MatchRoundMutation) ClearSttTasks() {
-	m.clearedstt_tasks = true
-}
-
-// SttTasksCleared reports if the "stt_tasks" edge to the STTTask entity was cleared.
-func (m *MatchRoundMutation) SttTasksCleared() bool {
-	return m.clearedstt_tasks
-}
-
-// RemoveSttTaskIDs removes the "stt_tasks" edge to the STTTask entity by IDs.
-func (m *MatchRoundMutation) RemoveSttTaskIDs(ids ...int) {
-	if m.removedstt_tasks == nil {
-		m.removedstt_tasks = make(map[int]struct{})
-	}
-	for i := range ids {
-		delete(m.stt_tasks, ids[i])
-		m.removedstt_tasks[ids[i]] = struct{}{}
-	}
-}
-
-// RemovedSttTasks returns the removed IDs of the "stt_tasks" edge to the STTTask entity.
-func (m *MatchRoundMutation) RemovedSttTasksIDs() (ids []int) {
-	for id := range m.removedstt_tasks {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// SttTasksIDs returns the "stt_tasks" edge IDs in the mutation.
-func (m *MatchRoundMutation) SttTasksIDs() (ids []int) {
-	for id := range m.stt_tasks {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// ResetSttTasks resets all changes to the "stt_tasks" edge.
-func (m *MatchRoundMutation) ResetSttTasks() {
-	m.stt_tasks = nil
-	m.clearedstt_tasks = false
-	m.removedstt_tasks = nil
-}
-
-// AddAnalyzeTaskIDs adds the "analyze_tasks" edge to the AnalyzeTask entity by ids.
-func (m *MatchRoundMutation) AddAnalyzeTaskIDs(ids ...int) {
-	if m.analyze_tasks == nil {
-		m.analyze_tasks = make(map[int]struct{})
-	}
-	for i := range ids {
-		m.analyze_tasks[ids[i]] = struct{}{}
-	}
-}
-
-// ClearAnalyzeTasks clears the "analyze_tasks" edge to the AnalyzeTask entity.
-func (m *MatchRoundMutation) ClearAnalyzeTasks() {
-	m.clearedanalyze_tasks = true
-}
-
-// AnalyzeTasksCleared reports if the "analyze_tasks" edge to the AnalyzeTask entity was cleared.
-func (m *MatchRoundMutation) AnalyzeTasksCleared() bool {
-	return m.clearedanalyze_tasks
-}
-
-// RemoveAnalyzeTaskIDs removes the "analyze_tasks" edge to the AnalyzeTask entity by IDs.
-func (m *MatchRoundMutation) RemoveAnalyzeTaskIDs(ids ...int) {
-	if m.removedanalyze_tasks == nil {
-		m.removedanalyze_tasks = make(map[int]struct{})
-	}
-	for i := range ids {
-		delete(m.analyze_tasks, ids[i])
-		m.removedanalyze_tasks[ids[i]] = struct{}{}
-	}
-}
-
-// RemovedAnalyzeTasks returns the removed IDs of the "analyze_tasks" edge to the AnalyzeTask entity.
-func (m *MatchRoundMutation) RemovedAnalyzeTasksIDs() (ids []int) {
-	for id := range m.removedanalyze_tasks {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// AnalyzeTasksIDs returns the "analyze_tasks" edge IDs in the mutation.
-func (m *MatchRoundMutation) AnalyzeTasksIDs() (ids []int) {
-	for id := range m.analyze_tasks {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// ResetAnalyzeTasks resets all changes to the "analyze_tasks" edge.
-func (m *MatchRoundMutation) ResetAnalyzeTasks() {
-	m.analyze_tasks = nil
-	m.clearedanalyze_tasks = false
-	m.removedanalyze_tasks = nil
-}
-
 // AddHighlightClipIDs adds the "highlight_clips" edge to the HighlightClip entity by ids.
 func (m *MatchRoundMutation) AddHighlightClipIDs(ids ...int) {
 	if m.highlight_clips == nil {
@@ -8388,58 +6713,58 @@ func (m *MatchRoundMutation) ResetHighlightClips() {
 	m.removedhighlight_clips = nil
 }
 
-// AddHighlightStateIDs adds the "highlight_states" edge to the HighlightRoundState entity by ids.
-func (m *MatchRoundMutation) AddHighlightStateIDs(ids ...int) {
-	if m.highlight_states == nil {
-		m.highlight_states = make(map[int]struct{})
+// AddLarkBitableRecordIDs adds the "lark_bitable_records" edge to the LarkBitableRecord entity by ids.
+func (m *MatchRoundMutation) AddLarkBitableRecordIDs(ids ...int) {
+	if m.lark_bitable_records == nil {
+		m.lark_bitable_records = make(map[int]struct{})
 	}
 	for i := range ids {
-		m.highlight_states[ids[i]] = struct{}{}
+		m.lark_bitable_records[ids[i]] = struct{}{}
 	}
 }
 
-// ClearHighlightStates clears the "highlight_states" edge to the HighlightRoundState entity.
-func (m *MatchRoundMutation) ClearHighlightStates() {
-	m.clearedhighlight_states = true
+// ClearLarkBitableRecords clears the "lark_bitable_records" edge to the LarkBitableRecord entity.
+func (m *MatchRoundMutation) ClearLarkBitableRecords() {
+	m.clearedlark_bitable_records = true
 }
 
-// HighlightStatesCleared reports if the "highlight_states" edge to the HighlightRoundState entity was cleared.
-func (m *MatchRoundMutation) HighlightStatesCleared() bool {
-	return m.clearedhighlight_states
+// LarkBitableRecordsCleared reports if the "lark_bitable_records" edge to the LarkBitableRecord entity was cleared.
+func (m *MatchRoundMutation) LarkBitableRecordsCleared() bool {
+	return m.clearedlark_bitable_records
 }
 
-// RemoveHighlightStateIDs removes the "highlight_states" edge to the HighlightRoundState entity by IDs.
-func (m *MatchRoundMutation) RemoveHighlightStateIDs(ids ...int) {
-	if m.removedhighlight_states == nil {
-		m.removedhighlight_states = make(map[int]struct{})
+// RemoveLarkBitableRecordIDs removes the "lark_bitable_records" edge to the LarkBitableRecord entity by IDs.
+func (m *MatchRoundMutation) RemoveLarkBitableRecordIDs(ids ...int) {
+	if m.removedlark_bitable_records == nil {
+		m.removedlark_bitable_records = make(map[int]struct{})
 	}
 	for i := range ids {
-		delete(m.highlight_states, ids[i])
-		m.removedhighlight_states[ids[i]] = struct{}{}
+		delete(m.lark_bitable_records, ids[i])
+		m.removedlark_bitable_records[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedHighlightStates returns the removed IDs of the "highlight_states" edge to the HighlightRoundState entity.
-func (m *MatchRoundMutation) RemovedHighlightStatesIDs() (ids []int) {
-	for id := range m.removedhighlight_states {
+// RemovedLarkBitableRecords returns the removed IDs of the "lark_bitable_records" edge to the LarkBitableRecord entity.
+func (m *MatchRoundMutation) RemovedLarkBitableRecordsIDs() (ids []int) {
+	for id := range m.removedlark_bitable_records {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// HighlightStatesIDs returns the "highlight_states" edge IDs in the mutation.
-func (m *MatchRoundMutation) HighlightStatesIDs() (ids []int) {
-	for id := range m.highlight_states {
+// LarkBitableRecordsIDs returns the "lark_bitable_records" edge IDs in the mutation.
+func (m *MatchRoundMutation) LarkBitableRecordsIDs() (ids []int) {
+	for id := range m.lark_bitable_records {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetHighlightStates resets all changes to the "highlight_states" edge.
-func (m *MatchRoundMutation) ResetHighlightStates() {
-	m.highlight_states = nil
-	m.clearedhighlight_states = false
-	m.removedhighlight_states = nil
+// ResetLarkBitableRecords resets all changes to the "lark_bitable_records" edge.
+func (m *MatchRoundMutation) ResetLarkBitableRecords() {
+	m.lark_bitable_records = nil
+	m.clearedlark_bitable_records = false
+	m.removedlark_bitable_records = nil
 }
 
 // Where appends a list predicates to the MatchRoundMutation builder.
@@ -8476,7 +6801,7 @@ func (m *MatchRoundMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *MatchRoundMutation) Fields() []string {
-	fields := make([]string, 0, 7)
+	fields := make([]string, 0, 10)
 	if m.round_no != nil {
 		fields = append(fields, matchround.FieldRoundNo)
 	}
@@ -8485,6 +6810,15 @@ func (m *MatchRoundMutation) Fields() []string {
 	}
 	if m.winner != nil {
 		fields = append(fields, matchround.FieldWinner)
+	}
+	if m.workflow_name != nil {
+		fields = append(fields, matchround.FieldWorkflowName)
+	}
+	if m.workflow_uid != nil {
+		fields = append(fields, matchround.FieldWorkflowUID)
+	}
+	if m.workflow_phase != nil {
+		fields = append(fields, matchround.FieldWorkflowPhase)
 	}
 	if m.started_at != nil {
 		fields = append(fields, matchround.FieldStartedAt)
@@ -8512,6 +6846,12 @@ func (m *MatchRoundMutation) Field(name string) (ent.Value, bool) {
 		return m.Status()
 	case matchround.FieldWinner:
 		return m.Winner()
+	case matchround.FieldWorkflowName:
+		return m.WorkflowName()
+	case matchround.FieldWorkflowUID:
+		return m.WorkflowUID()
+	case matchround.FieldWorkflowPhase:
+		return m.WorkflowPhase()
 	case matchround.FieldStartedAt:
 		return m.StartedAt()
 	case matchround.FieldEndedAt:
@@ -8535,6 +6875,12 @@ func (m *MatchRoundMutation) OldField(ctx context.Context, name string) (ent.Val
 		return m.OldStatus(ctx)
 	case matchround.FieldWinner:
 		return m.OldWinner(ctx)
+	case matchround.FieldWorkflowName:
+		return m.OldWorkflowName(ctx)
+	case matchround.FieldWorkflowUID:
+		return m.OldWorkflowUID(ctx)
+	case matchround.FieldWorkflowPhase:
+		return m.OldWorkflowPhase(ctx)
 	case matchround.FieldStartedAt:
 		return m.OldStartedAt(ctx)
 	case matchround.FieldEndedAt:
@@ -8572,6 +6918,27 @@ func (m *MatchRoundMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetWinner(v)
+		return nil
+	case matchround.FieldWorkflowName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetWorkflowName(v)
+		return nil
+	case matchround.FieldWorkflowUID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetWorkflowUID(v)
+		return nil
+	case matchround.FieldWorkflowPhase:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetWorkflowPhase(v)
 		return nil
 	case matchround.FieldStartedAt:
 		v, ok := value.(time.Time)
@@ -8649,6 +7016,15 @@ func (m *MatchRoundMutation) ClearedFields() []string {
 	if m.FieldCleared(matchround.FieldWinner) {
 		fields = append(fields, matchround.FieldWinner)
 	}
+	if m.FieldCleared(matchround.FieldWorkflowName) {
+		fields = append(fields, matchround.FieldWorkflowName)
+	}
+	if m.FieldCleared(matchround.FieldWorkflowUID) {
+		fields = append(fields, matchround.FieldWorkflowUID)
+	}
+	if m.FieldCleared(matchround.FieldWorkflowPhase) {
+		fields = append(fields, matchround.FieldWorkflowPhase)
+	}
 	if m.FieldCleared(matchround.FieldEndedAt) {
 		fields = append(fields, matchround.FieldEndedAt)
 	}
@@ -8668,6 +7044,15 @@ func (m *MatchRoundMutation) ClearField(name string) error {
 	switch name {
 	case matchround.FieldWinner:
 		m.ClearWinner()
+		return nil
+	case matchround.FieldWorkflowName:
+		m.ClearWorkflowName()
+		return nil
+	case matchround.FieldWorkflowUID:
+		m.ClearWorkflowUID()
+		return nil
+	case matchround.FieldWorkflowPhase:
+		m.ClearWorkflowPhase()
 		return nil
 	case matchround.FieldEndedAt:
 		m.ClearEndedAt()
@@ -8689,6 +7074,15 @@ func (m *MatchRoundMutation) ResetField(name string) error {
 	case matchround.FieldWinner:
 		m.ResetWinner()
 		return nil
+	case matchround.FieldWorkflowName:
+		m.ResetWorkflowName()
+		return nil
+	case matchround.FieldWorkflowUID:
+		m.ResetWorkflowUID()
+		return nil
+	case matchround.FieldWorkflowPhase:
+		m.ResetWorkflowPhase()
+		return nil
 	case matchround.FieldStartedAt:
 		m.ResetStartedAt()
 		return nil
@@ -8707,24 +7101,15 @@ func (m *MatchRoundMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *MatchRoundMutation) AddedEdges() []string {
-	edges := make([]string, 0, 6)
+	edges := make([]string, 0, 3)
 	if m.match != nil {
 		edges = append(edges, matchround.EdgeMatch)
-	}
-	if m.record_tasks != nil {
-		edges = append(edges, matchround.EdgeRecordTasks)
-	}
-	if m.stt_tasks != nil {
-		edges = append(edges, matchround.EdgeSttTasks)
-	}
-	if m.analyze_tasks != nil {
-		edges = append(edges, matchround.EdgeAnalyzeTasks)
 	}
 	if m.highlight_clips != nil {
 		edges = append(edges, matchround.EdgeHighlightClips)
 	}
-	if m.highlight_states != nil {
-		edges = append(edges, matchround.EdgeHighlightStates)
+	if m.lark_bitable_records != nil {
+		edges = append(edges, matchround.EdgeLarkBitableRecords)
 	}
 	return edges
 }
@@ -8737,33 +7122,15 @@ func (m *MatchRoundMutation) AddedIDs(name string) []ent.Value {
 		if id := m.match; id != nil {
 			return []ent.Value{*id}
 		}
-	case matchround.EdgeRecordTasks:
-		ids := make([]ent.Value, 0, len(m.record_tasks))
-		for id := range m.record_tasks {
-			ids = append(ids, id)
-		}
-		return ids
-	case matchround.EdgeSttTasks:
-		ids := make([]ent.Value, 0, len(m.stt_tasks))
-		for id := range m.stt_tasks {
-			ids = append(ids, id)
-		}
-		return ids
-	case matchround.EdgeAnalyzeTasks:
-		ids := make([]ent.Value, 0, len(m.analyze_tasks))
-		for id := range m.analyze_tasks {
-			ids = append(ids, id)
-		}
-		return ids
 	case matchround.EdgeHighlightClips:
 		ids := make([]ent.Value, 0, len(m.highlight_clips))
 		for id := range m.highlight_clips {
 			ids = append(ids, id)
 		}
 		return ids
-	case matchround.EdgeHighlightStates:
-		ids := make([]ent.Value, 0, len(m.highlight_states))
-		for id := range m.highlight_states {
+	case matchround.EdgeLarkBitableRecords:
+		ids := make([]ent.Value, 0, len(m.lark_bitable_records))
+		for id := range m.lark_bitable_records {
 			ids = append(ids, id)
 		}
 		return ids
@@ -8773,21 +7140,12 @@ func (m *MatchRoundMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *MatchRoundMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 6)
-	if m.removedrecord_tasks != nil {
-		edges = append(edges, matchround.EdgeRecordTasks)
-	}
-	if m.removedstt_tasks != nil {
-		edges = append(edges, matchround.EdgeSttTasks)
-	}
-	if m.removedanalyze_tasks != nil {
-		edges = append(edges, matchround.EdgeAnalyzeTasks)
-	}
+	edges := make([]string, 0, 3)
 	if m.removedhighlight_clips != nil {
 		edges = append(edges, matchround.EdgeHighlightClips)
 	}
-	if m.removedhighlight_states != nil {
-		edges = append(edges, matchround.EdgeHighlightStates)
+	if m.removedlark_bitable_records != nil {
+		edges = append(edges, matchround.EdgeLarkBitableRecords)
 	}
 	return edges
 }
@@ -8796,33 +7154,15 @@ func (m *MatchRoundMutation) RemovedEdges() []string {
 // the given name in this mutation.
 func (m *MatchRoundMutation) RemovedIDs(name string) []ent.Value {
 	switch name {
-	case matchround.EdgeRecordTasks:
-		ids := make([]ent.Value, 0, len(m.removedrecord_tasks))
-		for id := range m.removedrecord_tasks {
-			ids = append(ids, id)
-		}
-		return ids
-	case matchround.EdgeSttTasks:
-		ids := make([]ent.Value, 0, len(m.removedstt_tasks))
-		for id := range m.removedstt_tasks {
-			ids = append(ids, id)
-		}
-		return ids
-	case matchround.EdgeAnalyzeTasks:
-		ids := make([]ent.Value, 0, len(m.removedanalyze_tasks))
-		for id := range m.removedanalyze_tasks {
-			ids = append(ids, id)
-		}
-		return ids
 	case matchround.EdgeHighlightClips:
 		ids := make([]ent.Value, 0, len(m.removedhighlight_clips))
 		for id := range m.removedhighlight_clips {
 			ids = append(ids, id)
 		}
 		return ids
-	case matchround.EdgeHighlightStates:
-		ids := make([]ent.Value, 0, len(m.removedhighlight_states))
-		for id := range m.removedhighlight_states {
+	case matchround.EdgeLarkBitableRecords:
+		ids := make([]ent.Value, 0, len(m.removedlark_bitable_records))
+		for id := range m.removedlark_bitable_records {
 			ids = append(ids, id)
 		}
 		return ids
@@ -8832,24 +7172,15 @@ func (m *MatchRoundMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *MatchRoundMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 6)
+	edges := make([]string, 0, 3)
 	if m.clearedmatch {
 		edges = append(edges, matchround.EdgeMatch)
-	}
-	if m.clearedrecord_tasks {
-		edges = append(edges, matchround.EdgeRecordTasks)
-	}
-	if m.clearedstt_tasks {
-		edges = append(edges, matchround.EdgeSttTasks)
-	}
-	if m.clearedanalyze_tasks {
-		edges = append(edges, matchround.EdgeAnalyzeTasks)
 	}
 	if m.clearedhighlight_clips {
 		edges = append(edges, matchround.EdgeHighlightClips)
 	}
-	if m.clearedhighlight_states {
-		edges = append(edges, matchround.EdgeHighlightStates)
+	if m.clearedlark_bitable_records {
+		edges = append(edges, matchround.EdgeLarkBitableRecords)
 	}
 	return edges
 }
@@ -8860,16 +7191,10 @@ func (m *MatchRoundMutation) EdgeCleared(name string) bool {
 	switch name {
 	case matchround.EdgeMatch:
 		return m.clearedmatch
-	case matchround.EdgeRecordTasks:
-		return m.clearedrecord_tasks
-	case matchround.EdgeSttTasks:
-		return m.clearedstt_tasks
-	case matchround.EdgeAnalyzeTasks:
-		return m.clearedanalyze_tasks
 	case matchround.EdgeHighlightClips:
 		return m.clearedhighlight_clips
-	case matchround.EdgeHighlightStates:
-		return m.clearedhighlight_states
+	case matchround.EdgeLarkBitableRecords:
+		return m.clearedlark_bitable_records
 	}
 	return false
 }
@@ -8892,4191 +7217,14 @@ func (m *MatchRoundMutation) ResetEdge(name string) error {
 	case matchround.EdgeMatch:
 		m.ResetMatch()
 		return nil
-	case matchround.EdgeRecordTasks:
-		m.ResetRecordTasks()
-		return nil
-	case matchround.EdgeSttTasks:
-		m.ResetSttTasks()
-		return nil
-	case matchround.EdgeAnalyzeTasks:
-		m.ResetAnalyzeTasks()
-		return nil
 	case matchround.EdgeHighlightClips:
 		m.ResetHighlightClips()
 		return nil
-	case matchround.EdgeHighlightStates:
-		m.ResetHighlightStates()
+	case matchround.EdgeLarkBitableRecords:
+		m.ResetLarkBitableRecords()
 		return nil
 	}
 	return fmt.Errorf("unknown MatchRound edge %s", name)
-}
-
-// MediaArtifactMutation represents an operation that mutates the MediaArtifact nodes in the graph.
-type MediaArtifactMutation struct {
-	config
-	op                            Op
-	typ                           string
-	id                            *int
-	kind                          *mediaartifact.Kind
-	_path                         *string
-	format                        *mediaartifact.Format
-	codec                         *mediaartifact.Codec
-	file_size                     *int64
-	addfile_size                  *int64
-	checksum                      *string
-	status                        *mediaartifact.Status
-	deletable_at                  *time.Time
-	deleted_at                    *time.Time
-	created_at                    *time.Time
-	updated_at                    *time.Time
-	clearedFields                 map[string]struct{}
-	record_task                   *int
-	clearedrecord_task            bool
-	upload_task                   *int
-	clearedupload_task            bool
-	stt_tasks                     map[int]struct{}
-	removedstt_tasks              map[int]struct{}
-	clearedstt_tasks              bool
-	analyze_tasks                 map[int]struct{}
-	removedanalyze_tasks          map[int]struct{}
-	clearedanalyze_tasks          bool
-	source_transcode_task         *int
-	clearedsource_transcode_task  bool
-	archive_transcode_task        *int
-	clearedarchive_transcode_task bool
-	highlight_clips               map[int]struct{}
-	removedhighlight_clips        map[int]struct{}
-	clearedhighlight_clips        bool
-	done                          bool
-	oldValue                      func(context.Context) (*MediaArtifact, error)
-	predicates                    []predicate.MediaArtifact
-}
-
-var _ ent.Mutation = (*MediaArtifactMutation)(nil)
-
-// mediaartifactOption allows management of the mutation configuration using functional options.
-type mediaartifactOption func(*MediaArtifactMutation)
-
-// newMediaArtifactMutation creates new mutation for the MediaArtifact entity.
-func newMediaArtifactMutation(c config, op Op, opts ...mediaartifactOption) *MediaArtifactMutation {
-	m := &MediaArtifactMutation{
-		config:        c,
-		op:            op,
-		typ:           TypeMediaArtifact,
-		clearedFields: make(map[string]struct{}),
-	}
-	for _, opt := range opts {
-		opt(m)
-	}
-	return m
-}
-
-// withMediaArtifactID sets the ID field of the mutation.
-func withMediaArtifactID(id int) mediaartifactOption {
-	return func(m *MediaArtifactMutation) {
-		var (
-			err   error
-			once  sync.Once
-			value *MediaArtifact
-		)
-		m.oldValue = func(ctx context.Context) (*MediaArtifact, error) {
-			once.Do(func() {
-				if m.done {
-					err = errors.New("querying old values post mutation is not allowed")
-				} else {
-					value, err = m.Client().MediaArtifact.Get(ctx, id)
-				}
-			})
-			return value, err
-		}
-		m.id = &id
-	}
-}
-
-// withMediaArtifact sets the old MediaArtifact of the mutation.
-func withMediaArtifact(node *MediaArtifact) mediaartifactOption {
-	return func(m *MediaArtifactMutation) {
-		m.oldValue = func(context.Context) (*MediaArtifact, error) {
-			return node, nil
-		}
-		m.id = &node.ID
-	}
-}
-
-// Client returns a new `ent.Client` from the mutation. If the mutation was
-// executed in a transaction (ent.Tx), a transactional client is returned.
-func (m MediaArtifactMutation) Client() *Client {
-	client := &Client{config: m.config}
-	client.init()
-	return client
-}
-
-// Tx returns an `ent.Tx` for mutations that were executed in transactions;
-// it returns an error otherwise.
-func (m MediaArtifactMutation) Tx() (*Tx, error) {
-	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, errors.New("ent: mutation is not running in a transaction")
-	}
-	tx := &Tx{config: m.config}
-	tx.init()
-	return tx, nil
-}
-
-// ID returns the ID value in the mutation. Note that the ID is only available
-// if it was provided to the builder or after it was returned from the database.
-func (m *MediaArtifactMutation) ID() (id int, exists bool) {
-	if m.id == nil {
-		return
-	}
-	return *m.id, true
-}
-
-// IDs queries the database and returns the entity ids that match the mutation's predicate.
-// That means, if the mutation is applied within a transaction with an isolation level such
-// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
-// or updated by the mutation.
-func (m *MediaArtifactMutation) IDs(ctx context.Context) ([]int, error) {
-	switch {
-	case m.op.Is(OpUpdateOne | OpDeleteOne):
-		id, exists := m.ID()
-		if exists {
-			return []int{id}, nil
-		}
-		fallthrough
-	case m.op.Is(OpUpdate | OpDelete):
-		return m.Client().MediaArtifact.Query().Where(m.predicates...).IDs(ctx)
-	default:
-		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
-	}
-}
-
-// SetKind sets the "kind" field.
-func (m *MediaArtifactMutation) SetKind(value mediaartifact.Kind) {
-	m.kind = &value
-}
-
-// Kind returns the value of the "kind" field in the mutation.
-func (m *MediaArtifactMutation) Kind() (r mediaartifact.Kind, exists bool) {
-	v := m.kind
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldKind returns the old "kind" field's value of the MediaArtifact entity.
-// If the MediaArtifact object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *MediaArtifactMutation) OldKind(ctx context.Context) (v mediaartifact.Kind, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldKind is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldKind requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldKind: %w", err)
-	}
-	return oldValue.Kind, nil
-}
-
-// ResetKind resets all changes to the "kind" field.
-func (m *MediaArtifactMutation) ResetKind() {
-	m.kind = nil
-}
-
-// SetPath sets the "path" field.
-func (m *MediaArtifactMutation) SetPath(s string) {
-	m._path = &s
-}
-
-// Path returns the value of the "path" field in the mutation.
-func (m *MediaArtifactMutation) Path() (r string, exists bool) {
-	v := m._path
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldPath returns the old "path" field's value of the MediaArtifact entity.
-// If the MediaArtifact object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *MediaArtifactMutation) OldPath(ctx context.Context) (v string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldPath is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldPath requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldPath: %w", err)
-	}
-	return oldValue.Path, nil
-}
-
-// ResetPath resets all changes to the "path" field.
-func (m *MediaArtifactMutation) ResetPath() {
-	m._path = nil
-}
-
-// SetFormat sets the "format" field.
-func (m *MediaArtifactMutation) SetFormat(value mediaartifact.Format) {
-	m.format = &value
-}
-
-// Format returns the value of the "format" field in the mutation.
-func (m *MediaArtifactMutation) Format() (r mediaartifact.Format, exists bool) {
-	v := m.format
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldFormat returns the old "format" field's value of the MediaArtifact entity.
-// If the MediaArtifact object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *MediaArtifactMutation) OldFormat(ctx context.Context) (v mediaartifact.Format, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldFormat is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldFormat requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldFormat: %w", err)
-	}
-	return oldValue.Format, nil
-}
-
-// ResetFormat resets all changes to the "format" field.
-func (m *MediaArtifactMutation) ResetFormat() {
-	m.format = nil
-}
-
-// SetCodec sets the "codec" field.
-func (m *MediaArtifactMutation) SetCodec(value mediaartifact.Codec) {
-	m.codec = &value
-}
-
-// Codec returns the value of the "codec" field in the mutation.
-func (m *MediaArtifactMutation) Codec() (r mediaartifact.Codec, exists bool) {
-	v := m.codec
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldCodec returns the old "codec" field's value of the MediaArtifact entity.
-// If the MediaArtifact object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *MediaArtifactMutation) OldCodec(ctx context.Context) (v mediaartifact.Codec, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldCodec is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldCodec requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldCodec: %w", err)
-	}
-	return oldValue.Codec, nil
-}
-
-// ResetCodec resets all changes to the "codec" field.
-func (m *MediaArtifactMutation) ResetCodec() {
-	m.codec = nil
-}
-
-// SetFileSize sets the "file_size" field.
-func (m *MediaArtifactMutation) SetFileSize(i int64) {
-	m.file_size = &i
-	m.addfile_size = nil
-}
-
-// FileSize returns the value of the "file_size" field in the mutation.
-func (m *MediaArtifactMutation) FileSize() (r int64, exists bool) {
-	v := m.file_size
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldFileSize returns the old "file_size" field's value of the MediaArtifact entity.
-// If the MediaArtifact object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *MediaArtifactMutation) OldFileSize(ctx context.Context) (v *int64, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldFileSize is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldFileSize requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldFileSize: %w", err)
-	}
-	return oldValue.FileSize, nil
-}
-
-// AddFileSize adds i to the "file_size" field.
-func (m *MediaArtifactMutation) AddFileSize(i int64) {
-	if m.addfile_size != nil {
-		*m.addfile_size += i
-	} else {
-		m.addfile_size = &i
-	}
-}
-
-// AddedFileSize returns the value that was added to the "file_size" field in this mutation.
-func (m *MediaArtifactMutation) AddedFileSize() (r int64, exists bool) {
-	v := m.addfile_size
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// ClearFileSize clears the value of the "file_size" field.
-func (m *MediaArtifactMutation) ClearFileSize() {
-	m.file_size = nil
-	m.addfile_size = nil
-	m.clearedFields[mediaartifact.FieldFileSize] = struct{}{}
-}
-
-// FileSizeCleared returns if the "file_size" field was cleared in this mutation.
-func (m *MediaArtifactMutation) FileSizeCleared() bool {
-	_, ok := m.clearedFields[mediaartifact.FieldFileSize]
-	return ok
-}
-
-// ResetFileSize resets all changes to the "file_size" field.
-func (m *MediaArtifactMutation) ResetFileSize() {
-	m.file_size = nil
-	m.addfile_size = nil
-	delete(m.clearedFields, mediaartifact.FieldFileSize)
-}
-
-// SetChecksum sets the "checksum" field.
-func (m *MediaArtifactMutation) SetChecksum(s string) {
-	m.checksum = &s
-}
-
-// Checksum returns the value of the "checksum" field in the mutation.
-func (m *MediaArtifactMutation) Checksum() (r string, exists bool) {
-	v := m.checksum
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldChecksum returns the old "checksum" field's value of the MediaArtifact entity.
-// If the MediaArtifact object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *MediaArtifactMutation) OldChecksum(ctx context.Context) (v *string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldChecksum is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldChecksum requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldChecksum: %w", err)
-	}
-	return oldValue.Checksum, nil
-}
-
-// ClearChecksum clears the value of the "checksum" field.
-func (m *MediaArtifactMutation) ClearChecksum() {
-	m.checksum = nil
-	m.clearedFields[mediaartifact.FieldChecksum] = struct{}{}
-}
-
-// ChecksumCleared returns if the "checksum" field was cleared in this mutation.
-func (m *MediaArtifactMutation) ChecksumCleared() bool {
-	_, ok := m.clearedFields[mediaartifact.FieldChecksum]
-	return ok
-}
-
-// ResetChecksum resets all changes to the "checksum" field.
-func (m *MediaArtifactMutation) ResetChecksum() {
-	m.checksum = nil
-	delete(m.clearedFields, mediaartifact.FieldChecksum)
-}
-
-// SetStatus sets the "status" field.
-func (m *MediaArtifactMutation) SetStatus(value mediaartifact.Status) {
-	m.status = &value
-}
-
-// Status returns the value of the "status" field in the mutation.
-func (m *MediaArtifactMutation) Status() (r mediaartifact.Status, exists bool) {
-	v := m.status
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldStatus returns the old "status" field's value of the MediaArtifact entity.
-// If the MediaArtifact object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *MediaArtifactMutation) OldStatus(ctx context.Context) (v mediaartifact.Status, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldStatus requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldStatus: %w", err)
-	}
-	return oldValue.Status, nil
-}
-
-// ResetStatus resets all changes to the "status" field.
-func (m *MediaArtifactMutation) ResetStatus() {
-	m.status = nil
-}
-
-// SetDeletableAt sets the "deletable_at" field.
-func (m *MediaArtifactMutation) SetDeletableAt(t time.Time) {
-	m.deletable_at = &t
-}
-
-// DeletableAt returns the value of the "deletable_at" field in the mutation.
-func (m *MediaArtifactMutation) DeletableAt() (r time.Time, exists bool) {
-	v := m.deletable_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldDeletableAt returns the old "deletable_at" field's value of the MediaArtifact entity.
-// If the MediaArtifact object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *MediaArtifactMutation) OldDeletableAt(ctx context.Context) (v *time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldDeletableAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldDeletableAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldDeletableAt: %w", err)
-	}
-	return oldValue.DeletableAt, nil
-}
-
-// ClearDeletableAt clears the value of the "deletable_at" field.
-func (m *MediaArtifactMutation) ClearDeletableAt() {
-	m.deletable_at = nil
-	m.clearedFields[mediaartifact.FieldDeletableAt] = struct{}{}
-}
-
-// DeletableAtCleared returns if the "deletable_at" field was cleared in this mutation.
-func (m *MediaArtifactMutation) DeletableAtCleared() bool {
-	_, ok := m.clearedFields[mediaartifact.FieldDeletableAt]
-	return ok
-}
-
-// ResetDeletableAt resets all changes to the "deletable_at" field.
-func (m *MediaArtifactMutation) ResetDeletableAt() {
-	m.deletable_at = nil
-	delete(m.clearedFields, mediaartifact.FieldDeletableAt)
-}
-
-// SetDeletedAt sets the "deleted_at" field.
-func (m *MediaArtifactMutation) SetDeletedAt(t time.Time) {
-	m.deleted_at = &t
-}
-
-// DeletedAt returns the value of the "deleted_at" field in the mutation.
-func (m *MediaArtifactMutation) DeletedAt() (r time.Time, exists bool) {
-	v := m.deleted_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldDeletedAt returns the old "deleted_at" field's value of the MediaArtifact entity.
-// If the MediaArtifact object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *MediaArtifactMutation) OldDeletedAt(ctx context.Context) (v *time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldDeletedAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldDeletedAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldDeletedAt: %w", err)
-	}
-	return oldValue.DeletedAt, nil
-}
-
-// ClearDeletedAt clears the value of the "deleted_at" field.
-func (m *MediaArtifactMutation) ClearDeletedAt() {
-	m.deleted_at = nil
-	m.clearedFields[mediaartifact.FieldDeletedAt] = struct{}{}
-}
-
-// DeletedAtCleared returns if the "deleted_at" field was cleared in this mutation.
-func (m *MediaArtifactMutation) DeletedAtCleared() bool {
-	_, ok := m.clearedFields[mediaartifact.FieldDeletedAt]
-	return ok
-}
-
-// ResetDeletedAt resets all changes to the "deleted_at" field.
-func (m *MediaArtifactMutation) ResetDeletedAt() {
-	m.deleted_at = nil
-	delete(m.clearedFields, mediaartifact.FieldDeletedAt)
-}
-
-// SetCreatedAt sets the "created_at" field.
-func (m *MediaArtifactMutation) SetCreatedAt(t time.Time) {
-	m.created_at = &t
-}
-
-// CreatedAt returns the value of the "created_at" field in the mutation.
-func (m *MediaArtifactMutation) CreatedAt() (r time.Time, exists bool) {
-	v := m.created_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldCreatedAt returns the old "created_at" field's value of the MediaArtifact entity.
-// If the MediaArtifact object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *MediaArtifactMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
-	}
-	return oldValue.CreatedAt, nil
-}
-
-// ResetCreatedAt resets all changes to the "created_at" field.
-func (m *MediaArtifactMutation) ResetCreatedAt() {
-	m.created_at = nil
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (m *MediaArtifactMutation) SetUpdatedAt(t time.Time) {
-	m.updated_at = &t
-}
-
-// UpdatedAt returns the value of the "updated_at" field in the mutation.
-func (m *MediaArtifactMutation) UpdatedAt() (r time.Time, exists bool) {
-	v := m.updated_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldUpdatedAt returns the old "updated_at" field's value of the MediaArtifact entity.
-// If the MediaArtifact object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *MediaArtifactMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
-	}
-	return oldValue.UpdatedAt, nil
-}
-
-// ResetUpdatedAt resets all changes to the "updated_at" field.
-func (m *MediaArtifactMutation) ResetUpdatedAt() {
-	m.updated_at = nil
-}
-
-// SetRecordTaskID sets the "record_task" edge to the RecordTask entity by id.
-func (m *MediaArtifactMutation) SetRecordTaskID(id int) {
-	m.record_task = &id
-}
-
-// ClearRecordTask clears the "record_task" edge to the RecordTask entity.
-func (m *MediaArtifactMutation) ClearRecordTask() {
-	m.clearedrecord_task = true
-}
-
-// RecordTaskCleared reports if the "record_task" edge to the RecordTask entity was cleared.
-func (m *MediaArtifactMutation) RecordTaskCleared() bool {
-	return m.clearedrecord_task
-}
-
-// RecordTaskID returns the "record_task" edge ID in the mutation.
-func (m *MediaArtifactMutation) RecordTaskID() (id int, exists bool) {
-	if m.record_task != nil {
-		return *m.record_task, true
-	}
-	return
-}
-
-// RecordTaskIDs returns the "record_task" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// RecordTaskID instead. It exists only for internal usage by the builders.
-func (m *MediaArtifactMutation) RecordTaskIDs() (ids []int) {
-	if id := m.record_task; id != nil {
-		ids = append(ids, *id)
-	}
-	return
-}
-
-// ResetRecordTask resets all changes to the "record_task" edge.
-func (m *MediaArtifactMutation) ResetRecordTask() {
-	m.record_task = nil
-	m.clearedrecord_task = false
-}
-
-// SetUploadTaskID sets the "upload_task" edge to the UploadTask entity by id.
-func (m *MediaArtifactMutation) SetUploadTaskID(id int) {
-	m.upload_task = &id
-}
-
-// ClearUploadTask clears the "upload_task" edge to the UploadTask entity.
-func (m *MediaArtifactMutation) ClearUploadTask() {
-	m.clearedupload_task = true
-}
-
-// UploadTaskCleared reports if the "upload_task" edge to the UploadTask entity was cleared.
-func (m *MediaArtifactMutation) UploadTaskCleared() bool {
-	return m.clearedupload_task
-}
-
-// UploadTaskID returns the "upload_task" edge ID in the mutation.
-func (m *MediaArtifactMutation) UploadTaskID() (id int, exists bool) {
-	if m.upload_task != nil {
-		return *m.upload_task, true
-	}
-	return
-}
-
-// UploadTaskIDs returns the "upload_task" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// UploadTaskID instead. It exists only for internal usage by the builders.
-func (m *MediaArtifactMutation) UploadTaskIDs() (ids []int) {
-	if id := m.upload_task; id != nil {
-		ids = append(ids, *id)
-	}
-	return
-}
-
-// ResetUploadTask resets all changes to the "upload_task" edge.
-func (m *MediaArtifactMutation) ResetUploadTask() {
-	m.upload_task = nil
-	m.clearedupload_task = false
-}
-
-// AddSttTaskIDs adds the "stt_tasks" edge to the STTTask entity by ids.
-func (m *MediaArtifactMutation) AddSttTaskIDs(ids ...int) {
-	if m.stt_tasks == nil {
-		m.stt_tasks = make(map[int]struct{})
-	}
-	for i := range ids {
-		m.stt_tasks[ids[i]] = struct{}{}
-	}
-}
-
-// ClearSttTasks clears the "stt_tasks" edge to the STTTask entity.
-func (m *MediaArtifactMutation) ClearSttTasks() {
-	m.clearedstt_tasks = true
-}
-
-// SttTasksCleared reports if the "stt_tasks" edge to the STTTask entity was cleared.
-func (m *MediaArtifactMutation) SttTasksCleared() bool {
-	return m.clearedstt_tasks
-}
-
-// RemoveSttTaskIDs removes the "stt_tasks" edge to the STTTask entity by IDs.
-func (m *MediaArtifactMutation) RemoveSttTaskIDs(ids ...int) {
-	if m.removedstt_tasks == nil {
-		m.removedstt_tasks = make(map[int]struct{})
-	}
-	for i := range ids {
-		delete(m.stt_tasks, ids[i])
-		m.removedstt_tasks[ids[i]] = struct{}{}
-	}
-}
-
-// RemovedSttTasks returns the removed IDs of the "stt_tasks" edge to the STTTask entity.
-func (m *MediaArtifactMutation) RemovedSttTasksIDs() (ids []int) {
-	for id := range m.removedstt_tasks {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// SttTasksIDs returns the "stt_tasks" edge IDs in the mutation.
-func (m *MediaArtifactMutation) SttTasksIDs() (ids []int) {
-	for id := range m.stt_tasks {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// ResetSttTasks resets all changes to the "stt_tasks" edge.
-func (m *MediaArtifactMutation) ResetSttTasks() {
-	m.stt_tasks = nil
-	m.clearedstt_tasks = false
-	m.removedstt_tasks = nil
-}
-
-// AddAnalyzeTaskIDs adds the "analyze_tasks" edge to the AnalyzeTask entity by ids.
-func (m *MediaArtifactMutation) AddAnalyzeTaskIDs(ids ...int) {
-	if m.analyze_tasks == nil {
-		m.analyze_tasks = make(map[int]struct{})
-	}
-	for i := range ids {
-		m.analyze_tasks[ids[i]] = struct{}{}
-	}
-}
-
-// ClearAnalyzeTasks clears the "analyze_tasks" edge to the AnalyzeTask entity.
-func (m *MediaArtifactMutation) ClearAnalyzeTasks() {
-	m.clearedanalyze_tasks = true
-}
-
-// AnalyzeTasksCleared reports if the "analyze_tasks" edge to the AnalyzeTask entity was cleared.
-func (m *MediaArtifactMutation) AnalyzeTasksCleared() bool {
-	return m.clearedanalyze_tasks
-}
-
-// RemoveAnalyzeTaskIDs removes the "analyze_tasks" edge to the AnalyzeTask entity by IDs.
-func (m *MediaArtifactMutation) RemoveAnalyzeTaskIDs(ids ...int) {
-	if m.removedanalyze_tasks == nil {
-		m.removedanalyze_tasks = make(map[int]struct{})
-	}
-	for i := range ids {
-		delete(m.analyze_tasks, ids[i])
-		m.removedanalyze_tasks[ids[i]] = struct{}{}
-	}
-}
-
-// RemovedAnalyzeTasks returns the removed IDs of the "analyze_tasks" edge to the AnalyzeTask entity.
-func (m *MediaArtifactMutation) RemovedAnalyzeTasksIDs() (ids []int) {
-	for id := range m.removedanalyze_tasks {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// AnalyzeTasksIDs returns the "analyze_tasks" edge IDs in the mutation.
-func (m *MediaArtifactMutation) AnalyzeTasksIDs() (ids []int) {
-	for id := range m.analyze_tasks {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// ResetAnalyzeTasks resets all changes to the "analyze_tasks" edge.
-func (m *MediaArtifactMutation) ResetAnalyzeTasks() {
-	m.analyze_tasks = nil
-	m.clearedanalyze_tasks = false
-	m.removedanalyze_tasks = nil
-}
-
-// SetSourceTranscodeTaskID sets the "source_transcode_task" edge to the TranscodeTask entity by id.
-func (m *MediaArtifactMutation) SetSourceTranscodeTaskID(id int) {
-	m.source_transcode_task = &id
-}
-
-// ClearSourceTranscodeTask clears the "source_transcode_task" edge to the TranscodeTask entity.
-func (m *MediaArtifactMutation) ClearSourceTranscodeTask() {
-	m.clearedsource_transcode_task = true
-}
-
-// SourceTranscodeTaskCleared reports if the "source_transcode_task" edge to the TranscodeTask entity was cleared.
-func (m *MediaArtifactMutation) SourceTranscodeTaskCleared() bool {
-	return m.clearedsource_transcode_task
-}
-
-// SourceTranscodeTaskID returns the "source_transcode_task" edge ID in the mutation.
-func (m *MediaArtifactMutation) SourceTranscodeTaskID() (id int, exists bool) {
-	if m.source_transcode_task != nil {
-		return *m.source_transcode_task, true
-	}
-	return
-}
-
-// SourceTranscodeTaskIDs returns the "source_transcode_task" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// SourceTranscodeTaskID instead. It exists only for internal usage by the builders.
-func (m *MediaArtifactMutation) SourceTranscodeTaskIDs() (ids []int) {
-	if id := m.source_transcode_task; id != nil {
-		ids = append(ids, *id)
-	}
-	return
-}
-
-// ResetSourceTranscodeTask resets all changes to the "source_transcode_task" edge.
-func (m *MediaArtifactMutation) ResetSourceTranscodeTask() {
-	m.source_transcode_task = nil
-	m.clearedsource_transcode_task = false
-}
-
-// SetArchiveTranscodeTaskID sets the "archive_transcode_task" edge to the TranscodeTask entity by id.
-func (m *MediaArtifactMutation) SetArchiveTranscodeTaskID(id int) {
-	m.archive_transcode_task = &id
-}
-
-// ClearArchiveTranscodeTask clears the "archive_transcode_task" edge to the TranscodeTask entity.
-func (m *MediaArtifactMutation) ClearArchiveTranscodeTask() {
-	m.clearedarchive_transcode_task = true
-}
-
-// ArchiveTranscodeTaskCleared reports if the "archive_transcode_task" edge to the TranscodeTask entity was cleared.
-func (m *MediaArtifactMutation) ArchiveTranscodeTaskCleared() bool {
-	return m.clearedarchive_transcode_task
-}
-
-// ArchiveTranscodeTaskID returns the "archive_transcode_task" edge ID in the mutation.
-func (m *MediaArtifactMutation) ArchiveTranscodeTaskID() (id int, exists bool) {
-	if m.archive_transcode_task != nil {
-		return *m.archive_transcode_task, true
-	}
-	return
-}
-
-// ArchiveTranscodeTaskIDs returns the "archive_transcode_task" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// ArchiveTranscodeTaskID instead. It exists only for internal usage by the builders.
-func (m *MediaArtifactMutation) ArchiveTranscodeTaskIDs() (ids []int) {
-	if id := m.archive_transcode_task; id != nil {
-		ids = append(ids, *id)
-	}
-	return
-}
-
-// ResetArchiveTranscodeTask resets all changes to the "archive_transcode_task" edge.
-func (m *MediaArtifactMutation) ResetArchiveTranscodeTask() {
-	m.archive_transcode_task = nil
-	m.clearedarchive_transcode_task = false
-}
-
-// AddHighlightClipIDs adds the "highlight_clips" edge to the HighlightClip entity by ids.
-func (m *MediaArtifactMutation) AddHighlightClipIDs(ids ...int) {
-	if m.highlight_clips == nil {
-		m.highlight_clips = make(map[int]struct{})
-	}
-	for i := range ids {
-		m.highlight_clips[ids[i]] = struct{}{}
-	}
-}
-
-// ClearHighlightClips clears the "highlight_clips" edge to the HighlightClip entity.
-func (m *MediaArtifactMutation) ClearHighlightClips() {
-	m.clearedhighlight_clips = true
-}
-
-// HighlightClipsCleared reports if the "highlight_clips" edge to the HighlightClip entity was cleared.
-func (m *MediaArtifactMutation) HighlightClipsCleared() bool {
-	return m.clearedhighlight_clips
-}
-
-// RemoveHighlightClipIDs removes the "highlight_clips" edge to the HighlightClip entity by IDs.
-func (m *MediaArtifactMutation) RemoveHighlightClipIDs(ids ...int) {
-	if m.removedhighlight_clips == nil {
-		m.removedhighlight_clips = make(map[int]struct{})
-	}
-	for i := range ids {
-		delete(m.highlight_clips, ids[i])
-		m.removedhighlight_clips[ids[i]] = struct{}{}
-	}
-}
-
-// RemovedHighlightClips returns the removed IDs of the "highlight_clips" edge to the HighlightClip entity.
-func (m *MediaArtifactMutation) RemovedHighlightClipsIDs() (ids []int) {
-	for id := range m.removedhighlight_clips {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// HighlightClipsIDs returns the "highlight_clips" edge IDs in the mutation.
-func (m *MediaArtifactMutation) HighlightClipsIDs() (ids []int) {
-	for id := range m.highlight_clips {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// ResetHighlightClips resets all changes to the "highlight_clips" edge.
-func (m *MediaArtifactMutation) ResetHighlightClips() {
-	m.highlight_clips = nil
-	m.clearedhighlight_clips = false
-	m.removedhighlight_clips = nil
-}
-
-// Where appends a list predicates to the MediaArtifactMutation builder.
-func (m *MediaArtifactMutation) Where(ps ...predicate.MediaArtifact) {
-	m.predicates = append(m.predicates, ps...)
-}
-
-// WhereP appends storage-level predicates to the MediaArtifactMutation builder. Using this method,
-// users can use type-assertion to append predicates that do not depend on any generated package.
-func (m *MediaArtifactMutation) WhereP(ps ...func(*sql.Selector)) {
-	p := make([]predicate.MediaArtifact, len(ps))
-	for i := range ps {
-		p[i] = ps[i]
-	}
-	m.Where(p...)
-}
-
-// Op returns the operation name.
-func (m *MediaArtifactMutation) Op() Op {
-	return m.op
-}
-
-// SetOp allows setting the mutation operation.
-func (m *MediaArtifactMutation) SetOp(op Op) {
-	m.op = op
-}
-
-// Type returns the node type of this mutation (MediaArtifact).
-func (m *MediaArtifactMutation) Type() string {
-	return m.typ
-}
-
-// Fields returns all fields that were changed during this mutation. Note that in
-// order to get all numeric fields that were incremented/decremented, call
-// AddedFields().
-func (m *MediaArtifactMutation) Fields() []string {
-	fields := make([]string, 0, 11)
-	if m.kind != nil {
-		fields = append(fields, mediaartifact.FieldKind)
-	}
-	if m._path != nil {
-		fields = append(fields, mediaartifact.FieldPath)
-	}
-	if m.format != nil {
-		fields = append(fields, mediaartifact.FieldFormat)
-	}
-	if m.codec != nil {
-		fields = append(fields, mediaartifact.FieldCodec)
-	}
-	if m.file_size != nil {
-		fields = append(fields, mediaartifact.FieldFileSize)
-	}
-	if m.checksum != nil {
-		fields = append(fields, mediaartifact.FieldChecksum)
-	}
-	if m.status != nil {
-		fields = append(fields, mediaartifact.FieldStatus)
-	}
-	if m.deletable_at != nil {
-		fields = append(fields, mediaartifact.FieldDeletableAt)
-	}
-	if m.deleted_at != nil {
-		fields = append(fields, mediaartifact.FieldDeletedAt)
-	}
-	if m.created_at != nil {
-		fields = append(fields, mediaartifact.FieldCreatedAt)
-	}
-	if m.updated_at != nil {
-		fields = append(fields, mediaartifact.FieldUpdatedAt)
-	}
-	return fields
-}
-
-// Field returns the value of a field with the given name. The second boolean
-// return value indicates that this field was not set, or was not defined in the
-// schema.
-func (m *MediaArtifactMutation) Field(name string) (ent.Value, bool) {
-	switch name {
-	case mediaartifact.FieldKind:
-		return m.Kind()
-	case mediaartifact.FieldPath:
-		return m.Path()
-	case mediaartifact.FieldFormat:
-		return m.Format()
-	case mediaartifact.FieldCodec:
-		return m.Codec()
-	case mediaartifact.FieldFileSize:
-		return m.FileSize()
-	case mediaartifact.FieldChecksum:
-		return m.Checksum()
-	case mediaartifact.FieldStatus:
-		return m.Status()
-	case mediaartifact.FieldDeletableAt:
-		return m.DeletableAt()
-	case mediaartifact.FieldDeletedAt:
-		return m.DeletedAt()
-	case mediaartifact.FieldCreatedAt:
-		return m.CreatedAt()
-	case mediaartifact.FieldUpdatedAt:
-		return m.UpdatedAt()
-	}
-	return nil, false
-}
-
-// OldField returns the old value of the field from the database. An error is
-// returned if the mutation operation is not UpdateOne, or the query to the
-// database failed.
-func (m *MediaArtifactMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
-	switch name {
-	case mediaartifact.FieldKind:
-		return m.OldKind(ctx)
-	case mediaartifact.FieldPath:
-		return m.OldPath(ctx)
-	case mediaartifact.FieldFormat:
-		return m.OldFormat(ctx)
-	case mediaartifact.FieldCodec:
-		return m.OldCodec(ctx)
-	case mediaartifact.FieldFileSize:
-		return m.OldFileSize(ctx)
-	case mediaartifact.FieldChecksum:
-		return m.OldChecksum(ctx)
-	case mediaartifact.FieldStatus:
-		return m.OldStatus(ctx)
-	case mediaartifact.FieldDeletableAt:
-		return m.OldDeletableAt(ctx)
-	case mediaartifact.FieldDeletedAt:
-		return m.OldDeletedAt(ctx)
-	case mediaartifact.FieldCreatedAt:
-		return m.OldCreatedAt(ctx)
-	case mediaartifact.FieldUpdatedAt:
-		return m.OldUpdatedAt(ctx)
-	}
-	return nil, fmt.Errorf("unknown MediaArtifact field %s", name)
-}
-
-// SetField sets the value of a field with the given name. It returns an error if
-// the field is not defined in the schema, or if the type mismatched the field
-// type.
-func (m *MediaArtifactMutation) SetField(name string, value ent.Value) error {
-	switch name {
-	case mediaartifact.FieldKind:
-		v, ok := value.(mediaartifact.Kind)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetKind(v)
-		return nil
-	case mediaartifact.FieldPath:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetPath(v)
-		return nil
-	case mediaartifact.FieldFormat:
-		v, ok := value.(mediaartifact.Format)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetFormat(v)
-		return nil
-	case mediaartifact.FieldCodec:
-		v, ok := value.(mediaartifact.Codec)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetCodec(v)
-		return nil
-	case mediaartifact.FieldFileSize:
-		v, ok := value.(int64)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetFileSize(v)
-		return nil
-	case mediaartifact.FieldChecksum:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetChecksum(v)
-		return nil
-	case mediaartifact.FieldStatus:
-		v, ok := value.(mediaartifact.Status)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetStatus(v)
-		return nil
-	case mediaartifact.FieldDeletableAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetDeletableAt(v)
-		return nil
-	case mediaartifact.FieldDeletedAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetDeletedAt(v)
-		return nil
-	case mediaartifact.FieldCreatedAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetCreatedAt(v)
-		return nil
-	case mediaartifact.FieldUpdatedAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetUpdatedAt(v)
-		return nil
-	}
-	return fmt.Errorf("unknown MediaArtifact field %s", name)
-}
-
-// AddedFields returns all numeric fields that were incremented/decremented during
-// this mutation.
-func (m *MediaArtifactMutation) AddedFields() []string {
-	var fields []string
-	if m.addfile_size != nil {
-		fields = append(fields, mediaartifact.FieldFileSize)
-	}
-	return fields
-}
-
-// AddedField returns the numeric value that was incremented/decremented on a field
-// with the given name. The second boolean return value indicates that this field
-// was not set, or was not defined in the schema.
-func (m *MediaArtifactMutation) AddedField(name string) (ent.Value, bool) {
-	switch name {
-	case mediaartifact.FieldFileSize:
-		return m.AddedFileSize()
-	}
-	return nil, false
-}
-
-// AddField adds the value to the field with the given name. It returns an error if
-// the field is not defined in the schema, or if the type mismatched the field
-// type.
-func (m *MediaArtifactMutation) AddField(name string, value ent.Value) error {
-	switch name {
-	case mediaartifact.FieldFileSize:
-		v, ok := value.(int64)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddFileSize(v)
-		return nil
-	}
-	return fmt.Errorf("unknown MediaArtifact numeric field %s", name)
-}
-
-// ClearedFields returns all nullable fields that were cleared during this
-// mutation.
-func (m *MediaArtifactMutation) ClearedFields() []string {
-	var fields []string
-	if m.FieldCleared(mediaartifact.FieldFileSize) {
-		fields = append(fields, mediaartifact.FieldFileSize)
-	}
-	if m.FieldCleared(mediaartifact.FieldChecksum) {
-		fields = append(fields, mediaartifact.FieldChecksum)
-	}
-	if m.FieldCleared(mediaartifact.FieldDeletableAt) {
-		fields = append(fields, mediaartifact.FieldDeletableAt)
-	}
-	if m.FieldCleared(mediaartifact.FieldDeletedAt) {
-		fields = append(fields, mediaartifact.FieldDeletedAt)
-	}
-	return fields
-}
-
-// FieldCleared returns a boolean indicating if a field with the given name was
-// cleared in this mutation.
-func (m *MediaArtifactMutation) FieldCleared(name string) bool {
-	_, ok := m.clearedFields[name]
-	return ok
-}
-
-// ClearField clears the value of the field with the given name. It returns an
-// error if the field is not defined in the schema.
-func (m *MediaArtifactMutation) ClearField(name string) error {
-	switch name {
-	case mediaartifact.FieldFileSize:
-		m.ClearFileSize()
-		return nil
-	case mediaartifact.FieldChecksum:
-		m.ClearChecksum()
-		return nil
-	case mediaartifact.FieldDeletableAt:
-		m.ClearDeletableAt()
-		return nil
-	case mediaartifact.FieldDeletedAt:
-		m.ClearDeletedAt()
-		return nil
-	}
-	return fmt.Errorf("unknown MediaArtifact nullable field %s", name)
-}
-
-// ResetField resets all changes in the mutation for the field with the given name.
-// It returns an error if the field is not defined in the schema.
-func (m *MediaArtifactMutation) ResetField(name string) error {
-	switch name {
-	case mediaartifact.FieldKind:
-		m.ResetKind()
-		return nil
-	case mediaartifact.FieldPath:
-		m.ResetPath()
-		return nil
-	case mediaartifact.FieldFormat:
-		m.ResetFormat()
-		return nil
-	case mediaartifact.FieldCodec:
-		m.ResetCodec()
-		return nil
-	case mediaartifact.FieldFileSize:
-		m.ResetFileSize()
-		return nil
-	case mediaartifact.FieldChecksum:
-		m.ResetChecksum()
-		return nil
-	case mediaartifact.FieldStatus:
-		m.ResetStatus()
-		return nil
-	case mediaartifact.FieldDeletableAt:
-		m.ResetDeletableAt()
-		return nil
-	case mediaartifact.FieldDeletedAt:
-		m.ResetDeletedAt()
-		return nil
-	case mediaartifact.FieldCreatedAt:
-		m.ResetCreatedAt()
-		return nil
-	case mediaartifact.FieldUpdatedAt:
-		m.ResetUpdatedAt()
-		return nil
-	}
-	return fmt.Errorf("unknown MediaArtifact field %s", name)
-}
-
-// AddedEdges returns all edge names that were set/added in this mutation.
-func (m *MediaArtifactMutation) AddedEdges() []string {
-	edges := make([]string, 0, 7)
-	if m.record_task != nil {
-		edges = append(edges, mediaartifact.EdgeRecordTask)
-	}
-	if m.upload_task != nil {
-		edges = append(edges, mediaartifact.EdgeUploadTask)
-	}
-	if m.stt_tasks != nil {
-		edges = append(edges, mediaartifact.EdgeSttTasks)
-	}
-	if m.analyze_tasks != nil {
-		edges = append(edges, mediaartifact.EdgeAnalyzeTasks)
-	}
-	if m.source_transcode_task != nil {
-		edges = append(edges, mediaartifact.EdgeSourceTranscodeTask)
-	}
-	if m.archive_transcode_task != nil {
-		edges = append(edges, mediaartifact.EdgeArchiveTranscodeTask)
-	}
-	if m.highlight_clips != nil {
-		edges = append(edges, mediaartifact.EdgeHighlightClips)
-	}
-	return edges
-}
-
-// AddedIDs returns all IDs (to other nodes) that were added for the given edge
-// name in this mutation.
-func (m *MediaArtifactMutation) AddedIDs(name string) []ent.Value {
-	switch name {
-	case mediaartifact.EdgeRecordTask:
-		if id := m.record_task; id != nil {
-			return []ent.Value{*id}
-		}
-	case mediaartifact.EdgeUploadTask:
-		if id := m.upload_task; id != nil {
-			return []ent.Value{*id}
-		}
-	case mediaartifact.EdgeSttTasks:
-		ids := make([]ent.Value, 0, len(m.stt_tasks))
-		for id := range m.stt_tasks {
-			ids = append(ids, id)
-		}
-		return ids
-	case mediaartifact.EdgeAnalyzeTasks:
-		ids := make([]ent.Value, 0, len(m.analyze_tasks))
-		for id := range m.analyze_tasks {
-			ids = append(ids, id)
-		}
-		return ids
-	case mediaartifact.EdgeSourceTranscodeTask:
-		if id := m.source_transcode_task; id != nil {
-			return []ent.Value{*id}
-		}
-	case mediaartifact.EdgeArchiveTranscodeTask:
-		if id := m.archive_transcode_task; id != nil {
-			return []ent.Value{*id}
-		}
-	case mediaartifact.EdgeHighlightClips:
-		ids := make([]ent.Value, 0, len(m.highlight_clips))
-		for id := range m.highlight_clips {
-			ids = append(ids, id)
-		}
-		return ids
-	}
-	return nil
-}
-
-// RemovedEdges returns all edge names that were removed in this mutation.
-func (m *MediaArtifactMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 7)
-	if m.removedstt_tasks != nil {
-		edges = append(edges, mediaartifact.EdgeSttTasks)
-	}
-	if m.removedanalyze_tasks != nil {
-		edges = append(edges, mediaartifact.EdgeAnalyzeTasks)
-	}
-	if m.removedhighlight_clips != nil {
-		edges = append(edges, mediaartifact.EdgeHighlightClips)
-	}
-	return edges
-}
-
-// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
-// the given name in this mutation.
-func (m *MediaArtifactMutation) RemovedIDs(name string) []ent.Value {
-	switch name {
-	case mediaartifact.EdgeSttTasks:
-		ids := make([]ent.Value, 0, len(m.removedstt_tasks))
-		for id := range m.removedstt_tasks {
-			ids = append(ids, id)
-		}
-		return ids
-	case mediaartifact.EdgeAnalyzeTasks:
-		ids := make([]ent.Value, 0, len(m.removedanalyze_tasks))
-		for id := range m.removedanalyze_tasks {
-			ids = append(ids, id)
-		}
-		return ids
-	case mediaartifact.EdgeHighlightClips:
-		ids := make([]ent.Value, 0, len(m.removedhighlight_clips))
-		for id := range m.removedhighlight_clips {
-			ids = append(ids, id)
-		}
-		return ids
-	}
-	return nil
-}
-
-// ClearedEdges returns all edge names that were cleared in this mutation.
-func (m *MediaArtifactMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 7)
-	if m.clearedrecord_task {
-		edges = append(edges, mediaartifact.EdgeRecordTask)
-	}
-	if m.clearedupload_task {
-		edges = append(edges, mediaartifact.EdgeUploadTask)
-	}
-	if m.clearedstt_tasks {
-		edges = append(edges, mediaartifact.EdgeSttTasks)
-	}
-	if m.clearedanalyze_tasks {
-		edges = append(edges, mediaartifact.EdgeAnalyzeTasks)
-	}
-	if m.clearedsource_transcode_task {
-		edges = append(edges, mediaartifact.EdgeSourceTranscodeTask)
-	}
-	if m.clearedarchive_transcode_task {
-		edges = append(edges, mediaartifact.EdgeArchiveTranscodeTask)
-	}
-	if m.clearedhighlight_clips {
-		edges = append(edges, mediaartifact.EdgeHighlightClips)
-	}
-	return edges
-}
-
-// EdgeCleared returns a boolean which indicates if the edge with the given name
-// was cleared in this mutation.
-func (m *MediaArtifactMutation) EdgeCleared(name string) bool {
-	switch name {
-	case mediaartifact.EdgeRecordTask:
-		return m.clearedrecord_task
-	case mediaartifact.EdgeUploadTask:
-		return m.clearedupload_task
-	case mediaartifact.EdgeSttTasks:
-		return m.clearedstt_tasks
-	case mediaartifact.EdgeAnalyzeTasks:
-		return m.clearedanalyze_tasks
-	case mediaartifact.EdgeSourceTranscodeTask:
-		return m.clearedsource_transcode_task
-	case mediaartifact.EdgeArchiveTranscodeTask:
-		return m.clearedarchive_transcode_task
-	case mediaartifact.EdgeHighlightClips:
-		return m.clearedhighlight_clips
-	}
-	return false
-}
-
-// ClearEdge clears the value of the edge with the given name. It returns an error
-// if that edge is not defined in the schema.
-func (m *MediaArtifactMutation) ClearEdge(name string) error {
-	switch name {
-	case mediaartifact.EdgeRecordTask:
-		m.ClearRecordTask()
-		return nil
-	case mediaartifact.EdgeUploadTask:
-		m.ClearUploadTask()
-		return nil
-	case mediaartifact.EdgeSourceTranscodeTask:
-		m.ClearSourceTranscodeTask()
-		return nil
-	case mediaartifact.EdgeArchiveTranscodeTask:
-		m.ClearArchiveTranscodeTask()
-		return nil
-	}
-	return fmt.Errorf("unknown MediaArtifact unique edge %s", name)
-}
-
-// ResetEdge resets all changes to the edge with the given name in this mutation.
-// It returns an error if the edge is not defined in the schema.
-func (m *MediaArtifactMutation) ResetEdge(name string) error {
-	switch name {
-	case mediaartifact.EdgeRecordTask:
-		m.ResetRecordTask()
-		return nil
-	case mediaartifact.EdgeUploadTask:
-		m.ResetUploadTask()
-		return nil
-	case mediaartifact.EdgeSttTasks:
-		m.ResetSttTasks()
-		return nil
-	case mediaartifact.EdgeAnalyzeTasks:
-		m.ResetAnalyzeTasks()
-		return nil
-	case mediaartifact.EdgeSourceTranscodeTask:
-		m.ResetSourceTranscodeTask()
-		return nil
-	case mediaartifact.EdgeArchiveTranscodeTask:
-		m.ResetArchiveTranscodeTask()
-		return nil
-	case mediaartifact.EdgeHighlightClips:
-		m.ResetHighlightClips()
-		return nil
-	}
-	return fmt.Errorf("unknown MediaArtifact edge %s", name)
-}
-
-// RecordTaskMutation represents an operation that mutates the RecordTask nodes in the graph.
-type RecordTaskMutation struct {
-	config
-	op                     Op
-	typ                    string
-	id                     *int
-	role                   *string
-	source_url             *string
-	output_path            *string
-	status                 *recordtask.Status
-	k8s_job_name           *string
-	attempts               *int
-	addattempts            *int
-	priority               *int
-	addpriority            *int
-	file_size              *int64
-	addfile_size           *int64
-	checksum               *string
-	error_message          *string
-	started_at             *time.Time
-	completed_at           *time.Time
-	created_at             *time.Time
-	updated_at             *time.Time
-	clearedFields          map[string]struct{}
-	match_round            *int
-	clearedmatch_round     bool
-	upload_task            *int
-	clearedupload_task     bool
-	media_artifacts        map[int]struct{}
-	removedmedia_artifacts map[int]struct{}
-	clearedmedia_artifacts bool
-	done                   bool
-	oldValue               func(context.Context) (*RecordTask, error)
-	predicates             []predicate.RecordTask
-}
-
-var _ ent.Mutation = (*RecordTaskMutation)(nil)
-
-// recordtaskOption allows management of the mutation configuration using functional options.
-type recordtaskOption func(*RecordTaskMutation)
-
-// newRecordTaskMutation creates new mutation for the RecordTask entity.
-func newRecordTaskMutation(c config, op Op, opts ...recordtaskOption) *RecordTaskMutation {
-	m := &RecordTaskMutation{
-		config:        c,
-		op:            op,
-		typ:           TypeRecordTask,
-		clearedFields: make(map[string]struct{}),
-	}
-	for _, opt := range opts {
-		opt(m)
-	}
-	return m
-}
-
-// withRecordTaskID sets the ID field of the mutation.
-func withRecordTaskID(id int) recordtaskOption {
-	return func(m *RecordTaskMutation) {
-		var (
-			err   error
-			once  sync.Once
-			value *RecordTask
-		)
-		m.oldValue = func(ctx context.Context) (*RecordTask, error) {
-			once.Do(func() {
-				if m.done {
-					err = errors.New("querying old values post mutation is not allowed")
-				} else {
-					value, err = m.Client().RecordTask.Get(ctx, id)
-				}
-			})
-			return value, err
-		}
-		m.id = &id
-	}
-}
-
-// withRecordTask sets the old RecordTask of the mutation.
-func withRecordTask(node *RecordTask) recordtaskOption {
-	return func(m *RecordTaskMutation) {
-		m.oldValue = func(context.Context) (*RecordTask, error) {
-			return node, nil
-		}
-		m.id = &node.ID
-	}
-}
-
-// Client returns a new `ent.Client` from the mutation. If the mutation was
-// executed in a transaction (ent.Tx), a transactional client is returned.
-func (m RecordTaskMutation) Client() *Client {
-	client := &Client{config: m.config}
-	client.init()
-	return client
-}
-
-// Tx returns an `ent.Tx` for mutations that were executed in transactions;
-// it returns an error otherwise.
-func (m RecordTaskMutation) Tx() (*Tx, error) {
-	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, errors.New("ent: mutation is not running in a transaction")
-	}
-	tx := &Tx{config: m.config}
-	tx.init()
-	return tx, nil
-}
-
-// ID returns the ID value in the mutation. Note that the ID is only available
-// if it was provided to the builder or after it was returned from the database.
-func (m *RecordTaskMutation) ID() (id int, exists bool) {
-	if m.id == nil {
-		return
-	}
-	return *m.id, true
-}
-
-// IDs queries the database and returns the entity ids that match the mutation's predicate.
-// That means, if the mutation is applied within a transaction with an isolation level such
-// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
-// or updated by the mutation.
-func (m *RecordTaskMutation) IDs(ctx context.Context) ([]int, error) {
-	switch {
-	case m.op.Is(OpUpdateOne | OpDeleteOne):
-		id, exists := m.ID()
-		if exists {
-			return []int{id}, nil
-		}
-		fallthrough
-	case m.op.Is(OpUpdate | OpDelete):
-		return m.Client().RecordTask.Query().Where(m.predicates...).IDs(ctx)
-	default:
-		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
-	}
-}
-
-// SetRole sets the "role" field.
-func (m *RecordTaskMutation) SetRole(s string) {
-	m.role = &s
-}
-
-// Role returns the value of the "role" field in the mutation.
-func (m *RecordTaskMutation) Role() (r string, exists bool) {
-	v := m.role
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldRole returns the old "role" field's value of the RecordTask entity.
-// If the RecordTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *RecordTaskMutation) OldRole(ctx context.Context) (v string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldRole is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldRole requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldRole: %w", err)
-	}
-	return oldValue.Role, nil
-}
-
-// ResetRole resets all changes to the "role" field.
-func (m *RecordTaskMutation) ResetRole() {
-	m.role = nil
-}
-
-// SetSourceURL sets the "source_url" field.
-func (m *RecordTaskMutation) SetSourceURL(s string) {
-	m.source_url = &s
-}
-
-// SourceURL returns the value of the "source_url" field in the mutation.
-func (m *RecordTaskMutation) SourceURL() (r string, exists bool) {
-	v := m.source_url
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldSourceURL returns the old "source_url" field's value of the RecordTask entity.
-// If the RecordTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *RecordTaskMutation) OldSourceURL(ctx context.Context) (v string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldSourceURL is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldSourceURL requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldSourceURL: %w", err)
-	}
-	return oldValue.SourceURL, nil
-}
-
-// ResetSourceURL resets all changes to the "source_url" field.
-func (m *RecordTaskMutation) ResetSourceURL() {
-	m.source_url = nil
-}
-
-// SetOutputPath sets the "output_path" field.
-func (m *RecordTaskMutation) SetOutputPath(s string) {
-	m.output_path = &s
-}
-
-// OutputPath returns the value of the "output_path" field in the mutation.
-func (m *RecordTaskMutation) OutputPath() (r string, exists bool) {
-	v := m.output_path
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldOutputPath returns the old "output_path" field's value of the RecordTask entity.
-// If the RecordTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *RecordTaskMutation) OldOutputPath(ctx context.Context) (v string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldOutputPath is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldOutputPath requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldOutputPath: %w", err)
-	}
-	return oldValue.OutputPath, nil
-}
-
-// ResetOutputPath resets all changes to the "output_path" field.
-func (m *RecordTaskMutation) ResetOutputPath() {
-	m.output_path = nil
-}
-
-// SetStatus sets the "status" field.
-func (m *RecordTaskMutation) SetStatus(r recordtask.Status) {
-	m.status = &r
-}
-
-// Status returns the value of the "status" field in the mutation.
-func (m *RecordTaskMutation) Status() (r recordtask.Status, exists bool) {
-	v := m.status
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldStatus returns the old "status" field's value of the RecordTask entity.
-// If the RecordTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *RecordTaskMutation) OldStatus(ctx context.Context) (v recordtask.Status, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldStatus requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldStatus: %w", err)
-	}
-	return oldValue.Status, nil
-}
-
-// ResetStatus resets all changes to the "status" field.
-func (m *RecordTaskMutation) ResetStatus() {
-	m.status = nil
-}
-
-// SetK8sJobName sets the "k8s_job_name" field.
-func (m *RecordTaskMutation) SetK8sJobName(s string) {
-	m.k8s_job_name = &s
-}
-
-// K8sJobName returns the value of the "k8s_job_name" field in the mutation.
-func (m *RecordTaskMutation) K8sJobName() (r string, exists bool) {
-	v := m.k8s_job_name
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldK8sJobName returns the old "k8s_job_name" field's value of the RecordTask entity.
-// If the RecordTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *RecordTaskMutation) OldK8sJobName(ctx context.Context) (v *string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldK8sJobName is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldK8sJobName requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldK8sJobName: %w", err)
-	}
-	return oldValue.K8sJobName, nil
-}
-
-// ClearK8sJobName clears the value of the "k8s_job_name" field.
-func (m *RecordTaskMutation) ClearK8sJobName() {
-	m.k8s_job_name = nil
-	m.clearedFields[recordtask.FieldK8sJobName] = struct{}{}
-}
-
-// K8sJobNameCleared returns if the "k8s_job_name" field was cleared in this mutation.
-func (m *RecordTaskMutation) K8sJobNameCleared() bool {
-	_, ok := m.clearedFields[recordtask.FieldK8sJobName]
-	return ok
-}
-
-// ResetK8sJobName resets all changes to the "k8s_job_name" field.
-func (m *RecordTaskMutation) ResetK8sJobName() {
-	m.k8s_job_name = nil
-	delete(m.clearedFields, recordtask.FieldK8sJobName)
-}
-
-// SetAttempts sets the "attempts" field.
-func (m *RecordTaskMutation) SetAttempts(i int) {
-	m.attempts = &i
-	m.addattempts = nil
-}
-
-// Attempts returns the value of the "attempts" field in the mutation.
-func (m *RecordTaskMutation) Attempts() (r int, exists bool) {
-	v := m.attempts
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldAttempts returns the old "attempts" field's value of the RecordTask entity.
-// If the RecordTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *RecordTaskMutation) OldAttempts(ctx context.Context) (v int, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldAttempts is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldAttempts requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldAttempts: %w", err)
-	}
-	return oldValue.Attempts, nil
-}
-
-// AddAttempts adds i to the "attempts" field.
-func (m *RecordTaskMutation) AddAttempts(i int) {
-	if m.addattempts != nil {
-		*m.addattempts += i
-	} else {
-		m.addattempts = &i
-	}
-}
-
-// AddedAttempts returns the value that was added to the "attempts" field in this mutation.
-func (m *RecordTaskMutation) AddedAttempts() (r int, exists bool) {
-	v := m.addattempts
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// ResetAttempts resets all changes to the "attempts" field.
-func (m *RecordTaskMutation) ResetAttempts() {
-	m.attempts = nil
-	m.addattempts = nil
-}
-
-// SetPriority sets the "priority" field.
-func (m *RecordTaskMutation) SetPriority(i int) {
-	m.priority = &i
-	m.addpriority = nil
-}
-
-// Priority returns the value of the "priority" field in the mutation.
-func (m *RecordTaskMutation) Priority() (r int, exists bool) {
-	v := m.priority
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldPriority returns the old "priority" field's value of the RecordTask entity.
-// If the RecordTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *RecordTaskMutation) OldPriority(ctx context.Context) (v int, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldPriority is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldPriority requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldPriority: %w", err)
-	}
-	return oldValue.Priority, nil
-}
-
-// AddPriority adds i to the "priority" field.
-func (m *RecordTaskMutation) AddPriority(i int) {
-	if m.addpriority != nil {
-		*m.addpriority += i
-	} else {
-		m.addpriority = &i
-	}
-}
-
-// AddedPriority returns the value that was added to the "priority" field in this mutation.
-func (m *RecordTaskMutation) AddedPriority() (r int, exists bool) {
-	v := m.addpriority
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// ResetPriority resets all changes to the "priority" field.
-func (m *RecordTaskMutation) ResetPriority() {
-	m.priority = nil
-	m.addpriority = nil
-}
-
-// SetFileSize sets the "file_size" field.
-func (m *RecordTaskMutation) SetFileSize(i int64) {
-	m.file_size = &i
-	m.addfile_size = nil
-}
-
-// FileSize returns the value of the "file_size" field in the mutation.
-func (m *RecordTaskMutation) FileSize() (r int64, exists bool) {
-	v := m.file_size
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldFileSize returns the old "file_size" field's value of the RecordTask entity.
-// If the RecordTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *RecordTaskMutation) OldFileSize(ctx context.Context) (v *int64, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldFileSize is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldFileSize requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldFileSize: %w", err)
-	}
-	return oldValue.FileSize, nil
-}
-
-// AddFileSize adds i to the "file_size" field.
-func (m *RecordTaskMutation) AddFileSize(i int64) {
-	if m.addfile_size != nil {
-		*m.addfile_size += i
-	} else {
-		m.addfile_size = &i
-	}
-}
-
-// AddedFileSize returns the value that was added to the "file_size" field in this mutation.
-func (m *RecordTaskMutation) AddedFileSize() (r int64, exists bool) {
-	v := m.addfile_size
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// ClearFileSize clears the value of the "file_size" field.
-func (m *RecordTaskMutation) ClearFileSize() {
-	m.file_size = nil
-	m.addfile_size = nil
-	m.clearedFields[recordtask.FieldFileSize] = struct{}{}
-}
-
-// FileSizeCleared returns if the "file_size" field was cleared in this mutation.
-func (m *RecordTaskMutation) FileSizeCleared() bool {
-	_, ok := m.clearedFields[recordtask.FieldFileSize]
-	return ok
-}
-
-// ResetFileSize resets all changes to the "file_size" field.
-func (m *RecordTaskMutation) ResetFileSize() {
-	m.file_size = nil
-	m.addfile_size = nil
-	delete(m.clearedFields, recordtask.FieldFileSize)
-}
-
-// SetChecksum sets the "checksum" field.
-func (m *RecordTaskMutation) SetChecksum(s string) {
-	m.checksum = &s
-}
-
-// Checksum returns the value of the "checksum" field in the mutation.
-func (m *RecordTaskMutation) Checksum() (r string, exists bool) {
-	v := m.checksum
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldChecksum returns the old "checksum" field's value of the RecordTask entity.
-// If the RecordTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *RecordTaskMutation) OldChecksum(ctx context.Context) (v *string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldChecksum is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldChecksum requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldChecksum: %w", err)
-	}
-	return oldValue.Checksum, nil
-}
-
-// ClearChecksum clears the value of the "checksum" field.
-func (m *RecordTaskMutation) ClearChecksum() {
-	m.checksum = nil
-	m.clearedFields[recordtask.FieldChecksum] = struct{}{}
-}
-
-// ChecksumCleared returns if the "checksum" field was cleared in this mutation.
-func (m *RecordTaskMutation) ChecksumCleared() bool {
-	_, ok := m.clearedFields[recordtask.FieldChecksum]
-	return ok
-}
-
-// ResetChecksum resets all changes to the "checksum" field.
-func (m *RecordTaskMutation) ResetChecksum() {
-	m.checksum = nil
-	delete(m.clearedFields, recordtask.FieldChecksum)
-}
-
-// SetErrorMessage sets the "error_message" field.
-func (m *RecordTaskMutation) SetErrorMessage(s string) {
-	m.error_message = &s
-}
-
-// ErrorMessage returns the value of the "error_message" field in the mutation.
-func (m *RecordTaskMutation) ErrorMessage() (r string, exists bool) {
-	v := m.error_message
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldErrorMessage returns the old "error_message" field's value of the RecordTask entity.
-// If the RecordTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *RecordTaskMutation) OldErrorMessage(ctx context.Context) (v *string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldErrorMessage is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldErrorMessage requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldErrorMessage: %w", err)
-	}
-	return oldValue.ErrorMessage, nil
-}
-
-// ClearErrorMessage clears the value of the "error_message" field.
-func (m *RecordTaskMutation) ClearErrorMessage() {
-	m.error_message = nil
-	m.clearedFields[recordtask.FieldErrorMessage] = struct{}{}
-}
-
-// ErrorMessageCleared returns if the "error_message" field was cleared in this mutation.
-func (m *RecordTaskMutation) ErrorMessageCleared() bool {
-	_, ok := m.clearedFields[recordtask.FieldErrorMessage]
-	return ok
-}
-
-// ResetErrorMessage resets all changes to the "error_message" field.
-func (m *RecordTaskMutation) ResetErrorMessage() {
-	m.error_message = nil
-	delete(m.clearedFields, recordtask.FieldErrorMessage)
-}
-
-// SetStartedAt sets the "started_at" field.
-func (m *RecordTaskMutation) SetStartedAt(t time.Time) {
-	m.started_at = &t
-}
-
-// StartedAt returns the value of the "started_at" field in the mutation.
-func (m *RecordTaskMutation) StartedAt() (r time.Time, exists bool) {
-	v := m.started_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldStartedAt returns the old "started_at" field's value of the RecordTask entity.
-// If the RecordTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *RecordTaskMutation) OldStartedAt(ctx context.Context) (v *time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldStartedAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldStartedAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldStartedAt: %w", err)
-	}
-	return oldValue.StartedAt, nil
-}
-
-// ClearStartedAt clears the value of the "started_at" field.
-func (m *RecordTaskMutation) ClearStartedAt() {
-	m.started_at = nil
-	m.clearedFields[recordtask.FieldStartedAt] = struct{}{}
-}
-
-// StartedAtCleared returns if the "started_at" field was cleared in this mutation.
-func (m *RecordTaskMutation) StartedAtCleared() bool {
-	_, ok := m.clearedFields[recordtask.FieldStartedAt]
-	return ok
-}
-
-// ResetStartedAt resets all changes to the "started_at" field.
-func (m *RecordTaskMutation) ResetStartedAt() {
-	m.started_at = nil
-	delete(m.clearedFields, recordtask.FieldStartedAt)
-}
-
-// SetCompletedAt sets the "completed_at" field.
-func (m *RecordTaskMutation) SetCompletedAt(t time.Time) {
-	m.completed_at = &t
-}
-
-// CompletedAt returns the value of the "completed_at" field in the mutation.
-func (m *RecordTaskMutation) CompletedAt() (r time.Time, exists bool) {
-	v := m.completed_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldCompletedAt returns the old "completed_at" field's value of the RecordTask entity.
-// If the RecordTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *RecordTaskMutation) OldCompletedAt(ctx context.Context) (v *time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldCompletedAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldCompletedAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldCompletedAt: %w", err)
-	}
-	return oldValue.CompletedAt, nil
-}
-
-// ClearCompletedAt clears the value of the "completed_at" field.
-func (m *RecordTaskMutation) ClearCompletedAt() {
-	m.completed_at = nil
-	m.clearedFields[recordtask.FieldCompletedAt] = struct{}{}
-}
-
-// CompletedAtCleared returns if the "completed_at" field was cleared in this mutation.
-func (m *RecordTaskMutation) CompletedAtCleared() bool {
-	_, ok := m.clearedFields[recordtask.FieldCompletedAt]
-	return ok
-}
-
-// ResetCompletedAt resets all changes to the "completed_at" field.
-func (m *RecordTaskMutation) ResetCompletedAt() {
-	m.completed_at = nil
-	delete(m.clearedFields, recordtask.FieldCompletedAt)
-}
-
-// SetCreatedAt sets the "created_at" field.
-func (m *RecordTaskMutation) SetCreatedAt(t time.Time) {
-	m.created_at = &t
-}
-
-// CreatedAt returns the value of the "created_at" field in the mutation.
-func (m *RecordTaskMutation) CreatedAt() (r time.Time, exists bool) {
-	v := m.created_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldCreatedAt returns the old "created_at" field's value of the RecordTask entity.
-// If the RecordTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *RecordTaskMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
-	}
-	return oldValue.CreatedAt, nil
-}
-
-// ResetCreatedAt resets all changes to the "created_at" field.
-func (m *RecordTaskMutation) ResetCreatedAt() {
-	m.created_at = nil
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (m *RecordTaskMutation) SetUpdatedAt(t time.Time) {
-	m.updated_at = &t
-}
-
-// UpdatedAt returns the value of the "updated_at" field in the mutation.
-func (m *RecordTaskMutation) UpdatedAt() (r time.Time, exists bool) {
-	v := m.updated_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldUpdatedAt returns the old "updated_at" field's value of the RecordTask entity.
-// If the RecordTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *RecordTaskMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
-	}
-	return oldValue.UpdatedAt, nil
-}
-
-// ResetUpdatedAt resets all changes to the "updated_at" field.
-func (m *RecordTaskMutation) ResetUpdatedAt() {
-	m.updated_at = nil
-}
-
-// SetMatchRoundID sets the "match_round" edge to the MatchRound entity by id.
-func (m *RecordTaskMutation) SetMatchRoundID(id int) {
-	m.match_round = &id
-}
-
-// ClearMatchRound clears the "match_round" edge to the MatchRound entity.
-func (m *RecordTaskMutation) ClearMatchRound() {
-	m.clearedmatch_round = true
-}
-
-// MatchRoundCleared reports if the "match_round" edge to the MatchRound entity was cleared.
-func (m *RecordTaskMutation) MatchRoundCleared() bool {
-	return m.clearedmatch_round
-}
-
-// MatchRoundID returns the "match_round" edge ID in the mutation.
-func (m *RecordTaskMutation) MatchRoundID() (id int, exists bool) {
-	if m.match_round != nil {
-		return *m.match_round, true
-	}
-	return
-}
-
-// MatchRoundIDs returns the "match_round" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// MatchRoundID instead. It exists only for internal usage by the builders.
-func (m *RecordTaskMutation) MatchRoundIDs() (ids []int) {
-	if id := m.match_round; id != nil {
-		ids = append(ids, *id)
-	}
-	return
-}
-
-// ResetMatchRound resets all changes to the "match_round" edge.
-func (m *RecordTaskMutation) ResetMatchRound() {
-	m.match_round = nil
-	m.clearedmatch_round = false
-}
-
-// SetUploadTaskID sets the "upload_task" edge to the UploadTask entity by id.
-func (m *RecordTaskMutation) SetUploadTaskID(id int) {
-	m.upload_task = &id
-}
-
-// ClearUploadTask clears the "upload_task" edge to the UploadTask entity.
-func (m *RecordTaskMutation) ClearUploadTask() {
-	m.clearedupload_task = true
-}
-
-// UploadTaskCleared reports if the "upload_task" edge to the UploadTask entity was cleared.
-func (m *RecordTaskMutation) UploadTaskCleared() bool {
-	return m.clearedupload_task
-}
-
-// UploadTaskID returns the "upload_task" edge ID in the mutation.
-func (m *RecordTaskMutation) UploadTaskID() (id int, exists bool) {
-	if m.upload_task != nil {
-		return *m.upload_task, true
-	}
-	return
-}
-
-// UploadTaskIDs returns the "upload_task" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// UploadTaskID instead. It exists only for internal usage by the builders.
-func (m *RecordTaskMutation) UploadTaskIDs() (ids []int) {
-	if id := m.upload_task; id != nil {
-		ids = append(ids, *id)
-	}
-	return
-}
-
-// ResetUploadTask resets all changes to the "upload_task" edge.
-func (m *RecordTaskMutation) ResetUploadTask() {
-	m.upload_task = nil
-	m.clearedupload_task = false
-}
-
-// AddMediaArtifactIDs adds the "media_artifacts" edge to the MediaArtifact entity by ids.
-func (m *RecordTaskMutation) AddMediaArtifactIDs(ids ...int) {
-	if m.media_artifacts == nil {
-		m.media_artifacts = make(map[int]struct{})
-	}
-	for i := range ids {
-		m.media_artifacts[ids[i]] = struct{}{}
-	}
-}
-
-// ClearMediaArtifacts clears the "media_artifacts" edge to the MediaArtifact entity.
-func (m *RecordTaskMutation) ClearMediaArtifacts() {
-	m.clearedmedia_artifacts = true
-}
-
-// MediaArtifactsCleared reports if the "media_artifacts" edge to the MediaArtifact entity was cleared.
-func (m *RecordTaskMutation) MediaArtifactsCleared() bool {
-	return m.clearedmedia_artifacts
-}
-
-// RemoveMediaArtifactIDs removes the "media_artifacts" edge to the MediaArtifact entity by IDs.
-func (m *RecordTaskMutation) RemoveMediaArtifactIDs(ids ...int) {
-	if m.removedmedia_artifacts == nil {
-		m.removedmedia_artifacts = make(map[int]struct{})
-	}
-	for i := range ids {
-		delete(m.media_artifacts, ids[i])
-		m.removedmedia_artifacts[ids[i]] = struct{}{}
-	}
-}
-
-// RemovedMediaArtifacts returns the removed IDs of the "media_artifacts" edge to the MediaArtifact entity.
-func (m *RecordTaskMutation) RemovedMediaArtifactsIDs() (ids []int) {
-	for id := range m.removedmedia_artifacts {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// MediaArtifactsIDs returns the "media_artifacts" edge IDs in the mutation.
-func (m *RecordTaskMutation) MediaArtifactsIDs() (ids []int) {
-	for id := range m.media_artifacts {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// ResetMediaArtifacts resets all changes to the "media_artifacts" edge.
-func (m *RecordTaskMutation) ResetMediaArtifacts() {
-	m.media_artifacts = nil
-	m.clearedmedia_artifacts = false
-	m.removedmedia_artifacts = nil
-}
-
-// Where appends a list predicates to the RecordTaskMutation builder.
-func (m *RecordTaskMutation) Where(ps ...predicate.RecordTask) {
-	m.predicates = append(m.predicates, ps...)
-}
-
-// WhereP appends storage-level predicates to the RecordTaskMutation builder. Using this method,
-// users can use type-assertion to append predicates that do not depend on any generated package.
-func (m *RecordTaskMutation) WhereP(ps ...func(*sql.Selector)) {
-	p := make([]predicate.RecordTask, len(ps))
-	for i := range ps {
-		p[i] = ps[i]
-	}
-	m.Where(p...)
-}
-
-// Op returns the operation name.
-func (m *RecordTaskMutation) Op() Op {
-	return m.op
-}
-
-// SetOp allows setting the mutation operation.
-func (m *RecordTaskMutation) SetOp(op Op) {
-	m.op = op
-}
-
-// Type returns the node type of this mutation (RecordTask).
-func (m *RecordTaskMutation) Type() string {
-	return m.typ
-}
-
-// Fields returns all fields that were changed during this mutation. Note that in
-// order to get all numeric fields that were incremented/decremented, call
-// AddedFields().
-func (m *RecordTaskMutation) Fields() []string {
-	fields := make([]string, 0, 14)
-	if m.role != nil {
-		fields = append(fields, recordtask.FieldRole)
-	}
-	if m.source_url != nil {
-		fields = append(fields, recordtask.FieldSourceURL)
-	}
-	if m.output_path != nil {
-		fields = append(fields, recordtask.FieldOutputPath)
-	}
-	if m.status != nil {
-		fields = append(fields, recordtask.FieldStatus)
-	}
-	if m.k8s_job_name != nil {
-		fields = append(fields, recordtask.FieldK8sJobName)
-	}
-	if m.attempts != nil {
-		fields = append(fields, recordtask.FieldAttempts)
-	}
-	if m.priority != nil {
-		fields = append(fields, recordtask.FieldPriority)
-	}
-	if m.file_size != nil {
-		fields = append(fields, recordtask.FieldFileSize)
-	}
-	if m.checksum != nil {
-		fields = append(fields, recordtask.FieldChecksum)
-	}
-	if m.error_message != nil {
-		fields = append(fields, recordtask.FieldErrorMessage)
-	}
-	if m.started_at != nil {
-		fields = append(fields, recordtask.FieldStartedAt)
-	}
-	if m.completed_at != nil {
-		fields = append(fields, recordtask.FieldCompletedAt)
-	}
-	if m.created_at != nil {
-		fields = append(fields, recordtask.FieldCreatedAt)
-	}
-	if m.updated_at != nil {
-		fields = append(fields, recordtask.FieldUpdatedAt)
-	}
-	return fields
-}
-
-// Field returns the value of a field with the given name. The second boolean
-// return value indicates that this field was not set, or was not defined in the
-// schema.
-func (m *RecordTaskMutation) Field(name string) (ent.Value, bool) {
-	switch name {
-	case recordtask.FieldRole:
-		return m.Role()
-	case recordtask.FieldSourceURL:
-		return m.SourceURL()
-	case recordtask.FieldOutputPath:
-		return m.OutputPath()
-	case recordtask.FieldStatus:
-		return m.Status()
-	case recordtask.FieldK8sJobName:
-		return m.K8sJobName()
-	case recordtask.FieldAttempts:
-		return m.Attempts()
-	case recordtask.FieldPriority:
-		return m.Priority()
-	case recordtask.FieldFileSize:
-		return m.FileSize()
-	case recordtask.FieldChecksum:
-		return m.Checksum()
-	case recordtask.FieldErrorMessage:
-		return m.ErrorMessage()
-	case recordtask.FieldStartedAt:
-		return m.StartedAt()
-	case recordtask.FieldCompletedAt:
-		return m.CompletedAt()
-	case recordtask.FieldCreatedAt:
-		return m.CreatedAt()
-	case recordtask.FieldUpdatedAt:
-		return m.UpdatedAt()
-	}
-	return nil, false
-}
-
-// OldField returns the old value of the field from the database. An error is
-// returned if the mutation operation is not UpdateOne, or the query to the
-// database failed.
-func (m *RecordTaskMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
-	switch name {
-	case recordtask.FieldRole:
-		return m.OldRole(ctx)
-	case recordtask.FieldSourceURL:
-		return m.OldSourceURL(ctx)
-	case recordtask.FieldOutputPath:
-		return m.OldOutputPath(ctx)
-	case recordtask.FieldStatus:
-		return m.OldStatus(ctx)
-	case recordtask.FieldK8sJobName:
-		return m.OldK8sJobName(ctx)
-	case recordtask.FieldAttempts:
-		return m.OldAttempts(ctx)
-	case recordtask.FieldPriority:
-		return m.OldPriority(ctx)
-	case recordtask.FieldFileSize:
-		return m.OldFileSize(ctx)
-	case recordtask.FieldChecksum:
-		return m.OldChecksum(ctx)
-	case recordtask.FieldErrorMessage:
-		return m.OldErrorMessage(ctx)
-	case recordtask.FieldStartedAt:
-		return m.OldStartedAt(ctx)
-	case recordtask.FieldCompletedAt:
-		return m.OldCompletedAt(ctx)
-	case recordtask.FieldCreatedAt:
-		return m.OldCreatedAt(ctx)
-	case recordtask.FieldUpdatedAt:
-		return m.OldUpdatedAt(ctx)
-	}
-	return nil, fmt.Errorf("unknown RecordTask field %s", name)
-}
-
-// SetField sets the value of a field with the given name. It returns an error if
-// the field is not defined in the schema, or if the type mismatched the field
-// type.
-func (m *RecordTaskMutation) SetField(name string, value ent.Value) error {
-	switch name {
-	case recordtask.FieldRole:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetRole(v)
-		return nil
-	case recordtask.FieldSourceURL:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetSourceURL(v)
-		return nil
-	case recordtask.FieldOutputPath:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetOutputPath(v)
-		return nil
-	case recordtask.FieldStatus:
-		v, ok := value.(recordtask.Status)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetStatus(v)
-		return nil
-	case recordtask.FieldK8sJobName:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetK8sJobName(v)
-		return nil
-	case recordtask.FieldAttempts:
-		v, ok := value.(int)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetAttempts(v)
-		return nil
-	case recordtask.FieldPriority:
-		v, ok := value.(int)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetPriority(v)
-		return nil
-	case recordtask.FieldFileSize:
-		v, ok := value.(int64)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetFileSize(v)
-		return nil
-	case recordtask.FieldChecksum:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetChecksum(v)
-		return nil
-	case recordtask.FieldErrorMessage:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetErrorMessage(v)
-		return nil
-	case recordtask.FieldStartedAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetStartedAt(v)
-		return nil
-	case recordtask.FieldCompletedAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetCompletedAt(v)
-		return nil
-	case recordtask.FieldCreatedAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetCreatedAt(v)
-		return nil
-	case recordtask.FieldUpdatedAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetUpdatedAt(v)
-		return nil
-	}
-	return fmt.Errorf("unknown RecordTask field %s", name)
-}
-
-// AddedFields returns all numeric fields that were incremented/decremented during
-// this mutation.
-func (m *RecordTaskMutation) AddedFields() []string {
-	var fields []string
-	if m.addattempts != nil {
-		fields = append(fields, recordtask.FieldAttempts)
-	}
-	if m.addpriority != nil {
-		fields = append(fields, recordtask.FieldPriority)
-	}
-	if m.addfile_size != nil {
-		fields = append(fields, recordtask.FieldFileSize)
-	}
-	return fields
-}
-
-// AddedField returns the numeric value that was incremented/decremented on a field
-// with the given name. The second boolean return value indicates that this field
-// was not set, or was not defined in the schema.
-func (m *RecordTaskMutation) AddedField(name string) (ent.Value, bool) {
-	switch name {
-	case recordtask.FieldAttempts:
-		return m.AddedAttempts()
-	case recordtask.FieldPriority:
-		return m.AddedPriority()
-	case recordtask.FieldFileSize:
-		return m.AddedFileSize()
-	}
-	return nil, false
-}
-
-// AddField adds the value to the field with the given name. It returns an error if
-// the field is not defined in the schema, or if the type mismatched the field
-// type.
-func (m *RecordTaskMutation) AddField(name string, value ent.Value) error {
-	switch name {
-	case recordtask.FieldAttempts:
-		v, ok := value.(int)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddAttempts(v)
-		return nil
-	case recordtask.FieldPriority:
-		v, ok := value.(int)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddPriority(v)
-		return nil
-	case recordtask.FieldFileSize:
-		v, ok := value.(int64)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddFileSize(v)
-		return nil
-	}
-	return fmt.Errorf("unknown RecordTask numeric field %s", name)
-}
-
-// ClearedFields returns all nullable fields that were cleared during this
-// mutation.
-func (m *RecordTaskMutation) ClearedFields() []string {
-	var fields []string
-	if m.FieldCleared(recordtask.FieldK8sJobName) {
-		fields = append(fields, recordtask.FieldK8sJobName)
-	}
-	if m.FieldCleared(recordtask.FieldFileSize) {
-		fields = append(fields, recordtask.FieldFileSize)
-	}
-	if m.FieldCleared(recordtask.FieldChecksum) {
-		fields = append(fields, recordtask.FieldChecksum)
-	}
-	if m.FieldCleared(recordtask.FieldErrorMessage) {
-		fields = append(fields, recordtask.FieldErrorMessage)
-	}
-	if m.FieldCleared(recordtask.FieldStartedAt) {
-		fields = append(fields, recordtask.FieldStartedAt)
-	}
-	if m.FieldCleared(recordtask.FieldCompletedAt) {
-		fields = append(fields, recordtask.FieldCompletedAt)
-	}
-	return fields
-}
-
-// FieldCleared returns a boolean indicating if a field with the given name was
-// cleared in this mutation.
-func (m *RecordTaskMutation) FieldCleared(name string) bool {
-	_, ok := m.clearedFields[name]
-	return ok
-}
-
-// ClearField clears the value of the field with the given name. It returns an
-// error if the field is not defined in the schema.
-func (m *RecordTaskMutation) ClearField(name string) error {
-	switch name {
-	case recordtask.FieldK8sJobName:
-		m.ClearK8sJobName()
-		return nil
-	case recordtask.FieldFileSize:
-		m.ClearFileSize()
-		return nil
-	case recordtask.FieldChecksum:
-		m.ClearChecksum()
-		return nil
-	case recordtask.FieldErrorMessage:
-		m.ClearErrorMessage()
-		return nil
-	case recordtask.FieldStartedAt:
-		m.ClearStartedAt()
-		return nil
-	case recordtask.FieldCompletedAt:
-		m.ClearCompletedAt()
-		return nil
-	}
-	return fmt.Errorf("unknown RecordTask nullable field %s", name)
-}
-
-// ResetField resets all changes in the mutation for the field with the given name.
-// It returns an error if the field is not defined in the schema.
-func (m *RecordTaskMutation) ResetField(name string) error {
-	switch name {
-	case recordtask.FieldRole:
-		m.ResetRole()
-		return nil
-	case recordtask.FieldSourceURL:
-		m.ResetSourceURL()
-		return nil
-	case recordtask.FieldOutputPath:
-		m.ResetOutputPath()
-		return nil
-	case recordtask.FieldStatus:
-		m.ResetStatus()
-		return nil
-	case recordtask.FieldK8sJobName:
-		m.ResetK8sJobName()
-		return nil
-	case recordtask.FieldAttempts:
-		m.ResetAttempts()
-		return nil
-	case recordtask.FieldPriority:
-		m.ResetPriority()
-		return nil
-	case recordtask.FieldFileSize:
-		m.ResetFileSize()
-		return nil
-	case recordtask.FieldChecksum:
-		m.ResetChecksum()
-		return nil
-	case recordtask.FieldErrorMessage:
-		m.ResetErrorMessage()
-		return nil
-	case recordtask.FieldStartedAt:
-		m.ResetStartedAt()
-		return nil
-	case recordtask.FieldCompletedAt:
-		m.ResetCompletedAt()
-		return nil
-	case recordtask.FieldCreatedAt:
-		m.ResetCreatedAt()
-		return nil
-	case recordtask.FieldUpdatedAt:
-		m.ResetUpdatedAt()
-		return nil
-	}
-	return fmt.Errorf("unknown RecordTask field %s", name)
-}
-
-// AddedEdges returns all edge names that were set/added in this mutation.
-func (m *RecordTaskMutation) AddedEdges() []string {
-	edges := make([]string, 0, 3)
-	if m.match_round != nil {
-		edges = append(edges, recordtask.EdgeMatchRound)
-	}
-	if m.upload_task != nil {
-		edges = append(edges, recordtask.EdgeUploadTask)
-	}
-	if m.media_artifacts != nil {
-		edges = append(edges, recordtask.EdgeMediaArtifacts)
-	}
-	return edges
-}
-
-// AddedIDs returns all IDs (to other nodes) that were added for the given edge
-// name in this mutation.
-func (m *RecordTaskMutation) AddedIDs(name string) []ent.Value {
-	switch name {
-	case recordtask.EdgeMatchRound:
-		if id := m.match_round; id != nil {
-			return []ent.Value{*id}
-		}
-	case recordtask.EdgeUploadTask:
-		if id := m.upload_task; id != nil {
-			return []ent.Value{*id}
-		}
-	case recordtask.EdgeMediaArtifacts:
-		ids := make([]ent.Value, 0, len(m.media_artifacts))
-		for id := range m.media_artifacts {
-			ids = append(ids, id)
-		}
-		return ids
-	}
-	return nil
-}
-
-// RemovedEdges returns all edge names that were removed in this mutation.
-func (m *RecordTaskMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 3)
-	if m.removedmedia_artifacts != nil {
-		edges = append(edges, recordtask.EdgeMediaArtifacts)
-	}
-	return edges
-}
-
-// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
-// the given name in this mutation.
-func (m *RecordTaskMutation) RemovedIDs(name string) []ent.Value {
-	switch name {
-	case recordtask.EdgeMediaArtifacts:
-		ids := make([]ent.Value, 0, len(m.removedmedia_artifacts))
-		for id := range m.removedmedia_artifacts {
-			ids = append(ids, id)
-		}
-		return ids
-	}
-	return nil
-}
-
-// ClearedEdges returns all edge names that were cleared in this mutation.
-func (m *RecordTaskMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 3)
-	if m.clearedmatch_round {
-		edges = append(edges, recordtask.EdgeMatchRound)
-	}
-	if m.clearedupload_task {
-		edges = append(edges, recordtask.EdgeUploadTask)
-	}
-	if m.clearedmedia_artifacts {
-		edges = append(edges, recordtask.EdgeMediaArtifacts)
-	}
-	return edges
-}
-
-// EdgeCleared returns a boolean which indicates if the edge with the given name
-// was cleared in this mutation.
-func (m *RecordTaskMutation) EdgeCleared(name string) bool {
-	switch name {
-	case recordtask.EdgeMatchRound:
-		return m.clearedmatch_round
-	case recordtask.EdgeUploadTask:
-		return m.clearedupload_task
-	case recordtask.EdgeMediaArtifacts:
-		return m.clearedmedia_artifacts
-	}
-	return false
-}
-
-// ClearEdge clears the value of the edge with the given name. It returns an error
-// if that edge is not defined in the schema.
-func (m *RecordTaskMutation) ClearEdge(name string) error {
-	switch name {
-	case recordtask.EdgeMatchRound:
-		m.ClearMatchRound()
-		return nil
-	case recordtask.EdgeUploadTask:
-		m.ClearUploadTask()
-		return nil
-	}
-	return fmt.Errorf("unknown RecordTask unique edge %s", name)
-}
-
-// ResetEdge resets all changes to the edge with the given name in this mutation.
-// It returns an error if the edge is not defined in the schema.
-func (m *RecordTaskMutation) ResetEdge(name string) error {
-	switch name {
-	case recordtask.EdgeMatchRound:
-		m.ResetMatchRound()
-		return nil
-	case recordtask.EdgeUploadTask:
-		m.ResetUploadTask()
-		return nil
-	case recordtask.EdgeMediaArtifacts:
-		m.ResetMediaArtifacts()
-		return nil
-	}
-	return fmt.Errorf("unknown RecordTask edge %s", name)
-}
-
-// STTTaskMutation represents an operation that mutates the STTTask nodes in the graph.
-type STTTaskMutation struct {
-	config
-	op                     Op
-	typ                    string
-	id                     *int
-	role                   *string
-	status                 *stttask.Status
-	priority               *int
-	addpriority            *int
-	k8s_job_name           *string
-	attempts               *int
-	addattempts            *int
-	stt_path               *string
-	subtitle_path          *string
-	error_message          *string
-	started_at             *time.Time
-	completed_at           *time.Time
-	created_at             *time.Time
-	updated_at             *time.Time
-	clearedFields          map[string]struct{}
-	match_round            *int
-	clearedmatch_round     bool
-	source_artifact        *int
-	clearedsource_artifact bool
-	done                   bool
-	oldValue               func(context.Context) (*STTTask, error)
-	predicates             []predicate.STTTask
-}
-
-var _ ent.Mutation = (*STTTaskMutation)(nil)
-
-// stttaskOption allows management of the mutation configuration using functional options.
-type stttaskOption func(*STTTaskMutation)
-
-// newSTTTaskMutation creates new mutation for the STTTask entity.
-func newSTTTaskMutation(c config, op Op, opts ...stttaskOption) *STTTaskMutation {
-	m := &STTTaskMutation{
-		config:        c,
-		op:            op,
-		typ:           TypeSTTTask,
-		clearedFields: make(map[string]struct{}),
-	}
-	for _, opt := range opts {
-		opt(m)
-	}
-	return m
-}
-
-// withSTTTaskID sets the ID field of the mutation.
-func withSTTTaskID(id int) stttaskOption {
-	return func(m *STTTaskMutation) {
-		var (
-			err   error
-			once  sync.Once
-			value *STTTask
-		)
-		m.oldValue = func(ctx context.Context) (*STTTask, error) {
-			once.Do(func() {
-				if m.done {
-					err = errors.New("querying old values post mutation is not allowed")
-				} else {
-					value, err = m.Client().STTTask.Get(ctx, id)
-				}
-			})
-			return value, err
-		}
-		m.id = &id
-	}
-}
-
-// withSTTTask sets the old STTTask of the mutation.
-func withSTTTask(node *STTTask) stttaskOption {
-	return func(m *STTTaskMutation) {
-		m.oldValue = func(context.Context) (*STTTask, error) {
-			return node, nil
-		}
-		m.id = &node.ID
-	}
-}
-
-// Client returns a new `ent.Client` from the mutation. If the mutation was
-// executed in a transaction (ent.Tx), a transactional client is returned.
-func (m STTTaskMutation) Client() *Client {
-	client := &Client{config: m.config}
-	client.init()
-	return client
-}
-
-// Tx returns an `ent.Tx` for mutations that were executed in transactions;
-// it returns an error otherwise.
-func (m STTTaskMutation) Tx() (*Tx, error) {
-	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, errors.New("ent: mutation is not running in a transaction")
-	}
-	tx := &Tx{config: m.config}
-	tx.init()
-	return tx, nil
-}
-
-// ID returns the ID value in the mutation. Note that the ID is only available
-// if it was provided to the builder or after it was returned from the database.
-func (m *STTTaskMutation) ID() (id int, exists bool) {
-	if m.id == nil {
-		return
-	}
-	return *m.id, true
-}
-
-// IDs queries the database and returns the entity ids that match the mutation's predicate.
-// That means, if the mutation is applied within a transaction with an isolation level such
-// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
-// or updated by the mutation.
-func (m *STTTaskMutation) IDs(ctx context.Context) ([]int, error) {
-	switch {
-	case m.op.Is(OpUpdateOne | OpDeleteOne):
-		id, exists := m.ID()
-		if exists {
-			return []int{id}, nil
-		}
-		fallthrough
-	case m.op.Is(OpUpdate | OpDelete):
-		return m.Client().STTTask.Query().Where(m.predicates...).IDs(ctx)
-	default:
-		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
-	}
-}
-
-// SetRole sets the "role" field.
-func (m *STTTaskMutation) SetRole(s string) {
-	m.role = &s
-}
-
-// Role returns the value of the "role" field in the mutation.
-func (m *STTTaskMutation) Role() (r string, exists bool) {
-	v := m.role
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldRole returns the old "role" field's value of the STTTask entity.
-// If the STTTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *STTTaskMutation) OldRole(ctx context.Context) (v string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldRole is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldRole requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldRole: %w", err)
-	}
-	return oldValue.Role, nil
-}
-
-// ResetRole resets all changes to the "role" field.
-func (m *STTTaskMutation) ResetRole() {
-	m.role = nil
-}
-
-// SetStatus sets the "status" field.
-func (m *STTTaskMutation) SetStatus(s stttask.Status) {
-	m.status = &s
-}
-
-// Status returns the value of the "status" field in the mutation.
-func (m *STTTaskMutation) Status() (r stttask.Status, exists bool) {
-	v := m.status
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldStatus returns the old "status" field's value of the STTTask entity.
-// If the STTTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *STTTaskMutation) OldStatus(ctx context.Context) (v stttask.Status, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldStatus requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldStatus: %w", err)
-	}
-	return oldValue.Status, nil
-}
-
-// ResetStatus resets all changes to the "status" field.
-func (m *STTTaskMutation) ResetStatus() {
-	m.status = nil
-}
-
-// SetPriority sets the "priority" field.
-func (m *STTTaskMutation) SetPriority(i int) {
-	m.priority = &i
-	m.addpriority = nil
-}
-
-// Priority returns the value of the "priority" field in the mutation.
-func (m *STTTaskMutation) Priority() (r int, exists bool) {
-	v := m.priority
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldPriority returns the old "priority" field's value of the STTTask entity.
-// If the STTTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *STTTaskMutation) OldPriority(ctx context.Context) (v int, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldPriority is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldPriority requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldPriority: %w", err)
-	}
-	return oldValue.Priority, nil
-}
-
-// AddPriority adds i to the "priority" field.
-func (m *STTTaskMutation) AddPriority(i int) {
-	if m.addpriority != nil {
-		*m.addpriority += i
-	} else {
-		m.addpriority = &i
-	}
-}
-
-// AddedPriority returns the value that was added to the "priority" field in this mutation.
-func (m *STTTaskMutation) AddedPriority() (r int, exists bool) {
-	v := m.addpriority
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// ResetPriority resets all changes to the "priority" field.
-func (m *STTTaskMutation) ResetPriority() {
-	m.priority = nil
-	m.addpriority = nil
-}
-
-// SetK8sJobName sets the "k8s_job_name" field.
-func (m *STTTaskMutation) SetK8sJobName(s string) {
-	m.k8s_job_name = &s
-}
-
-// K8sJobName returns the value of the "k8s_job_name" field in the mutation.
-func (m *STTTaskMutation) K8sJobName() (r string, exists bool) {
-	v := m.k8s_job_name
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldK8sJobName returns the old "k8s_job_name" field's value of the STTTask entity.
-// If the STTTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *STTTaskMutation) OldK8sJobName(ctx context.Context) (v *string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldK8sJobName is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldK8sJobName requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldK8sJobName: %w", err)
-	}
-	return oldValue.K8sJobName, nil
-}
-
-// ClearK8sJobName clears the value of the "k8s_job_name" field.
-func (m *STTTaskMutation) ClearK8sJobName() {
-	m.k8s_job_name = nil
-	m.clearedFields[stttask.FieldK8sJobName] = struct{}{}
-}
-
-// K8sJobNameCleared returns if the "k8s_job_name" field was cleared in this mutation.
-func (m *STTTaskMutation) K8sJobNameCleared() bool {
-	_, ok := m.clearedFields[stttask.FieldK8sJobName]
-	return ok
-}
-
-// ResetK8sJobName resets all changes to the "k8s_job_name" field.
-func (m *STTTaskMutation) ResetK8sJobName() {
-	m.k8s_job_name = nil
-	delete(m.clearedFields, stttask.FieldK8sJobName)
-}
-
-// SetAttempts sets the "attempts" field.
-func (m *STTTaskMutation) SetAttempts(i int) {
-	m.attempts = &i
-	m.addattempts = nil
-}
-
-// Attempts returns the value of the "attempts" field in the mutation.
-func (m *STTTaskMutation) Attempts() (r int, exists bool) {
-	v := m.attempts
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldAttempts returns the old "attempts" field's value of the STTTask entity.
-// If the STTTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *STTTaskMutation) OldAttempts(ctx context.Context) (v int, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldAttempts is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldAttempts requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldAttempts: %w", err)
-	}
-	return oldValue.Attempts, nil
-}
-
-// AddAttempts adds i to the "attempts" field.
-func (m *STTTaskMutation) AddAttempts(i int) {
-	if m.addattempts != nil {
-		*m.addattempts += i
-	} else {
-		m.addattempts = &i
-	}
-}
-
-// AddedAttempts returns the value that was added to the "attempts" field in this mutation.
-func (m *STTTaskMutation) AddedAttempts() (r int, exists bool) {
-	v := m.addattempts
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// ResetAttempts resets all changes to the "attempts" field.
-func (m *STTTaskMutation) ResetAttempts() {
-	m.attempts = nil
-	m.addattempts = nil
-}
-
-// SetSttPath sets the "stt_path" field.
-func (m *STTTaskMutation) SetSttPath(s string) {
-	m.stt_path = &s
-}
-
-// SttPath returns the value of the "stt_path" field in the mutation.
-func (m *STTTaskMutation) SttPath() (r string, exists bool) {
-	v := m.stt_path
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldSttPath returns the old "stt_path" field's value of the STTTask entity.
-// If the STTTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *STTTaskMutation) OldSttPath(ctx context.Context) (v *string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldSttPath is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldSttPath requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldSttPath: %w", err)
-	}
-	return oldValue.SttPath, nil
-}
-
-// ClearSttPath clears the value of the "stt_path" field.
-func (m *STTTaskMutation) ClearSttPath() {
-	m.stt_path = nil
-	m.clearedFields[stttask.FieldSttPath] = struct{}{}
-}
-
-// SttPathCleared returns if the "stt_path" field was cleared in this mutation.
-func (m *STTTaskMutation) SttPathCleared() bool {
-	_, ok := m.clearedFields[stttask.FieldSttPath]
-	return ok
-}
-
-// ResetSttPath resets all changes to the "stt_path" field.
-func (m *STTTaskMutation) ResetSttPath() {
-	m.stt_path = nil
-	delete(m.clearedFields, stttask.FieldSttPath)
-}
-
-// SetSubtitlePath sets the "subtitle_path" field.
-func (m *STTTaskMutation) SetSubtitlePath(s string) {
-	m.subtitle_path = &s
-}
-
-// SubtitlePath returns the value of the "subtitle_path" field in the mutation.
-func (m *STTTaskMutation) SubtitlePath() (r string, exists bool) {
-	v := m.subtitle_path
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldSubtitlePath returns the old "subtitle_path" field's value of the STTTask entity.
-// If the STTTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *STTTaskMutation) OldSubtitlePath(ctx context.Context) (v *string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldSubtitlePath is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldSubtitlePath requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldSubtitlePath: %w", err)
-	}
-	return oldValue.SubtitlePath, nil
-}
-
-// ClearSubtitlePath clears the value of the "subtitle_path" field.
-func (m *STTTaskMutation) ClearSubtitlePath() {
-	m.subtitle_path = nil
-	m.clearedFields[stttask.FieldSubtitlePath] = struct{}{}
-}
-
-// SubtitlePathCleared returns if the "subtitle_path" field was cleared in this mutation.
-func (m *STTTaskMutation) SubtitlePathCleared() bool {
-	_, ok := m.clearedFields[stttask.FieldSubtitlePath]
-	return ok
-}
-
-// ResetSubtitlePath resets all changes to the "subtitle_path" field.
-func (m *STTTaskMutation) ResetSubtitlePath() {
-	m.subtitle_path = nil
-	delete(m.clearedFields, stttask.FieldSubtitlePath)
-}
-
-// SetErrorMessage sets the "error_message" field.
-func (m *STTTaskMutation) SetErrorMessage(s string) {
-	m.error_message = &s
-}
-
-// ErrorMessage returns the value of the "error_message" field in the mutation.
-func (m *STTTaskMutation) ErrorMessage() (r string, exists bool) {
-	v := m.error_message
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldErrorMessage returns the old "error_message" field's value of the STTTask entity.
-// If the STTTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *STTTaskMutation) OldErrorMessage(ctx context.Context) (v *string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldErrorMessage is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldErrorMessage requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldErrorMessage: %w", err)
-	}
-	return oldValue.ErrorMessage, nil
-}
-
-// ClearErrorMessage clears the value of the "error_message" field.
-func (m *STTTaskMutation) ClearErrorMessage() {
-	m.error_message = nil
-	m.clearedFields[stttask.FieldErrorMessage] = struct{}{}
-}
-
-// ErrorMessageCleared returns if the "error_message" field was cleared in this mutation.
-func (m *STTTaskMutation) ErrorMessageCleared() bool {
-	_, ok := m.clearedFields[stttask.FieldErrorMessage]
-	return ok
-}
-
-// ResetErrorMessage resets all changes to the "error_message" field.
-func (m *STTTaskMutation) ResetErrorMessage() {
-	m.error_message = nil
-	delete(m.clearedFields, stttask.FieldErrorMessage)
-}
-
-// SetStartedAt sets the "started_at" field.
-func (m *STTTaskMutation) SetStartedAt(t time.Time) {
-	m.started_at = &t
-}
-
-// StartedAt returns the value of the "started_at" field in the mutation.
-func (m *STTTaskMutation) StartedAt() (r time.Time, exists bool) {
-	v := m.started_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldStartedAt returns the old "started_at" field's value of the STTTask entity.
-// If the STTTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *STTTaskMutation) OldStartedAt(ctx context.Context) (v *time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldStartedAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldStartedAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldStartedAt: %w", err)
-	}
-	return oldValue.StartedAt, nil
-}
-
-// ClearStartedAt clears the value of the "started_at" field.
-func (m *STTTaskMutation) ClearStartedAt() {
-	m.started_at = nil
-	m.clearedFields[stttask.FieldStartedAt] = struct{}{}
-}
-
-// StartedAtCleared returns if the "started_at" field was cleared in this mutation.
-func (m *STTTaskMutation) StartedAtCleared() bool {
-	_, ok := m.clearedFields[stttask.FieldStartedAt]
-	return ok
-}
-
-// ResetStartedAt resets all changes to the "started_at" field.
-func (m *STTTaskMutation) ResetStartedAt() {
-	m.started_at = nil
-	delete(m.clearedFields, stttask.FieldStartedAt)
-}
-
-// SetCompletedAt sets the "completed_at" field.
-func (m *STTTaskMutation) SetCompletedAt(t time.Time) {
-	m.completed_at = &t
-}
-
-// CompletedAt returns the value of the "completed_at" field in the mutation.
-func (m *STTTaskMutation) CompletedAt() (r time.Time, exists bool) {
-	v := m.completed_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldCompletedAt returns the old "completed_at" field's value of the STTTask entity.
-// If the STTTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *STTTaskMutation) OldCompletedAt(ctx context.Context) (v *time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldCompletedAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldCompletedAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldCompletedAt: %w", err)
-	}
-	return oldValue.CompletedAt, nil
-}
-
-// ClearCompletedAt clears the value of the "completed_at" field.
-func (m *STTTaskMutation) ClearCompletedAt() {
-	m.completed_at = nil
-	m.clearedFields[stttask.FieldCompletedAt] = struct{}{}
-}
-
-// CompletedAtCleared returns if the "completed_at" field was cleared in this mutation.
-func (m *STTTaskMutation) CompletedAtCleared() bool {
-	_, ok := m.clearedFields[stttask.FieldCompletedAt]
-	return ok
-}
-
-// ResetCompletedAt resets all changes to the "completed_at" field.
-func (m *STTTaskMutation) ResetCompletedAt() {
-	m.completed_at = nil
-	delete(m.clearedFields, stttask.FieldCompletedAt)
-}
-
-// SetCreatedAt sets the "created_at" field.
-func (m *STTTaskMutation) SetCreatedAt(t time.Time) {
-	m.created_at = &t
-}
-
-// CreatedAt returns the value of the "created_at" field in the mutation.
-func (m *STTTaskMutation) CreatedAt() (r time.Time, exists bool) {
-	v := m.created_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldCreatedAt returns the old "created_at" field's value of the STTTask entity.
-// If the STTTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *STTTaskMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
-	}
-	return oldValue.CreatedAt, nil
-}
-
-// ResetCreatedAt resets all changes to the "created_at" field.
-func (m *STTTaskMutation) ResetCreatedAt() {
-	m.created_at = nil
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (m *STTTaskMutation) SetUpdatedAt(t time.Time) {
-	m.updated_at = &t
-}
-
-// UpdatedAt returns the value of the "updated_at" field in the mutation.
-func (m *STTTaskMutation) UpdatedAt() (r time.Time, exists bool) {
-	v := m.updated_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldUpdatedAt returns the old "updated_at" field's value of the STTTask entity.
-// If the STTTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *STTTaskMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
-	}
-	return oldValue.UpdatedAt, nil
-}
-
-// ResetUpdatedAt resets all changes to the "updated_at" field.
-func (m *STTTaskMutation) ResetUpdatedAt() {
-	m.updated_at = nil
-}
-
-// SetMatchRoundID sets the "match_round" edge to the MatchRound entity by id.
-func (m *STTTaskMutation) SetMatchRoundID(id int) {
-	m.match_round = &id
-}
-
-// ClearMatchRound clears the "match_round" edge to the MatchRound entity.
-func (m *STTTaskMutation) ClearMatchRound() {
-	m.clearedmatch_round = true
-}
-
-// MatchRoundCleared reports if the "match_round" edge to the MatchRound entity was cleared.
-func (m *STTTaskMutation) MatchRoundCleared() bool {
-	return m.clearedmatch_round
-}
-
-// MatchRoundID returns the "match_round" edge ID in the mutation.
-func (m *STTTaskMutation) MatchRoundID() (id int, exists bool) {
-	if m.match_round != nil {
-		return *m.match_round, true
-	}
-	return
-}
-
-// MatchRoundIDs returns the "match_round" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// MatchRoundID instead. It exists only for internal usage by the builders.
-func (m *STTTaskMutation) MatchRoundIDs() (ids []int) {
-	if id := m.match_round; id != nil {
-		ids = append(ids, *id)
-	}
-	return
-}
-
-// ResetMatchRound resets all changes to the "match_round" edge.
-func (m *STTTaskMutation) ResetMatchRound() {
-	m.match_round = nil
-	m.clearedmatch_round = false
-}
-
-// SetSourceArtifactID sets the "source_artifact" edge to the MediaArtifact entity by id.
-func (m *STTTaskMutation) SetSourceArtifactID(id int) {
-	m.source_artifact = &id
-}
-
-// ClearSourceArtifact clears the "source_artifact" edge to the MediaArtifact entity.
-func (m *STTTaskMutation) ClearSourceArtifact() {
-	m.clearedsource_artifact = true
-}
-
-// SourceArtifactCleared reports if the "source_artifact" edge to the MediaArtifact entity was cleared.
-func (m *STTTaskMutation) SourceArtifactCleared() bool {
-	return m.clearedsource_artifact
-}
-
-// SourceArtifactID returns the "source_artifact" edge ID in the mutation.
-func (m *STTTaskMutation) SourceArtifactID() (id int, exists bool) {
-	if m.source_artifact != nil {
-		return *m.source_artifact, true
-	}
-	return
-}
-
-// SourceArtifactIDs returns the "source_artifact" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// SourceArtifactID instead. It exists only for internal usage by the builders.
-func (m *STTTaskMutation) SourceArtifactIDs() (ids []int) {
-	if id := m.source_artifact; id != nil {
-		ids = append(ids, *id)
-	}
-	return
-}
-
-// ResetSourceArtifact resets all changes to the "source_artifact" edge.
-func (m *STTTaskMutation) ResetSourceArtifact() {
-	m.source_artifact = nil
-	m.clearedsource_artifact = false
-}
-
-// Where appends a list predicates to the STTTaskMutation builder.
-func (m *STTTaskMutation) Where(ps ...predicate.STTTask) {
-	m.predicates = append(m.predicates, ps...)
-}
-
-// WhereP appends storage-level predicates to the STTTaskMutation builder. Using this method,
-// users can use type-assertion to append predicates that do not depend on any generated package.
-func (m *STTTaskMutation) WhereP(ps ...func(*sql.Selector)) {
-	p := make([]predicate.STTTask, len(ps))
-	for i := range ps {
-		p[i] = ps[i]
-	}
-	m.Where(p...)
-}
-
-// Op returns the operation name.
-func (m *STTTaskMutation) Op() Op {
-	return m.op
-}
-
-// SetOp allows setting the mutation operation.
-func (m *STTTaskMutation) SetOp(op Op) {
-	m.op = op
-}
-
-// Type returns the node type of this mutation (STTTask).
-func (m *STTTaskMutation) Type() string {
-	return m.typ
-}
-
-// Fields returns all fields that were changed during this mutation. Note that in
-// order to get all numeric fields that were incremented/decremented, call
-// AddedFields().
-func (m *STTTaskMutation) Fields() []string {
-	fields := make([]string, 0, 12)
-	if m.role != nil {
-		fields = append(fields, stttask.FieldRole)
-	}
-	if m.status != nil {
-		fields = append(fields, stttask.FieldStatus)
-	}
-	if m.priority != nil {
-		fields = append(fields, stttask.FieldPriority)
-	}
-	if m.k8s_job_name != nil {
-		fields = append(fields, stttask.FieldK8sJobName)
-	}
-	if m.attempts != nil {
-		fields = append(fields, stttask.FieldAttempts)
-	}
-	if m.stt_path != nil {
-		fields = append(fields, stttask.FieldSttPath)
-	}
-	if m.subtitle_path != nil {
-		fields = append(fields, stttask.FieldSubtitlePath)
-	}
-	if m.error_message != nil {
-		fields = append(fields, stttask.FieldErrorMessage)
-	}
-	if m.started_at != nil {
-		fields = append(fields, stttask.FieldStartedAt)
-	}
-	if m.completed_at != nil {
-		fields = append(fields, stttask.FieldCompletedAt)
-	}
-	if m.created_at != nil {
-		fields = append(fields, stttask.FieldCreatedAt)
-	}
-	if m.updated_at != nil {
-		fields = append(fields, stttask.FieldUpdatedAt)
-	}
-	return fields
-}
-
-// Field returns the value of a field with the given name. The second boolean
-// return value indicates that this field was not set, or was not defined in the
-// schema.
-func (m *STTTaskMutation) Field(name string) (ent.Value, bool) {
-	switch name {
-	case stttask.FieldRole:
-		return m.Role()
-	case stttask.FieldStatus:
-		return m.Status()
-	case stttask.FieldPriority:
-		return m.Priority()
-	case stttask.FieldK8sJobName:
-		return m.K8sJobName()
-	case stttask.FieldAttempts:
-		return m.Attempts()
-	case stttask.FieldSttPath:
-		return m.SttPath()
-	case stttask.FieldSubtitlePath:
-		return m.SubtitlePath()
-	case stttask.FieldErrorMessage:
-		return m.ErrorMessage()
-	case stttask.FieldStartedAt:
-		return m.StartedAt()
-	case stttask.FieldCompletedAt:
-		return m.CompletedAt()
-	case stttask.FieldCreatedAt:
-		return m.CreatedAt()
-	case stttask.FieldUpdatedAt:
-		return m.UpdatedAt()
-	}
-	return nil, false
-}
-
-// OldField returns the old value of the field from the database. An error is
-// returned if the mutation operation is not UpdateOne, or the query to the
-// database failed.
-func (m *STTTaskMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
-	switch name {
-	case stttask.FieldRole:
-		return m.OldRole(ctx)
-	case stttask.FieldStatus:
-		return m.OldStatus(ctx)
-	case stttask.FieldPriority:
-		return m.OldPriority(ctx)
-	case stttask.FieldK8sJobName:
-		return m.OldK8sJobName(ctx)
-	case stttask.FieldAttempts:
-		return m.OldAttempts(ctx)
-	case stttask.FieldSttPath:
-		return m.OldSttPath(ctx)
-	case stttask.FieldSubtitlePath:
-		return m.OldSubtitlePath(ctx)
-	case stttask.FieldErrorMessage:
-		return m.OldErrorMessage(ctx)
-	case stttask.FieldStartedAt:
-		return m.OldStartedAt(ctx)
-	case stttask.FieldCompletedAt:
-		return m.OldCompletedAt(ctx)
-	case stttask.FieldCreatedAt:
-		return m.OldCreatedAt(ctx)
-	case stttask.FieldUpdatedAt:
-		return m.OldUpdatedAt(ctx)
-	}
-	return nil, fmt.Errorf("unknown STTTask field %s", name)
-}
-
-// SetField sets the value of a field with the given name. It returns an error if
-// the field is not defined in the schema, or if the type mismatched the field
-// type.
-func (m *STTTaskMutation) SetField(name string, value ent.Value) error {
-	switch name {
-	case stttask.FieldRole:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetRole(v)
-		return nil
-	case stttask.FieldStatus:
-		v, ok := value.(stttask.Status)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetStatus(v)
-		return nil
-	case stttask.FieldPriority:
-		v, ok := value.(int)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetPriority(v)
-		return nil
-	case stttask.FieldK8sJobName:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetK8sJobName(v)
-		return nil
-	case stttask.FieldAttempts:
-		v, ok := value.(int)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetAttempts(v)
-		return nil
-	case stttask.FieldSttPath:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetSttPath(v)
-		return nil
-	case stttask.FieldSubtitlePath:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetSubtitlePath(v)
-		return nil
-	case stttask.FieldErrorMessage:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetErrorMessage(v)
-		return nil
-	case stttask.FieldStartedAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetStartedAt(v)
-		return nil
-	case stttask.FieldCompletedAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetCompletedAt(v)
-		return nil
-	case stttask.FieldCreatedAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetCreatedAt(v)
-		return nil
-	case stttask.FieldUpdatedAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetUpdatedAt(v)
-		return nil
-	}
-	return fmt.Errorf("unknown STTTask field %s", name)
-}
-
-// AddedFields returns all numeric fields that were incremented/decremented during
-// this mutation.
-func (m *STTTaskMutation) AddedFields() []string {
-	var fields []string
-	if m.addpriority != nil {
-		fields = append(fields, stttask.FieldPriority)
-	}
-	if m.addattempts != nil {
-		fields = append(fields, stttask.FieldAttempts)
-	}
-	return fields
-}
-
-// AddedField returns the numeric value that was incremented/decremented on a field
-// with the given name. The second boolean return value indicates that this field
-// was not set, or was not defined in the schema.
-func (m *STTTaskMutation) AddedField(name string) (ent.Value, bool) {
-	switch name {
-	case stttask.FieldPriority:
-		return m.AddedPriority()
-	case stttask.FieldAttempts:
-		return m.AddedAttempts()
-	}
-	return nil, false
-}
-
-// AddField adds the value to the field with the given name. It returns an error if
-// the field is not defined in the schema, or if the type mismatched the field
-// type.
-func (m *STTTaskMutation) AddField(name string, value ent.Value) error {
-	switch name {
-	case stttask.FieldPriority:
-		v, ok := value.(int)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddPriority(v)
-		return nil
-	case stttask.FieldAttempts:
-		v, ok := value.(int)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddAttempts(v)
-		return nil
-	}
-	return fmt.Errorf("unknown STTTask numeric field %s", name)
-}
-
-// ClearedFields returns all nullable fields that were cleared during this
-// mutation.
-func (m *STTTaskMutation) ClearedFields() []string {
-	var fields []string
-	if m.FieldCleared(stttask.FieldK8sJobName) {
-		fields = append(fields, stttask.FieldK8sJobName)
-	}
-	if m.FieldCleared(stttask.FieldSttPath) {
-		fields = append(fields, stttask.FieldSttPath)
-	}
-	if m.FieldCleared(stttask.FieldSubtitlePath) {
-		fields = append(fields, stttask.FieldSubtitlePath)
-	}
-	if m.FieldCleared(stttask.FieldErrorMessage) {
-		fields = append(fields, stttask.FieldErrorMessage)
-	}
-	if m.FieldCleared(stttask.FieldStartedAt) {
-		fields = append(fields, stttask.FieldStartedAt)
-	}
-	if m.FieldCleared(stttask.FieldCompletedAt) {
-		fields = append(fields, stttask.FieldCompletedAt)
-	}
-	return fields
-}
-
-// FieldCleared returns a boolean indicating if a field with the given name was
-// cleared in this mutation.
-func (m *STTTaskMutation) FieldCleared(name string) bool {
-	_, ok := m.clearedFields[name]
-	return ok
-}
-
-// ClearField clears the value of the field with the given name. It returns an
-// error if the field is not defined in the schema.
-func (m *STTTaskMutation) ClearField(name string) error {
-	switch name {
-	case stttask.FieldK8sJobName:
-		m.ClearK8sJobName()
-		return nil
-	case stttask.FieldSttPath:
-		m.ClearSttPath()
-		return nil
-	case stttask.FieldSubtitlePath:
-		m.ClearSubtitlePath()
-		return nil
-	case stttask.FieldErrorMessage:
-		m.ClearErrorMessage()
-		return nil
-	case stttask.FieldStartedAt:
-		m.ClearStartedAt()
-		return nil
-	case stttask.FieldCompletedAt:
-		m.ClearCompletedAt()
-		return nil
-	}
-	return fmt.Errorf("unknown STTTask nullable field %s", name)
-}
-
-// ResetField resets all changes in the mutation for the field with the given name.
-// It returns an error if the field is not defined in the schema.
-func (m *STTTaskMutation) ResetField(name string) error {
-	switch name {
-	case stttask.FieldRole:
-		m.ResetRole()
-		return nil
-	case stttask.FieldStatus:
-		m.ResetStatus()
-		return nil
-	case stttask.FieldPriority:
-		m.ResetPriority()
-		return nil
-	case stttask.FieldK8sJobName:
-		m.ResetK8sJobName()
-		return nil
-	case stttask.FieldAttempts:
-		m.ResetAttempts()
-		return nil
-	case stttask.FieldSttPath:
-		m.ResetSttPath()
-		return nil
-	case stttask.FieldSubtitlePath:
-		m.ResetSubtitlePath()
-		return nil
-	case stttask.FieldErrorMessage:
-		m.ResetErrorMessage()
-		return nil
-	case stttask.FieldStartedAt:
-		m.ResetStartedAt()
-		return nil
-	case stttask.FieldCompletedAt:
-		m.ResetCompletedAt()
-		return nil
-	case stttask.FieldCreatedAt:
-		m.ResetCreatedAt()
-		return nil
-	case stttask.FieldUpdatedAt:
-		m.ResetUpdatedAt()
-		return nil
-	}
-	return fmt.Errorf("unknown STTTask field %s", name)
-}
-
-// AddedEdges returns all edge names that were set/added in this mutation.
-func (m *STTTaskMutation) AddedEdges() []string {
-	edges := make([]string, 0, 2)
-	if m.match_round != nil {
-		edges = append(edges, stttask.EdgeMatchRound)
-	}
-	if m.source_artifact != nil {
-		edges = append(edges, stttask.EdgeSourceArtifact)
-	}
-	return edges
-}
-
-// AddedIDs returns all IDs (to other nodes) that were added for the given edge
-// name in this mutation.
-func (m *STTTaskMutation) AddedIDs(name string) []ent.Value {
-	switch name {
-	case stttask.EdgeMatchRound:
-		if id := m.match_round; id != nil {
-			return []ent.Value{*id}
-		}
-	case stttask.EdgeSourceArtifact:
-		if id := m.source_artifact; id != nil {
-			return []ent.Value{*id}
-		}
-	}
-	return nil
-}
-
-// RemovedEdges returns all edge names that were removed in this mutation.
-func (m *STTTaskMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 2)
-	return edges
-}
-
-// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
-// the given name in this mutation.
-func (m *STTTaskMutation) RemovedIDs(name string) []ent.Value {
-	return nil
-}
-
-// ClearedEdges returns all edge names that were cleared in this mutation.
-func (m *STTTaskMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 2)
-	if m.clearedmatch_round {
-		edges = append(edges, stttask.EdgeMatchRound)
-	}
-	if m.clearedsource_artifact {
-		edges = append(edges, stttask.EdgeSourceArtifact)
-	}
-	return edges
-}
-
-// EdgeCleared returns a boolean which indicates if the edge with the given name
-// was cleared in this mutation.
-func (m *STTTaskMutation) EdgeCleared(name string) bool {
-	switch name {
-	case stttask.EdgeMatchRound:
-		return m.clearedmatch_round
-	case stttask.EdgeSourceArtifact:
-		return m.clearedsource_artifact
-	}
-	return false
-}
-
-// ClearEdge clears the value of the edge with the given name. It returns an error
-// if that edge is not defined in the schema.
-func (m *STTTaskMutation) ClearEdge(name string) error {
-	switch name {
-	case stttask.EdgeMatchRound:
-		m.ClearMatchRound()
-		return nil
-	case stttask.EdgeSourceArtifact:
-		m.ClearSourceArtifact()
-		return nil
-	}
-	return fmt.Errorf("unknown STTTask unique edge %s", name)
-}
-
-// ResetEdge resets all changes to the edge with the given name in this mutation.
-// It returns an error if the edge is not defined in the schema.
-func (m *STTTaskMutation) ResetEdge(name string) error {
-	switch name {
-	case stttask.EdgeMatchRound:
-		m.ResetMatchRound()
-		return nil
-	case stttask.EdgeSourceArtifact:
-		m.ResetSourceArtifact()
-		return nil
-	}
-	return fmt.Errorf("unknown STTTask edge %s", name)
 }
 
 // TeamMutation represents an operation that mutates the Team nodes in the graph.
@@ -13801,2487 +7949,4 @@ func (m *TeamMutation) ResetEdge(name string) error {
 		return nil
 	}
 	return fmt.Errorf("unknown Team edge %s", name)
-}
-
-// TranscodeTaskMutation represents an operation that mutates the TranscodeTask nodes in the graph.
-type TranscodeTaskMutation struct {
-	config
-	op                      Op
-	typ                     string
-	id                      *int
-	status                  *transcodetask.Status
-	k8s_job_name            *string
-	attempts                *int
-	addattempts             *int
-	priority                *int
-	addpriority             *int
-	error_message           *string
-	started_at              *time.Time
-	completed_at            *time.Time
-	created_at              *time.Time
-	updated_at              *time.Time
-	clearedFields           map[string]struct{}
-	source_artifact         *int
-	clearedsource_artifact  bool
-	archive_artifact        *int
-	clearedarchive_artifact bool
-	done                    bool
-	oldValue                func(context.Context) (*TranscodeTask, error)
-	predicates              []predicate.TranscodeTask
-}
-
-var _ ent.Mutation = (*TranscodeTaskMutation)(nil)
-
-// transcodetaskOption allows management of the mutation configuration using functional options.
-type transcodetaskOption func(*TranscodeTaskMutation)
-
-// newTranscodeTaskMutation creates new mutation for the TranscodeTask entity.
-func newTranscodeTaskMutation(c config, op Op, opts ...transcodetaskOption) *TranscodeTaskMutation {
-	m := &TranscodeTaskMutation{
-		config:        c,
-		op:            op,
-		typ:           TypeTranscodeTask,
-		clearedFields: make(map[string]struct{}),
-	}
-	for _, opt := range opts {
-		opt(m)
-	}
-	return m
-}
-
-// withTranscodeTaskID sets the ID field of the mutation.
-func withTranscodeTaskID(id int) transcodetaskOption {
-	return func(m *TranscodeTaskMutation) {
-		var (
-			err   error
-			once  sync.Once
-			value *TranscodeTask
-		)
-		m.oldValue = func(ctx context.Context) (*TranscodeTask, error) {
-			once.Do(func() {
-				if m.done {
-					err = errors.New("querying old values post mutation is not allowed")
-				} else {
-					value, err = m.Client().TranscodeTask.Get(ctx, id)
-				}
-			})
-			return value, err
-		}
-		m.id = &id
-	}
-}
-
-// withTranscodeTask sets the old TranscodeTask of the mutation.
-func withTranscodeTask(node *TranscodeTask) transcodetaskOption {
-	return func(m *TranscodeTaskMutation) {
-		m.oldValue = func(context.Context) (*TranscodeTask, error) {
-			return node, nil
-		}
-		m.id = &node.ID
-	}
-}
-
-// Client returns a new `ent.Client` from the mutation. If the mutation was
-// executed in a transaction (ent.Tx), a transactional client is returned.
-func (m TranscodeTaskMutation) Client() *Client {
-	client := &Client{config: m.config}
-	client.init()
-	return client
-}
-
-// Tx returns an `ent.Tx` for mutations that were executed in transactions;
-// it returns an error otherwise.
-func (m TranscodeTaskMutation) Tx() (*Tx, error) {
-	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, errors.New("ent: mutation is not running in a transaction")
-	}
-	tx := &Tx{config: m.config}
-	tx.init()
-	return tx, nil
-}
-
-// ID returns the ID value in the mutation. Note that the ID is only available
-// if it was provided to the builder or after it was returned from the database.
-func (m *TranscodeTaskMutation) ID() (id int, exists bool) {
-	if m.id == nil {
-		return
-	}
-	return *m.id, true
-}
-
-// IDs queries the database and returns the entity ids that match the mutation's predicate.
-// That means, if the mutation is applied within a transaction with an isolation level such
-// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
-// or updated by the mutation.
-func (m *TranscodeTaskMutation) IDs(ctx context.Context) ([]int, error) {
-	switch {
-	case m.op.Is(OpUpdateOne | OpDeleteOne):
-		id, exists := m.ID()
-		if exists {
-			return []int{id}, nil
-		}
-		fallthrough
-	case m.op.Is(OpUpdate | OpDelete):
-		return m.Client().TranscodeTask.Query().Where(m.predicates...).IDs(ctx)
-	default:
-		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
-	}
-}
-
-// SetStatus sets the "status" field.
-func (m *TranscodeTaskMutation) SetStatus(t transcodetask.Status) {
-	m.status = &t
-}
-
-// Status returns the value of the "status" field in the mutation.
-func (m *TranscodeTaskMutation) Status() (r transcodetask.Status, exists bool) {
-	v := m.status
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldStatus returns the old "status" field's value of the TranscodeTask entity.
-// If the TranscodeTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *TranscodeTaskMutation) OldStatus(ctx context.Context) (v transcodetask.Status, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldStatus requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldStatus: %w", err)
-	}
-	return oldValue.Status, nil
-}
-
-// ResetStatus resets all changes to the "status" field.
-func (m *TranscodeTaskMutation) ResetStatus() {
-	m.status = nil
-}
-
-// SetK8sJobName sets the "k8s_job_name" field.
-func (m *TranscodeTaskMutation) SetK8sJobName(s string) {
-	m.k8s_job_name = &s
-}
-
-// K8sJobName returns the value of the "k8s_job_name" field in the mutation.
-func (m *TranscodeTaskMutation) K8sJobName() (r string, exists bool) {
-	v := m.k8s_job_name
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldK8sJobName returns the old "k8s_job_name" field's value of the TranscodeTask entity.
-// If the TranscodeTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *TranscodeTaskMutation) OldK8sJobName(ctx context.Context) (v *string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldK8sJobName is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldK8sJobName requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldK8sJobName: %w", err)
-	}
-	return oldValue.K8sJobName, nil
-}
-
-// ClearK8sJobName clears the value of the "k8s_job_name" field.
-func (m *TranscodeTaskMutation) ClearK8sJobName() {
-	m.k8s_job_name = nil
-	m.clearedFields[transcodetask.FieldK8sJobName] = struct{}{}
-}
-
-// K8sJobNameCleared returns if the "k8s_job_name" field was cleared in this mutation.
-func (m *TranscodeTaskMutation) K8sJobNameCleared() bool {
-	_, ok := m.clearedFields[transcodetask.FieldK8sJobName]
-	return ok
-}
-
-// ResetK8sJobName resets all changes to the "k8s_job_name" field.
-func (m *TranscodeTaskMutation) ResetK8sJobName() {
-	m.k8s_job_name = nil
-	delete(m.clearedFields, transcodetask.FieldK8sJobName)
-}
-
-// SetAttempts sets the "attempts" field.
-func (m *TranscodeTaskMutation) SetAttempts(i int) {
-	m.attempts = &i
-	m.addattempts = nil
-}
-
-// Attempts returns the value of the "attempts" field in the mutation.
-func (m *TranscodeTaskMutation) Attempts() (r int, exists bool) {
-	v := m.attempts
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldAttempts returns the old "attempts" field's value of the TranscodeTask entity.
-// If the TranscodeTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *TranscodeTaskMutation) OldAttempts(ctx context.Context) (v int, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldAttempts is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldAttempts requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldAttempts: %w", err)
-	}
-	return oldValue.Attempts, nil
-}
-
-// AddAttempts adds i to the "attempts" field.
-func (m *TranscodeTaskMutation) AddAttempts(i int) {
-	if m.addattempts != nil {
-		*m.addattempts += i
-	} else {
-		m.addattempts = &i
-	}
-}
-
-// AddedAttempts returns the value that was added to the "attempts" field in this mutation.
-func (m *TranscodeTaskMutation) AddedAttempts() (r int, exists bool) {
-	v := m.addattempts
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// ResetAttempts resets all changes to the "attempts" field.
-func (m *TranscodeTaskMutation) ResetAttempts() {
-	m.attempts = nil
-	m.addattempts = nil
-}
-
-// SetPriority sets the "priority" field.
-func (m *TranscodeTaskMutation) SetPriority(i int) {
-	m.priority = &i
-	m.addpriority = nil
-}
-
-// Priority returns the value of the "priority" field in the mutation.
-func (m *TranscodeTaskMutation) Priority() (r int, exists bool) {
-	v := m.priority
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldPriority returns the old "priority" field's value of the TranscodeTask entity.
-// If the TranscodeTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *TranscodeTaskMutation) OldPriority(ctx context.Context) (v int, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldPriority is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldPriority requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldPriority: %w", err)
-	}
-	return oldValue.Priority, nil
-}
-
-// AddPriority adds i to the "priority" field.
-func (m *TranscodeTaskMutation) AddPriority(i int) {
-	if m.addpriority != nil {
-		*m.addpriority += i
-	} else {
-		m.addpriority = &i
-	}
-}
-
-// AddedPriority returns the value that was added to the "priority" field in this mutation.
-func (m *TranscodeTaskMutation) AddedPriority() (r int, exists bool) {
-	v := m.addpriority
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// ResetPriority resets all changes to the "priority" field.
-func (m *TranscodeTaskMutation) ResetPriority() {
-	m.priority = nil
-	m.addpriority = nil
-}
-
-// SetErrorMessage sets the "error_message" field.
-func (m *TranscodeTaskMutation) SetErrorMessage(s string) {
-	m.error_message = &s
-}
-
-// ErrorMessage returns the value of the "error_message" field in the mutation.
-func (m *TranscodeTaskMutation) ErrorMessage() (r string, exists bool) {
-	v := m.error_message
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldErrorMessage returns the old "error_message" field's value of the TranscodeTask entity.
-// If the TranscodeTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *TranscodeTaskMutation) OldErrorMessage(ctx context.Context) (v *string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldErrorMessage is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldErrorMessage requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldErrorMessage: %w", err)
-	}
-	return oldValue.ErrorMessage, nil
-}
-
-// ClearErrorMessage clears the value of the "error_message" field.
-func (m *TranscodeTaskMutation) ClearErrorMessage() {
-	m.error_message = nil
-	m.clearedFields[transcodetask.FieldErrorMessage] = struct{}{}
-}
-
-// ErrorMessageCleared returns if the "error_message" field was cleared in this mutation.
-func (m *TranscodeTaskMutation) ErrorMessageCleared() bool {
-	_, ok := m.clearedFields[transcodetask.FieldErrorMessage]
-	return ok
-}
-
-// ResetErrorMessage resets all changes to the "error_message" field.
-func (m *TranscodeTaskMutation) ResetErrorMessage() {
-	m.error_message = nil
-	delete(m.clearedFields, transcodetask.FieldErrorMessage)
-}
-
-// SetStartedAt sets the "started_at" field.
-func (m *TranscodeTaskMutation) SetStartedAt(t time.Time) {
-	m.started_at = &t
-}
-
-// StartedAt returns the value of the "started_at" field in the mutation.
-func (m *TranscodeTaskMutation) StartedAt() (r time.Time, exists bool) {
-	v := m.started_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldStartedAt returns the old "started_at" field's value of the TranscodeTask entity.
-// If the TranscodeTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *TranscodeTaskMutation) OldStartedAt(ctx context.Context) (v *time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldStartedAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldStartedAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldStartedAt: %w", err)
-	}
-	return oldValue.StartedAt, nil
-}
-
-// ClearStartedAt clears the value of the "started_at" field.
-func (m *TranscodeTaskMutation) ClearStartedAt() {
-	m.started_at = nil
-	m.clearedFields[transcodetask.FieldStartedAt] = struct{}{}
-}
-
-// StartedAtCleared returns if the "started_at" field was cleared in this mutation.
-func (m *TranscodeTaskMutation) StartedAtCleared() bool {
-	_, ok := m.clearedFields[transcodetask.FieldStartedAt]
-	return ok
-}
-
-// ResetStartedAt resets all changes to the "started_at" field.
-func (m *TranscodeTaskMutation) ResetStartedAt() {
-	m.started_at = nil
-	delete(m.clearedFields, transcodetask.FieldStartedAt)
-}
-
-// SetCompletedAt sets the "completed_at" field.
-func (m *TranscodeTaskMutation) SetCompletedAt(t time.Time) {
-	m.completed_at = &t
-}
-
-// CompletedAt returns the value of the "completed_at" field in the mutation.
-func (m *TranscodeTaskMutation) CompletedAt() (r time.Time, exists bool) {
-	v := m.completed_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldCompletedAt returns the old "completed_at" field's value of the TranscodeTask entity.
-// If the TranscodeTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *TranscodeTaskMutation) OldCompletedAt(ctx context.Context) (v *time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldCompletedAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldCompletedAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldCompletedAt: %w", err)
-	}
-	return oldValue.CompletedAt, nil
-}
-
-// ClearCompletedAt clears the value of the "completed_at" field.
-func (m *TranscodeTaskMutation) ClearCompletedAt() {
-	m.completed_at = nil
-	m.clearedFields[transcodetask.FieldCompletedAt] = struct{}{}
-}
-
-// CompletedAtCleared returns if the "completed_at" field was cleared in this mutation.
-func (m *TranscodeTaskMutation) CompletedAtCleared() bool {
-	_, ok := m.clearedFields[transcodetask.FieldCompletedAt]
-	return ok
-}
-
-// ResetCompletedAt resets all changes to the "completed_at" field.
-func (m *TranscodeTaskMutation) ResetCompletedAt() {
-	m.completed_at = nil
-	delete(m.clearedFields, transcodetask.FieldCompletedAt)
-}
-
-// SetCreatedAt sets the "created_at" field.
-func (m *TranscodeTaskMutation) SetCreatedAt(t time.Time) {
-	m.created_at = &t
-}
-
-// CreatedAt returns the value of the "created_at" field in the mutation.
-func (m *TranscodeTaskMutation) CreatedAt() (r time.Time, exists bool) {
-	v := m.created_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldCreatedAt returns the old "created_at" field's value of the TranscodeTask entity.
-// If the TranscodeTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *TranscodeTaskMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
-	}
-	return oldValue.CreatedAt, nil
-}
-
-// ResetCreatedAt resets all changes to the "created_at" field.
-func (m *TranscodeTaskMutation) ResetCreatedAt() {
-	m.created_at = nil
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (m *TranscodeTaskMutation) SetUpdatedAt(t time.Time) {
-	m.updated_at = &t
-}
-
-// UpdatedAt returns the value of the "updated_at" field in the mutation.
-func (m *TranscodeTaskMutation) UpdatedAt() (r time.Time, exists bool) {
-	v := m.updated_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldUpdatedAt returns the old "updated_at" field's value of the TranscodeTask entity.
-// If the TranscodeTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *TranscodeTaskMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
-	}
-	return oldValue.UpdatedAt, nil
-}
-
-// ResetUpdatedAt resets all changes to the "updated_at" field.
-func (m *TranscodeTaskMutation) ResetUpdatedAt() {
-	m.updated_at = nil
-}
-
-// SetSourceArtifactID sets the "source_artifact" edge to the MediaArtifact entity by id.
-func (m *TranscodeTaskMutation) SetSourceArtifactID(id int) {
-	m.source_artifact = &id
-}
-
-// ClearSourceArtifact clears the "source_artifact" edge to the MediaArtifact entity.
-func (m *TranscodeTaskMutation) ClearSourceArtifact() {
-	m.clearedsource_artifact = true
-}
-
-// SourceArtifactCleared reports if the "source_artifact" edge to the MediaArtifact entity was cleared.
-func (m *TranscodeTaskMutation) SourceArtifactCleared() bool {
-	return m.clearedsource_artifact
-}
-
-// SourceArtifactID returns the "source_artifact" edge ID in the mutation.
-func (m *TranscodeTaskMutation) SourceArtifactID() (id int, exists bool) {
-	if m.source_artifact != nil {
-		return *m.source_artifact, true
-	}
-	return
-}
-
-// SourceArtifactIDs returns the "source_artifact" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// SourceArtifactID instead. It exists only for internal usage by the builders.
-func (m *TranscodeTaskMutation) SourceArtifactIDs() (ids []int) {
-	if id := m.source_artifact; id != nil {
-		ids = append(ids, *id)
-	}
-	return
-}
-
-// ResetSourceArtifact resets all changes to the "source_artifact" edge.
-func (m *TranscodeTaskMutation) ResetSourceArtifact() {
-	m.source_artifact = nil
-	m.clearedsource_artifact = false
-}
-
-// SetArchiveArtifactID sets the "archive_artifact" edge to the MediaArtifact entity by id.
-func (m *TranscodeTaskMutation) SetArchiveArtifactID(id int) {
-	m.archive_artifact = &id
-}
-
-// ClearArchiveArtifact clears the "archive_artifact" edge to the MediaArtifact entity.
-func (m *TranscodeTaskMutation) ClearArchiveArtifact() {
-	m.clearedarchive_artifact = true
-}
-
-// ArchiveArtifactCleared reports if the "archive_artifact" edge to the MediaArtifact entity was cleared.
-func (m *TranscodeTaskMutation) ArchiveArtifactCleared() bool {
-	return m.clearedarchive_artifact
-}
-
-// ArchiveArtifactID returns the "archive_artifact" edge ID in the mutation.
-func (m *TranscodeTaskMutation) ArchiveArtifactID() (id int, exists bool) {
-	if m.archive_artifact != nil {
-		return *m.archive_artifact, true
-	}
-	return
-}
-
-// ArchiveArtifactIDs returns the "archive_artifact" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// ArchiveArtifactID instead. It exists only for internal usage by the builders.
-func (m *TranscodeTaskMutation) ArchiveArtifactIDs() (ids []int) {
-	if id := m.archive_artifact; id != nil {
-		ids = append(ids, *id)
-	}
-	return
-}
-
-// ResetArchiveArtifact resets all changes to the "archive_artifact" edge.
-func (m *TranscodeTaskMutation) ResetArchiveArtifact() {
-	m.archive_artifact = nil
-	m.clearedarchive_artifact = false
-}
-
-// Where appends a list predicates to the TranscodeTaskMutation builder.
-func (m *TranscodeTaskMutation) Where(ps ...predicate.TranscodeTask) {
-	m.predicates = append(m.predicates, ps...)
-}
-
-// WhereP appends storage-level predicates to the TranscodeTaskMutation builder. Using this method,
-// users can use type-assertion to append predicates that do not depend on any generated package.
-func (m *TranscodeTaskMutation) WhereP(ps ...func(*sql.Selector)) {
-	p := make([]predicate.TranscodeTask, len(ps))
-	for i := range ps {
-		p[i] = ps[i]
-	}
-	m.Where(p...)
-}
-
-// Op returns the operation name.
-func (m *TranscodeTaskMutation) Op() Op {
-	return m.op
-}
-
-// SetOp allows setting the mutation operation.
-func (m *TranscodeTaskMutation) SetOp(op Op) {
-	m.op = op
-}
-
-// Type returns the node type of this mutation (TranscodeTask).
-func (m *TranscodeTaskMutation) Type() string {
-	return m.typ
-}
-
-// Fields returns all fields that were changed during this mutation. Note that in
-// order to get all numeric fields that were incremented/decremented, call
-// AddedFields().
-func (m *TranscodeTaskMutation) Fields() []string {
-	fields := make([]string, 0, 9)
-	if m.status != nil {
-		fields = append(fields, transcodetask.FieldStatus)
-	}
-	if m.k8s_job_name != nil {
-		fields = append(fields, transcodetask.FieldK8sJobName)
-	}
-	if m.attempts != nil {
-		fields = append(fields, transcodetask.FieldAttempts)
-	}
-	if m.priority != nil {
-		fields = append(fields, transcodetask.FieldPriority)
-	}
-	if m.error_message != nil {
-		fields = append(fields, transcodetask.FieldErrorMessage)
-	}
-	if m.started_at != nil {
-		fields = append(fields, transcodetask.FieldStartedAt)
-	}
-	if m.completed_at != nil {
-		fields = append(fields, transcodetask.FieldCompletedAt)
-	}
-	if m.created_at != nil {
-		fields = append(fields, transcodetask.FieldCreatedAt)
-	}
-	if m.updated_at != nil {
-		fields = append(fields, transcodetask.FieldUpdatedAt)
-	}
-	return fields
-}
-
-// Field returns the value of a field with the given name. The second boolean
-// return value indicates that this field was not set, or was not defined in the
-// schema.
-func (m *TranscodeTaskMutation) Field(name string) (ent.Value, bool) {
-	switch name {
-	case transcodetask.FieldStatus:
-		return m.Status()
-	case transcodetask.FieldK8sJobName:
-		return m.K8sJobName()
-	case transcodetask.FieldAttempts:
-		return m.Attempts()
-	case transcodetask.FieldPriority:
-		return m.Priority()
-	case transcodetask.FieldErrorMessage:
-		return m.ErrorMessage()
-	case transcodetask.FieldStartedAt:
-		return m.StartedAt()
-	case transcodetask.FieldCompletedAt:
-		return m.CompletedAt()
-	case transcodetask.FieldCreatedAt:
-		return m.CreatedAt()
-	case transcodetask.FieldUpdatedAt:
-		return m.UpdatedAt()
-	}
-	return nil, false
-}
-
-// OldField returns the old value of the field from the database. An error is
-// returned if the mutation operation is not UpdateOne, or the query to the
-// database failed.
-func (m *TranscodeTaskMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
-	switch name {
-	case transcodetask.FieldStatus:
-		return m.OldStatus(ctx)
-	case transcodetask.FieldK8sJobName:
-		return m.OldK8sJobName(ctx)
-	case transcodetask.FieldAttempts:
-		return m.OldAttempts(ctx)
-	case transcodetask.FieldPriority:
-		return m.OldPriority(ctx)
-	case transcodetask.FieldErrorMessage:
-		return m.OldErrorMessage(ctx)
-	case transcodetask.FieldStartedAt:
-		return m.OldStartedAt(ctx)
-	case transcodetask.FieldCompletedAt:
-		return m.OldCompletedAt(ctx)
-	case transcodetask.FieldCreatedAt:
-		return m.OldCreatedAt(ctx)
-	case transcodetask.FieldUpdatedAt:
-		return m.OldUpdatedAt(ctx)
-	}
-	return nil, fmt.Errorf("unknown TranscodeTask field %s", name)
-}
-
-// SetField sets the value of a field with the given name. It returns an error if
-// the field is not defined in the schema, or if the type mismatched the field
-// type.
-func (m *TranscodeTaskMutation) SetField(name string, value ent.Value) error {
-	switch name {
-	case transcodetask.FieldStatus:
-		v, ok := value.(transcodetask.Status)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetStatus(v)
-		return nil
-	case transcodetask.FieldK8sJobName:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetK8sJobName(v)
-		return nil
-	case transcodetask.FieldAttempts:
-		v, ok := value.(int)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetAttempts(v)
-		return nil
-	case transcodetask.FieldPriority:
-		v, ok := value.(int)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetPriority(v)
-		return nil
-	case transcodetask.FieldErrorMessage:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetErrorMessage(v)
-		return nil
-	case transcodetask.FieldStartedAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetStartedAt(v)
-		return nil
-	case transcodetask.FieldCompletedAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetCompletedAt(v)
-		return nil
-	case transcodetask.FieldCreatedAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetCreatedAt(v)
-		return nil
-	case transcodetask.FieldUpdatedAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetUpdatedAt(v)
-		return nil
-	}
-	return fmt.Errorf("unknown TranscodeTask field %s", name)
-}
-
-// AddedFields returns all numeric fields that were incremented/decremented during
-// this mutation.
-func (m *TranscodeTaskMutation) AddedFields() []string {
-	var fields []string
-	if m.addattempts != nil {
-		fields = append(fields, transcodetask.FieldAttempts)
-	}
-	if m.addpriority != nil {
-		fields = append(fields, transcodetask.FieldPriority)
-	}
-	return fields
-}
-
-// AddedField returns the numeric value that was incremented/decremented on a field
-// with the given name. The second boolean return value indicates that this field
-// was not set, or was not defined in the schema.
-func (m *TranscodeTaskMutation) AddedField(name string) (ent.Value, bool) {
-	switch name {
-	case transcodetask.FieldAttempts:
-		return m.AddedAttempts()
-	case transcodetask.FieldPriority:
-		return m.AddedPriority()
-	}
-	return nil, false
-}
-
-// AddField adds the value to the field with the given name. It returns an error if
-// the field is not defined in the schema, or if the type mismatched the field
-// type.
-func (m *TranscodeTaskMutation) AddField(name string, value ent.Value) error {
-	switch name {
-	case transcodetask.FieldAttempts:
-		v, ok := value.(int)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddAttempts(v)
-		return nil
-	case transcodetask.FieldPriority:
-		v, ok := value.(int)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddPriority(v)
-		return nil
-	}
-	return fmt.Errorf("unknown TranscodeTask numeric field %s", name)
-}
-
-// ClearedFields returns all nullable fields that were cleared during this
-// mutation.
-func (m *TranscodeTaskMutation) ClearedFields() []string {
-	var fields []string
-	if m.FieldCleared(transcodetask.FieldK8sJobName) {
-		fields = append(fields, transcodetask.FieldK8sJobName)
-	}
-	if m.FieldCleared(transcodetask.FieldErrorMessage) {
-		fields = append(fields, transcodetask.FieldErrorMessage)
-	}
-	if m.FieldCleared(transcodetask.FieldStartedAt) {
-		fields = append(fields, transcodetask.FieldStartedAt)
-	}
-	if m.FieldCleared(transcodetask.FieldCompletedAt) {
-		fields = append(fields, transcodetask.FieldCompletedAt)
-	}
-	return fields
-}
-
-// FieldCleared returns a boolean indicating if a field with the given name was
-// cleared in this mutation.
-func (m *TranscodeTaskMutation) FieldCleared(name string) bool {
-	_, ok := m.clearedFields[name]
-	return ok
-}
-
-// ClearField clears the value of the field with the given name. It returns an
-// error if the field is not defined in the schema.
-func (m *TranscodeTaskMutation) ClearField(name string) error {
-	switch name {
-	case transcodetask.FieldK8sJobName:
-		m.ClearK8sJobName()
-		return nil
-	case transcodetask.FieldErrorMessage:
-		m.ClearErrorMessage()
-		return nil
-	case transcodetask.FieldStartedAt:
-		m.ClearStartedAt()
-		return nil
-	case transcodetask.FieldCompletedAt:
-		m.ClearCompletedAt()
-		return nil
-	}
-	return fmt.Errorf("unknown TranscodeTask nullable field %s", name)
-}
-
-// ResetField resets all changes in the mutation for the field with the given name.
-// It returns an error if the field is not defined in the schema.
-func (m *TranscodeTaskMutation) ResetField(name string) error {
-	switch name {
-	case transcodetask.FieldStatus:
-		m.ResetStatus()
-		return nil
-	case transcodetask.FieldK8sJobName:
-		m.ResetK8sJobName()
-		return nil
-	case transcodetask.FieldAttempts:
-		m.ResetAttempts()
-		return nil
-	case transcodetask.FieldPriority:
-		m.ResetPriority()
-		return nil
-	case transcodetask.FieldErrorMessage:
-		m.ResetErrorMessage()
-		return nil
-	case transcodetask.FieldStartedAt:
-		m.ResetStartedAt()
-		return nil
-	case transcodetask.FieldCompletedAt:
-		m.ResetCompletedAt()
-		return nil
-	case transcodetask.FieldCreatedAt:
-		m.ResetCreatedAt()
-		return nil
-	case transcodetask.FieldUpdatedAt:
-		m.ResetUpdatedAt()
-		return nil
-	}
-	return fmt.Errorf("unknown TranscodeTask field %s", name)
-}
-
-// AddedEdges returns all edge names that were set/added in this mutation.
-func (m *TranscodeTaskMutation) AddedEdges() []string {
-	edges := make([]string, 0, 2)
-	if m.source_artifact != nil {
-		edges = append(edges, transcodetask.EdgeSourceArtifact)
-	}
-	if m.archive_artifact != nil {
-		edges = append(edges, transcodetask.EdgeArchiveArtifact)
-	}
-	return edges
-}
-
-// AddedIDs returns all IDs (to other nodes) that were added for the given edge
-// name in this mutation.
-func (m *TranscodeTaskMutation) AddedIDs(name string) []ent.Value {
-	switch name {
-	case transcodetask.EdgeSourceArtifact:
-		if id := m.source_artifact; id != nil {
-			return []ent.Value{*id}
-		}
-	case transcodetask.EdgeArchiveArtifact:
-		if id := m.archive_artifact; id != nil {
-			return []ent.Value{*id}
-		}
-	}
-	return nil
-}
-
-// RemovedEdges returns all edge names that were removed in this mutation.
-func (m *TranscodeTaskMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 2)
-	return edges
-}
-
-// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
-// the given name in this mutation.
-func (m *TranscodeTaskMutation) RemovedIDs(name string) []ent.Value {
-	return nil
-}
-
-// ClearedEdges returns all edge names that were cleared in this mutation.
-func (m *TranscodeTaskMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 2)
-	if m.clearedsource_artifact {
-		edges = append(edges, transcodetask.EdgeSourceArtifact)
-	}
-	if m.clearedarchive_artifact {
-		edges = append(edges, transcodetask.EdgeArchiveArtifact)
-	}
-	return edges
-}
-
-// EdgeCleared returns a boolean which indicates if the edge with the given name
-// was cleared in this mutation.
-func (m *TranscodeTaskMutation) EdgeCleared(name string) bool {
-	switch name {
-	case transcodetask.EdgeSourceArtifact:
-		return m.clearedsource_artifact
-	case transcodetask.EdgeArchiveArtifact:
-		return m.clearedarchive_artifact
-	}
-	return false
-}
-
-// ClearEdge clears the value of the edge with the given name. It returns an error
-// if that edge is not defined in the schema.
-func (m *TranscodeTaskMutation) ClearEdge(name string) error {
-	switch name {
-	case transcodetask.EdgeSourceArtifact:
-		m.ClearSourceArtifact()
-		return nil
-	case transcodetask.EdgeArchiveArtifact:
-		m.ClearArchiveArtifact()
-		return nil
-	}
-	return fmt.Errorf("unknown TranscodeTask unique edge %s", name)
-}
-
-// ResetEdge resets all changes to the edge with the given name in this mutation.
-// It returns an error if the edge is not defined in the schema.
-func (m *TranscodeTaskMutation) ResetEdge(name string) error {
-	switch name {
-	case transcodetask.EdgeSourceArtifact:
-		m.ResetSourceArtifact()
-		return nil
-	case transcodetask.EdgeArchiveArtifact:
-		m.ResetArchiveArtifact()
-		return nil
-	}
-	return fmt.Errorf("unknown TranscodeTask edge %s", name)
-}
-
-// UploadTaskMutation represents an operation that mutates the UploadTask nodes in the graph.
-type UploadTaskMutation struct {
-	config
-	op                     Op
-	typ                    string
-	id                     *int
-	source_path            *string
-	status                 *uploadtask.Status
-	k8s_job_name           *string
-	attempts               *int
-	addattempts            *int
-	priority               *int
-	addpriority            *int
-	bitable_app_token      *string
-	bitable_table_id       *string
-	bitable_record_id      *string
-	bitable_record_url     *string
-	attachment_file_token  *string
-	error_message          *string
-	started_at             *time.Time
-	completed_at           *time.Time
-	created_at             *time.Time
-	updated_at             *time.Time
-	clearedFields          map[string]struct{}
-	record_task            *int
-	clearedrecord_task     bool
-	source_artifact        *int
-	clearedsource_artifact bool
-	done                   bool
-	oldValue               func(context.Context) (*UploadTask, error)
-	predicates             []predicate.UploadTask
-}
-
-var _ ent.Mutation = (*UploadTaskMutation)(nil)
-
-// uploadtaskOption allows management of the mutation configuration using functional options.
-type uploadtaskOption func(*UploadTaskMutation)
-
-// newUploadTaskMutation creates new mutation for the UploadTask entity.
-func newUploadTaskMutation(c config, op Op, opts ...uploadtaskOption) *UploadTaskMutation {
-	m := &UploadTaskMutation{
-		config:        c,
-		op:            op,
-		typ:           TypeUploadTask,
-		clearedFields: make(map[string]struct{}),
-	}
-	for _, opt := range opts {
-		opt(m)
-	}
-	return m
-}
-
-// withUploadTaskID sets the ID field of the mutation.
-func withUploadTaskID(id int) uploadtaskOption {
-	return func(m *UploadTaskMutation) {
-		var (
-			err   error
-			once  sync.Once
-			value *UploadTask
-		)
-		m.oldValue = func(ctx context.Context) (*UploadTask, error) {
-			once.Do(func() {
-				if m.done {
-					err = errors.New("querying old values post mutation is not allowed")
-				} else {
-					value, err = m.Client().UploadTask.Get(ctx, id)
-				}
-			})
-			return value, err
-		}
-		m.id = &id
-	}
-}
-
-// withUploadTask sets the old UploadTask of the mutation.
-func withUploadTask(node *UploadTask) uploadtaskOption {
-	return func(m *UploadTaskMutation) {
-		m.oldValue = func(context.Context) (*UploadTask, error) {
-			return node, nil
-		}
-		m.id = &node.ID
-	}
-}
-
-// Client returns a new `ent.Client` from the mutation. If the mutation was
-// executed in a transaction (ent.Tx), a transactional client is returned.
-func (m UploadTaskMutation) Client() *Client {
-	client := &Client{config: m.config}
-	client.init()
-	return client
-}
-
-// Tx returns an `ent.Tx` for mutations that were executed in transactions;
-// it returns an error otherwise.
-func (m UploadTaskMutation) Tx() (*Tx, error) {
-	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, errors.New("ent: mutation is not running in a transaction")
-	}
-	tx := &Tx{config: m.config}
-	tx.init()
-	return tx, nil
-}
-
-// ID returns the ID value in the mutation. Note that the ID is only available
-// if it was provided to the builder or after it was returned from the database.
-func (m *UploadTaskMutation) ID() (id int, exists bool) {
-	if m.id == nil {
-		return
-	}
-	return *m.id, true
-}
-
-// IDs queries the database and returns the entity ids that match the mutation's predicate.
-// That means, if the mutation is applied within a transaction with an isolation level such
-// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
-// or updated by the mutation.
-func (m *UploadTaskMutation) IDs(ctx context.Context) ([]int, error) {
-	switch {
-	case m.op.Is(OpUpdateOne | OpDeleteOne):
-		id, exists := m.ID()
-		if exists {
-			return []int{id}, nil
-		}
-		fallthrough
-	case m.op.Is(OpUpdate | OpDelete):
-		return m.Client().UploadTask.Query().Where(m.predicates...).IDs(ctx)
-	default:
-		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
-	}
-}
-
-// SetSourcePath sets the "source_path" field.
-func (m *UploadTaskMutation) SetSourcePath(s string) {
-	m.source_path = &s
-}
-
-// SourcePath returns the value of the "source_path" field in the mutation.
-func (m *UploadTaskMutation) SourcePath() (r string, exists bool) {
-	v := m.source_path
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldSourcePath returns the old "source_path" field's value of the UploadTask entity.
-// If the UploadTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *UploadTaskMutation) OldSourcePath(ctx context.Context) (v string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldSourcePath is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldSourcePath requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldSourcePath: %w", err)
-	}
-	return oldValue.SourcePath, nil
-}
-
-// ResetSourcePath resets all changes to the "source_path" field.
-func (m *UploadTaskMutation) ResetSourcePath() {
-	m.source_path = nil
-}
-
-// SetStatus sets the "status" field.
-func (m *UploadTaskMutation) SetStatus(u uploadtask.Status) {
-	m.status = &u
-}
-
-// Status returns the value of the "status" field in the mutation.
-func (m *UploadTaskMutation) Status() (r uploadtask.Status, exists bool) {
-	v := m.status
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldStatus returns the old "status" field's value of the UploadTask entity.
-// If the UploadTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *UploadTaskMutation) OldStatus(ctx context.Context) (v uploadtask.Status, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldStatus requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldStatus: %w", err)
-	}
-	return oldValue.Status, nil
-}
-
-// ResetStatus resets all changes to the "status" field.
-func (m *UploadTaskMutation) ResetStatus() {
-	m.status = nil
-}
-
-// SetK8sJobName sets the "k8s_job_name" field.
-func (m *UploadTaskMutation) SetK8sJobName(s string) {
-	m.k8s_job_name = &s
-}
-
-// K8sJobName returns the value of the "k8s_job_name" field in the mutation.
-func (m *UploadTaskMutation) K8sJobName() (r string, exists bool) {
-	v := m.k8s_job_name
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldK8sJobName returns the old "k8s_job_name" field's value of the UploadTask entity.
-// If the UploadTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *UploadTaskMutation) OldK8sJobName(ctx context.Context) (v *string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldK8sJobName is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldK8sJobName requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldK8sJobName: %w", err)
-	}
-	return oldValue.K8sJobName, nil
-}
-
-// ClearK8sJobName clears the value of the "k8s_job_name" field.
-func (m *UploadTaskMutation) ClearK8sJobName() {
-	m.k8s_job_name = nil
-	m.clearedFields[uploadtask.FieldK8sJobName] = struct{}{}
-}
-
-// K8sJobNameCleared returns if the "k8s_job_name" field was cleared in this mutation.
-func (m *UploadTaskMutation) K8sJobNameCleared() bool {
-	_, ok := m.clearedFields[uploadtask.FieldK8sJobName]
-	return ok
-}
-
-// ResetK8sJobName resets all changes to the "k8s_job_name" field.
-func (m *UploadTaskMutation) ResetK8sJobName() {
-	m.k8s_job_name = nil
-	delete(m.clearedFields, uploadtask.FieldK8sJobName)
-}
-
-// SetAttempts sets the "attempts" field.
-func (m *UploadTaskMutation) SetAttempts(i int) {
-	m.attempts = &i
-	m.addattempts = nil
-}
-
-// Attempts returns the value of the "attempts" field in the mutation.
-func (m *UploadTaskMutation) Attempts() (r int, exists bool) {
-	v := m.attempts
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldAttempts returns the old "attempts" field's value of the UploadTask entity.
-// If the UploadTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *UploadTaskMutation) OldAttempts(ctx context.Context) (v int, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldAttempts is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldAttempts requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldAttempts: %w", err)
-	}
-	return oldValue.Attempts, nil
-}
-
-// AddAttempts adds i to the "attempts" field.
-func (m *UploadTaskMutation) AddAttempts(i int) {
-	if m.addattempts != nil {
-		*m.addattempts += i
-	} else {
-		m.addattempts = &i
-	}
-}
-
-// AddedAttempts returns the value that was added to the "attempts" field in this mutation.
-func (m *UploadTaskMutation) AddedAttempts() (r int, exists bool) {
-	v := m.addattempts
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// ResetAttempts resets all changes to the "attempts" field.
-func (m *UploadTaskMutation) ResetAttempts() {
-	m.attempts = nil
-	m.addattempts = nil
-}
-
-// SetPriority sets the "priority" field.
-func (m *UploadTaskMutation) SetPriority(i int) {
-	m.priority = &i
-	m.addpriority = nil
-}
-
-// Priority returns the value of the "priority" field in the mutation.
-func (m *UploadTaskMutation) Priority() (r int, exists bool) {
-	v := m.priority
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldPriority returns the old "priority" field's value of the UploadTask entity.
-// If the UploadTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *UploadTaskMutation) OldPriority(ctx context.Context) (v int, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldPriority is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldPriority requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldPriority: %w", err)
-	}
-	return oldValue.Priority, nil
-}
-
-// AddPriority adds i to the "priority" field.
-func (m *UploadTaskMutation) AddPriority(i int) {
-	if m.addpriority != nil {
-		*m.addpriority += i
-	} else {
-		m.addpriority = &i
-	}
-}
-
-// AddedPriority returns the value that was added to the "priority" field in this mutation.
-func (m *UploadTaskMutation) AddedPriority() (r int, exists bool) {
-	v := m.addpriority
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// ResetPriority resets all changes to the "priority" field.
-func (m *UploadTaskMutation) ResetPriority() {
-	m.priority = nil
-	m.addpriority = nil
-}
-
-// SetBitableAppToken sets the "bitable_app_token" field.
-func (m *UploadTaskMutation) SetBitableAppToken(s string) {
-	m.bitable_app_token = &s
-}
-
-// BitableAppToken returns the value of the "bitable_app_token" field in the mutation.
-func (m *UploadTaskMutation) BitableAppToken() (r string, exists bool) {
-	v := m.bitable_app_token
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldBitableAppToken returns the old "bitable_app_token" field's value of the UploadTask entity.
-// If the UploadTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *UploadTaskMutation) OldBitableAppToken(ctx context.Context) (v *string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldBitableAppToken is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldBitableAppToken requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldBitableAppToken: %w", err)
-	}
-	return oldValue.BitableAppToken, nil
-}
-
-// ClearBitableAppToken clears the value of the "bitable_app_token" field.
-func (m *UploadTaskMutation) ClearBitableAppToken() {
-	m.bitable_app_token = nil
-	m.clearedFields[uploadtask.FieldBitableAppToken] = struct{}{}
-}
-
-// BitableAppTokenCleared returns if the "bitable_app_token" field was cleared in this mutation.
-func (m *UploadTaskMutation) BitableAppTokenCleared() bool {
-	_, ok := m.clearedFields[uploadtask.FieldBitableAppToken]
-	return ok
-}
-
-// ResetBitableAppToken resets all changes to the "bitable_app_token" field.
-func (m *UploadTaskMutation) ResetBitableAppToken() {
-	m.bitable_app_token = nil
-	delete(m.clearedFields, uploadtask.FieldBitableAppToken)
-}
-
-// SetBitableTableID sets the "bitable_table_id" field.
-func (m *UploadTaskMutation) SetBitableTableID(s string) {
-	m.bitable_table_id = &s
-}
-
-// BitableTableID returns the value of the "bitable_table_id" field in the mutation.
-func (m *UploadTaskMutation) BitableTableID() (r string, exists bool) {
-	v := m.bitable_table_id
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldBitableTableID returns the old "bitable_table_id" field's value of the UploadTask entity.
-// If the UploadTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *UploadTaskMutation) OldBitableTableID(ctx context.Context) (v *string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldBitableTableID is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldBitableTableID requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldBitableTableID: %w", err)
-	}
-	return oldValue.BitableTableID, nil
-}
-
-// ClearBitableTableID clears the value of the "bitable_table_id" field.
-func (m *UploadTaskMutation) ClearBitableTableID() {
-	m.bitable_table_id = nil
-	m.clearedFields[uploadtask.FieldBitableTableID] = struct{}{}
-}
-
-// BitableTableIDCleared returns if the "bitable_table_id" field was cleared in this mutation.
-func (m *UploadTaskMutation) BitableTableIDCleared() bool {
-	_, ok := m.clearedFields[uploadtask.FieldBitableTableID]
-	return ok
-}
-
-// ResetBitableTableID resets all changes to the "bitable_table_id" field.
-func (m *UploadTaskMutation) ResetBitableTableID() {
-	m.bitable_table_id = nil
-	delete(m.clearedFields, uploadtask.FieldBitableTableID)
-}
-
-// SetBitableRecordID sets the "bitable_record_id" field.
-func (m *UploadTaskMutation) SetBitableRecordID(s string) {
-	m.bitable_record_id = &s
-}
-
-// BitableRecordID returns the value of the "bitable_record_id" field in the mutation.
-func (m *UploadTaskMutation) BitableRecordID() (r string, exists bool) {
-	v := m.bitable_record_id
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldBitableRecordID returns the old "bitable_record_id" field's value of the UploadTask entity.
-// If the UploadTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *UploadTaskMutation) OldBitableRecordID(ctx context.Context) (v *string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldBitableRecordID is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldBitableRecordID requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldBitableRecordID: %w", err)
-	}
-	return oldValue.BitableRecordID, nil
-}
-
-// ClearBitableRecordID clears the value of the "bitable_record_id" field.
-func (m *UploadTaskMutation) ClearBitableRecordID() {
-	m.bitable_record_id = nil
-	m.clearedFields[uploadtask.FieldBitableRecordID] = struct{}{}
-}
-
-// BitableRecordIDCleared returns if the "bitable_record_id" field was cleared in this mutation.
-func (m *UploadTaskMutation) BitableRecordIDCleared() bool {
-	_, ok := m.clearedFields[uploadtask.FieldBitableRecordID]
-	return ok
-}
-
-// ResetBitableRecordID resets all changes to the "bitable_record_id" field.
-func (m *UploadTaskMutation) ResetBitableRecordID() {
-	m.bitable_record_id = nil
-	delete(m.clearedFields, uploadtask.FieldBitableRecordID)
-}
-
-// SetBitableRecordURL sets the "bitable_record_url" field.
-func (m *UploadTaskMutation) SetBitableRecordURL(s string) {
-	m.bitable_record_url = &s
-}
-
-// BitableRecordURL returns the value of the "bitable_record_url" field in the mutation.
-func (m *UploadTaskMutation) BitableRecordURL() (r string, exists bool) {
-	v := m.bitable_record_url
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldBitableRecordURL returns the old "bitable_record_url" field's value of the UploadTask entity.
-// If the UploadTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *UploadTaskMutation) OldBitableRecordURL(ctx context.Context) (v *string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldBitableRecordURL is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldBitableRecordURL requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldBitableRecordURL: %w", err)
-	}
-	return oldValue.BitableRecordURL, nil
-}
-
-// ClearBitableRecordURL clears the value of the "bitable_record_url" field.
-func (m *UploadTaskMutation) ClearBitableRecordURL() {
-	m.bitable_record_url = nil
-	m.clearedFields[uploadtask.FieldBitableRecordURL] = struct{}{}
-}
-
-// BitableRecordURLCleared returns if the "bitable_record_url" field was cleared in this mutation.
-func (m *UploadTaskMutation) BitableRecordURLCleared() bool {
-	_, ok := m.clearedFields[uploadtask.FieldBitableRecordURL]
-	return ok
-}
-
-// ResetBitableRecordURL resets all changes to the "bitable_record_url" field.
-func (m *UploadTaskMutation) ResetBitableRecordURL() {
-	m.bitable_record_url = nil
-	delete(m.clearedFields, uploadtask.FieldBitableRecordURL)
-}
-
-// SetAttachmentFileToken sets the "attachment_file_token" field.
-func (m *UploadTaskMutation) SetAttachmentFileToken(s string) {
-	m.attachment_file_token = &s
-}
-
-// AttachmentFileToken returns the value of the "attachment_file_token" field in the mutation.
-func (m *UploadTaskMutation) AttachmentFileToken() (r string, exists bool) {
-	v := m.attachment_file_token
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldAttachmentFileToken returns the old "attachment_file_token" field's value of the UploadTask entity.
-// If the UploadTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *UploadTaskMutation) OldAttachmentFileToken(ctx context.Context) (v *string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldAttachmentFileToken is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldAttachmentFileToken requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldAttachmentFileToken: %w", err)
-	}
-	return oldValue.AttachmentFileToken, nil
-}
-
-// ClearAttachmentFileToken clears the value of the "attachment_file_token" field.
-func (m *UploadTaskMutation) ClearAttachmentFileToken() {
-	m.attachment_file_token = nil
-	m.clearedFields[uploadtask.FieldAttachmentFileToken] = struct{}{}
-}
-
-// AttachmentFileTokenCleared returns if the "attachment_file_token" field was cleared in this mutation.
-func (m *UploadTaskMutation) AttachmentFileTokenCleared() bool {
-	_, ok := m.clearedFields[uploadtask.FieldAttachmentFileToken]
-	return ok
-}
-
-// ResetAttachmentFileToken resets all changes to the "attachment_file_token" field.
-func (m *UploadTaskMutation) ResetAttachmentFileToken() {
-	m.attachment_file_token = nil
-	delete(m.clearedFields, uploadtask.FieldAttachmentFileToken)
-}
-
-// SetErrorMessage sets the "error_message" field.
-func (m *UploadTaskMutation) SetErrorMessage(s string) {
-	m.error_message = &s
-}
-
-// ErrorMessage returns the value of the "error_message" field in the mutation.
-func (m *UploadTaskMutation) ErrorMessage() (r string, exists bool) {
-	v := m.error_message
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldErrorMessage returns the old "error_message" field's value of the UploadTask entity.
-// If the UploadTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *UploadTaskMutation) OldErrorMessage(ctx context.Context) (v *string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldErrorMessage is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldErrorMessage requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldErrorMessage: %w", err)
-	}
-	return oldValue.ErrorMessage, nil
-}
-
-// ClearErrorMessage clears the value of the "error_message" field.
-func (m *UploadTaskMutation) ClearErrorMessage() {
-	m.error_message = nil
-	m.clearedFields[uploadtask.FieldErrorMessage] = struct{}{}
-}
-
-// ErrorMessageCleared returns if the "error_message" field was cleared in this mutation.
-func (m *UploadTaskMutation) ErrorMessageCleared() bool {
-	_, ok := m.clearedFields[uploadtask.FieldErrorMessage]
-	return ok
-}
-
-// ResetErrorMessage resets all changes to the "error_message" field.
-func (m *UploadTaskMutation) ResetErrorMessage() {
-	m.error_message = nil
-	delete(m.clearedFields, uploadtask.FieldErrorMessage)
-}
-
-// SetStartedAt sets the "started_at" field.
-func (m *UploadTaskMutation) SetStartedAt(t time.Time) {
-	m.started_at = &t
-}
-
-// StartedAt returns the value of the "started_at" field in the mutation.
-func (m *UploadTaskMutation) StartedAt() (r time.Time, exists bool) {
-	v := m.started_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldStartedAt returns the old "started_at" field's value of the UploadTask entity.
-// If the UploadTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *UploadTaskMutation) OldStartedAt(ctx context.Context) (v *time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldStartedAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldStartedAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldStartedAt: %w", err)
-	}
-	return oldValue.StartedAt, nil
-}
-
-// ClearStartedAt clears the value of the "started_at" field.
-func (m *UploadTaskMutation) ClearStartedAt() {
-	m.started_at = nil
-	m.clearedFields[uploadtask.FieldStartedAt] = struct{}{}
-}
-
-// StartedAtCleared returns if the "started_at" field was cleared in this mutation.
-func (m *UploadTaskMutation) StartedAtCleared() bool {
-	_, ok := m.clearedFields[uploadtask.FieldStartedAt]
-	return ok
-}
-
-// ResetStartedAt resets all changes to the "started_at" field.
-func (m *UploadTaskMutation) ResetStartedAt() {
-	m.started_at = nil
-	delete(m.clearedFields, uploadtask.FieldStartedAt)
-}
-
-// SetCompletedAt sets the "completed_at" field.
-func (m *UploadTaskMutation) SetCompletedAt(t time.Time) {
-	m.completed_at = &t
-}
-
-// CompletedAt returns the value of the "completed_at" field in the mutation.
-func (m *UploadTaskMutation) CompletedAt() (r time.Time, exists bool) {
-	v := m.completed_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldCompletedAt returns the old "completed_at" field's value of the UploadTask entity.
-// If the UploadTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *UploadTaskMutation) OldCompletedAt(ctx context.Context) (v *time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldCompletedAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldCompletedAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldCompletedAt: %w", err)
-	}
-	return oldValue.CompletedAt, nil
-}
-
-// ClearCompletedAt clears the value of the "completed_at" field.
-func (m *UploadTaskMutation) ClearCompletedAt() {
-	m.completed_at = nil
-	m.clearedFields[uploadtask.FieldCompletedAt] = struct{}{}
-}
-
-// CompletedAtCleared returns if the "completed_at" field was cleared in this mutation.
-func (m *UploadTaskMutation) CompletedAtCleared() bool {
-	_, ok := m.clearedFields[uploadtask.FieldCompletedAt]
-	return ok
-}
-
-// ResetCompletedAt resets all changes to the "completed_at" field.
-func (m *UploadTaskMutation) ResetCompletedAt() {
-	m.completed_at = nil
-	delete(m.clearedFields, uploadtask.FieldCompletedAt)
-}
-
-// SetCreatedAt sets the "created_at" field.
-func (m *UploadTaskMutation) SetCreatedAt(t time.Time) {
-	m.created_at = &t
-}
-
-// CreatedAt returns the value of the "created_at" field in the mutation.
-func (m *UploadTaskMutation) CreatedAt() (r time.Time, exists bool) {
-	v := m.created_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldCreatedAt returns the old "created_at" field's value of the UploadTask entity.
-// If the UploadTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *UploadTaskMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
-	}
-	return oldValue.CreatedAt, nil
-}
-
-// ResetCreatedAt resets all changes to the "created_at" field.
-func (m *UploadTaskMutation) ResetCreatedAt() {
-	m.created_at = nil
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (m *UploadTaskMutation) SetUpdatedAt(t time.Time) {
-	m.updated_at = &t
-}
-
-// UpdatedAt returns the value of the "updated_at" field in the mutation.
-func (m *UploadTaskMutation) UpdatedAt() (r time.Time, exists bool) {
-	v := m.updated_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldUpdatedAt returns the old "updated_at" field's value of the UploadTask entity.
-// If the UploadTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *UploadTaskMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
-	}
-	return oldValue.UpdatedAt, nil
-}
-
-// ResetUpdatedAt resets all changes to the "updated_at" field.
-func (m *UploadTaskMutation) ResetUpdatedAt() {
-	m.updated_at = nil
-}
-
-// SetRecordTaskID sets the "record_task" edge to the RecordTask entity by id.
-func (m *UploadTaskMutation) SetRecordTaskID(id int) {
-	m.record_task = &id
-}
-
-// ClearRecordTask clears the "record_task" edge to the RecordTask entity.
-func (m *UploadTaskMutation) ClearRecordTask() {
-	m.clearedrecord_task = true
-}
-
-// RecordTaskCleared reports if the "record_task" edge to the RecordTask entity was cleared.
-func (m *UploadTaskMutation) RecordTaskCleared() bool {
-	return m.clearedrecord_task
-}
-
-// RecordTaskID returns the "record_task" edge ID in the mutation.
-func (m *UploadTaskMutation) RecordTaskID() (id int, exists bool) {
-	if m.record_task != nil {
-		return *m.record_task, true
-	}
-	return
-}
-
-// RecordTaskIDs returns the "record_task" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// RecordTaskID instead. It exists only for internal usage by the builders.
-func (m *UploadTaskMutation) RecordTaskIDs() (ids []int) {
-	if id := m.record_task; id != nil {
-		ids = append(ids, *id)
-	}
-	return
-}
-
-// ResetRecordTask resets all changes to the "record_task" edge.
-func (m *UploadTaskMutation) ResetRecordTask() {
-	m.record_task = nil
-	m.clearedrecord_task = false
-}
-
-// SetSourceArtifactID sets the "source_artifact" edge to the MediaArtifact entity by id.
-func (m *UploadTaskMutation) SetSourceArtifactID(id int) {
-	m.source_artifact = &id
-}
-
-// ClearSourceArtifact clears the "source_artifact" edge to the MediaArtifact entity.
-func (m *UploadTaskMutation) ClearSourceArtifact() {
-	m.clearedsource_artifact = true
-}
-
-// SourceArtifactCleared reports if the "source_artifact" edge to the MediaArtifact entity was cleared.
-func (m *UploadTaskMutation) SourceArtifactCleared() bool {
-	return m.clearedsource_artifact
-}
-
-// SourceArtifactID returns the "source_artifact" edge ID in the mutation.
-func (m *UploadTaskMutation) SourceArtifactID() (id int, exists bool) {
-	if m.source_artifact != nil {
-		return *m.source_artifact, true
-	}
-	return
-}
-
-// SourceArtifactIDs returns the "source_artifact" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// SourceArtifactID instead. It exists only for internal usage by the builders.
-func (m *UploadTaskMutation) SourceArtifactIDs() (ids []int) {
-	if id := m.source_artifact; id != nil {
-		ids = append(ids, *id)
-	}
-	return
-}
-
-// ResetSourceArtifact resets all changes to the "source_artifact" edge.
-func (m *UploadTaskMutation) ResetSourceArtifact() {
-	m.source_artifact = nil
-	m.clearedsource_artifact = false
-}
-
-// Where appends a list predicates to the UploadTaskMutation builder.
-func (m *UploadTaskMutation) Where(ps ...predicate.UploadTask) {
-	m.predicates = append(m.predicates, ps...)
-}
-
-// WhereP appends storage-level predicates to the UploadTaskMutation builder. Using this method,
-// users can use type-assertion to append predicates that do not depend on any generated package.
-func (m *UploadTaskMutation) WhereP(ps ...func(*sql.Selector)) {
-	p := make([]predicate.UploadTask, len(ps))
-	for i := range ps {
-		p[i] = ps[i]
-	}
-	m.Where(p...)
-}
-
-// Op returns the operation name.
-func (m *UploadTaskMutation) Op() Op {
-	return m.op
-}
-
-// SetOp allows setting the mutation operation.
-func (m *UploadTaskMutation) SetOp(op Op) {
-	m.op = op
-}
-
-// Type returns the node type of this mutation (UploadTask).
-func (m *UploadTaskMutation) Type() string {
-	return m.typ
-}
-
-// Fields returns all fields that were changed during this mutation. Note that in
-// order to get all numeric fields that were incremented/decremented, call
-// AddedFields().
-func (m *UploadTaskMutation) Fields() []string {
-	fields := make([]string, 0, 15)
-	if m.source_path != nil {
-		fields = append(fields, uploadtask.FieldSourcePath)
-	}
-	if m.status != nil {
-		fields = append(fields, uploadtask.FieldStatus)
-	}
-	if m.k8s_job_name != nil {
-		fields = append(fields, uploadtask.FieldK8sJobName)
-	}
-	if m.attempts != nil {
-		fields = append(fields, uploadtask.FieldAttempts)
-	}
-	if m.priority != nil {
-		fields = append(fields, uploadtask.FieldPriority)
-	}
-	if m.bitable_app_token != nil {
-		fields = append(fields, uploadtask.FieldBitableAppToken)
-	}
-	if m.bitable_table_id != nil {
-		fields = append(fields, uploadtask.FieldBitableTableID)
-	}
-	if m.bitable_record_id != nil {
-		fields = append(fields, uploadtask.FieldBitableRecordID)
-	}
-	if m.bitable_record_url != nil {
-		fields = append(fields, uploadtask.FieldBitableRecordURL)
-	}
-	if m.attachment_file_token != nil {
-		fields = append(fields, uploadtask.FieldAttachmentFileToken)
-	}
-	if m.error_message != nil {
-		fields = append(fields, uploadtask.FieldErrorMessage)
-	}
-	if m.started_at != nil {
-		fields = append(fields, uploadtask.FieldStartedAt)
-	}
-	if m.completed_at != nil {
-		fields = append(fields, uploadtask.FieldCompletedAt)
-	}
-	if m.created_at != nil {
-		fields = append(fields, uploadtask.FieldCreatedAt)
-	}
-	if m.updated_at != nil {
-		fields = append(fields, uploadtask.FieldUpdatedAt)
-	}
-	return fields
-}
-
-// Field returns the value of a field with the given name. The second boolean
-// return value indicates that this field was not set, or was not defined in the
-// schema.
-func (m *UploadTaskMutation) Field(name string) (ent.Value, bool) {
-	switch name {
-	case uploadtask.FieldSourcePath:
-		return m.SourcePath()
-	case uploadtask.FieldStatus:
-		return m.Status()
-	case uploadtask.FieldK8sJobName:
-		return m.K8sJobName()
-	case uploadtask.FieldAttempts:
-		return m.Attempts()
-	case uploadtask.FieldPriority:
-		return m.Priority()
-	case uploadtask.FieldBitableAppToken:
-		return m.BitableAppToken()
-	case uploadtask.FieldBitableTableID:
-		return m.BitableTableID()
-	case uploadtask.FieldBitableRecordID:
-		return m.BitableRecordID()
-	case uploadtask.FieldBitableRecordURL:
-		return m.BitableRecordURL()
-	case uploadtask.FieldAttachmentFileToken:
-		return m.AttachmentFileToken()
-	case uploadtask.FieldErrorMessage:
-		return m.ErrorMessage()
-	case uploadtask.FieldStartedAt:
-		return m.StartedAt()
-	case uploadtask.FieldCompletedAt:
-		return m.CompletedAt()
-	case uploadtask.FieldCreatedAt:
-		return m.CreatedAt()
-	case uploadtask.FieldUpdatedAt:
-		return m.UpdatedAt()
-	}
-	return nil, false
-}
-
-// OldField returns the old value of the field from the database. An error is
-// returned if the mutation operation is not UpdateOne, or the query to the
-// database failed.
-func (m *UploadTaskMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
-	switch name {
-	case uploadtask.FieldSourcePath:
-		return m.OldSourcePath(ctx)
-	case uploadtask.FieldStatus:
-		return m.OldStatus(ctx)
-	case uploadtask.FieldK8sJobName:
-		return m.OldK8sJobName(ctx)
-	case uploadtask.FieldAttempts:
-		return m.OldAttempts(ctx)
-	case uploadtask.FieldPriority:
-		return m.OldPriority(ctx)
-	case uploadtask.FieldBitableAppToken:
-		return m.OldBitableAppToken(ctx)
-	case uploadtask.FieldBitableTableID:
-		return m.OldBitableTableID(ctx)
-	case uploadtask.FieldBitableRecordID:
-		return m.OldBitableRecordID(ctx)
-	case uploadtask.FieldBitableRecordURL:
-		return m.OldBitableRecordURL(ctx)
-	case uploadtask.FieldAttachmentFileToken:
-		return m.OldAttachmentFileToken(ctx)
-	case uploadtask.FieldErrorMessage:
-		return m.OldErrorMessage(ctx)
-	case uploadtask.FieldStartedAt:
-		return m.OldStartedAt(ctx)
-	case uploadtask.FieldCompletedAt:
-		return m.OldCompletedAt(ctx)
-	case uploadtask.FieldCreatedAt:
-		return m.OldCreatedAt(ctx)
-	case uploadtask.FieldUpdatedAt:
-		return m.OldUpdatedAt(ctx)
-	}
-	return nil, fmt.Errorf("unknown UploadTask field %s", name)
-}
-
-// SetField sets the value of a field with the given name. It returns an error if
-// the field is not defined in the schema, or if the type mismatched the field
-// type.
-func (m *UploadTaskMutation) SetField(name string, value ent.Value) error {
-	switch name {
-	case uploadtask.FieldSourcePath:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetSourcePath(v)
-		return nil
-	case uploadtask.FieldStatus:
-		v, ok := value.(uploadtask.Status)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetStatus(v)
-		return nil
-	case uploadtask.FieldK8sJobName:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetK8sJobName(v)
-		return nil
-	case uploadtask.FieldAttempts:
-		v, ok := value.(int)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetAttempts(v)
-		return nil
-	case uploadtask.FieldPriority:
-		v, ok := value.(int)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetPriority(v)
-		return nil
-	case uploadtask.FieldBitableAppToken:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetBitableAppToken(v)
-		return nil
-	case uploadtask.FieldBitableTableID:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetBitableTableID(v)
-		return nil
-	case uploadtask.FieldBitableRecordID:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetBitableRecordID(v)
-		return nil
-	case uploadtask.FieldBitableRecordURL:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetBitableRecordURL(v)
-		return nil
-	case uploadtask.FieldAttachmentFileToken:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetAttachmentFileToken(v)
-		return nil
-	case uploadtask.FieldErrorMessage:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetErrorMessage(v)
-		return nil
-	case uploadtask.FieldStartedAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetStartedAt(v)
-		return nil
-	case uploadtask.FieldCompletedAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetCompletedAt(v)
-		return nil
-	case uploadtask.FieldCreatedAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetCreatedAt(v)
-		return nil
-	case uploadtask.FieldUpdatedAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetUpdatedAt(v)
-		return nil
-	}
-	return fmt.Errorf("unknown UploadTask field %s", name)
-}
-
-// AddedFields returns all numeric fields that were incremented/decremented during
-// this mutation.
-func (m *UploadTaskMutation) AddedFields() []string {
-	var fields []string
-	if m.addattempts != nil {
-		fields = append(fields, uploadtask.FieldAttempts)
-	}
-	if m.addpriority != nil {
-		fields = append(fields, uploadtask.FieldPriority)
-	}
-	return fields
-}
-
-// AddedField returns the numeric value that was incremented/decremented on a field
-// with the given name. The second boolean return value indicates that this field
-// was not set, or was not defined in the schema.
-func (m *UploadTaskMutation) AddedField(name string) (ent.Value, bool) {
-	switch name {
-	case uploadtask.FieldAttempts:
-		return m.AddedAttempts()
-	case uploadtask.FieldPriority:
-		return m.AddedPriority()
-	}
-	return nil, false
-}
-
-// AddField adds the value to the field with the given name. It returns an error if
-// the field is not defined in the schema, or if the type mismatched the field
-// type.
-func (m *UploadTaskMutation) AddField(name string, value ent.Value) error {
-	switch name {
-	case uploadtask.FieldAttempts:
-		v, ok := value.(int)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddAttempts(v)
-		return nil
-	case uploadtask.FieldPriority:
-		v, ok := value.(int)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddPriority(v)
-		return nil
-	}
-	return fmt.Errorf("unknown UploadTask numeric field %s", name)
-}
-
-// ClearedFields returns all nullable fields that were cleared during this
-// mutation.
-func (m *UploadTaskMutation) ClearedFields() []string {
-	var fields []string
-	if m.FieldCleared(uploadtask.FieldK8sJobName) {
-		fields = append(fields, uploadtask.FieldK8sJobName)
-	}
-	if m.FieldCleared(uploadtask.FieldBitableAppToken) {
-		fields = append(fields, uploadtask.FieldBitableAppToken)
-	}
-	if m.FieldCleared(uploadtask.FieldBitableTableID) {
-		fields = append(fields, uploadtask.FieldBitableTableID)
-	}
-	if m.FieldCleared(uploadtask.FieldBitableRecordID) {
-		fields = append(fields, uploadtask.FieldBitableRecordID)
-	}
-	if m.FieldCleared(uploadtask.FieldBitableRecordURL) {
-		fields = append(fields, uploadtask.FieldBitableRecordURL)
-	}
-	if m.FieldCleared(uploadtask.FieldAttachmentFileToken) {
-		fields = append(fields, uploadtask.FieldAttachmentFileToken)
-	}
-	if m.FieldCleared(uploadtask.FieldErrorMessage) {
-		fields = append(fields, uploadtask.FieldErrorMessage)
-	}
-	if m.FieldCleared(uploadtask.FieldStartedAt) {
-		fields = append(fields, uploadtask.FieldStartedAt)
-	}
-	if m.FieldCleared(uploadtask.FieldCompletedAt) {
-		fields = append(fields, uploadtask.FieldCompletedAt)
-	}
-	return fields
-}
-
-// FieldCleared returns a boolean indicating if a field with the given name was
-// cleared in this mutation.
-func (m *UploadTaskMutation) FieldCleared(name string) bool {
-	_, ok := m.clearedFields[name]
-	return ok
-}
-
-// ClearField clears the value of the field with the given name. It returns an
-// error if the field is not defined in the schema.
-func (m *UploadTaskMutation) ClearField(name string) error {
-	switch name {
-	case uploadtask.FieldK8sJobName:
-		m.ClearK8sJobName()
-		return nil
-	case uploadtask.FieldBitableAppToken:
-		m.ClearBitableAppToken()
-		return nil
-	case uploadtask.FieldBitableTableID:
-		m.ClearBitableTableID()
-		return nil
-	case uploadtask.FieldBitableRecordID:
-		m.ClearBitableRecordID()
-		return nil
-	case uploadtask.FieldBitableRecordURL:
-		m.ClearBitableRecordURL()
-		return nil
-	case uploadtask.FieldAttachmentFileToken:
-		m.ClearAttachmentFileToken()
-		return nil
-	case uploadtask.FieldErrorMessage:
-		m.ClearErrorMessage()
-		return nil
-	case uploadtask.FieldStartedAt:
-		m.ClearStartedAt()
-		return nil
-	case uploadtask.FieldCompletedAt:
-		m.ClearCompletedAt()
-		return nil
-	}
-	return fmt.Errorf("unknown UploadTask nullable field %s", name)
-}
-
-// ResetField resets all changes in the mutation for the field with the given name.
-// It returns an error if the field is not defined in the schema.
-func (m *UploadTaskMutation) ResetField(name string) error {
-	switch name {
-	case uploadtask.FieldSourcePath:
-		m.ResetSourcePath()
-		return nil
-	case uploadtask.FieldStatus:
-		m.ResetStatus()
-		return nil
-	case uploadtask.FieldK8sJobName:
-		m.ResetK8sJobName()
-		return nil
-	case uploadtask.FieldAttempts:
-		m.ResetAttempts()
-		return nil
-	case uploadtask.FieldPriority:
-		m.ResetPriority()
-		return nil
-	case uploadtask.FieldBitableAppToken:
-		m.ResetBitableAppToken()
-		return nil
-	case uploadtask.FieldBitableTableID:
-		m.ResetBitableTableID()
-		return nil
-	case uploadtask.FieldBitableRecordID:
-		m.ResetBitableRecordID()
-		return nil
-	case uploadtask.FieldBitableRecordURL:
-		m.ResetBitableRecordURL()
-		return nil
-	case uploadtask.FieldAttachmentFileToken:
-		m.ResetAttachmentFileToken()
-		return nil
-	case uploadtask.FieldErrorMessage:
-		m.ResetErrorMessage()
-		return nil
-	case uploadtask.FieldStartedAt:
-		m.ResetStartedAt()
-		return nil
-	case uploadtask.FieldCompletedAt:
-		m.ResetCompletedAt()
-		return nil
-	case uploadtask.FieldCreatedAt:
-		m.ResetCreatedAt()
-		return nil
-	case uploadtask.FieldUpdatedAt:
-		m.ResetUpdatedAt()
-		return nil
-	}
-	return fmt.Errorf("unknown UploadTask field %s", name)
-}
-
-// AddedEdges returns all edge names that were set/added in this mutation.
-func (m *UploadTaskMutation) AddedEdges() []string {
-	edges := make([]string, 0, 2)
-	if m.record_task != nil {
-		edges = append(edges, uploadtask.EdgeRecordTask)
-	}
-	if m.source_artifact != nil {
-		edges = append(edges, uploadtask.EdgeSourceArtifact)
-	}
-	return edges
-}
-
-// AddedIDs returns all IDs (to other nodes) that were added for the given edge
-// name in this mutation.
-func (m *UploadTaskMutation) AddedIDs(name string) []ent.Value {
-	switch name {
-	case uploadtask.EdgeRecordTask:
-		if id := m.record_task; id != nil {
-			return []ent.Value{*id}
-		}
-	case uploadtask.EdgeSourceArtifact:
-		if id := m.source_artifact; id != nil {
-			return []ent.Value{*id}
-		}
-	}
-	return nil
-}
-
-// RemovedEdges returns all edge names that were removed in this mutation.
-func (m *UploadTaskMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 2)
-	return edges
-}
-
-// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
-// the given name in this mutation.
-func (m *UploadTaskMutation) RemovedIDs(name string) []ent.Value {
-	return nil
-}
-
-// ClearedEdges returns all edge names that were cleared in this mutation.
-func (m *UploadTaskMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 2)
-	if m.clearedrecord_task {
-		edges = append(edges, uploadtask.EdgeRecordTask)
-	}
-	if m.clearedsource_artifact {
-		edges = append(edges, uploadtask.EdgeSourceArtifact)
-	}
-	return edges
-}
-
-// EdgeCleared returns a boolean which indicates if the edge with the given name
-// was cleared in this mutation.
-func (m *UploadTaskMutation) EdgeCleared(name string) bool {
-	switch name {
-	case uploadtask.EdgeRecordTask:
-		return m.clearedrecord_task
-	case uploadtask.EdgeSourceArtifact:
-		return m.clearedsource_artifact
-	}
-	return false
-}
-
-// ClearEdge clears the value of the edge with the given name. It returns an error
-// if that edge is not defined in the schema.
-func (m *UploadTaskMutation) ClearEdge(name string) error {
-	switch name {
-	case uploadtask.EdgeRecordTask:
-		m.ClearRecordTask()
-		return nil
-	case uploadtask.EdgeSourceArtifact:
-		m.ClearSourceArtifact()
-		return nil
-	}
-	return fmt.Errorf("unknown UploadTask unique edge %s", name)
-}
-
-// ResetEdge resets all changes to the edge with the given name in this mutation.
-// It returns an error if the edge is not defined in the schema.
-func (m *UploadTaskMutation) ResetEdge(name string) error {
-	switch name {
-	case uploadtask.EdgeRecordTask:
-		m.ResetRecordTask()
-		return nil
-	case uploadtask.EdgeSourceArtifact:
-		m.ResetSourceArtifact()
-		return nil
-	}
-	return fmt.Errorf("unknown UploadTask edge %s", name)
 }

@@ -24,6 +24,12 @@ type MatchRound struct {
 	Status matchround.Status `json:"status,omitempty"`
 	// Winner holds the value of the "winner" field.
 	Winner *matchround.Winner `json:"winner,omitempty"`
+	// WorkflowName holds the value of the "workflow_name" field.
+	WorkflowName *string `json:"workflow_name,omitempty"`
+	// WorkflowUID holds the value of the "workflow_uid" field.
+	WorkflowUID *string `json:"workflow_uid,omitempty"`
+	// WorkflowPhase holds the value of the "workflow_phase" field.
+	WorkflowPhase *string `json:"workflow_phase,omitempty"`
 	// StartedAt holds the value of the "started_at" field.
 	StartedAt time.Time `json:"started_at,omitempty"`
 	// EndedAt holds the value of the "ended_at" field.
@@ -43,19 +49,13 @@ type MatchRound struct {
 type MatchRoundEdges struct {
 	// Match holds the value of the match edge.
 	Match *Match `json:"match,omitempty"`
-	// RecordTasks holds the value of the record_tasks edge.
-	RecordTasks []*RecordTask `json:"record_tasks,omitempty"`
-	// SttTasks holds the value of the stt_tasks edge.
-	SttTasks []*STTTask `json:"stt_tasks,omitempty"`
-	// AnalyzeTasks holds the value of the analyze_tasks edge.
-	AnalyzeTasks []*AnalyzeTask `json:"analyze_tasks,omitempty"`
 	// HighlightClips holds the value of the highlight_clips edge.
 	HighlightClips []*HighlightClip `json:"highlight_clips,omitempty"`
-	// HighlightStates holds the value of the highlight_states edge.
-	HighlightStates []*HighlightRoundState `json:"highlight_states,omitempty"`
+	// LarkBitableRecords holds the value of the lark_bitable_records edge.
+	LarkBitableRecords []*LarkBitableRecord `json:"lark_bitable_records,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [6]bool
+	loadedTypes [3]bool
 }
 
 // MatchOrErr returns the Match value or an error if the edge
@@ -69,49 +69,22 @@ func (e MatchRoundEdges) MatchOrErr() (*Match, error) {
 	return nil, &NotLoadedError{edge: "match"}
 }
 
-// RecordTasksOrErr returns the RecordTasks value or an error if the edge
-// was not loaded in eager-loading.
-func (e MatchRoundEdges) RecordTasksOrErr() ([]*RecordTask, error) {
-	if e.loadedTypes[1] {
-		return e.RecordTasks, nil
-	}
-	return nil, &NotLoadedError{edge: "record_tasks"}
-}
-
-// SttTasksOrErr returns the SttTasks value or an error if the edge
-// was not loaded in eager-loading.
-func (e MatchRoundEdges) SttTasksOrErr() ([]*STTTask, error) {
-	if e.loadedTypes[2] {
-		return e.SttTasks, nil
-	}
-	return nil, &NotLoadedError{edge: "stt_tasks"}
-}
-
-// AnalyzeTasksOrErr returns the AnalyzeTasks value or an error if the edge
-// was not loaded in eager-loading.
-func (e MatchRoundEdges) AnalyzeTasksOrErr() ([]*AnalyzeTask, error) {
-	if e.loadedTypes[3] {
-		return e.AnalyzeTasks, nil
-	}
-	return nil, &NotLoadedError{edge: "analyze_tasks"}
-}
-
 // HighlightClipsOrErr returns the HighlightClips value or an error if the edge
 // was not loaded in eager-loading.
 func (e MatchRoundEdges) HighlightClipsOrErr() ([]*HighlightClip, error) {
-	if e.loadedTypes[4] {
+	if e.loadedTypes[1] {
 		return e.HighlightClips, nil
 	}
 	return nil, &NotLoadedError{edge: "highlight_clips"}
 }
 
-// HighlightStatesOrErr returns the HighlightStates value or an error if the edge
+// LarkBitableRecordsOrErr returns the LarkBitableRecords value or an error if the edge
 // was not loaded in eager-loading.
-func (e MatchRoundEdges) HighlightStatesOrErr() ([]*HighlightRoundState, error) {
-	if e.loadedTypes[5] {
-		return e.HighlightStates, nil
+func (e MatchRoundEdges) LarkBitableRecordsOrErr() ([]*LarkBitableRecord, error) {
+	if e.loadedTypes[2] {
+		return e.LarkBitableRecords, nil
 	}
-	return nil, &NotLoadedError{edge: "highlight_states"}
+	return nil, &NotLoadedError{edge: "lark_bitable_records"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -121,7 +94,7 @@ func (*MatchRound) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case matchround.FieldID, matchround.FieldRoundNo:
 			values[i] = new(sql.NullInt64)
-		case matchround.FieldStatus, matchround.FieldWinner:
+		case matchround.FieldStatus, matchround.FieldWinner, matchround.FieldWorkflowName, matchround.FieldWorkflowUID, matchround.FieldWorkflowPhase:
 			values[i] = new(sql.NullString)
 		case matchround.FieldStartedAt, matchround.FieldEndedAt, matchround.FieldCreatedAt, matchround.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -166,6 +139,27 @@ func (_m *MatchRound) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.Winner = new(matchround.Winner)
 				*_m.Winner = matchround.Winner(value.String)
+			}
+		case matchround.FieldWorkflowName:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field workflow_name", values[i])
+			} else if value.Valid {
+				_m.WorkflowName = new(string)
+				*_m.WorkflowName = value.String
+			}
+		case matchround.FieldWorkflowUID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field workflow_uid", values[i])
+			} else if value.Valid {
+				_m.WorkflowUID = new(string)
+				*_m.WorkflowUID = value.String
+			}
+		case matchround.FieldWorkflowPhase:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field workflow_phase", values[i])
+			} else if value.Valid {
+				_m.WorkflowPhase = new(string)
+				*_m.WorkflowPhase = value.String
 			}
 		case matchround.FieldStartedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -217,29 +211,14 @@ func (_m *MatchRound) QueryMatch() *MatchQuery {
 	return NewMatchRoundClient(_m.config).QueryMatch(_m)
 }
 
-// QueryRecordTasks queries the "record_tasks" edge of the MatchRound entity.
-func (_m *MatchRound) QueryRecordTasks() *RecordTaskQuery {
-	return NewMatchRoundClient(_m.config).QueryRecordTasks(_m)
-}
-
-// QuerySttTasks queries the "stt_tasks" edge of the MatchRound entity.
-func (_m *MatchRound) QuerySttTasks() *STTTaskQuery {
-	return NewMatchRoundClient(_m.config).QuerySttTasks(_m)
-}
-
-// QueryAnalyzeTasks queries the "analyze_tasks" edge of the MatchRound entity.
-func (_m *MatchRound) QueryAnalyzeTasks() *AnalyzeTaskQuery {
-	return NewMatchRoundClient(_m.config).QueryAnalyzeTasks(_m)
-}
-
 // QueryHighlightClips queries the "highlight_clips" edge of the MatchRound entity.
 func (_m *MatchRound) QueryHighlightClips() *HighlightClipQuery {
 	return NewMatchRoundClient(_m.config).QueryHighlightClips(_m)
 }
 
-// QueryHighlightStates queries the "highlight_states" edge of the MatchRound entity.
-func (_m *MatchRound) QueryHighlightStates() *HighlightRoundStateQuery {
-	return NewMatchRoundClient(_m.config).QueryHighlightStates(_m)
+// QueryLarkBitableRecords queries the "lark_bitable_records" edge of the MatchRound entity.
+func (_m *MatchRound) QueryLarkBitableRecords() *LarkBitableRecordQuery {
+	return NewMatchRoundClient(_m.config).QueryLarkBitableRecords(_m)
 }
 
 // Update returns a builder for updating this MatchRound.
@@ -274,6 +253,21 @@ func (_m *MatchRound) String() string {
 	if v := _m.Winner; v != nil {
 		builder.WriteString("winner=")
 		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	if v := _m.WorkflowName; v != nil {
+		builder.WriteString("workflow_name=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	if v := _m.WorkflowUID; v != nil {
+		builder.WriteString("workflow_uid=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	if v := _m.WorkflowPhase; v != nil {
+		builder.WriteString("workflow_phase=")
+		builder.WriteString(*v)
 	}
 	builder.WriteString(", ")
 	builder.WriteString("started_at=")

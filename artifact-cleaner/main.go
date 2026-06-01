@@ -30,7 +30,7 @@ func main() {
 	}
 	defer client.Close()
 	transcodeConf := c.TranscodeConf.WithDefaults()
-	result, err := logic.CleanExpiredSources(context.Background(), client, transcodeConf.BaseDir, time.Now(), 500)
+	result, err := logic.CleanUploadedSources(context.Background(), client, transcodeConf.BaseDir, time.Now(), transcodeConf.SourceRetentionDays, 500)
 	if err != nil {
 		logx.Error(err)
 		os.Exit(1)

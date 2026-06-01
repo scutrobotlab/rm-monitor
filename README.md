@@ -2,37 +2,38 @@
 
 rm-monitor is a RoboMaster match monitoring and recording system. It watches the
 official schedule/live data, writes authoritative match state to PostgreSQL, and
-drives recording, uploading, transcoding, STT, manifest generation, and Feishu
-card updates through Kubernetes Jobs.
+drives recording, uploading, transcoding, STT, highlights, manifest generation,
+and Feishu card updates through Argo Workflows.
 
 ## Architecture
 
 The runtime services are:
 
-- `monitor`: polls schedule/live data, upserts teams/matches/rounds, and writes
-  Redis heartbeat/cache state.
+- `match-controller`: polls schedule/live data, upserts teams/matches/rounds,
+  and creates or resumes deterministic Argo match workflows.
 - `lark-notifier`: sends internal Feishu match cards, patches cards
-  idempotently from PostgreSQL state, and replies when uploads complete.
-- `record-dispatcher`: creates record, STT, and manifest Jobs from PostgreSQL
-  state.
-- `uploader-dispatcher`: creates upload Jobs for source artifacts.
-- `transcode-dispatcher`: creates AV1 archive transcode Jobs.
+  idempotently from PostgreSQL state, and displays Feishu bitable record links.
 - `health-checker`: periodic structured-log-only health check CronJob.
 
-Runtime Jobs are created by dispatchers, not by Helm:
+Runtime Jobs are created by Argo workflows, not by Helm:
 
 - `record-job`: records one round/role source to FLV.
-- `stt-job`: records one configured role's audio segments and calls a Whisper
-  server.
+- `danmu-job`: records one round's LeanCloud chatroom danmu XML and stats.
+- `analyze-job`: detects effective round bounds and settlement output.
+- `stt-job`: extracts audio from the configured role recording and calls a
+  Whisper server.
+- `lark-record-job`: creates Feishu bitable records, uploads source FLV
+  attachments, and records the business result.
+- `transcode-job`: writes MP4/AV1 archive output.
+- `highlight-job`: finds highlight candidates and writes highlight business
+  rows.
+- `highlight-artifact-job`: renders one highlight's file artifacts.
 - `manifest-job`: runs once after a match completes, writes `README.md`, and
   saves the Markdown report on the match.
-- `uploader-job`: uploads source FLV to Feishu bitable attachments.
-- `transcode-job`: writes MP4/AV1 archive output.
-- `artifact-cleaner`: deletes expired source artifacts after archive and upload
-  have reached explicit terminal states.
 
-PostgreSQL is the authoritative business state. Redis is only used for cache,
-rate limiting, monitor heartbeat, and short-lived STT coordination signals.
+PostgreSQL is authoritative only for business state. Argo owns orchestration and
+dependency state. Redis is used for cache and short-lived external API locks or
+rate limits.
 
 ## Storage Model
 
@@ -41,8 +42,8 @@ The deployment uses a single real data source plus an internal shared view:
 - `records`: a deployer-created local RWO PV on the record node. `record-job`
   writes here directly.
 - `records-shared`: a deployer-created internal NFS RWX PV exported from the
-  `records` data. Upload, transcode, STT, manifest, health-check, and cleanup
-  Jobs mount this PVC so they can drift across nodes.
+  `records` data. Read-only services such as manifest, notifier, and health
+  checks can mount this shared view.
 
 OpenList is intentionally outside this chart. If deployed, it should mount the
 `records` PVC read-only and serve browsing/preview only.

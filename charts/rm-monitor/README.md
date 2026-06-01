@@ -58,13 +58,13 @@ record PVC. It is not part of the write path.
 
 The chart includes a lightweight `health-checker` CronJob. It does not send
 messages or mutate business state; it only writes structured logs and fails the
-CronJob when PG, Redis, monitor heartbeat, task status, failed runtime Jobs, or
-the shared records PVC are unhealthy.
+CronJob when PG, Redis, controller heartbeat, Argo workflow health, or the shared
+records PVC are unhealthy.
 
 For a first migration from legacy `kubectl apply` resources, either remove the
 old non-data resources and reinstall with Helm, or do a one-off manual adoption.
 Do not keep ownership-adoption flags in the regular deployment command.
 
-Dynamic record/upload/transcode/stt/manifest Job instances are still created by
-the dispatchers at runtime. Helm only manages the long-running services,
-configuration, RBAC, storage PVCs, and artifact-cleaner CronJob.
+Dynamic record/upload/transcode/stt/highlight/manifest work is created by Argo
+Workflows at runtime. Helm manages the long-running services, WorkflowTemplates,
+configuration, RBAC, and storage PVCs.

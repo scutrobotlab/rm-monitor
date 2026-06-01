@@ -43,6 +43,26 @@ func (_u *LarkMessageUpdate) SetNillableMessageID(v *string) *LarkMessageUpdate 
 	return _u
 }
 
+// SetChatID sets the "chat_id" field.
+func (_u *LarkMessageUpdate) SetChatID(v string) *LarkMessageUpdate {
+	_u.mutation.SetChatID(v)
+	return _u
+}
+
+// SetNillableChatID sets the "chat_id" field if the given value is not nil.
+func (_u *LarkMessageUpdate) SetNillableChatID(v *string) *LarkMessageUpdate {
+	if v != nil {
+		_u.SetChatID(*v)
+	}
+	return _u
+}
+
+// ClearChatID clears the value of the "chat_id" field.
+func (_u *LarkMessageUpdate) ClearChatID() *LarkMessageUpdate {
+	_u.mutation.ClearChatID()
+	return _u
+}
+
 // SetCardID sets the "card_id" field.
 func (_u *LarkMessageUpdate) SetCardID(v string) *LarkMessageUpdate {
 	_u.mutation.SetCardID(v)
@@ -162,6 +182,12 @@ func (_u *LarkMessageUpdate) sqlSave(ctx context.Context) (_node int, err error)
 	if value, ok := _u.mutation.MessageID(); ok {
 		_spec.SetField(larkmessage.FieldMessageID, field.TypeString, value)
 	}
+	if value, ok := _u.mutation.ChatID(); ok {
+		_spec.SetField(larkmessage.FieldChatID, field.TypeString, value)
+	}
+	if _u.mutation.ChatIDCleared() {
+		_spec.ClearField(larkmessage.FieldChatID, field.TypeString)
+	}
 	if value, ok := _u.mutation.CardID(); ok {
 		_spec.SetField(larkmessage.FieldCardID, field.TypeString, value)
 	}
@@ -237,6 +263,26 @@ func (_u *LarkMessageUpdateOne) SetNillableMessageID(v *string) *LarkMessageUpda
 	if v != nil {
 		_u.SetMessageID(*v)
 	}
+	return _u
+}
+
+// SetChatID sets the "chat_id" field.
+func (_u *LarkMessageUpdateOne) SetChatID(v string) *LarkMessageUpdateOne {
+	_u.mutation.SetChatID(v)
+	return _u
+}
+
+// SetNillableChatID sets the "chat_id" field if the given value is not nil.
+func (_u *LarkMessageUpdateOne) SetNillableChatID(v *string) *LarkMessageUpdateOne {
+	if v != nil {
+		_u.SetChatID(*v)
+	}
+	return _u
+}
+
+// ClearChatID clears the value of the "chat_id" field.
+func (_u *LarkMessageUpdateOne) ClearChatID() *LarkMessageUpdateOne {
+	_u.mutation.ClearChatID()
 	return _u
 }
 
@@ -388,6 +434,12 @@ func (_u *LarkMessageUpdateOne) sqlSave(ctx context.Context) (_node *LarkMessage
 	}
 	if value, ok := _u.mutation.MessageID(); ok {
 		_spec.SetField(larkmessage.FieldMessageID, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.ChatID(); ok {
+		_spec.SetField(larkmessage.FieldChatID, field.TypeString, value)
+	}
+	if _u.mutation.ChatIDCleared() {
+		_spec.ClearField(larkmessage.FieldChatID, field.TypeString)
 	}
 	if value, ok := _u.mutation.CardID(); ok {
 		_spec.SetField(larkmessage.FieldCardID, field.TypeString, value)

@@ -25,16 +25,14 @@ const (
 	FieldStatus = "status"
 	// FieldPriority holds the string denoting the priority field in the database.
 	FieldPriority = "priority"
-	// FieldK8sJobName holds the string denoting the k8s_job_name field in the database.
-	FieldK8sJobName = "k8s_job_name"
-	// FieldAttempts holds the string denoting the attempts field in the database.
-	FieldAttempts = "attempts"
 	// FieldStartSeconds holds the string denoting the start_seconds field in the database.
 	FieldStartSeconds = "start_seconds"
 	// FieldEndSeconds holds the string denoting the end_seconds field in the database.
 	FieldEndSeconds = "end_seconds"
 	// FieldPeakSeconds holds the string denoting the peak_seconds field in the database.
 	FieldPeakSeconds = "peak_seconds"
+	// FieldSourcePath holds the string denoting the source_path field in the database.
+	FieldSourcePath = "source_path"
 	// FieldOutputDir holds the string denoting the output_dir field in the database.
 	FieldOutputDir = "output_dir"
 	// FieldTitle holds the string denoting the title field in the database.
@@ -47,10 +45,6 @@ const (
 	FieldScore = "score"
 	// FieldModelPayload holds the string denoting the model_payload field in the database.
 	FieldModelPayload = "model_payload"
-	// FieldErrorMessage holds the string denoting the error_message field in the database.
-	FieldErrorMessage = "error_message"
-	// FieldStartedAt holds the string denoting the started_at field in the database.
-	FieldStartedAt = "started_at"
 	// FieldCompletedAt holds the string denoting the completed_at field in the database.
 	FieldCompletedAt = "completed_at"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
@@ -59,10 +53,8 @@ const (
 	FieldUpdatedAt = "updated_at"
 	// EdgeMatchRound holds the string denoting the match_round edge name in mutations.
 	EdgeMatchRound = "match_round"
-	// EdgeSourceArtifact holds the string denoting the source_artifact edge name in mutations.
-	EdgeSourceArtifact = "source_artifact"
-	// EdgePublishTasks holds the string denoting the publish_tasks edge name in mutations.
-	EdgePublishTasks = "publish_tasks"
+	// EdgeBilibiliPublications holds the string denoting the bilibili_publications edge name in mutations.
+	EdgeBilibiliPublications = "bilibili_publications"
 	// Table holds the table name of the highlightclip in the database.
 	Table = "highlight_clips"
 	// MatchRoundTable is the table that holds the match_round relation/edge.
@@ -72,20 +64,13 @@ const (
 	MatchRoundInverseTable = "match_rounds"
 	// MatchRoundColumn is the table column denoting the match_round relation/edge.
 	MatchRoundColumn = "match_round_highlight_clips"
-	// SourceArtifactTable is the table that holds the source_artifact relation/edge.
-	SourceArtifactTable = "highlight_clips"
-	// SourceArtifactInverseTable is the table name for the MediaArtifact entity.
-	// It exists in this package in order to avoid circular dependency with the "mediaartifact" package.
-	SourceArtifactInverseTable = "media_artifacts"
-	// SourceArtifactColumn is the table column denoting the source_artifact relation/edge.
-	SourceArtifactColumn = "media_artifact_highlight_clips"
-	// PublishTasksTable is the table that holds the publish_tasks relation/edge.
-	PublishTasksTable = "highlight_publish_tasks"
-	// PublishTasksInverseTable is the table name for the HighlightPublishTask entity.
-	// It exists in this package in order to avoid circular dependency with the "highlightpublishtask" package.
-	PublishTasksInverseTable = "highlight_publish_tasks"
-	// PublishTasksColumn is the table column denoting the publish_tasks relation/edge.
-	PublishTasksColumn = "highlight_clip_publish_tasks"
+	// BilibiliPublicationsTable is the table that holds the bilibili_publications relation/edge.
+	BilibiliPublicationsTable = "bilibili_highlight_publications"
+	// BilibiliPublicationsInverseTable is the table name for the BilibiliHighlightPublication entity.
+	// It exists in this package in order to avoid circular dependency with the "bilibilihighlightpublication" package.
+	BilibiliPublicationsInverseTable = "bilibili_highlight_publications"
+	// BilibiliPublicationsColumn is the table column denoting the bilibili_publications relation/edge.
+	BilibiliPublicationsColumn = "highlight_clip_bilibili_publications"
 )
 
 // Columns holds all SQL columns for highlightclip fields.
@@ -96,19 +81,16 @@ var Columns = []string{
 	FieldAlgorithmVersion,
 	FieldStatus,
 	FieldPriority,
-	FieldK8sJobName,
-	FieldAttempts,
 	FieldStartSeconds,
 	FieldEndSeconds,
 	FieldPeakSeconds,
+	FieldSourcePath,
 	FieldOutputDir,
 	FieldTitle,
 	FieldDescription,
 	FieldTags,
 	FieldScore,
 	FieldModelPayload,
-	FieldErrorMessage,
-	FieldStartedAt,
 	FieldCompletedAt,
 	FieldCreatedAt,
 	FieldUpdatedAt,
@@ -118,7 +100,6 @@ var Columns = []string{
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
 	"match_round_highlight_clips",
-	"media_artifact_highlight_clips",
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -139,8 +120,6 @@ func ValidColumn(column string) bool {
 var (
 	// DefaultPriority holds the default value on creation for the "priority" field.
 	DefaultPriority int
-	// DefaultAttempts holds the default value on creation for the "attempts" field.
-	DefaultAttempts int
 	// DefaultScore holds the default value on creation for the "score" field.
 	DefaultScore float64
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
@@ -154,17 +133,14 @@ var (
 // Status defines the type for the "status" enum field.
 type Status string
 
-// StatusPENDING is the default value of the Status enum.
-const DefaultStatus = StatusPENDING
+// StatusAVAILABLE is the default value of the Status enum.
+const DefaultStatus = StatusAVAILABLE
 
 // Status values.
 const (
-	StatusPENDING     Status = "PENDING"
-	StatusDISPATCHING Status = "DISPATCHING"
-	StatusRUNNING     Status = "RUNNING"
-	StatusSUCCEEDED   Status = "SUCCEEDED"
-	StatusFAILED      Status = "FAILED"
-	StatusSKIPPED     Status = "SKIPPED"
+	StatusAVAILABLE Status = "AVAILABLE"
+	StatusFAILED    Status = "FAILED"
+	StatusSKIPPED   Status = "SKIPPED"
 )
 
 func (s Status) String() string {
@@ -174,7 +150,7 @@ func (s Status) String() string {
 // StatusValidator is a validator for the "status" field enum values. It is called by the builders before save.
 func StatusValidator(s Status) error {
 	switch s {
-	case StatusPENDING, StatusDISPATCHING, StatusRUNNING, StatusSUCCEEDED, StatusFAILED, StatusSKIPPED:
+	case StatusAVAILABLE, StatusFAILED, StatusSKIPPED:
 		return nil
 	default:
 		return fmt.Errorf("highlightclip: invalid enum value for status field: %q", s)
@@ -214,16 +190,6 @@ func ByPriority(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldPriority, opts...).ToFunc()
 }
 
-// ByK8sJobName orders the results by the k8s_job_name field.
-func ByK8sJobName(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldK8sJobName, opts...).ToFunc()
-}
-
-// ByAttempts orders the results by the attempts field.
-func ByAttempts(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldAttempts, opts...).ToFunc()
-}
-
 // ByStartSeconds orders the results by the start_seconds field.
 func ByStartSeconds(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldStartSeconds, opts...).ToFunc()
@@ -237,6 +203,11 @@ func ByEndSeconds(opts ...sql.OrderTermOption) OrderOption {
 // ByPeakSeconds orders the results by the peak_seconds field.
 func ByPeakSeconds(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldPeakSeconds, opts...).ToFunc()
+}
+
+// BySourcePath orders the results by the source_path field.
+func BySourcePath(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSourcePath, opts...).ToFunc()
 }
 
 // ByOutputDir orders the results by the output_dir field.
@@ -264,16 +235,6 @@ func ByModelPayload(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldModelPayload, opts...).ToFunc()
 }
 
-// ByErrorMessage orders the results by the error_message field.
-func ByErrorMessage(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldErrorMessage, opts...).ToFunc()
-}
-
-// ByStartedAt orders the results by the started_at field.
-func ByStartedAt(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldStartedAt, opts...).ToFunc()
-}
-
 // ByCompletedAt orders the results by the completed_at field.
 func ByCompletedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCompletedAt, opts...).ToFunc()
@@ -296,24 +257,17 @@ func ByMatchRoundField(field string, opts ...sql.OrderTermOption) OrderOption {
 	}
 }
 
-// BySourceArtifactField orders the results by source_artifact field.
-func BySourceArtifactField(field string, opts ...sql.OrderTermOption) OrderOption {
+// ByBilibiliPublicationsCount orders the results by bilibili_publications count.
+func ByBilibiliPublicationsCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newSourceArtifactStep(), sql.OrderByField(field, opts...))
+		sqlgraph.OrderByNeighborsCount(s, newBilibiliPublicationsStep(), opts...)
 	}
 }
 
-// ByPublishTasksCount orders the results by publish_tasks count.
-func ByPublishTasksCount(opts ...sql.OrderTermOption) OrderOption {
+// ByBilibiliPublications orders the results by bilibili_publications terms.
+func ByBilibiliPublications(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newPublishTasksStep(), opts...)
-	}
-}
-
-// ByPublishTasks orders the results by publish_tasks terms.
-func ByPublishTasks(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newPublishTasksStep(), append([]sql.OrderTerm{term}, terms...)...)
+		sqlgraph.OrderByNeighborTerms(s, newBilibiliPublicationsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
 func newMatchRoundStep() *sqlgraph.Step {
@@ -323,17 +277,10 @@ func newMatchRoundStep() *sqlgraph.Step {
 		sqlgraph.Edge(sqlgraph.M2O, true, MatchRoundTable, MatchRoundColumn),
 	)
 }
-func newSourceArtifactStep() *sqlgraph.Step {
+func newBilibiliPublicationsStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(SourceArtifactInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.M2O, true, SourceArtifactTable, SourceArtifactColumn),
-	)
-}
-func newPublishTasksStep() *sqlgraph.Step {
-	return sqlgraph.NewStep(
-		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(PublishTasksInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, false, PublishTasksTable, PublishTasksColumn),
+		sqlgraph.To(BilibiliPublicationsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, BilibiliPublicationsTable, BilibiliPublicationsColumn),
 	)
 }

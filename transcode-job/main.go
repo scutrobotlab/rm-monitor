@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"encoding/xml"
 	"flag"
 	"fmt"
@@ -58,15 +59,18 @@ func main() {
 		os.Exit(1)
 	}
 	if err := run(context.Background(), jobCtx, jobDir); err != nil {
-		_ = jobcontract.WriteError(jobDir, "transcode", jobCtx.TaskID, err)
+		_ = jobcontract.WriteError(jobDir, "transcode", 0, err)
 		logx.Error(err)
 		os.Exit(1)
 	}
 }
 
 func run(ctx context.Context, jobCtx jobcontract.TranscodeContext, jobDir string) error {
-	if jobCtx.TaskID == 0 {
-		return errors.New("task_id is required")
+	if strings.TrimSpace(jobCtx.SourcePath) == "" {
+		return errors.New("source_path is required")
+	}
+	if err := applyRoundBoundary(&jobCtx); err != nil {
+		return err
 	}
 	sourceRel, sourceMountedPath, err := artifactPath(jobCtx.BaseDir, jobCtx.SourcePath)
 	if err != nil {
@@ -80,7 +84,7 @@ func run(ctx context.Context, jobCtx jobcontract.TranscodeContext, jobDir string
 	if err != nil {
 		return err
 	}
-	tmpArchiveRel := fmt.Sprintf("%s.tmp-%d", archiveRel, jobCtx.TaskID)
+	tmpArchiveRel := fmt.Sprintf("%s.tmp-%d", archiveRel, jobCtx.MatchRoundID)
 	tmpArchiveMountedPath := filepath.Join(jobCtx.BaseDir, filepath.FromSlash(tmpArchiveRel))
 
 	if err := ensureSVTAV1(ctx); err != nil {
@@ -158,17 +162,26 @@ func run(ctx context.Context, jobCtx jobcontract.TranscodeContext, jobDir string
 		return err
 	}
 
-	return jobcontract.WriteResult(jobDir, jobcontract.TranscodeResult{
-		Schema:           "rm-monitor/transcode-result/v1",
-		TaskID:           jobCtx.TaskID,
-		SourceArtifactID: jobCtx.SourceArtifactID,
-		RecordTaskID:     jobCtx.RecordTaskID,
-		ArchivePath:      archiveRel,
-		Format:           "mp4",
-		Codec:            "av1",
-		FileSize:         stat.Size(),
-		Checksum:         sum,
-		CompletedAt:      time.Now(),
+	result := jobcontract.TranscodeResult{
+		Schema:       "rm-monitor/transcode-result/v1",
+		MatchID:      jobCtx.MatchID,
+		MatchRoundID: jobCtx.MatchRoundID,
+		ArchivePath:  archiveRel,
+		Format:       "mp4",
+		Codec:        "av1",
+		FileSize:     stat.Size(),
+		Checksum:     sum,
+		CompletedAt:  time.Now(),
+	}
+	if err := jobcontract.WriteTempResult(result); err != nil {
+		return err
+	}
+	return jobcontract.WriteArgoOutputs(map[string]any{
+		"archive_path": result.ArchivePath,
+		"format":       result.Format,
+		"codec":        result.Codec,
+		"file_size":    result.FileSize,
+		"checksum":     result.Checksum,
 	})
 }
 
@@ -245,6 +258,40 @@ func cropRoundDanmu(jobCtx jobcontract.TranscodeContext) error {
 	return errors.Wrap(os.Rename(tmp, finalPath), "publish final danmu xml")
 }
 
+func applyRoundBoundary(jobCtx *jobcontract.TranscodeContext) error {
+	if jobCtx == nil || (jobCtx.TrimStartSeconds != nil && jobCtx.TrimEndSeconds != nil) {
+		return nil
+	}
+	roundDir := strings.TrimSpace(jobCtx.RoundDir)
+	if roundDir == "" {
+		return nil
+	}
+	raw, err := os.ReadFile(filepath.Join(roundDir, "round.json"))
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return errors.Wrap(err, "read round analysis")
+	}
+	var doc struct {
+		Boundary struct {
+			StartSeconds float64 `json:"start_seconds"`
+			EndSeconds   float64 `json:"end_seconds"`
+		} `json:"boundary"`
+	}
+	if err := json.Unmarshal(raw, &doc); err != nil {
+		return errors.Wrap(err, "parse round analysis")
+	}
+	if doc.Boundary.EndSeconds <= doc.Boundary.StartSeconds {
+		return nil
+	}
+	start := doc.Boundary.StartSeconds
+	end := doc.Boundary.EndSeconds
+	jobCtx.TrimStartSeconds = &start
+	jobCtx.TrimEndSeconds = &end
+	return nil
+}
+
 func transcodeJobDir(jobCtx jobcontract.TranscodeContext) (string, error) {
 	archiveRel := strings.TrimSpace(jobCtx.ArchivePath)
 	if archiveRel == "" {
@@ -258,7 +305,7 @@ func transcodeJobDir(jobCtx jobcontract.TranscodeContext) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(jobCtx.BaseDir, filepath.FromSlash(pathpkg.Dir(archiveRel)), jobcontract.DirName, fmt.Sprintf("transcode-%d", jobCtx.TaskID)), nil
+	return filepath.Join(jobCtx.BaseDir, filepath.FromSlash(pathpkg.Dir(archiveRel)), jobcontract.DirName, fmt.Sprintf("transcode-%d", jobCtx.MatchRoundID)), nil
 }
 
 func artifactPath(baseDir, artifactPath string) (string, string, error) {

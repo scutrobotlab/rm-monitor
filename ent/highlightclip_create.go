@@ -8,13 +8,11 @@ import (
 	"fmt"
 	"time"
 
-	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"scutbot.cn/web/rm-monitor/ent/bilibilihighlightpublication"
 	"scutbot.cn/web/rm-monitor/ent/highlightclip"
-	"scutbot.cn/web/rm-monitor/ent/highlightpublishtask"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
-	"scutbot.cn/web/rm-monitor/ent/mediaartifact"
 )
 
 // HighlightClipCreate is the builder for creating a HighlightClip entity.
@@ -22,7 +20,6 @@ type HighlightClipCreate struct {
 	config
 	mutation *HighlightClipMutation
 	hooks    []Hook
-	conflict []sql.ConflictOption
 }
 
 // SetHighlightIndex sets the "highlight_index" field.
@@ -71,34 +68,6 @@ func (_c *HighlightClipCreate) SetNillablePriority(v *int) *HighlightClipCreate 
 	return _c
 }
 
-// SetK8sJobName sets the "k8s_job_name" field.
-func (_c *HighlightClipCreate) SetK8sJobName(v string) *HighlightClipCreate {
-	_c.mutation.SetK8sJobName(v)
-	return _c
-}
-
-// SetNillableK8sJobName sets the "k8s_job_name" field if the given value is not nil.
-func (_c *HighlightClipCreate) SetNillableK8sJobName(v *string) *HighlightClipCreate {
-	if v != nil {
-		_c.SetK8sJobName(*v)
-	}
-	return _c
-}
-
-// SetAttempts sets the "attempts" field.
-func (_c *HighlightClipCreate) SetAttempts(v int) *HighlightClipCreate {
-	_c.mutation.SetAttempts(v)
-	return _c
-}
-
-// SetNillableAttempts sets the "attempts" field if the given value is not nil.
-func (_c *HighlightClipCreate) SetNillableAttempts(v *int) *HighlightClipCreate {
-	if v != nil {
-		_c.SetAttempts(*v)
-	}
-	return _c
-}
-
 // SetStartSeconds sets the "start_seconds" field.
 func (_c *HighlightClipCreate) SetStartSeconds(v float64) *HighlightClipCreate {
 	_c.mutation.SetStartSeconds(v)
@@ -114,6 +83,12 @@ func (_c *HighlightClipCreate) SetEndSeconds(v float64) *HighlightClipCreate {
 // SetPeakSeconds sets the "peak_seconds" field.
 func (_c *HighlightClipCreate) SetPeakSeconds(v float64) *HighlightClipCreate {
 	_c.mutation.SetPeakSeconds(v)
+	return _c
+}
+
+// SetSourcePath sets the "source_path" field.
+func (_c *HighlightClipCreate) SetSourcePath(v string) *HighlightClipCreate {
+	_c.mutation.SetSourcePath(v)
 	return _c
 }
 
@@ -185,34 +160,6 @@ func (_c *HighlightClipCreate) SetNillableModelPayload(v *string) *HighlightClip
 	return _c
 }
 
-// SetErrorMessage sets the "error_message" field.
-func (_c *HighlightClipCreate) SetErrorMessage(v string) *HighlightClipCreate {
-	_c.mutation.SetErrorMessage(v)
-	return _c
-}
-
-// SetNillableErrorMessage sets the "error_message" field if the given value is not nil.
-func (_c *HighlightClipCreate) SetNillableErrorMessage(v *string) *HighlightClipCreate {
-	if v != nil {
-		_c.SetErrorMessage(*v)
-	}
-	return _c
-}
-
-// SetStartedAt sets the "started_at" field.
-func (_c *HighlightClipCreate) SetStartedAt(v time.Time) *HighlightClipCreate {
-	_c.mutation.SetStartedAt(v)
-	return _c
-}
-
-// SetNillableStartedAt sets the "started_at" field if the given value is not nil.
-func (_c *HighlightClipCreate) SetNillableStartedAt(v *time.Time) *HighlightClipCreate {
-	if v != nil {
-		_c.SetStartedAt(*v)
-	}
-	return _c
-}
-
 // SetCompletedAt sets the "completed_at" field.
 func (_c *HighlightClipCreate) SetCompletedAt(v time.Time) *HighlightClipCreate {
 	_c.mutation.SetCompletedAt(v)
@@ -266,30 +213,19 @@ func (_c *HighlightClipCreate) SetMatchRound(v *MatchRound) *HighlightClipCreate
 	return _c.SetMatchRoundID(v.ID)
 }
 
-// SetSourceArtifactID sets the "source_artifact" edge to the MediaArtifact entity by ID.
-func (_c *HighlightClipCreate) SetSourceArtifactID(id int) *HighlightClipCreate {
-	_c.mutation.SetSourceArtifactID(id)
+// AddBilibiliPublicationIDs adds the "bilibili_publications" edge to the BilibiliHighlightPublication entity by IDs.
+func (_c *HighlightClipCreate) AddBilibiliPublicationIDs(ids ...int) *HighlightClipCreate {
+	_c.mutation.AddBilibiliPublicationIDs(ids...)
 	return _c
 }
 
-// SetSourceArtifact sets the "source_artifact" edge to the MediaArtifact entity.
-func (_c *HighlightClipCreate) SetSourceArtifact(v *MediaArtifact) *HighlightClipCreate {
-	return _c.SetSourceArtifactID(v.ID)
-}
-
-// AddPublishTaskIDs adds the "publish_tasks" edge to the HighlightPublishTask entity by IDs.
-func (_c *HighlightClipCreate) AddPublishTaskIDs(ids ...int) *HighlightClipCreate {
-	_c.mutation.AddPublishTaskIDs(ids...)
-	return _c
-}
-
-// AddPublishTasks adds the "publish_tasks" edges to the HighlightPublishTask entity.
-func (_c *HighlightClipCreate) AddPublishTasks(v ...*HighlightPublishTask) *HighlightClipCreate {
+// AddBilibiliPublications adds the "bilibili_publications" edges to the BilibiliHighlightPublication entity.
+func (_c *HighlightClipCreate) AddBilibiliPublications(v ...*BilibiliHighlightPublication) *HighlightClipCreate {
 	ids := make([]int, len(v))
 	for i := range v {
 		ids[i] = v[i].ID
 	}
-	return _c.AddPublishTaskIDs(ids...)
+	return _c.AddBilibiliPublicationIDs(ids...)
 }
 
 // Mutation returns the HighlightClipMutation object of the builder.
@@ -335,10 +271,6 @@ func (_c *HighlightClipCreate) defaults() {
 		v := highlightclip.DefaultPriority
 		_c.mutation.SetPriority(v)
 	}
-	if _, ok := _c.mutation.Attempts(); !ok {
-		v := highlightclip.DefaultAttempts
-		_c.mutation.SetAttempts(v)
-	}
 	if _, ok := _c.mutation.Score(); !ok {
 		v := highlightclip.DefaultScore
 		_c.mutation.SetScore(v)
@@ -375,9 +307,6 @@ func (_c *HighlightClipCreate) check() error {
 	if _, ok := _c.mutation.Priority(); !ok {
 		return &ValidationError{Name: "priority", err: errors.New(`ent: missing required field "HighlightClip.priority"`)}
 	}
-	if _, ok := _c.mutation.Attempts(); !ok {
-		return &ValidationError{Name: "attempts", err: errors.New(`ent: missing required field "HighlightClip.attempts"`)}
-	}
 	if _, ok := _c.mutation.StartSeconds(); !ok {
 		return &ValidationError{Name: "start_seconds", err: errors.New(`ent: missing required field "HighlightClip.start_seconds"`)}
 	}
@@ -386,6 +315,9 @@ func (_c *HighlightClipCreate) check() error {
 	}
 	if _, ok := _c.mutation.PeakSeconds(); !ok {
 		return &ValidationError{Name: "peak_seconds", err: errors.New(`ent: missing required field "HighlightClip.peak_seconds"`)}
+	}
+	if _, ok := _c.mutation.SourcePath(); !ok {
+		return &ValidationError{Name: "source_path", err: errors.New(`ent: missing required field "HighlightClip.source_path"`)}
 	}
 	if _, ok := _c.mutation.OutputDir(); !ok {
 		return &ValidationError{Name: "output_dir", err: errors.New(`ent: missing required field "HighlightClip.output_dir"`)}
@@ -401,9 +333,6 @@ func (_c *HighlightClipCreate) check() error {
 	}
 	if len(_c.mutation.MatchRoundIDs()) == 0 {
 		return &ValidationError{Name: "match_round", err: errors.New(`ent: missing required edge "HighlightClip.match_round"`)}
-	}
-	if len(_c.mutation.SourceArtifactIDs()) == 0 {
-		return &ValidationError{Name: "source_artifact", err: errors.New(`ent: missing required edge "HighlightClip.source_artifact"`)}
 	}
 	return nil
 }
@@ -431,7 +360,6 @@ func (_c *HighlightClipCreate) createSpec() (*HighlightClip, *sqlgraph.CreateSpe
 		_node = &HighlightClip{config: _c.config}
 		_spec = sqlgraph.NewCreateSpec(highlightclip.Table, sqlgraph.NewFieldSpec(highlightclip.FieldID, field.TypeInt))
 	)
-	_spec.OnConflict = _c.conflict
 	if value, ok := _c.mutation.HighlightIndex(); ok {
 		_spec.SetField(highlightclip.FieldHighlightIndex, field.TypeInt, value)
 		_node.HighlightIndex = value
@@ -452,14 +380,6 @@ func (_c *HighlightClipCreate) createSpec() (*HighlightClip, *sqlgraph.CreateSpe
 		_spec.SetField(highlightclip.FieldPriority, field.TypeInt, value)
 		_node.Priority = value
 	}
-	if value, ok := _c.mutation.K8sJobName(); ok {
-		_spec.SetField(highlightclip.FieldK8sJobName, field.TypeString, value)
-		_node.K8sJobName = &value
-	}
-	if value, ok := _c.mutation.Attempts(); ok {
-		_spec.SetField(highlightclip.FieldAttempts, field.TypeInt, value)
-		_node.Attempts = value
-	}
 	if value, ok := _c.mutation.StartSeconds(); ok {
 		_spec.SetField(highlightclip.FieldStartSeconds, field.TypeFloat64, value)
 		_node.StartSeconds = value
@@ -471,6 +391,10 @@ func (_c *HighlightClipCreate) createSpec() (*HighlightClip, *sqlgraph.CreateSpe
 	if value, ok := _c.mutation.PeakSeconds(); ok {
 		_spec.SetField(highlightclip.FieldPeakSeconds, field.TypeFloat64, value)
 		_node.PeakSeconds = value
+	}
+	if value, ok := _c.mutation.SourcePath(); ok {
+		_spec.SetField(highlightclip.FieldSourcePath, field.TypeString, value)
+		_node.SourcePath = value
 	}
 	if value, ok := _c.mutation.OutputDir(); ok {
 		_spec.SetField(highlightclip.FieldOutputDir, field.TypeString, value)
@@ -495,14 +419,6 @@ func (_c *HighlightClipCreate) createSpec() (*HighlightClip, *sqlgraph.CreateSpe
 	if value, ok := _c.mutation.ModelPayload(); ok {
 		_spec.SetField(highlightclip.FieldModelPayload, field.TypeString, value)
 		_node.ModelPayload = &value
-	}
-	if value, ok := _c.mutation.ErrorMessage(); ok {
-		_spec.SetField(highlightclip.FieldErrorMessage, field.TypeString, value)
-		_node.ErrorMessage = &value
-	}
-	if value, ok := _c.mutation.StartedAt(); ok {
-		_spec.SetField(highlightclip.FieldStartedAt, field.TypeTime, value)
-		_node.StartedAt = &value
 	}
 	if value, ok := _c.mutation.CompletedAt(); ok {
 		_spec.SetField(highlightclip.FieldCompletedAt, field.TypeTime, value)
@@ -533,32 +449,15 @@ func (_c *HighlightClipCreate) createSpec() (*HighlightClip, *sqlgraph.CreateSpe
 		_node.match_round_highlight_clips = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := _c.mutation.SourceArtifactIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   highlightclip.SourceArtifactTable,
-			Columns: []string{highlightclip.SourceArtifactColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(mediaartifact.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_node.media_artifact_highlight_clips = &nodes[0]
-		_spec.Edges = append(_spec.Edges, edge)
-	}
-	if nodes := _c.mutation.PublishTasksIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.BilibiliPublicationsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   highlightclip.PublishTasksTable,
-			Columns: []string{highlightclip.PublishTasksColumn},
+			Table:   highlightclip.BilibiliPublicationsTable,
+			Columns: []string{highlightclip.BilibiliPublicationsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(highlightpublishtask.FieldID, field.TypeInt),
+				IDSpec: sqlgraph.NewFieldSpec(bilibilihighlightpublication.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -569,854 +468,11 @@ func (_c *HighlightClipCreate) createSpec() (*HighlightClip, *sqlgraph.CreateSpe
 	return _node, _spec
 }
 
-// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
-// of the `INSERT` statement. For example:
-//
-//	client.HighlightClip.Create().
-//		SetHighlightIndex(v).
-//		OnConflict(
-//			// Update the row with the new values
-//			// the was proposed for insertion.
-//			sql.ResolveWithNewValues(),
-//		).
-//		// Override some of the fields with custom
-//		// update values.
-//		Update(func(u *ent.HighlightClipUpsert) {
-//			SetHighlightIndex(v+v).
-//		}).
-//		Exec(ctx)
-func (_c *HighlightClipCreate) OnConflict(opts ...sql.ConflictOption) *HighlightClipUpsertOne {
-	_c.conflict = opts
-	return &HighlightClipUpsertOne{
-		create: _c,
-	}
-}
-
-// OnConflictColumns calls `OnConflict` and configures the columns
-// as conflict target. Using this option is equivalent to using:
-//
-//	client.HighlightClip.Create().
-//		OnConflict(sql.ConflictColumns(columns...)).
-//		Exec(ctx)
-func (_c *HighlightClipCreate) OnConflictColumns(columns ...string) *HighlightClipUpsertOne {
-	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
-	return &HighlightClipUpsertOne{
-		create: _c,
-	}
-}
-
-type (
-	// HighlightClipUpsertOne is the builder for "upsert"-ing
-	//  one HighlightClip node.
-	HighlightClipUpsertOne struct {
-		create *HighlightClipCreate
-	}
-
-	// HighlightClipUpsert is the "OnConflict" setter.
-	HighlightClipUpsert struct {
-		*sql.UpdateSet
-	}
-)
-
-// SetHighlightIndex sets the "highlight_index" field.
-func (u *HighlightClipUpsert) SetHighlightIndex(v int) *HighlightClipUpsert {
-	u.Set(highlightclip.FieldHighlightIndex, v)
-	return u
-}
-
-// UpdateHighlightIndex sets the "highlight_index" field to the value that was provided on create.
-func (u *HighlightClipUpsert) UpdateHighlightIndex() *HighlightClipUpsert {
-	u.SetExcluded(highlightclip.FieldHighlightIndex)
-	return u
-}
-
-// AddHighlightIndex adds v to the "highlight_index" field.
-func (u *HighlightClipUpsert) AddHighlightIndex(v int) *HighlightClipUpsert {
-	u.Add(highlightclip.FieldHighlightIndex, v)
-	return u
-}
-
-// SetRole sets the "role" field.
-func (u *HighlightClipUpsert) SetRole(v string) *HighlightClipUpsert {
-	u.Set(highlightclip.FieldRole, v)
-	return u
-}
-
-// UpdateRole sets the "role" field to the value that was provided on create.
-func (u *HighlightClipUpsert) UpdateRole() *HighlightClipUpsert {
-	u.SetExcluded(highlightclip.FieldRole)
-	return u
-}
-
-// SetAlgorithmVersion sets the "algorithm_version" field.
-func (u *HighlightClipUpsert) SetAlgorithmVersion(v string) *HighlightClipUpsert {
-	u.Set(highlightclip.FieldAlgorithmVersion, v)
-	return u
-}
-
-// UpdateAlgorithmVersion sets the "algorithm_version" field to the value that was provided on create.
-func (u *HighlightClipUpsert) UpdateAlgorithmVersion() *HighlightClipUpsert {
-	u.SetExcluded(highlightclip.FieldAlgorithmVersion)
-	return u
-}
-
-// SetStatus sets the "status" field.
-func (u *HighlightClipUpsert) SetStatus(v highlightclip.Status) *HighlightClipUpsert {
-	u.Set(highlightclip.FieldStatus, v)
-	return u
-}
-
-// UpdateStatus sets the "status" field to the value that was provided on create.
-func (u *HighlightClipUpsert) UpdateStatus() *HighlightClipUpsert {
-	u.SetExcluded(highlightclip.FieldStatus)
-	return u
-}
-
-// SetPriority sets the "priority" field.
-func (u *HighlightClipUpsert) SetPriority(v int) *HighlightClipUpsert {
-	u.Set(highlightclip.FieldPriority, v)
-	return u
-}
-
-// UpdatePriority sets the "priority" field to the value that was provided on create.
-func (u *HighlightClipUpsert) UpdatePriority() *HighlightClipUpsert {
-	u.SetExcluded(highlightclip.FieldPriority)
-	return u
-}
-
-// AddPriority adds v to the "priority" field.
-func (u *HighlightClipUpsert) AddPriority(v int) *HighlightClipUpsert {
-	u.Add(highlightclip.FieldPriority, v)
-	return u
-}
-
-// SetK8sJobName sets the "k8s_job_name" field.
-func (u *HighlightClipUpsert) SetK8sJobName(v string) *HighlightClipUpsert {
-	u.Set(highlightclip.FieldK8sJobName, v)
-	return u
-}
-
-// UpdateK8sJobName sets the "k8s_job_name" field to the value that was provided on create.
-func (u *HighlightClipUpsert) UpdateK8sJobName() *HighlightClipUpsert {
-	u.SetExcluded(highlightclip.FieldK8sJobName)
-	return u
-}
-
-// ClearK8sJobName clears the value of the "k8s_job_name" field.
-func (u *HighlightClipUpsert) ClearK8sJobName() *HighlightClipUpsert {
-	u.SetNull(highlightclip.FieldK8sJobName)
-	return u
-}
-
-// SetAttempts sets the "attempts" field.
-func (u *HighlightClipUpsert) SetAttempts(v int) *HighlightClipUpsert {
-	u.Set(highlightclip.FieldAttempts, v)
-	return u
-}
-
-// UpdateAttempts sets the "attempts" field to the value that was provided on create.
-func (u *HighlightClipUpsert) UpdateAttempts() *HighlightClipUpsert {
-	u.SetExcluded(highlightclip.FieldAttempts)
-	return u
-}
-
-// AddAttempts adds v to the "attempts" field.
-func (u *HighlightClipUpsert) AddAttempts(v int) *HighlightClipUpsert {
-	u.Add(highlightclip.FieldAttempts, v)
-	return u
-}
-
-// SetStartSeconds sets the "start_seconds" field.
-func (u *HighlightClipUpsert) SetStartSeconds(v float64) *HighlightClipUpsert {
-	u.Set(highlightclip.FieldStartSeconds, v)
-	return u
-}
-
-// UpdateStartSeconds sets the "start_seconds" field to the value that was provided on create.
-func (u *HighlightClipUpsert) UpdateStartSeconds() *HighlightClipUpsert {
-	u.SetExcluded(highlightclip.FieldStartSeconds)
-	return u
-}
-
-// AddStartSeconds adds v to the "start_seconds" field.
-func (u *HighlightClipUpsert) AddStartSeconds(v float64) *HighlightClipUpsert {
-	u.Add(highlightclip.FieldStartSeconds, v)
-	return u
-}
-
-// SetEndSeconds sets the "end_seconds" field.
-func (u *HighlightClipUpsert) SetEndSeconds(v float64) *HighlightClipUpsert {
-	u.Set(highlightclip.FieldEndSeconds, v)
-	return u
-}
-
-// UpdateEndSeconds sets the "end_seconds" field to the value that was provided on create.
-func (u *HighlightClipUpsert) UpdateEndSeconds() *HighlightClipUpsert {
-	u.SetExcluded(highlightclip.FieldEndSeconds)
-	return u
-}
-
-// AddEndSeconds adds v to the "end_seconds" field.
-func (u *HighlightClipUpsert) AddEndSeconds(v float64) *HighlightClipUpsert {
-	u.Add(highlightclip.FieldEndSeconds, v)
-	return u
-}
-
-// SetPeakSeconds sets the "peak_seconds" field.
-func (u *HighlightClipUpsert) SetPeakSeconds(v float64) *HighlightClipUpsert {
-	u.Set(highlightclip.FieldPeakSeconds, v)
-	return u
-}
-
-// UpdatePeakSeconds sets the "peak_seconds" field to the value that was provided on create.
-func (u *HighlightClipUpsert) UpdatePeakSeconds() *HighlightClipUpsert {
-	u.SetExcluded(highlightclip.FieldPeakSeconds)
-	return u
-}
-
-// AddPeakSeconds adds v to the "peak_seconds" field.
-func (u *HighlightClipUpsert) AddPeakSeconds(v float64) *HighlightClipUpsert {
-	u.Add(highlightclip.FieldPeakSeconds, v)
-	return u
-}
-
-// SetOutputDir sets the "output_dir" field.
-func (u *HighlightClipUpsert) SetOutputDir(v string) *HighlightClipUpsert {
-	u.Set(highlightclip.FieldOutputDir, v)
-	return u
-}
-
-// UpdateOutputDir sets the "output_dir" field to the value that was provided on create.
-func (u *HighlightClipUpsert) UpdateOutputDir() *HighlightClipUpsert {
-	u.SetExcluded(highlightclip.FieldOutputDir)
-	return u
-}
-
-// SetTitle sets the "title" field.
-func (u *HighlightClipUpsert) SetTitle(v string) *HighlightClipUpsert {
-	u.Set(highlightclip.FieldTitle, v)
-	return u
-}
-
-// UpdateTitle sets the "title" field to the value that was provided on create.
-func (u *HighlightClipUpsert) UpdateTitle() *HighlightClipUpsert {
-	u.SetExcluded(highlightclip.FieldTitle)
-	return u
-}
-
-// ClearTitle clears the value of the "title" field.
-func (u *HighlightClipUpsert) ClearTitle() *HighlightClipUpsert {
-	u.SetNull(highlightclip.FieldTitle)
-	return u
-}
-
-// SetDescription sets the "description" field.
-func (u *HighlightClipUpsert) SetDescription(v string) *HighlightClipUpsert {
-	u.Set(highlightclip.FieldDescription, v)
-	return u
-}
-
-// UpdateDescription sets the "description" field to the value that was provided on create.
-func (u *HighlightClipUpsert) UpdateDescription() *HighlightClipUpsert {
-	u.SetExcluded(highlightclip.FieldDescription)
-	return u
-}
-
-// ClearDescription clears the value of the "description" field.
-func (u *HighlightClipUpsert) ClearDescription() *HighlightClipUpsert {
-	u.SetNull(highlightclip.FieldDescription)
-	return u
-}
-
-// SetTags sets the "tags" field.
-func (u *HighlightClipUpsert) SetTags(v []string) *HighlightClipUpsert {
-	u.Set(highlightclip.FieldTags, v)
-	return u
-}
-
-// UpdateTags sets the "tags" field to the value that was provided on create.
-func (u *HighlightClipUpsert) UpdateTags() *HighlightClipUpsert {
-	u.SetExcluded(highlightclip.FieldTags)
-	return u
-}
-
-// ClearTags clears the value of the "tags" field.
-func (u *HighlightClipUpsert) ClearTags() *HighlightClipUpsert {
-	u.SetNull(highlightclip.FieldTags)
-	return u
-}
-
-// SetScore sets the "score" field.
-func (u *HighlightClipUpsert) SetScore(v float64) *HighlightClipUpsert {
-	u.Set(highlightclip.FieldScore, v)
-	return u
-}
-
-// UpdateScore sets the "score" field to the value that was provided on create.
-func (u *HighlightClipUpsert) UpdateScore() *HighlightClipUpsert {
-	u.SetExcluded(highlightclip.FieldScore)
-	return u
-}
-
-// AddScore adds v to the "score" field.
-func (u *HighlightClipUpsert) AddScore(v float64) *HighlightClipUpsert {
-	u.Add(highlightclip.FieldScore, v)
-	return u
-}
-
-// SetModelPayload sets the "model_payload" field.
-func (u *HighlightClipUpsert) SetModelPayload(v string) *HighlightClipUpsert {
-	u.Set(highlightclip.FieldModelPayload, v)
-	return u
-}
-
-// UpdateModelPayload sets the "model_payload" field to the value that was provided on create.
-func (u *HighlightClipUpsert) UpdateModelPayload() *HighlightClipUpsert {
-	u.SetExcluded(highlightclip.FieldModelPayload)
-	return u
-}
-
-// ClearModelPayload clears the value of the "model_payload" field.
-func (u *HighlightClipUpsert) ClearModelPayload() *HighlightClipUpsert {
-	u.SetNull(highlightclip.FieldModelPayload)
-	return u
-}
-
-// SetErrorMessage sets the "error_message" field.
-func (u *HighlightClipUpsert) SetErrorMessage(v string) *HighlightClipUpsert {
-	u.Set(highlightclip.FieldErrorMessage, v)
-	return u
-}
-
-// UpdateErrorMessage sets the "error_message" field to the value that was provided on create.
-func (u *HighlightClipUpsert) UpdateErrorMessage() *HighlightClipUpsert {
-	u.SetExcluded(highlightclip.FieldErrorMessage)
-	return u
-}
-
-// ClearErrorMessage clears the value of the "error_message" field.
-func (u *HighlightClipUpsert) ClearErrorMessage() *HighlightClipUpsert {
-	u.SetNull(highlightclip.FieldErrorMessage)
-	return u
-}
-
-// SetStartedAt sets the "started_at" field.
-func (u *HighlightClipUpsert) SetStartedAt(v time.Time) *HighlightClipUpsert {
-	u.Set(highlightclip.FieldStartedAt, v)
-	return u
-}
-
-// UpdateStartedAt sets the "started_at" field to the value that was provided on create.
-func (u *HighlightClipUpsert) UpdateStartedAt() *HighlightClipUpsert {
-	u.SetExcluded(highlightclip.FieldStartedAt)
-	return u
-}
-
-// ClearStartedAt clears the value of the "started_at" field.
-func (u *HighlightClipUpsert) ClearStartedAt() *HighlightClipUpsert {
-	u.SetNull(highlightclip.FieldStartedAt)
-	return u
-}
-
-// SetCompletedAt sets the "completed_at" field.
-func (u *HighlightClipUpsert) SetCompletedAt(v time.Time) *HighlightClipUpsert {
-	u.Set(highlightclip.FieldCompletedAt, v)
-	return u
-}
-
-// UpdateCompletedAt sets the "completed_at" field to the value that was provided on create.
-func (u *HighlightClipUpsert) UpdateCompletedAt() *HighlightClipUpsert {
-	u.SetExcluded(highlightclip.FieldCompletedAt)
-	return u
-}
-
-// ClearCompletedAt clears the value of the "completed_at" field.
-func (u *HighlightClipUpsert) ClearCompletedAt() *HighlightClipUpsert {
-	u.SetNull(highlightclip.FieldCompletedAt)
-	return u
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (u *HighlightClipUpsert) SetUpdatedAt(v time.Time) *HighlightClipUpsert {
-	u.Set(highlightclip.FieldUpdatedAt, v)
-	return u
-}
-
-// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
-func (u *HighlightClipUpsert) UpdateUpdatedAt() *HighlightClipUpsert {
-	u.SetExcluded(highlightclip.FieldUpdatedAt)
-	return u
-}
-
-// UpdateNewValues updates the mutable fields using the new values that were set on create.
-// Using this option is equivalent to using:
-//
-//	client.HighlightClip.Create().
-//		OnConflict(
-//			sql.ResolveWithNewValues(),
-//		).
-//		Exec(ctx)
-func (u *HighlightClipUpsertOne) UpdateNewValues() *HighlightClipUpsertOne {
-	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
-	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
-		if _, exists := u.create.mutation.CreatedAt(); exists {
-			s.SetIgnore(highlightclip.FieldCreatedAt)
-		}
-	}))
-	return u
-}
-
-// Ignore sets each column to itself in case of conflict.
-// Using this option is equivalent to using:
-//
-//	client.HighlightClip.Create().
-//	    OnConflict(sql.ResolveWithIgnore()).
-//	    Exec(ctx)
-func (u *HighlightClipUpsertOne) Ignore() *HighlightClipUpsertOne {
-	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
-	return u
-}
-
-// DoNothing configures the conflict_action to `DO NOTHING`.
-// Supported only by SQLite and PostgreSQL.
-func (u *HighlightClipUpsertOne) DoNothing() *HighlightClipUpsertOne {
-	u.create.conflict = append(u.create.conflict, sql.DoNothing())
-	return u
-}
-
-// Update allows overriding fields `UPDATE` values. See the HighlightClipCreate.OnConflict
-// documentation for more info.
-func (u *HighlightClipUpsertOne) Update(set func(*HighlightClipUpsert)) *HighlightClipUpsertOne {
-	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
-		set(&HighlightClipUpsert{UpdateSet: update})
-	}))
-	return u
-}
-
-// SetHighlightIndex sets the "highlight_index" field.
-func (u *HighlightClipUpsertOne) SetHighlightIndex(v int) *HighlightClipUpsertOne {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.SetHighlightIndex(v)
-	})
-}
-
-// AddHighlightIndex adds v to the "highlight_index" field.
-func (u *HighlightClipUpsertOne) AddHighlightIndex(v int) *HighlightClipUpsertOne {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.AddHighlightIndex(v)
-	})
-}
-
-// UpdateHighlightIndex sets the "highlight_index" field to the value that was provided on create.
-func (u *HighlightClipUpsertOne) UpdateHighlightIndex() *HighlightClipUpsertOne {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.UpdateHighlightIndex()
-	})
-}
-
-// SetRole sets the "role" field.
-func (u *HighlightClipUpsertOne) SetRole(v string) *HighlightClipUpsertOne {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.SetRole(v)
-	})
-}
-
-// UpdateRole sets the "role" field to the value that was provided on create.
-func (u *HighlightClipUpsertOne) UpdateRole() *HighlightClipUpsertOne {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.UpdateRole()
-	})
-}
-
-// SetAlgorithmVersion sets the "algorithm_version" field.
-func (u *HighlightClipUpsertOne) SetAlgorithmVersion(v string) *HighlightClipUpsertOne {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.SetAlgorithmVersion(v)
-	})
-}
-
-// UpdateAlgorithmVersion sets the "algorithm_version" field to the value that was provided on create.
-func (u *HighlightClipUpsertOne) UpdateAlgorithmVersion() *HighlightClipUpsertOne {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.UpdateAlgorithmVersion()
-	})
-}
-
-// SetStatus sets the "status" field.
-func (u *HighlightClipUpsertOne) SetStatus(v highlightclip.Status) *HighlightClipUpsertOne {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.SetStatus(v)
-	})
-}
-
-// UpdateStatus sets the "status" field to the value that was provided on create.
-func (u *HighlightClipUpsertOne) UpdateStatus() *HighlightClipUpsertOne {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.UpdateStatus()
-	})
-}
-
-// SetPriority sets the "priority" field.
-func (u *HighlightClipUpsertOne) SetPriority(v int) *HighlightClipUpsertOne {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.SetPriority(v)
-	})
-}
-
-// AddPriority adds v to the "priority" field.
-func (u *HighlightClipUpsertOne) AddPriority(v int) *HighlightClipUpsertOne {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.AddPriority(v)
-	})
-}
-
-// UpdatePriority sets the "priority" field to the value that was provided on create.
-func (u *HighlightClipUpsertOne) UpdatePriority() *HighlightClipUpsertOne {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.UpdatePriority()
-	})
-}
-
-// SetK8sJobName sets the "k8s_job_name" field.
-func (u *HighlightClipUpsertOne) SetK8sJobName(v string) *HighlightClipUpsertOne {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.SetK8sJobName(v)
-	})
-}
-
-// UpdateK8sJobName sets the "k8s_job_name" field to the value that was provided on create.
-func (u *HighlightClipUpsertOne) UpdateK8sJobName() *HighlightClipUpsertOne {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.UpdateK8sJobName()
-	})
-}
-
-// ClearK8sJobName clears the value of the "k8s_job_name" field.
-func (u *HighlightClipUpsertOne) ClearK8sJobName() *HighlightClipUpsertOne {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.ClearK8sJobName()
-	})
-}
-
-// SetAttempts sets the "attempts" field.
-func (u *HighlightClipUpsertOne) SetAttempts(v int) *HighlightClipUpsertOne {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.SetAttempts(v)
-	})
-}
-
-// AddAttempts adds v to the "attempts" field.
-func (u *HighlightClipUpsertOne) AddAttempts(v int) *HighlightClipUpsertOne {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.AddAttempts(v)
-	})
-}
-
-// UpdateAttempts sets the "attempts" field to the value that was provided on create.
-func (u *HighlightClipUpsertOne) UpdateAttempts() *HighlightClipUpsertOne {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.UpdateAttempts()
-	})
-}
-
-// SetStartSeconds sets the "start_seconds" field.
-func (u *HighlightClipUpsertOne) SetStartSeconds(v float64) *HighlightClipUpsertOne {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.SetStartSeconds(v)
-	})
-}
-
-// AddStartSeconds adds v to the "start_seconds" field.
-func (u *HighlightClipUpsertOne) AddStartSeconds(v float64) *HighlightClipUpsertOne {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.AddStartSeconds(v)
-	})
-}
-
-// UpdateStartSeconds sets the "start_seconds" field to the value that was provided on create.
-func (u *HighlightClipUpsertOne) UpdateStartSeconds() *HighlightClipUpsertOne {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.UpdateStartSeconds()
-	})
-}
-
-// SetEndSeconds sets the "end_seconds" field.
-func (u *HighlightClipUpsertOne) SetEndSeconds(v float64) *HighlightClipUpsertOne {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.SetEndSeconds(v)
-	})
-}
-
-// AddEndSeconds adds v to the "end_seconds" field.
-func (u *HighlightClipUpsertOne) AddEndSeconds(v float64) *HighlightClipUpsertOne {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.AddEndSeconds(v)
-	})
-}
-
-// UpdateEndSeconds sets the "end_seconds" field to the value that was provided on create.
-func (u *HighlightClipUpsertOne) UpdateEndSeconds() *HighlightClipUpsertOne {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.UpdateEndSeconds()
-	})
-}
-
-// SetPeakSeconds sets the "peak_seconds" field.
-func (u *HighlightClipUpsertOne) SetPeakSeconds(v float64) *HighlightClipUpsertOne {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.SetPeakSeconds(v)
-	})
-}
-
-// AddPeakSeconds adds v to the "peak_seconds" field.
-func (u *HighlightClipUpsertOne) AddPeakSeconds(v float64) *HighlightClipUpsertOne {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.AddPeakSeconds(v)
-	})
-}
-
-// UpdatePeakSeconds sets the "peak_seconds" field to the value that was provided on create.
-func (u *HighlightClipUpsertOne) UpdatePeakSeconds() *HighlightClipUpsertOne {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.UpdatePeakSeconds()
-	})
-}
-
-// SetOutputDir sets the "output_dir" field.
-func (u *HighlightClipUpsertOne) SetOutputDir(v string) *HighlightClipUpsertOne {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.SetOutputDir(v)
-	})
-}
-
-// UpdateOutputDir sets the "output_dir" field to the value that was provided on create.
-func (u *HighlightClipUpsertOne) UpdateOutputDir() *HighlightClipUpsertOne {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.UpdateOutputDir()
-	})
-}
-
-// SetTitle sets the "title" field.
-func (u *HighlightClipUpsertOne) SetTitle(v string) *HighlightClipUpsertOne {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.SetTitle(v)
-	})
-}
-
-// UpdateTitle sets the "title" field to the value that was provided on create.
-func (u *HighlightClipUpsertOne) UpdateTitle() *HighlightClipUpsertOne {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.UpdateTitle()
-	})
-}
-
-// ClearTitle clears the value of the "title" field.
-func (u *HighlightClipUpsertOne) ClearTitle() *HighlightClipUpsertOne {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.ClearTitle()
-	})
-}
-
-// SetDescription sets the "description" field.
-func (u *HighlightClipUpsertOne) SetDescription(v string) *HighlightClipUpsertOne {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.SetDescription(v)
-	})
-}
-
-// UpdateDescription sets the "description" field to the value that was provided on create.
-func (u *HighlightClipUpsertOne) UpdateDescription() *HighlightClipUpsertOne {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.UpdateDescription()
-	})
-}
-
-// ClearDescription clears the value of the "description" field.
-func (u *HighlightClipUpsertOne) ClearDescription() *HighlightClipUpsertOne {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.ClearDescription()
-	})
-}
-
-// SetTags sets the "tags" field.
-func (u *HighlightClipUpsertOne) SetTags(v []string) *HighlightClipUpsertOne {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.SetTags(v)
-	})
-}
-
-// UpdateTags sets the "tags" field to the value that was provided on create.
-func (u *HighlightClipUpsertOne) UpdateTags() *HighlightClipUpsertOne {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.UpdateTags()
-	})
-}
-
-// ClearTags clears the value of the "tags" field.
-func (u *HighlightClipUpsertOne) ClearTags() *HighlightClipUpsertOne {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.ClearTags()
-	})
-}
-
-// SetScore sets the "score" field.
-func (u *HighlightClipUpsertOne) SetScore(v float64) *HighlightClipUpsertOne {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.SetScore(v)
-	})
-}
-
-// AddScore adds v to the "score" field.
-func (u *HighlightClipUpsertOne) AddScore(v float64) *HighlightClipUpsertOne {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.AddScore(v)
-	})
-}
-
-// UpdateScore sets the "score" field to the value that was provided on create.
-func (u *HighlightClipUpsertOne) UpdateScore() *HighlightClipUpsertOne {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.UpdateScore()
-	})
-}
-
-// SetModelPayload sets the "model_payload" field.
-func (u *HighlightClipUpsertOne) SetModelPayload(v string) *HighlightClipUpsertOne {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.SetModelPayload(v)
-	})
-}
-
-// UpdateModelPayload sets the "model_payload" field to the value that was provided on create.
-func (u *HighlightClipUpsertOne) UpdateModelPayload() *HighlightClipUpsertOne {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.UpdateModelPayload()
-	})
-}
-
-// ClearModelPayload clears the value of the "model_payload" field.
-func (u *HighlightClipUpsertOne) ClearModelPayload() *HighlightClipUpsertOne {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.ClearModelPayload()
-	})
-}
-
-// SetErrorMessage sets the "error_message" field.
-func (u *HighlightClipUpsertOne) SetErrorMessage(v string) *HighlightClipUpsertOne {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.SetErrorMessage(v)
-	})
-}
-
-// UpdateErrorMessage sets the "error_message" field to the value that was provided on create.
-func (u *HighlightClipUpsertOne) UpdateErrorMessage() *HighlightClipUpsertOne {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.UpdateErrorMessage()
-	})
-}
-
-// ClearErrorMessage clears the value of the "error_message" field.
-func (u *HighlightClipUpsertOne) ClearErrorMessage() *HighlightClipUpsertOne {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.ClearErrorMessage()
-	})
-}
-
-// SetStartedAt sets the "started_at" field.
-func (u *HighlightClipUpsertOne) SetStartedAt(v time.Time) *HighlightClipUpsertOne {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.SetStartedAt(v)
-	})
-}
-
-// UpdateStartedAt sets the "started_at" field to the value that was provided on create.
-func (u *HighlightClipUpsertOne) UpdateStartedAt() *HighlightClipUpsertOne {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.UpdateStartedAt()
-	})
-}
-
-// ClearStartedAt clears the value of the "started_at" field.
-func (u *HighlightClipUpsertOne) ClearStartedAt() *HighlightClipUpsertOne {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.ClearStartedAt()
-	})
-}
-
-// SetCompletedAt sets the "completed_at" field.
-func (u *HighlightClipUpsertOne) SetCompletedAt(v time.Time) *HighlightClipUpsertOne {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.SetCompletedAt(v)
-	})
-}
-
-// UpdateCompletedAt sets the "completed_at" field to the value that was provided on create.
-func (u *HighlightClipUpsertOne) UpdateCompletedAt() *HighlightClipUpsertOne {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.UpdateCompletedAt()
-	})
-}
-
-// ClearCompletedAt clears the value of the "completed_at" field.
-func (u *HighlightClipUpsertOne) ClearCompletedAt() *HighlightClipUpsertOne {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.ClearCompletedAt()
-	})
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (u *HighlightClipUpsertOne) SetUpdatedAt(v time.Time) *HighlightClipUpsertOne {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.SetUpdatedAt(v)
-	})
-}
-
-// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
-func (u *HighlightClipUpsertOne) UpdateUpdatedAt() *HighlightClipUpsertOne {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.UpdateUpdatedAt()
-	})
-}
-
-// Exec executes the query.
-func (u *HighlightClipUpsertOne) Exec(ctx context.Context) error {
-	if len(u.create.conflict) == 0 {
-		return errors.New("ent: missing options for HighlightClipCreate.OnConflict")
-	}
-	return u.create.Exec(ctx)
-}
-
-// ExecX is like Exec, but panics if an error occurs.
-func (u *HighlightClipUpsertOne) ExecX(ctx context.Context) {
-	if err := u.create.Exec(ctx); err != nil {
-		panic(err)
-	}
-}
-
-// Exec executes the UPSERT query and returns the inserted/updated ID.
-func (u *HighlightClipUpsertOne) ID(ctx context.Context) (id int, err error) {
-	node, err := u.create.Save(ctx)
-	if err != nil {
-		return id, err
-	}
-	return node.ID, nil
-}
-
-// IDX is like ID, but panics if an error occurs.
-func (u *HighlightClipUpsertOne) IDX(ctx context.Context) int {
-	id, err := u.ID(ctx)
-	if err != nil {
-		panic(err)
-	}
-	return id
-}
-
 // HighlightClipCreateBulk is the builder for creating many HighlightClip entities in bulk.
 type HighlightClipCreateBulk struct {
 	config
 	err      error
 	builders []*HighlightClipCreate
-	conflict []sql.ConflictOption
 }
 
 // Save creates the HighlightClip entities in the database.
@@ -1446,7 +502,6 @@ func (_c *HighlightClipCreateBulk) Save(ctx context.Context) ([]*HighlightClip, 
 					_, err = mutators[i+1].Mutate(root, _c.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
-					spec.OnConflict = _c.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
 					if err = sqlgraph.BatchCreate(ctx, _c.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
@@ -1497,502 +552,6 @@ func (_c *HighlightClipCreateBulk) Exec(ctx context.Context) error {
 // ExecX is like Exec, but panics if an error occurs.
 func (_c *HighlightClipCreateBulk) ExecX(ctx context.Context) {
 	if err := _c.Exec(ctx); err != nil {
-		panic(err)
-	}
-}
-
-// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
-// of the `INSERT` statement. For example:
-//
-//	client.HighlightClip.CreateBulk(builders...).
-//		OnConflict(
-//			// Update the row with the new values
-//			// the was proposed for insertion.
-//			sql.ResolveWithNewValues(),
-//		).
-//		// Override some of the fields with custom
-//		// update values.
-//		Update(func(u *ent.HighlightClipUpsert) {
-//			SetHighlightIndex(v+v).
-//		}).
-//		Exec(ctx)
-func (_c *HighlightClipCreateBulk) OnConflict(opts ...sql.ConflictOption) *HighlightClipUpsertBulk {
-	_c.conflict = opts
-	return &HighlightClipUpsertBulk{
-		create: _c,
-	}
-}
-
-// OnConflictColumns calls `OnConflict` and configures the columns
-// as conflict target. Using this option is equivalent to using:
-//
-//	client.HighlightClip.Create().
-//		OnConflict(sql.ConflictColumns(columns...)).
-//		Exec(ctx)
-func (_c *HighlightClipCreateBulk) OnConflictColumns(columns ...string) *HighlightClipUpsertBulk {
-	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
-	return &HighlightClipUpsertBulk{
-		create: _c,
-	}
-}
-
-// HighlightClipUpsertBulk is the builder for "upsert"-ing
-// a bulk of HighlightClip nodes.
-type HighlightClipUpsertBulk struct {
-	create *HighlightClipCreateBulk
-}
-
-// UpdateNewValues updates the mutable fields using the new values that
-// were set on create. Using this option is equivalent to using:
-//
-//	client.HighlightClip.Create().
-//		OnConflict(
-//			sql.ResolveWithNewValues(),
-//		).
-//		Exec(ctx)
-func (u *HighlightClipUpsertBulk) UpdateNewValues() *HighlightClipUpsertBulk {
-	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
-	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
-		for _, b := range u.create.builders {
-			if _, exists := b.mutation.CreatedAt(); exists {
-				s.SetIgnore(highlightclip.FieldCreatedAt)
-			}
-		}
-	}))
-	return u
-}
-
-// Ignore sets each column to itself in case of conflict.
-// Using this option is equivalent to using:
-//
-//	client.HighlightClip.Create().
-//		OnConflict(sql.ResolveWithIgnore()).
-//		Exec(ctx)
-func (u *HighlightClipUpsertBulk) Ignore() *HighlightClipUpsertBulk {
-	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
-	return u
-}
-
-// DoNothing configures the conflict_action to `DO NOTHING`.
-// Supported only by SQLite and PostgreSQL.
-func (u *HighlightClipUpsertBulk) DoNothing() *HighlightClipUpsertBulk {
-	u.create.conflict = append(u.create.conflict, sql.DoNothing())
-	return u
-}
-
-// Update allows overriding fields `UPDATE` values. See the HighlightClipCreateBulk.OnConflict
-// documentation for more info.
-func (u *HighlightClipUpsertBulk) Update(set func(*HighlightClipUpsert)) *HighlightClipUpsertBulk {
-	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
-		set(&HighlightClipUpsert{UpdateSet: update})
-	}))
-	return u
-}
-
-// SetHighlightIndex sets the "highlight_index" field.
-func (u *HighlightClipUpsertBulk) SetHighlightIndex(v int) *HighlightClipUpsertBulk {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.SetHighlightIndex(v)
-	})
-}
-
-// AddHighlightIndex adds v to the "highlight_index" field.
-func (u *HighlightClipUpsertBulk) AddHighlightIndex(v int) *HighlightClipUpsertBulk {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.AddHighlightIndex(v)
-	})
-}
-
-// UpdateHighlightIndex sets the "highlight_index" field to the value that was provided on create.
-func (u *HighlightClipUpsertBulk) UpdateHighlightIndex() *HighlightClipUpsertBulk {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.UpdateHighlightIndex()
-	})
-}
-
-// SetRole sets the "role" field.
-func (u *HighlightClipUpsertBulk) SetRole(v string) *HighlightClipUpsertBulk {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.SetRole(v)
-	})
-}
-
-// UpdateRole sets the "role" field to the value that was provided on create.
-func (u *HighlightClipUpsertBulk) UpdateRole() *HighlightClipUpsertBulk {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.UpdateRole()
-	})
-}
-
-// SetAlgorithmVersion sets the "algorithm_version" field.
-func (u *HighlightClipUpsertBulk) SetAlgorithmVersion(v string) *HighlightClipUpsertBulk {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.SetAlgorithmVersion(v)
-	})
-}
-
-// UpdateAlgorithmVersion sets the "algorithm_version" field to the value that was provided on create.
-func (u *HighlightClipUpsertBulk) UpdateAlgorithmVersion() *HighlightClipUpsertBulk {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.UpdateAlgorithmVersion()
-	})
-}
-
-// SetStatus sets the "status" field.
-func (u *HighlightClipUpsertBulk) SetStatus(v highlightclip.Status) *HighlightClipUpsertBulk {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.SetStatus(v)
-	})
-}
-
-// UpdateStatus sets the "status" field to the value that was provided on create.
-func (u *HighlightClipUpsertBulk) UpdateStatus() *HighlightClipUpsertBulk {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.UpdateStatus()
-	})
-}
-
-// SetPriority sets the "priority" field.
-func (u *HighlightClipUpsertBulk) SetPriority(v int) *HighlightClipUpsertBulk {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.SetPriority(v)
-	})
-}
-
-// AddPriority adds v to the "priority" field.
-func (u *HighlightClipUpsertBulk) AddPriority(v int) *HighlightClipUpsertBulk {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.AddPriority(v)
-	})
-}
-
-// UpdatePriority sets the "priority" field to the value that was provided on create.
-func (u *HighlightClipUpsertBulk) UpdatePriority() *HighlightClipUpsertBulk {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.UpdatePriority()
-	})
-}
-
-// SetK8sJobName sets the "k8s_job_name" field.
-func (u *HighlightClipUpsertBulk) SetK8sJobName(v string) *HighlightClipUpsertBulk {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.SetK8sJobName(v)
-	})
-}
-
-// UpdateK8sJobName sets the "k8s_job_name" field to the value that was provided on create.
-func (u *HighlightClipUpsertBulk) UpdateK8sJobName() *HighlightClipUpsertBulk {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.UpdateK8sJobName()
-	})
-}
-
-// ClearK8sJobName clears the value of the "k8s_job_name" field.
-func (u *HighlightClipUpsertBulk) ClearK8sJobName() *HighlightClipUpsertBulk {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.ClearK8sJobName()
-	})
-}
-
-// SetAttempts sets the "attempts" field.
-func (u *HighlightClipUpsertBulk) SetAttempts(v int) *HighlightClipUpsertBulk {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.SetAttempts(v)
-	})
-}
-
-// AddAttempts adds v to the "attempts" field.
-func (u *HighlightClipUpsertBulk) AddAttempts(v int) *HighlightClipUpsertBulk {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.AddAttempts(v)
-	})
-}
-
-// UpdateAttempts sets the "attempts" field to the value that was provided on create.
-func (u *HighlightClipUpsertBulk) UpdateAttempts() *HighlightClipUpsertBulk {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.UpdateAttempts()
-	})
-}
-
-// SetStartSeconds sets the "start_seconds" field.
-func (u *HighlightClipUpsertBulk) SetStartSeconds(v float64) *HighlightClipUpsertBulk {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.SetStartSeconds(v)
-	})
-}
-
-// AddStartSeconds adds v to the "start_seconds" field.
-func (u *HighlightClipUpsertBulk) AddStartSeconds(v float64) *HighlightClipUpsertBulk {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.AddStartSeconds(v)
-	})
-}
-
-// UpdateStartSeconds sets the "start_seconds" field to the value that was provided on create.
-func (u *HighlightClipUpsertBulk) UpdateStartSeconds() *HighlightClipUpsertBulk {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.UpdateStartSeconds()
-	})
-}
-
-// SetEndSeconds sets the "end_seconds" field.
-func (u *HighlightClipUpsertBulk) SetEndSeconds(v float64) *HighlightClipUpsertBulk {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.SetEndSeconds(v)
-	})
-}
-
-// AddEndSeconds adds v to the "end_seconds" field.
-func (u *HighlightClipUpsertBulk) AddEndSeconds(v float64) *HighlightClipUpsertBulk {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.AddEndSeconds(v)
-	})
-}
-
-// UpdateEndSeconds sets the "end_seconds" field to the value that was provided on create.
-func (u *HighlightClipUpsertBulk) UpdateEndSeconds() *HighlightClipUpsertBulk {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.UpdateEndSeconds()
-	})
-}
-
-// SetPeakSeconds sets the "peak_seconds" field.
-func (u *HighlightClipUpsertBulk) SetPeakSeconds(v float64) *HighlightClipUpsertBulk {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.SetPeakSeconds(v)
-	})
-}
-
-// AddPeakSeconds adds v to the "peak_seconds" field.
-func (u *HighlightClipUpsertBulk) AddPeakSeconds(v float64) *HighlightClipUpsertBulk {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.AddPeakSeconds(v)
-	})
-}
-
-// UpdatePeakSeconds sets the "peak_seconds" field to the value that was provided on create.
-func (u *HighlightClipUpsertBulk) UpdatePeakSeconds() *HighlightClipUpsertBulk {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.UpdatePeakSeconds()
-	})
-}
-
-// SetOutputDir sets the "output_dir" field.
-func (u *HighlightClipUpsertBulk) SetOutputDir(v string) *HighlightClipUpsertBulk {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.SetOutputDir(v)
-	})
-}
-
-// UpdateOutputDir sets the "output_dir" field to the value that was provided on create.
-func (u *HighlightClipUpsertBulk) UpdateOutputDir() *HighlightClipUpsertBulk {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.UpdateOutputDir()
-	})
-}
-
-// SetTitle sets the "title" field.
-func (u *HighlightClipUpsertBulk) SetTitle(v string) *HighlightClipUpsertBulk {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.SetTitle(v)
-	})
-}
-
-// UpdateTitle sets the "title" field to the value that was provided on create.
-func (u *HighlightClipUpsertBulk) UpdateTitle() *HighlightClipUpsertBulk {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.UpdateTitle()
-	})
-}
-
-// ClearTitle clears the value of the "title" field.
-func (u *HighlightClipUpsertBulk) ClearTitle() *HighlightClipUpsertBulk {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.ClearTitle()
-	})
-}
-
-// SetDescription sets the "description" field.
-func (u *HighlightClipUpsertBulk) SetDescription(v string) *HighlightClipUpsertBulk {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.SetDescription(v)
-	})
-}
-
-// UpdateDescription sets the "description" field to the value that was provided on create.
-func (u *HighlightClipUpsertBulk) UpdateDescription() *HighlightClipUpsertBulk {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.UpdateDescription()
-	})
-}
-
-// ClearDescription clears the value of the "description" field.
-func (u *HighlightClipUpsertBulk) ClearDescription() *HighlightClipUpsertBulk {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.ClearDescription()
-	})
-}
-
-// SetTags sets the "tags" field.
-func (u *HighlightClipUpsertBulk) SetTags(v []string) *HighlightClipUpsertBulk {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.SetTags(v)
-	})
-}
-
-// UpdateTags sets the "tags" field to the value that was provided on create.
-func (u *HighlightClipUpsertBulk) UpdateTags() *HighlightClipUpsertBulk {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.UpdateTags()
-	})
-}
-
-// ClearTags clears the value of the "tags" field.
-func (u *HighlightClipUpsertBulk) ClearTags() *HighlightClipUpsertBulk {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.ClearTags()
-	})
-}
-
-// SetScore sets the "score" field.
-func (u *HighlightClipUpsertBulk) SetScore(v float64) *HighlightClipUpsertBulk {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.SetScore(v)
-	})
-}
-
-// AddScore adds v to the "score" field.
-func (u *HighlightClipUpsertBulk) AddScore(v float64) *HighlightClipUpsertBulk {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.AddScore(v)
-	})
-}
-
-// UpdateScore sets the "score" field to the value that was provided on create.
-func (u *HighlightClipUpsertBulk) UpdateScore() *HighlightClipUpsertBulk {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.UpdateScore()
-	})
-}
-
-// SetModelPayload sets the "model_payload" field.
-func (u *HighlightClipUpsertBulk) SetModelPayload(v string) *HighlightClipUpsertBulk {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.SetModelPayload(v)
-	})
-}
-
-// UpdateModelPayload sets the "model_payload" field to the value that was provided on create.
-func (u *HighlightClipUpsertBulk) UpdateModelPayload() *HighlightClipUpsertBulk {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.UpdateModelPayload()
-	})
-}
-
-// ClearModelPayload clears the value of the "model_payload" field.
-func (u *HighlightClipUpsertBulk) ClearModelPayload() *HighlightClipUpsertBulk {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.ClearModelPayload()
-	})
-}
-
-// SetErrorMessage sets the "error_message" field.
-func (u *HighlightClipUpsertBulk) SetErrorMessage(v string) *HighlightClipUpsertBulk {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.SetErrorMessage(v)
-	})
-}
-
-// UpdateErrorMessage sets the "error_message" field to the value that was provided on create.
-func (u *HighlightClipUpsertBulk) UpdateErrorMessage() *HighlightClipUpsertBulk {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.UpdateErrorMessage()
-	})
-}
-
-// ClearErrorMessage clears the value of the "error_message" field.
-func (u *HighlightClipUpsertBulk) ClearErrorMessage() *HighlightClipUpsertBulk {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.ClearErrorMessage()
-	})
-}
-
-// SetStartedAt sets the "started_at" field.
-func (u *HighlightClipUpsertBulk) SetStartedAt(v time.Time) *HighlightClipUpsertBulk {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.SetStartedAt(v)
-	})
-}
-
-// UpdateStartedAt sets the "started_at" field to the value that was provided on create.
-func (u *HighlightClipUpsertBulk) UpdateStartedAt() *HighlightClipUpsertBulk {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.UpdateStartedAt()
-	})
-}
-
-// ClearStartedAt clears the value of the "started_at" field.
-func (u *HighlightClipUpsertBulk) ClearStartedAt() *HighlightClipUpsertBulk {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.ClearStartedAt()
-	})
-}
-
-// SetCompletedAt sets the "completed_at" field.
-func (u *HighlightClipUpsertBulk) SetCompletedAt(v time.Time) *HighlightClipUpsertBulk {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.SetCompletedAt(v)
-	})
-}
-
-// UpdateCompletedAt sets the "completed_at" field to the value that was provided on create.
-func (u *HighlightClipUpsertBulk) UpdateCompletedAt() *HighlightClipUpsertBulk {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.UpdateCompletedAt()
-	})
-}
-
-// ClearCompletedAt clears the value of the "completed_at" field.
-func (u *HighlightClipUpsertBulk) ClearCompletedAt() *HighlightClipUpsertBulk {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.ClearCompletedAt()
-	})
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (u *HighlightClipUpsertBulk) SetUpdatedAt(v time.Time) *HighlightClipUpsertBulk {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.SetUpdatedAt(v)
-	})
-}
-
-// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
-func (u *HighlightClipUpsertBulk) UpdateUpdatedAt() *HighlightClipUpsertBulk {
-	return u.Update(func(s *HighlightClipUpsert) {
-		s.UpdateUpdatedAt()
-	})
-}
-
-// Exec executes the query.
-func (u *HighlightClipUpsertBulk) Exec(ctx context.Context) error {
-	if u.create.err != nil {
-		return u.create.err
-	}
-	for i, b := range u.create.builders {
-		if len(b.conflict) != 0 {
-			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the HighlightClipCreateBulk instead", i)
-		}
-	}
-	if len(u.create.conflict) == 0 {
-		return errors.New("ent: missing options for HighlightClipCreateBulk.OnConflict")
-	}
-	return u.create.Exec(ctx)
-}
-
-// ExecX is like Exec, but panics if an error occurs.
-func (u *HighlightClipUpsertBulk) ExecX(ctx context.Context) {
-	if err := u.create.Exec(ctx); err != nil {
 		panic(err)
 	}
 }

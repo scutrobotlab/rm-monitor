@@ -115,6 +115,21 @@ func LatestStatus(v string) predicate.Match {
 	return predicate.Match(sql.FieldEQ(FieldLatestStatus, v))
 }
 
+// WorkflowName applies equality check predicate on the "workflow_name" field. It's identical to WorkflowNameEQ.
+func WorkflowName(v string) predicate.Match {
+	return predicate.Match(sql.FieldEQ(FieldWorkflowName, v))
+}
+
+// WorkflowUID applies equality check predicate on the "workflow_uid" field. It's identical to WorkflowUIDEQ.
+func WorkflowUID(v string) predicate.Match {
+	return predicate.Match(sql.FieldEQ(FieldWorkflowUID, v))
+}
+
+// WorkflowPhase applies equality check predicate on the "workflow_phase" field. It's identical to WorkflowPhaseEQ.
+func WorkflowPhase(v string) predicate.Match {
+	return predicate.Match(sql.FieldEQ(FieldWorkflowPhase, v))
+}
+
 // Report applies equality check predicate on the "report" field. It's identical to ReportEQ.
 func Report(v string) predicate.Match {
 	return predicate.Match(sql.FieldEQ(FieldReport, v))
@@ -753,6 +768,231 @@ func LatestStatusEqualFold(v string) predicate.Match {
 // LatestStatusContainsFold applies the ContainsFold predicate on the "latest_status" field.
 func LatestStatusContainsFold(v string) predicate.Match {
 	return predicate.Match(sql.FieldContainsFold(FieldLatestStatus, v))
+}
+
+// WorkflowNameEQ applies the EQ predicate on the "workflow_name" field.
+func WorkflowNameEQ(v string) predicate.Match {
+	return predicate.Match(sql.FieldEQ(FieldWorkflowName, v))
+}
+
+// WorkflowNameNEQ applies the NEQ predicate on the "workflow_name" field.
+func WorkflowNameNEQ(v string) predicate.Match {
+	return predicate.Match(sql.FieldNEQ(FieldWorkflowName, v))
+}
+
+// WorkflowNameIn applies the In predicate on the "workflow_name" field.
+func WorkflowNameIn(vs ...string) predicate.Match {
+	return predicate.Match(sql.FieldIn(FieldWorkflowName, vs...))
+}
+
+// WorkflowNameNotIn applies the NotIn predicate on the "workflow_name" field.
+func WorkflowNameNotIn(vs ...string) predicate.Match {
+	return predicate.Match(sql.FieldNotIn(FieldWorkflowName, vs...))
+}
+
+// WorkflowNameGT applies the GT predicate on the "workflow_name" field.
+func WorkflowNameGT(v string) predicate.Match {
+	return predicate.Match(sql.FieldGT(FieldWorkflowName, v))
+}
+
+// WorkflowNameGTE applies the GTE predicate on the "workflow_name" field.
+func WorkflowNameGTE(v string) predicate.Match {
+	return predicate.Match(sql.FieldGTE(FieldWorkflowName, v))
+}
+
+// WorkflowNameLT applies the LT predicate on the "workflow_name" field.
+func WorkflowNameLT(v string) predicate.Match {
+	return predicate.Match(sql.FieldLT(FieldWorkflowName, v))
+}
+
+// WorkflowNameLTE applies the LTE predicate on the "workflow_name" field.
+func WorkflowNameLTE(v string) predicate.Match {
+	return predicate.Match(sql.FieldLTE(FieldWorkflowName, v))
+}
+
+// WorkflowNameContains applies the Contains predicate on the "workflow_name" field.
+func WorkflowNameContains(v string) predicate.Match {
+	return predicate.Match(sql.FieldContains(FieldWorkflowName, v))
+}
+
+// WorkflowNameHasPrefix applies the HasPrefix predicate on the "workflow_name" field.
+func WorkflowNameHasPrefix(v string) predicate.Match {
+	return predicate.Match(sql.FieldHasPrefix(FieldWorkflowName, v))
+}
+
+// WorkflowNameHasSuffix applies the HasSuffix predicate on the "workflow_name" field.
+func WorkflowNameHasSuffix(v string) predicate.Match {
+	return predicate.Match(sql.FieldHasSuffix(FieldWorkflowName, v))
+}
+
+// WorkflowNameIsNil applies the IsNil predicate on the "workflow_name" field.
+func WorkflowNameIsNil() predicate.Match {
+	return predicate.Match(sql.FieldIsNull(FieldWorkflowName))
+}
+
+// WorkflowNameNotNil applies the NotNil predicate on the "workflow_name" field.
+func WorkflowNameNotNil() predicate.Match {
+	return predicate.Match(sql.FieldNotNull(FieldWorkflowName))
+}
+
+// WorkflowNameEqualFold applies the EqualFold predicate on the "workflow_name" field.
+func WorkflowNameEqualFold(v string) predicate.Match {
+	return predicate.Match(sql.FieldEqualFold(FieldWorkflowName, v))
+}
+
+// WorkflowNameContainsFold applies the ContainsFold predicate on the "workflow_name" field.
+func WorkflowNameContainsFold(v string) predicate.Match {
+	return predicate.Match(sql.FieldContainsFold(FieldWorkflowName, v))
+}
+
+// WorkflowUIDEQ applies the EQ predicate on the "workflow_uid" field.
+func WorkflowUIDEQ(v string) predicate.Match {
+	return predicate.Match(sql.FieldEQ(FieldWorkflowUID, v))
+}
+
+// WorkflowUIDNEQ applies the NEQ predicate on the "workflow_uid" field.
+func WorkflowUIDNEQ(v string) predicate.Match {
+	return predicate.Match(sql.FieldNEQ(FieldWorkflowUID, v))
+}
+
+// WorkflowUIDIn applies the In predicate on the "workflow_uid" field.
+func WorkflowUIDIn(vs ...string) predicate.Match {
+	return predicate.Match(sql.FieldIn(FieldWorkflowUID, vs...))
+}
+
+// WorkflowUIDNotIn applies the NotIn predicate on the "workflow_uid" field.
+func WorkflowUIDNotIn(vs ...string) predicate.Match {
+	return predicate.Match(sql.FieldNotIn(FieldWorkflowUID, vs...))
+}
+
+// WorkflowUIDGT applies the GT predicate on the "workflow_uid" field.
+func WorkflowUIDGT(v string) predicate.Match {
+	return predicate.Match(sql.FieldGT(FieldWorkflowUID, v))
+}
+
+// WorkflowUIDGTE applies the GTE predicate on the "workflow_uid" field.
+func WorkflowUIDGTE(v string) predicate.Match {
+	return predicate.Match(sql.FieldGTE(FieldWorkflowUID, v))
+}
+
+// WorkflowUIDLT applies the LT predicate on the "workflow_uid" field.
+func WorkflowUIDLT(v string) predicate.Match {
+	return predicate.Match(sql.FieldLT(FieldWorkflowUID, v))
+}
+
+// WorkflowUIDLTE applies the LTE predicate on the "workflow_uid" field.
+func WorkflowUIDLTE(v string) predicate.Match {
+	return predicate.Match(sql.FieldLTE(FieldWorkflowUID, v))
+}
+
+// WorkflowUIDContains applies the Contains predicate on the "workflow_uid" field.
+func WorkflowUIDContains(v string) predicate.Match {
+	return predicate.Match(sql.FieldContains(FieldWorkflowUID, v))
+}
+
+// WorkflowUIDHasPrefix applies the HasPrefix predicate on the "workflow_uid" field.
+func WorkflowUIDHasPrefix(v string) predicate.Match {
+	return predicate.Match(sql.FieldHasPrefix(FieldWorkflowUID, v))
+}
+
+// WorkflowUIDHasSuffix applies the HasSuffix predicate on the "workflow_uid" field.
+func WorkflowUIDHasSuffix(v string) predicate.Match {
+	return predicate.Match(sql.FieldHasSuffix(FieldWorkflowUID, v))
+}
+
+// WorkflowUIDIsNil applies the IsNil predicate on the "workflow_uid" field.
+func WorkflowUIDIsNil() predicate.Match {
+	return predicate.Match(sql.FieldIsNull(FieldWorkflowUID))
+}
+
+// WorkflowUIDNotNil applies the NotNil predicate on the "workflow_uid" field.
+func WorkflowUIDNotNil() predicate.Match {
+	return predicate.Match(sql.FieldNotNull(FieldWorkflowUID))
+}
+
+// WorkflowUIDEqualFold applies the EqualFold predicate on the "workflow_uid" field.
+func WorkflowUIDEqualFold(v string) predicate.Match {
+	return predicate.Match(sql.FieldEqualFold(FieldWorkflowUID, v))
+}
+
+// WorkflowUIDContainsFold applies the ContainsFold predicate on the "workflow_uid" field.
+func WorkflowUIDContainsFold(v string) predicate.Match {
+	return predicate.Match(sql.FieldContainsFold(FieldWorkflowUID, v))
+}
+
+// WorkflowPhaseEQ applies the EQ predicate on the "workflow_phase" field.
+func WorkflowPhaseEQ(v string) predicate.Match {
+	return predicate.Match(sql.FieldEQ(FieldWorkflowPhase, v))
+}
+
+// WorkflowPhaseNEQ applies the NEQ predicate on the "workflow_phase" field.
+func WorkflowPhaseNEQ(v string) predicate.Match {
+	return predicate.Match(sql.FieldNEQ(FieldWorkflowPhase, v))
+}
+
+// WorkflowPhaseIn applies the In predicate on the "workflow_phase" field.
+func WorkflowPhaseIn(vs ...string) predicate.Match {
+	return predicate.Match(sql.FieldIn(FieldWorkflowPhase, vs...))
+}
+
+// WorkflowPhaseNotIn applies the NotIn predicate on the "workflow_phase" field.
+func WorkflowPhaseNotIn(vs ...string) predicate.Match {
+	return predicate.Match(sql.FieldNotIn(FieldWorkflowPhase, vs...))
+}
+
+// WorkflowPhaseGT applies the GT predicate on the "workflow_phase" field.
+func WorkflowPhaseGT(v string) predicate.Match {
+	return predicate.Match(sql.FieldGT(FieldWorkflowPhase, v))
+}
+
+// WorkflowPhaseGTE applies the GTE predicate on the "workflow_phase" field.
+func WorkflowPhaseGTE(v string) predicate.Match {
+	return predicate.Match(sql.FieldGTE(FieldWorkflowPhase, v))
+}
+
+// WorkflowPhaseLT applies the LT predicate on the "workflow_phase" field.
+func WorkflowPhaseLT(v string) predicate.Match {
+	return predicate.Match(sql.FieldLT(FieldWorkflowPhase, v))
+}
+
+// WorkflowPhaseLTE applies the LTE predicate on the "workflow_phase" field.
+func WorkflowPhaseLTE(v string) predicate.Match {
+	return predicate.Match(sql.FieldLTE(FieldWorkflowPhase, v))
+}
+
+// WorkflowPhaseContains applies the Contains predicate on the "workflow_phase" field.
+func WorkflowPhaseContains(v string) predicate.Match {
+	return predicate.Match(sql.FieldContains(FieldWorkflowPhase, v))
+}
+
+// WorkflowPhaseHasPrefix applies the HasPrefix predicate on the "workflow_phase" field.
+func WorkflowPhaseHasPrefix(v string) predicate.Match {
+	return predicate.Match(sql.FieldHasPrefix(FieldWorkflowPhase, v))
+}
+
+// WorkflowPhaseHasSuffix applies the HasSuffix predicate on the "workflow_phase" field.
+func WorkflowPhaseHasSuffix(v string) predicate.Match {
+	return predicate.Match(sql.FieldHasSuffix(FieldWorkflowPhase, v))
+}
+
+// WorkflowPhaseIsNil applies the IsNil predicate on the "workflow_phase" field.
+func WorkflowPhaseIsNil() predicate.Match {
+	return predicate.Match(sql.FieldIsNull(FieldWorkflowPhase))
+}
+
+// WorkflowPhaseNotNil applies the NotNil predicate on the "workflow_phase" field.
+func WorkflowPhaseNotNil() predicate.Match {
+	return predicate.Match(sql.FieldNotNull(FieldWorkflowPhase))
+}
+
+// WorkflowPhaseEqualFold applies the EqualFold predicate on the "workflow_phase" field.
+func WorkflowPhaseEqualFold(v string) predicate.Match {
+	return predicate.Match(sql.FieldEqualFold(FieldWorkflowPhase, v))
+}
+
+// WorkflowPhaseContainsFold applies the ContainsFold predicate on the "workflow_phase" field.
+func WorkflowPhaseContainsFold(v string) predicate.Match {
+	return predicate.Match(sql.FieldContainsFold(FieldWorkflowPhase, v))
 }
 
 // ReportEQ applies the EQ predicate on the "report" field.

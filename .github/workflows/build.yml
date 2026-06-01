@@ -58,46 +58,32 @@ jobs:
         include:
           - app: lark-notifier
             dockerfile: lark-notifier/Dockerfile
-          - app: monitor
-            dockerfile: monitor/Dockerfile
+          - app: artifact-cleaner
+            dockerfile: artifact-cleaner/Dockerfile
+          - app: match-controller
+            dockerfile: match-controller/Dockerfile
           - app: record-job
             dockerfile: record-job/Dockerfile
-          - app: record-dispatcher
-            dockerfile: record-dispatcher/Dockerfile
           - app: stt-job
             dockerfile: stt-job/Dockerfile
-          - app: stt-normalize
-            dockerfile: cmd/stt-normalize/Dockerfile
           - app: stt-subtitle
             dockerfile: cmd/stt-subtitle/Dockerfile
-          - app: recording-repair
-            dockerfile: cmd/recording-repair/Dockerfile
           - app: danmu-job
             dockerfile: danmu-job/Dockerfile
           - app: analyze-job
             dockerfile: analyze-job/Dockerfile
-          - app: ocr-server
-            dockerfile: analyze-job/ocr-daemon/Dockerfile
-          - app: highlight-dispatcher
-            dockerfile: highlight-dispatcher/Dockerfile
+          - app: highlight-job
+            dockerfile: highlight-job/Dockerfile
           - app: highlight-artifact-job
             dockerfile: highlight-artifact-job/Dockerfile
-          - app: highlight-publish-bilibili-job
-            dockerfile: highlight-publish-bilibili-job/Dockerfile
           - app: manifest-job
             dockerfile: manifest-job/Dockerfile
           - app: migrate-job
             dockerfile: migrate-job/Dockerfile
-          - app: artifact-cleaner
-            dockerfile: artifact-cleaner/Dockerfile
           - app: health-checker
             dockerfile: health-checker/Dockerfile
-          - app: uploader-dispatcher
-            dockerfile: uploader-dispatcher/Dockerfile
-          - app: uploader-job
-            dockerfile: uploader-job/Dockerfile
-          - app: transcode-dispatcher
-            dockerfile: transcode-dispatcher/Dockerfile
+          - app: lark-record-job
+            dockerfile: lark-record-job/Dockerfile
           - app: transcode-job
             dockerfile: transcode-job/Dockerfile
 

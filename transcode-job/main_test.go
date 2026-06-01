@@ -1,6 +1,12 @@
 package main
 
-import "testing"
+import (
+	"os"
+	"path/filepath"
+	"testing"
+
+	"scutbot.cn/web/rm-monitor/pkg/jobcontract"
+)
 
 func TestArtifactPath(t *testing.T) {
 	tests := []struct {
@@ -33,5 +39,38 @@ func TestArtifactPath(t *testing.T) {
 				t.Fatalf("artifactPath() full path is empty")
 			}
 		})
+	}
+}
+
+func TestApplyRoundBoundaryReadsRoundJSON(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "round.json"), []byte(`{"boundary":{"start_seconds":12.5,"end_seconds":420.25}}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	ctx := jobcontract.TranscodeContext{RoundDir: dir}
+	if err := applyRoundBoundary(&ctx); err != nil {
+		t.Fatal(err)
+	}
+	if ctx.TrimStartSeconds == nil || *ctx.TrimStartSeconds != 12.5 {
+		t.Fatalf("TrimStartSeconds = %v, want 12.5", ctx.TrimStartSeconds)
+	}
+	if ctx.TrimEndSeconds == nil || *ctx.TrimEndSeconds != 420.25 {
+		t.Fatalf("TrimEndSeconds = %v, want 420.25", ctx.TrimEndSeconds)
+	}
+}
+
+func TestApplyRoundBoundaryKeepsExplicitTrim(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "round.json"), []byte(`{"boundary":{"start_seconds":12.5,"end_seconds":420.25}}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	start := 1.0
+	end := 2.0
+	ctx := jobcontract.TranscodeContext{RoundDir: dir, TrimStartSeconds: &start, TrimEndSeconds: &end}
+	if err := applyRoundBoundary(&ctx); err != nil {
+		t.Fatal(err)
+	}
+	if *ctx.TrimStartSeconds != 1.0 || *ctx.TrimEndSeconds != 2.0 {
+		t.Fatalf("explicit trim overwritten: start=%v end=%v", *ctx.TrimStartSeconds, *ctx.TrimEndSeconds)
 	}
 }

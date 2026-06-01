@@ -1,0 +1,9 @@
+{{- if .Values.argo.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rm-monitor-argo-semaphores
+  namespace: {{ include "rm-monitor.namespace" . }}
+data:
+  transcode: {{ .Values.transcode.maxConcurrent | quote }}
+{{- end }}

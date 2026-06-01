@@ -12,32 +12,20 @@ import (
 // Tx is a transactional client that is created by calling Client.Tx().
 type Tx struct {
 	config
-	// AnalyzeTask is the client for interacting with the AnalyzeTask builders.
-	AnalyzeTask *AnalyzeTaskClient
+	// BilibiliHighlightPublication is the client for interacting with the BilibiliHighlightPublication builders.
+	BilibiliHighlightPublication *BilibiliHighlightPublicationClient
 	// HighlightClip is the client for interacting with the HighlightClip builders.
 	HighlightClip *HighlightClipClient
-	// HighlightPublishTask is the client for interacting with the HighlightPublishTask builders.
-	HighlightPublishTask *HighlightPublishTaskClient
-	// HighlightRoundState is the client for interacting with the HighlightRoundState builders.
-	HighlightRoundState *HighlightRoundStateClient
+	// LarkBitableRecord is the client for interacting with the LarkBitableRecord builders.
+	LarkBitableRecord *LarkBitableRecordClient
 	// LarkMessage is the client for interacting with the LarkMessage builders.
 	LarkMessage *LarkMessageClient
 	// Match is the client for interacting with the Match builders.
 	Match *MatchClient
 	// MatchRound is the client for interacting with the MatchRound builders.
 	MatchRound *MatchRoundClient
-	// MediaArtifact is the client for interacting with the MediaArtifact builders.
-	MediaArtifact *MediaArtifactClient
-	// RecordTask is the client for interacting with the RecordTask builders.
-	RecordTask *RecordTaskClient
-	// STTTask is the client for interacting with the STTTask builders.
-	STTTask *STTTaskClient
 	// Team is the client for interacting with the Team builders.
 	Team *TeamClient
-	// TranscodeTask is the client for interacting with the TranscodeTask builders.
-	TranscodeTask *TranscodeTaskClient
-	// UploadTask is the client for interacting with the UploadTask builders.
-	UploadTask *UploadTaskClient
 
 	// lazily loaded.
 	client     *Client
@@ -169,19 +157,13 @@ func (tx *Tx) Client() *Client {
 }
 
 func (tx *Tx) init() {
-	tx.AnalyzeTask = NewAnalyzeTaskClient(tx.config)
+	tx.BilibiliHighlightPublication = NewBilibiliHighlightPublicationClient(tx.config)
 	tx.HighlightClip = NewHighlightClipClient(tx.config)
-	tx.HighlightPublishTask = NewHighlightPublishTaskClient(tx.config)
-	tx.HighlightRoundState = NewHighlightRoundStateClient(tx.config)
+	tx.LarkBitableRecord = NewLarkBitableRecordClient(tx.config)
 	tx.LarkMessage = NewLarkMessageClient(tx.config)
 	tx.Match = NewMatchClient(tx.config)
 	tx.MatchRound = NewMatchRoundClient(tx.config)
-	tx.MediaArtifact = NewMediaArtifactClient(tx.config)
-	tx.RecordTask = NewRecordTaskClient(tx.config)
-	tx.STTTask = NewSTTTaskClient(tx.config)
 	tx.Team = NewTeamClient(tx.config)
-	tx.TranscodeTask = NewTranscodeTaskClient(tx.config)
-	tx.UploadTask = NewUploadTaskClient(tx.config)
 }
 
 // txDriver wraps the given dialect.Tx with a nop dialect.Driver implementation.
@@ -191,7 +173,7 @@ func (tx *Tx) init() {
 // of them in order to commit or rollback the transaction.
 //
 // If a closed transaction is embedded in one of the generated entities, and the entity
-// applies a query, for example: AnalyzeTask.QueryXXX(), the query will be executed
+// applies a query, for example: BilibiliHighlightPublication.QueryXXX(), the query will be executed
 // through the driver which created this transaction.
 //
 // Note that txDriver is not goroutine safe.

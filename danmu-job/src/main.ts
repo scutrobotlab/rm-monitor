@@ -1,7 +1,8 @@
 import fs from "node:fs";
 import { setTimeout as sleep } from "node:timers/promises";
 import path from "node:path";
-import { danmuConfWithDefaults, loadConfig } from "./config.js";
+import { Client as PgClient } from "pg";
+import { danmuConfWithDefaults, loadConfig, recordConfWithDefaults } from "./config.js";
 import { DanmuStats, statsBucketSeconds } from "./stats.js";
 import { BilibiliXMLWriter, type DanmuMessage } from "./xml.js";
 
@@ -30,7 +31,7 @@ type DanmuJobContext = {
 
 type RecordMeta = {
   schema: string;
-  record_task_id: number;
+  match_round_id: number;
   role: string;
   source_url: string;
   output_path: string;
@@ -71,6 +72,8 @@ const chatRoomID = String(jobContext.chat_room_id || "").trim();
 
 const config = loadConfig(configFile);
 const danmuConf = danmuConfWithDefaults(config.DanmuConf);
+const recordConf = recordConfWithDefaults(config.RecordConf);
+const postgresDSN = String(config.PostgresConf?.DSN || "").trim();
 
 if (!danmuConf.Enabled) {
   process.exit(0);
@@ -163,7 +166,7 @@ async function run() {
   stopSampling();
   const finalRound = { ...round, endedAt: new Date() };
   await writer.close();
-  await stats.writeOutputs(roundDir, {
+  const statsOutputs = await stats.writeOutputs(roundDir, {
     roundNo: finalRound.roundNo,
     startedAt: finalRound.startedAt,
     endedAt: finalRound.endedAt,
@@ -172,15 +175,15 @@ async function run() {
     videoOffsetSeconds: danmuConf.VideoOffsetSeconds,
     mediaTimeZeroWallAt,
   });
-  await writeJobResult(outputPath);
+  await writeJobResult(outputPath, statsOutputs);
 }
 
 async function connectLeanCloudWithRetry(roomID: string, round: RoundInfo): Promise<LeanRuntime | null> {
   let attempt = 0;
   for (;;) {
-    if (shuttingDown) {
+    if (shuttingDown || (await isRoundEnded())) {
       console.error(
-        `leancloud room ${roomID} for round ${round.id} was not connected before shutdown after ${attempt} attempt(s)`,
+        `leancloud room ${roomID} for round ${round.id} was not connected before stop after ${attempt} attempt(s)`,
       );
       return null;
     }
@@ -196,7 +199,12 @@ async function connectLeanCloudWithRetry(roomID: string, round: RoundInfo): Prom
           error instanceof Error ? error.message : String(error)
         }`,
       );
-      await sleep(delayMs);
+      if (await sleepUntilStopped(delayMs)) {
+        console.error(
+          `leancloud room ${roomID} for round ${round.id} stopped during retry wait after ${attempt} attempt(s)`,
+        );
+        return null;
+      }
     }
   }
 }
@@ -210,45 +218,68 @@ async function connectLeanCloud(roomID: string, round: RoundInfo): Promise<LeanR
     leancloudConnectTimeoutMs,
     `create leancloud im client ${clientID}`,
   );
-  registerRuntimeDiagnostics(client, "leancloud-client");
-  const room = await withTimeout(resolveRoom(client, roomID), leancloudConnectTimeoutMs, `resolve leancloud room ${roomID}`);
-  registerRuntimeDiagnostics(room, "leancloud-room");
-  if (room?.join) {
-    await withTimeout(room.join(), leancloudConnectTimeoutMs, `join leancloud room ${roomID}`);
-  }
-  diagnostics.connectedAt = new Date().toISOString();
-  console.log(`connected leancloud room ${roomID} for round ${round.id} with client ${clientID}`);
-
-  const seen = new Set<string>();
-  const seenOrder: string[] = [];
-  let hydrating = true;
-  const pending: LeanMessage[] = [];
-  const eventNames = new Set<string>(["message"]);
-  if (typeof Event?.MESSAGE === "string" && Event.MESSAGE.trim()) {
-    eventNames.add(Event.MESSAGE);
-  }
-  const handler = (message: LeanMessage) => {
-    if (hydrating) {
-      pending.push(message);
-      return;
+  try {
+    registerRuntimeDiagnostics(client, "leancloud-client");
+    const room = await withTimeout(
+      resolveRoom(client, roomID),
+      leancloudConnectTimeoutMs,
+      `resolve leancloud room ${roomID}`,
+    );
+    registerRuntimeDiagnostics(room, "leancloud-room");
+    if (!room || typeof room.on !== "function") {
+      throw new Error(`leancloud room ${roomID} is not subscribable`);
     }
-    writeMessageIfValid(message, round, seen, seenOrder);
-  };
-  for (const eventName of eventNames) {
-    room.on(eventName, handler);
-  }
+    if (room?.join) {
+      await withTimeout(room.join(), leancloudConnectTimeoutMs, `join leancloud room ${roomID}`);
+    }
+    diagnostics.connectedAt = new Date().toISOString();
+    console.log(`connected leancloud room ${roomID} for round ${round.id} with client ${clientID}`);
 
-  await withTimeout(
-    writeHistory(room as { queryMessages?: (opts: unknown) => Promise<LeanMessage[]> }, round, seen, seenOrder),
-    leancloudHistoryTimeoutMs,
-    `query leancloud history ${roomID}`,
-  );
-  hydrating = false;
-  pending.sort((a, b) => messageTimestamp(a) - messageTimestamp(b));
-  for (const message of pending) {
-    writeMessageIfValid(message, round, seen, seenOrder);
+    const seen = new Set<string>();
+    const seenOrder: string[] = [];
+    let hydrating = true;
+    const pending: LeanMessage[] = [];
+    const eventNames = new Set<string>(["message"]);
+    if (typeof Event?.MESSAGE === "string" && Event.MESSAGE.trim()) {
+      eventNames.add(Event.MESSAGE);
+    }
+    const handler = (message: LeanMessage) => {
+      if (hydrating) {
+        pending.push(message);
+        return;
+      }
+      writeMessageIfValid(message, round, seen, seenOrder);
+    };
+    for (const eventName of eventNames) {
+      room.on(eventName, handler);
+    }
+
+    await withTimeout(
+      writeHistory(room as { queryMessages?: (opts: unknown) => Promise<LeanMessage[]> }, round, seen, seenOrder),
+      leancloudHistoryTimeoutMs,
+      `query leancloud history ${roomID}`,
+    );
+    hydrating = false;
+    pending.sort((a, b) => messageTimestamp(a) - messageTimestamp(b));
+    for (const message of pending) {
+      writeMessageIfValid(message, round, seen, seenOrder);
+    }
+    return { client: client as LeanRuntime["client"], room: room as LeanRuntime["room"] };
+  } catch (error) {
+    await closeLeancloudClient(client);
+    throw error;
   }
-  return { client: client as LeanRuntime["client"], room: room as LeanRuntime["room"] };
+}
+
+async function closeLeancloudClient(client: unknown) {
+  try {
+    const closable = client as { close?: () => Promise<void> };
+    if (typeof closable.close === "function") {
+      await closable.close();
+    }
+  } catch {
+    // ignore close failures on failed connect attempts
+  }
 }
 
 async function getLeancloudRealtime() {
@@ -453,11 +484,76 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: str
 }
 
 async function waitUntilStopped() {
+  await waitForRoundEnded();
+}
+
+async function waitForRoundEnded() {
+  if (!postgresDSN) {
+    throw new Error("PostgresConf.DSN is required for danmu round polling");
+  }
+  const client = new PgClient({ connectionString: postgresDSN });
+  await client.connect();
+  try {
+    for (;;) {
+      if (shuttingDown) {
+        return;
+      }
+      const result = await client.query<{ status: string }>("select status from match_rounds where id = $1", [roundID]);
+      if (result.rows[0]?.status === "ENDED") {
+        if (recordConf.StopDelaySeconds > 0) {
+          await sleepUntilSignal(recordConf.StopDelaySeconds * 1000);
+        }
+        return;
+      }
+      await sleep(1000);
+    }
+  } finally {
+    await client.end().catch(() => undefined);
+  }
+}
+
+async function sleepUntilSignal(delayMs: number) {
+  const deadline = Date.now() + delayMs;
   for (;;) {
     if (shuttingDown) {
       return;
     }
-    await sleep(1000);
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) {
+      return;
+    }
+    await sleep(Math.min(1000, remaining));
+  }
+}
+
+async function isRoundEnded(): Promise<boolean> {
+  if (shuttingDown) {
+    return true;
+  }
+  if (!postgresDSN) {
+    throw new Error("PostgresConf.DSN is required for danmu round polling");
+  }
+  const client = new PgClient({ connectionString: postgresDSN });
+  await client.connect();
+  try {
+    const result = await client.query<{ status: string }>("select status from match_rounds where id = $1", [roundID]);
+    return result.rows[0]?.status === "ENDED";
+  } finally {
+    await client.end().catch(() => undefined);
+  }
+}
+
+async function sleepUntilStopped(delayMs: number): Promise<boolean> {
+  const deadline = Date.now() + delayMs;
+  for (;;) {
+    if (await isRoundEnded()) {
+      return true;
+    }
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) {
+      return false;
+    }
+    await sleep(Math.min(1000, remaining));
   }
 }
 
@@ -543,18 +639,22 @@ function loadJobContext(): DanmuJobContext {
 }
 
 function jobDir(): string {
-  return path.join(jobContext.round_dir, ".job", `danmu-${roundID}`);
+  return "/tmp/job";
 }
 
 async function writeJobContext() {
   await atomicWriteJSON(path.join(jobDir(), "context.json"), jobContext);
 }
 
-async function writeJobResult(outputPath: string) {
-  await atomicWriteJSON(path.join(jobDir(), "result.json"), {
+async function writeJobResult(outputPath: string, statsOutputs: { danmuCountJSON: string; onlineCountJSON: string; danmuCountChart: string; onlineCountChart: string }) {
+  const result = {
     schema: "rm-monitor/danmu-result/v1",
     match_round_id: roundID,
     output_path: outputPath,
+    danmu_count_json: statsOutputs.danmuCountJSON,
+    online_count_json: statsOutputs.onlineCountJSON,
+    danmu_count_chart: statsOutputs.danmuCountChart,
+    online_count_chart: statsOutputs.onlineCountChart,
     diagnostics: {
       connected: diagnostics.connectedAt !== null,
       connected_at: diagnostics.connectedAt,
@@ -567,6 +667,14 @@ async function writeJobResult(outputPath: string) {
       online_sample_timeouts: diagnostics.onlineSampleTimeouts,
     },
     completed_at: new Date().toISOString(),
+  };
+  await atomicWriteJSON(path.join(jobDir(), "result.json"), result);
+  await writeArgoOutputs({
+    output_path: outputPath,
+    danmu_count_json: statsOutputs.danmuCountJSON,
+    online_count_json: statsOutputs.onlineCountJSON,
+    danmu_count_svg: statsOutputs.danmuCountChart,
+    online_count_svg: statsOutputs.onlineCountChart,
   });
 }
 
@@ -588,6 +696,12 @@ async function atomicWriteJSON(filePath: string, value: unknown) {
   const tmp = `${filePath}.tmp-${process.pid}-${Date.now()}`;
   await fs.promises.writeFile(tmp, `${JSON.stringify(value, null, 2)}\n`, "utf8");
   await fs.promises.rename(tmp, filePath);
+}
+
+async function writeArgoOutputs(values: Record<string, unknown>) {
+  const dir = "/tmp/argo";
+  await fs.promises.mkdir(dir, { recursive: true });
+  await Promise.all(Object.entries(values).map(([key, value]) => fs.promises.writeFile(path.join(dir, key), String(value ?? ""))));
 }
 
 function roundNumberFromDir(roundDir: string): number {

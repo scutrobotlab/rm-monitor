@@ -207,7 +207,10 @@ func TestFinishSTTWritesSubtitleAndResult(t *testing.T) {
 	} else if !strings.Contains(string(raw), "测试字幕") {
 		t.Fatalf("subtitle missing text:\n%s", raw)
 	}
-	if _, err := os.Stat(filepath.Join(roundDir, ".job", "stt-42", "result.json")); err != nil {
+	if _, err := os.Stat(filepath.Join(jobcontract.TempJobDir, "result.json")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(jobcontract.ArgoOutDir, "stt_path")); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -244,7 +247,7 @@ exit 1
 	if _, err := os.Stat(filepath.Join(roundDir, "主视角.srt")); !os.IsNotExist(err) {
 		t.Fatalf("subtitle should not exist for no audio, err=%v", err)
 	}
-	if _, err := os.Stat(filepath.Join(roundDir, ".job", "stt-7", "result.json")); err != nil {
+	if _, err := os.Stat(filepath.Join(jobcontract.TempJobDir, "result.json")); err != nil {
 		t.Fatal(err)
 	}
 }

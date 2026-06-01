@@ -224,7 +224,7 @@ func TestBuildReportPayloadIncludesEvidence(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(roundDir, "stats", "online-count.json"), []byte(`{"points":[{"t":0,"online_count":12},{"t":10,"online_count":20}]}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(roundDir, "round.json"), []byte(`{"settlement":{"status":"CONFIRMED","ocr":{"fields":{"red_score":"1"}}}}`), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(roundDir, "round.json"), []byte(`{"analysis":{"status":"CONFIRMED"},"boundary":{"start_seconds":12.5,"end_seconds":420.25,"duration_seconds":407.75},"settlement":{"status":"CONFIRMED","ocr":{"fields":{"red_score":"1"}}}}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	highlightDir := filepath.Join(roundDir, "highlights", "Highlight-1")
@@ -265,6 +265,9 @@ func TestBuildReportPayloadIncludesEvidence(t *testing.T) {
 	}
 	if len(payload.Rounds[0].OCRSettlement) == 0 || len(payload.Rounds[0].Highlights) != 1 {
 		t.Fatalf("ocr/highlights missing: %#v", payload.Rounds[0])
+	}
+	if payload.Rounds[0].Analysis == nil || payload.Rounds[0].Analysis.StartSeconds != 12.5 || payload.Rounds[0].Analysis.EndSeconds != 420.25 {
+		t.Fatalf("analysis missing: %#v", payload.Rounds[0].Analysis)
 	}
 }
 

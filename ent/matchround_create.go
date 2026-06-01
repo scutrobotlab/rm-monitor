@@ -8,16 +8,12 @@ import (
 	"fmt"
 	"time"
 
-	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
-	"scutbot.cn/web/rm-monitor/ent/analyzetask"
 	"scutbot.cn/web/rm-monitor/ent/highlightclip"
-	"scutbot.cn/web/rm-monitor/ent/highlightroundstate"
+	"scutbot.cn/web/rm-monitor/ent/larkbitablerecord"
 	"scutbot.cn/web/rm-monitor/ent/match"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
-	"scutbot.cn/web/rm-monitor/ent/recordtask"
-	"scutbot.cn/web/rm-monitor/ent/stttask"
 )
 
 // MatchRoundCreate is the builder for creating a MatchRound entity.
@@ -25,7 +21,6 @@ type MatchRoundCreate struct {
 	config
 	mutation *MatchRoundMutation
 	hooks    []Hook
-	conflict []sql.ConflictOption
 }
 
 // SetRoundNo sets the "round_no" field.
@@ -50,6 +45,48 @@ func (_c *MatchRoundCreate) SetWinner(v matchround.Winner) *MatchRoundCreate {
 func (_c *MatchRoundCreate) SetNillableWinner(v *matchround.Winner) *MatchRoundCreate {
 	if v != nil {
 		_c.SetWinner(*v)
+	}
+	return _c
+}
+
+// SetWorkflowName sets the "workflow_name" field.
+func (_c *MatchRoundCreate) SetWorkflowName(v string) *MatchRoundCreate {
+	_c.mutation.SetWorkflowName(v)
+	return _c
+}
+
+// SetNillableWorkflowName sets the "workflow_name" field if the given value is not nil.
+func (_c *MatchRoundCreate) SetNillableWorkflowName(v *string) *MatchRoundCreate {
+	if v != nil {
+		_c.SetWorkflowName(*v)
+	}
+	return _c
+}
+
+// SetWorkflowUID sets the "workflow_uid" field.
+func (_c *MatchRoundCreate) SetWorkflowUID(v string) *MatchRoundCreate {
+	_c.mutation.SetWorkflowUID(v)
+	return _c
+}
+
+// SetNillableWorkflowUID sets the "workflow_uid" field if the given value is not nil.
+func (_c *MatchRoundCreate) SetNillableWorkflowUID(v *string) *MatchRoundCreate {
+	if v != nil {
+		_c.SetWorkflowUID(*v)
+	}
+	return _c
+}
+
+// SetWorkflowPhase sets the "workflow_phase" field.
+func (_c *MatchRoundCreate) SetWorkflowPhase(v string) *MatchRoundCreate {
+	_c.mutation.SetWorkflowPhase(v)
+	return _c
+}
+
+// SetNillableWorkflowPhase sets the "workflow_phase" field if the given value is not nil.
+func (_c *MatchRoundCreate) SetNillableWorkflowPhase(v *string) *MatchRoundCreate {
+	if v != nil {
+		_c.SetWorkflowPhase(*v)
 	}
 	return _c
 }
@@ -121,51 +158,6 @@ func (_c *MatchRoundCreate) SetMatch(v *Match) *MatchRoundCreate {
 	return _c.SetMatchID(v.ID)
 }
 
-// AddRecordTaskIDs adds the "record_tasks" edge to the RecordTask entity by IDs.
-func (_c *MatchRoundCreate) AddRecordTaskIDs(ids ...int) *MatchRoundCreate {
-	_c.mutation.AddRecordTaskIDs(ids...)
-	return _c
-}
-
-// AddRecordTasks adds the "record_tasks" edges to the RecordTask entity.
-func (_c *MatchRoundCreate) AddRecordTasks(v ...*RecordTask) *MatchRoundCreate {
-	ids := make([]int, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _c.AddRecordTaskIDs(ids...)
-}
-
-// AddSttTaskIDs adds the "stt_tasks" edge to the STTTask entity by IDs.
-func (_c *MatchRoundCreate) AddSttTaskIDs(ids ...int) *MatchRoundCreate {
-	_c.mutation.AddSttTaskIDs(ids...)
-	return _c
-}
-
-// AddSttTasks adds the "stt_tasks" edges to the STTTask entity.
-func (_c *MatchRoundCreate) AddSttTasks(v ...*STTTask) *MatchRoundCreate {
-	ids := make([]int, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _c.AddSttTaskIDs(ids...)
-}
-
-// AddAnalyzeTaskIDs adds the "analyze_tasks" edge to the AnalyzeTask entity by IDs.
-func (_c *MatchRoundCreate) AddAnalyzeTaskIDs(ids ...int) *MatchRoundCreate {
-	_c.mutation.AddAnalyzeTaskIDs(ids...)
-	return _c
-}
-
-// AddAnalyzeTasks adds the "analyze_tasks" edges to the AnalyzeTask entity.
-func (_c *MatchRoundCreate) AddAnalyzeTasks(v ...*AnalyzeTask) *MatchRoundCreate {
-	ids := make([]int, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _c.AddAnalyzeTaskIDs(ids...)
-}
-
 // AddHighlightClipIDs adds the "highlight_clips" edge to the HighlightClip entity by IDs.
 func (_c *MatchRoundCreate) AddHighlightClipIDs(ids ...int) *MatchRoundCreate {
 	_c.mutation.AddHighlightClipIDs(ids...)
@@ -181,19 +173,19 @@ func (_c *MatchRoundCreate) AddHighlightClips(v ...*HighlightClip) *MatchRoundCr
 	return _c.AddHighlightClipIDs(ids...)
 }
 
-// AddHighlightStateIDs adds the "highlight_states" edge to the HighlightRoundState entity by IDs.
-func (_c *MatchRoundCreate) AddHighlightStateIDs(ids ...int) *MatchRoundCreate {
-	_c.mutation.AddHighlightStateIDs(ids...)
+// AddLarkBitableRecordIDs adds the "lark_bitable_records" edge to the LarkBitableRecord entity by IDs.
+func (_c *MatchRoundCreate) AddLarkBitableRecordIDs(ids ...int) *MatchRoundCreate {
+	_c.mutation.AddLarkBitableRecordIDs(ids...)
 	return _c
 }
 
-// AddHighlightStates adds the "highlight_states" edges to the HighlightRoundState entity.
-func (_c *MatchRoundCreate) AddHighlightStates(v ...*HighlightRoundState) *MatchRoundCreate {
+// AddLarkBitableRecords adds the "lark_bitable_records" edges to the LarkBitableRecord entity.
+func (_c *MatchRoundCreate) AddLarkBitableRecords(v ...*LarkBitableRecord) *MatchRoundCreate {
 	ids := make([]int, len(v))
 	for i := range v {
 		ids[i] = v[i].ID
 	}
-	return _c.AddHighlightStateIDs(ids...)
+	return _c.AddLarkBitableRecordIDs(ids...)
 }
 
 // Mutation returns the MatchRoundMutation object of the builder.
@@ -301,7 +293,6 @@ func (_c *MatchRoundCreate) createSpec() (*MatchRound, *sqlgraph.CreateSpec) {
 		_node = &MatchRound{config: _c.config}
 		_spec = sqlgraph.NewCreateSpec(matchround.Table, sqlgraph.NewFieldSpec(matchround.FieldID, field.TypeInt))
 	)
-	_spec.OnConflict = _c.conflict
 	if value, ok := _c.mutation.RoundNo(); ok {
 		_spec.SetField(matchround.FieldRoundNo, field.TypeInt, value)
 		_node.RoundNo = value
@@ -313,6 +304,18 @@ func (_c *MatchRoundCreate) createSpec() (*MatchRound, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Winner(); ok {
 		_spec.SetField(matchround.FieldWinner, field.TypeEnum, value)
 		_node.Winner = &value
+	}
+	if value, ok := _c.mutation.WorkflowName(); ok {
+		_spec.SetField(matchround.FieldWorkflowName, field.TypeString, value)
+		_node.WorkflowName = &value
+	}
+	if value, ok := _c.mutation.WorkflowUID(); ok {
+		_spec.SetField(matchround.FieldWorkflowUID, field.TypeString, value)
+		_node.WorkflowUID = &value
+	}
+	if value, ok := _c.mutation.WorkflowPhase(); ok {
+		_spec.SetField(matchround.FieldWorkflowPhase, field.TypeString, value)
+		_node.WorkflowPhase = &value
 	}
 	if value, ok := _c.mutation.StartedAt(); ok {
 		_spec.SetField(matchround.FieldStartedAt, field.TypeTime, value)
@@ -347,54 +350,6 @@ func (_c *MatchRoundCreate) createSpec() (*MatchRound, *sqlgraph.CreateSpec) {
 		_node.match_rounds = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := _c.mutation.RecordTasksIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   matchround.RecordTasksTable,
-			Columns: []string{matchround.RecordTasksColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(recordtask.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges = append(_spec.Edges, edge)
-	}
-	if nodes := _c.mutation.SttTasksIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   matchround.SttTasksTable,
-			Columns: []string{matchround.SttTasksColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(stttask.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges = append(_spec.Edges, edge)
-	}
-	if nodes := _c.mutation.AnalyzeTasksIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   matchround.AnalyzeTasksTable,
-			Columns: []string{matchround.AnalyzeTasksColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(analyzetask.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges = append(_spec.Edges, edge)
-	}
 	if nodes := _c.mutation.HighlightClipsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
@@ -411,15 +366,15 @@ func (_c *MatchRoundCreate) createSpec() (*MatchRound, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := _c.mutation.HighlightStatesIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.LarkBitableRecordsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   matchround.HighlightStatesTable,
-			Columns: []string{matchround.HighlightStatesColumn},
+			Table:   matchround.LarkBitableRecordsTable,
+			Columns: []string{matchround.LarkBitableRecordsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(highlightroundstate.FieldID, field.TypeInt),
+				IDSpec: sqlgraph.NewFieldSpec(larkbitablerecord.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -430,334 +385,11 @@ func (_c *MatchRoundCreate) createSpec() (*MatchRound, *sqlgraph.CreateSpec) {
 	return _node, _spec
 }
 
-// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
-// of the `INSERT` statement. For example:
-//
-//	client.MatchRound.Create().
-//		SetRoundNo(v).
-//		OnConflict(
-//			// Update the row with the new values
-//			// the was proposed for insertion.
-//			sql.ResolveWithNewValues(),
-//		).
-//		// Override some of the fields with custom
-//		// update values.
-//		Update(func(u *ent.MatchRoundUpsert) {
-//			SetRoundNo(v+v).
-//		}).
-//		Exec(ctx)
-func (_c *MatchRoundCreate) OnConflict(opts ...sql.ConflictOption) *MatchRoundUpsertOne {
-	_c.conflict = opts
-	return &MatchRoundUpsertOne{
-		create: _c,
-	}
-}
-
-// OnConflictColumns calls `OnConflict` and configures the columns
-// as conflict target. Using this option is equivalent to using:
-//
-//	client.MatchRound.Create().
-//		OnConflict(sql.ConflictColumns(columns...)).
-//		Exec(ctx)
-func (_c *MatchRoundCreate) OnConflictColumns(columns ...string) *MatchRoundUpsertOne {
-	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
-	return &MatchRoundUpsertOne{
-		create: _c,
-	}
-}
-
-type (
-	// MatchRoundUpsertOne is the builder for "upsert"-ing
-	//  one MatchRound node.
-	MatchRoundUpsertOne struct {
-		create *MatchRoundCreate
-	}
-
-	// MatchRoundUpsert is the "OnConflict" setter.
-	MatchRoundUpsert struct {
-		*sql.UpdateSet
-	}
-)
-
-// SetRoundNo sets the "round_no" field.
-func (u *MatchRoundUpsert) SetRoundNo(v int) *MatchRoundUpsert {
-	u.Set(matchround.FieldRoundNo, v)
-	return u
-}
-
-// UpdateRoundNo sets the "round_no" field to the value that was provided on create.
-func (u *MatchRoundUpsert) UpdateRoundNo() *MatchRoundUpsert {
-	u.SetExcluded(matchround.FieldRoundNo)
-	return u
-}
-
-// AddRoundNo adds v to the "round_no" field.
-func (u *MatchRoundUpsert) AddRoundNo(v int) *MatchRoundUpsert {
-	u.Add(matchround.FieldRoundNo, v)
-	return u
-}
-
-// SetStatus sets the "status" field.
-func (u *MatchRoundUpsert) SetStatus(v matchround.Status) *MatchRoundUpsert {
-	u.Set(matchround.FieldStatus, v)
-	return u
-}
-
-// UpdateStatus sets the "status" field to the value that was provided on create.
-func (u *MatchRoundUpsert) UpdateStatus() *MatchRoundUpsert {
-	u.SetExcluded(matchround.FieldStatus)
-	return u
-}
-
-// SetWinner sets the "winner" field.
-func (u *MatchRoundUpsert) SetWinner(v matchround.Winner) *MatchRoundUpsert {
-	u.Set(matchround.FieldWinner, v)
-	return u
-}
-
-// UpdateWinner sets the "winner" field to the value that was provided on create.
-func (u *MatchRoundUpsert) UpdateWinner() *MatchRoundUpsert {
-	u.SetExcluded(matchround.FieldWinner)
-	return u
-}
-
-// ClearWinner clears the value of the "winner" field.
-func (u *MatchRoundUpsert) ClearWinner() *MatchRoundUpsert {
-	u.SetNull(matchround.FieldWinner)
-	return u
-}
-
-// SetStartedAt sets the "started_at" field.
-func (u *MatchRoundUpsert) SetStartedAt(v time.Time) *MatchRoundUpsert {
-	u.Set(matchround.FieldStartedAt, v)
-	return u
-}
-
-// UpdateStartedAt sets the "started_at" field to the value that was provided on create.
-func (u *MatchRoundUpsert) UpdateStartedAt() *MatchRoundUpsert {
-	u.SetExcluded(matchround.FieldStartedAt)
-	return u
-}
-
-// SetEndedAt sets the "ended_at" field.
-func (u *MatchRoundUpsert) SetEndedAt(v time.Time) *MatchRoundUpsert {
-	u.Set(matchround.FieldEndedAt, v)
-	return u
-}
-
-// UpdateEndedAt sets the "ended_at" field to the value that was provided on create.
-func (u *MatchRoundUpsert) UpdateEndedAt() *MatchRoundUpsert {
-	u.SetExcluded(matchround.FieldEndedAt)
-	return u
-}
-
-// ClearEndedAt clears the value of the "ended_at" field.
-func (u *MatchRoundUpsert) ClearEndedAt() *MatchRoundUpsert {
-	u.SetNull(matchround.FieldEndedAt)
-	return u
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (u *MatchRoundUpsert) SetUpdatedAt(v time.Time) *MatchRoundUpsert {
-	u.Set(matchround.FieldUpdatedAt, v)
-	return u
-}
-
-// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
-func (u *MatchRoundUpsert) UpdateUpdatedAt() *MatchRoundUpsert {
-	u.SetExcluded(matchround.FieldUpdatedAt)
-	return u
-}
-
-// UpdateNewValues updates the mutable fields using the new values that were set on create.
-// Using this option is equivalent to using:
-//
-//	client.MatchRound.Create().
-//		OnConflict(
-//			sql.ResolveWithNewValues(),
-//		).
-//		Exec(ctx)
-func (u *MatchRoundUpsertOne) UpdateNewValues() *MatchRoundUpsertOne {
-	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
-	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
-		if _, exists := u.create.mutation.CreatedAt(); exists {
-			s.SetIgnore(matchround.FieldCreatedAt)
-		}
-	}))
-	return u
-}
-
-// Ignore sets each column to itself in case of conflict.
-// Using this option is equivalent to using:
-//
-//	client.MatchRound.Create().
-//	    OnConflict(sql.ResolveWithIgnore()).
-//	    Exec(ctx)
-func (u *MatchRoundUpsertOne) Ignore() *MatchRoundUpsertOne {
-	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
-	return u
-}
-
-// DoNothing configures the conflict_action to `DO NOTHING`.
-// Supported only by SQLite and PostgreSQL.
-func (u *MatchRoundUpsertOne) DoNothing() *MatchRoundUpsertOne {
-	u.create.conflict = append(u.create.conflict, sql.DoNothing())
-	return u
-}
-
-// Update allows overriding fields `UPDATE` values. See the MatchRoundCreate.OnConflict
-// documentation for more info.
-func (u *MatchRoundUpsertOne) Update(set func(*MatchRoundUpsert)) *MatchRoundUpsertOne {
-	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
-		set(&MatchRoundUpsert{UpdateSet: update})
-	}))
-	return u
-}
-
-// SetRoundNo sets the "round_no" field.
-func (u *MatchRoundUpsertOne) SetRoundNo(v int) *MatchRoundUpsertOne {
-	return u.Update(func(s *MatchRoundUpsert) {
-		s.SetRoundNo(v)
-	})
-}
-
-// AddRoundNo adds v to the "round_no" field.
-func (u *MatchRoundUpsertOne) AddRoundNo(v int) *MatchRoundUpsertOne {
-	return u.Update(func(s *MatchRoundUpsert) {
-		s.AddRoundNo(v)
-	})
-}
-
-// UpdateRoundNo sets the "round_no" field to the value that was provided on create.
-func (u *MatchRoundUpsertOne) UpdateRoundNo() *MatchRoundUpsertOne {
-	return u.Update(func(s *MatchRoundUpsert) {
-		s.UpdateRoundNo()
-	})
-}
-
-// SetStatus sets the "status" field.
-func (u *MatchRoundUpsertOne) SetStatus(v matchround.Status) *MatchRoundUpsertOne {
-	return u.Update(func(s *MatchRoundUpsert) {
-		s.SetStatus(v)
-	})
-}
-
-// UpdateStatus sets the "status" field to the value that was provided on create.
-func (u *MatchRoundUpsertOne) UpdateStatus() *MatchRoundUpsertOne {
-	return u.Update(func(s *MatchRoundUpsert) {
-		s.UpdateStatus()
-	})
-}
-
-// SetWinner sets the "winner" field.
-func (u *MatchRoundUpsertOne) SetWinner(v matchround.Winner) *MatchRoundUpsertOne {
-	return u.Update(func(s *MatchRoundUpsert) {
-		s.SetWinner(v)
-	})
-}
-
-// UpdateWinner sets the "winner" field to the value that was provided on create.
-func (u *MatchRoundUpsertOne) UpdateWinner() *MatchRoundUpsertOne {
-	return u.Update(func(s *MatchRoundUpsert) {
-		s.UpdateWinner()
-	})
-}
-
-// ClearWinner clears the value of the "winner" field.
-func (u *MatchRoundUpsertOne) ClearWinner() *MatchRoundUpsertOne {
-	return u.Update(func(s *MatchRoundUpsert) {
-		s.ClearWinner()
-	})
-}
-
-// SetStartedAt sets the "started_at" field.
-func (u *MatchRoundUpsertOne) SetStartedAt(v time.Time) *MatchRoundUpsertOne {
-	return u.Update(func(s *MatchRoundUpsert) {
-		s.SetStartedAt(v)
-	})
-}
-
-// UpdateStartedAt sets the "started_at" field to the value that was provided on create.
-func (u *MatchRoundUpsertOne) UpdateStartedAt() *MatchRoundUpsertOne {
-	return u.Update(func(s *MatchRoundUpsert) {
-		s.UpdateStartedAt()
-	})
-}
-
-// SetEndedAt sets the "ended_at" field.
-func (u *MatchRoundUpsertOne) SetEndedAt(v time.Time) *MatchRoundUpsertOne {
-	return u.Update(func(s *MatchRoundUpsert) {
-		s.SetEndedAt(v)
-	})
-}
-
-// UpdateEndedAt sets the "ended_at" field to the value that was provided on create.
-func (u *MatchRoundUpsertOne) UpdateEndedAt() *MatchRoundUpsertOne {
-	return u.Update(func(s *MatchRoundUpsert) {
-		s.UpdateEndedAt()
-	})
-}
-
-// ClearEndedAt clears the value of the "ended_at" field.
-func (u *MatchRoundUpsertOne) ClearEndedAt() *MatchRoundUpsertOne {
-	return u.Update(func(s *MatchRoundUpsert) {
-		s.ClearEndedAt()
-	})
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (u *MatchRoundUpsertOne) SetUpdatedAt(v time.Time) *MatchRoundUpsertOne {
-	return u.Update(func(s *MatchRoundUpsert) {
-		s.SetUpdatedAt(v)
-	})
-}
-
-// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
-func (u *MatchRoundUpsertOne) UpdateUpdatedAt() *MatchRoundUpsertOne {
-	return u.Update(func(s *MatchRoundUpsert) {
-		s.UpdateUpdatedAt()
-	})
-}
-
-// Exec executes the query.
-func (u *MatchRoundUpsertOne) Exec(ctx context.Context) error {
-	if len(u.create.conflict) == 0 {
-		return errors.New("ent: missing options for MatchRoundCreate.OnConflict")
-	}
-	return u.create.Exec(ctx)
-}
-
-// ExecX is like Exec, but panics if an error occurs.
-func (u *MatchRoundUpsertOne) ExecX(ctx context.Context) {
-	if err := u.create.Exec(ctx); err != nil {
-		panic(err)
-	}
-}
-
-// Exec executes the UPSERT query and returns the inserted/updated ID.
-func (u *MatchRoundUpsertOne) ID(ctx context.Context) (id int, err error) {
-	node, err := u.create.Save(ctx)
-	if err != nil {
-		return id, err
-	}
-	return node.ID, nil
-}
-
-// IDX is like ID, but panics if an error occurs.
-func (u *MatchRoundUpsertOne) IDX(ctx context.Context) int {
-	id, err := u.ID(ctx)
-	if err != nil {
-		panic(err)
-	}
-	return id
-}
-
 // MatchRoundCreateBulk is the builder for creating many MatchRound entities in bulk.
 type MatchRoundCreateBulk struct {
 	config
 	err      error
 	builders []*MatchRoundCreate
-	conflict []sql.ConflictOption
 }
 
 // Save creates the MatchRound entities in the database.
@@ -787,7 +419,6 @@ func (_c *MatchRoundCreateBulk) Save(ctx context.Context) ([]*MatchRound, error)
 					_, err = mutators[i+1].Mutate(root, _c.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
-					spec.OnConflict = _c.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
 					if err = sqlgraph.BatchCreate(ctx, _c.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
@@ -838,222 +469,6 @@ func (_c *MatchRoundCreateBulk) Exec(ctx context.Context) error {
 // ExecX is like Exec, but panics if an error occurs.
 func (_c *MatchRoundCreateBulk) ExecX(ctx context.Context) {
 	if err := _c.Exec(ctx); err != nil {
-		panic(err)
-	}
-}
-
-// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
-// of the `INSERT` statement. For example:
-//
-//	client.MatchRound.CreateBulk(builders...).
-//		OnConflict(
-//			// Update the row with the new values
-//			// the was proposed for insertion.
-//			sql.ResolveWithNewValues(),
-//		).
-//		// Override some of the fields with custom
-//		// update values.
-//		Update(func(u *ent.MatchRoundUpsert) {
-//			SetRoundNo(v+v).
-//		}).
-//		Exec(ctx)
-func (_c *MatchRoundCreateBulk) OnConflict(opts ...sql.ConflictOption) *MatchRoundUpsertBulk {
-	_c.conflict = opts
-	return &MatchRoundUpsertBulk{
-		create: _c,
-	}
-}
-
-// OnConflictColumns calls `OnConflict` and configures the columns
-// as conflict target. Using this option is equivalent to using:
-//
-//	client.MatchRound.Create().
-//		OnConflict(sql.ConflictColumns(columns...)).
-//		Exec(ctx)
-func (_c *MatchRoundCreateBulk) OnConflictColumns(columns ...string) *MatchRoundUpsertBulk {
-	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
-	return &MatchRoundUpsertBulk{
-		create: _c,
-	}
-}
-
-// MatchRoundUpsertBulk is the builder for "upsert"-ing
-// a bulk of MatchRound nodes.
-type MatchRoundUpsertBulk struct {
-	create *MatchRoundCreateBulk
-}
-
-// UpdateNewValues updates the mutable fields using the new values that
-// were set on create. Using this option is equivalent to using:
-//
-//	client.MatchRound.Create().
-//		OnConflict(
-//			sql.ResolveWithNewValues(),
-//		).
-//		Exec(ctx)
-func (u *MatchRoundUpsertBulk) UpdateNewValues() *MatchRoundUpsertBulk {
-	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
-	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
-		for _, b := range u.create.builders {
-			if _, exists := b.mutation.CreatedAt(); exists {
-				s.SetIgnore(matchround.FieldCreatedAt)
-			}
-		}
-	}))
-	return u
-}
-
-// Ignore sets each column to itself in case of conflict.
-// Using this option is equivalent to using:
-//
-//	client.MatchRound.Create().
-//		OnConflict(sql.ResolveWithIgnore()).
-//		Exec(ctx)
-func (u *MatchRoundUpsertBulk) Ignore() *MatchRoundUpsertBulk {
-	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
-	return u
-}
-
-// DoNothing configures the conflict_action to `DO NOTHING`.
-// Supported only by SQLite and PostgreSQL.
-func (u *MatchRoundUpsertBulk) DoNothing() *MatchRoundUpsertBulk {
-	u.create.conflict = append(u.create.conflict, sql.DoNothing())
-	return u
-}
-
-// Update allows overriding fields `UPDATE` values. See the MatchRoundCreateBulk.OnConflict
-// documentation for more info.
-func (u *MatchRoundUpsertBulk) Update(set func(*MatchRoundUpsert)) *MatchRoundUpsertBulk {
-	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
-		set(&MatchRoundUpsert{UpdateSet: update})
-	}))
-	return u
-}
-
-// SetRoundNo sets the "round_no" field.
-func (u *MatchRoundUpsertBulk) SetRoundNo(v int) *MatchRoundUpsertBulk {
-	return u.Update(func(s *MatchRoundUpsert) {
-		s.SetRoundNo(v)
-	})
-}
-
-// AddRoundNo adds v to the "round_no" field.
-func (u *MatchRoundUpsertBulk) AddRoundNo(v int) *MatchRoundUpsertBulk {
-	return u.Update(func(s *MatchRoundUpsert) {
-		s.AddRoundNo(v)
-	})
-}
-
-// UpdateRoundNo sets the "round_no" field to the value that was provided on create.
-func (u *MatchRoundUpsertBulk) UpdateRoundNo() *MatchRoundUpsertBulk {
-	return u.Update(func(s *MatchRoundUpsert) {
-		s.UpdateRoundNo()
-	})
-}
-
-// SetStatus sets the "status" field.
-func (u *MatchRoundUpsertBulk) SetStatus(v matchround.Status) *MatchRoundUpsertBulk {
-	return u.Update(func(s *MatchRoundUpsert) {
-		s.SetStatus(v)
-	})
-}
-
-// UpdateStatus sets the "status" field to the value that was provided on create.
-func (u *MatchRoundUpsertBulk) UpdateStatus() *MatchRoundUpsertBulk {
-	return u.Update(func(s *MatchRoundUpsert) {
-		s.UpdateStatus()
-	})
-}
-
-// SetWinner sets the "winner" field.
-func (u *MatchRoundUpsertBulk) SetWinner(v matchround.Winner) *MatchRoundUpsertBulk {
-	return u.Update(func(s *MatchRoundUpsert) {
-		s.SetWinner(v)
-	})
-}
-
-// UpdateWinner sets the "winner" field to the value that was provided on create.
-func (u *MatchRoundUpsertBulk) UpdateWinner() *MatchRoundUpsertBulk {
-	return u.Update(func(s *MatchRoundUpsert) {
-		s.UpdateWinner()
-	})
-}
-
-// ClearWinner clears the value of the "winner" field.
-func (u *MatchRoundUpsertBulk) ClearWinner() *MatchRoundUpsertBulk {
-	return u.Update(func(s *MatchRoundUpsert) {
-		s.ClearWinner()
-	})
-}
-
-// SetStartedAt sets the "started_at" field.
-func (u *MatchRoundUpsertBulk) SetStartedAt(v time.Time) *MatchRoundUpsertBulk {
-	return u.Update(func(s *MatchRoundUpsert) {
-		s.SetStartedAt(v)
-	})
-}
-
-// UpdateStartedAt sets the "started_at" field to the value that was provided on create.
-func (u *MatchRoundUpsertBulk) UpdateStartedAt() *MatchRoundUpsertBulk {
-	return u.Update(func(s *MatchRoundUpsert) {
-		s.UpdateStartedAt()
-	})
-}
-
-// SetEndedAt sets the "ended_at" field.
-func (u *MatchRoundUpsertBulk) SetEndedAt(v time.Time) *MatchRoundUpsertBulk {
-	return u.Update(func(s *MatchRoundUpsert) {
-		s.SetEndedAt(v)
-	})
-}
-
-// UpdateEndedAt sets the "ended_at" field to the value that was provided on create.
-func (u *MatchRoundUpsertBulk) UpdateEndedAt() *MatchRoundUpsertBulk {
-	return u.Update(func(s *MatchRoundUpsert) {
-		s.UpdateEndedAt()
-	})
-}
-
-// ClearEndedAt clears the value of the "ended_at" field.
-func (u *MatchRoundUpsertBulk) ClearEndedAt() *MatchRoundUpsertBulk {
-	return u.Update(func(s *MatchRoundUpsert) {
-		s.ClearEndedAt()
-	})
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (u *MatchRoundUpsertBulk) SetUpdatedAt(v time.Time) *MatchRoundUpsertBulk {
-	return u.Update(func(s *MatchRoundUpsert) {
-		s.SetUpdatedAt(v)
-	})
-}
-
-// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
-func (u *MatchRoundUpsertBulk) UpdateUpdatedAt() *MatchRoundUpsertBulk {
-	return u.Update(func(s *MatchRoundUpsert) {
-		s.UpdateUpdatedAt()
-	})
-}
-
-// Exec executes the query.
-func (u *MatchRoundUpsertBulk) Exec(ctx context.Context) error {
-	if u.create.err != nil {
-		return u.create.err
-	}
-	for i, b := range u.create.builders {
-		if len(b.conflict) != 0 {
-			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the MatchRoundCreateBulk instead", i)
-		}
-	}
-	if len(u.create.conflict) == 0 {
-		return errors.New("ent: missing options for MatchRoundCreateBulk.OnConflict")
-	}
-	return u.create.Exec(ctx)
-}
-
-// ExecX is like Exec, but panics if an error occurs.
-func (u *MatchRoundUpsertBulk) ExecX(ctx context.Context) {
-	if err := u.create.Exec(ctx); err != nil {
 		panic(err)
 	}
 }

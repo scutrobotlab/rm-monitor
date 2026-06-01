@@ -65,22 +65,27 @@ export class DanmuStats {
 
   async writeOutputs(roundDir: string, meta: StatsMeta) {
     const statsDir = path.join(roundDir, "stats");
+    const danmuCountJSON = path.join(statsDir, "danmu-count.json");
+    const onlineCountJSON = path.join(statsDir, "online-count.json");
+    const danmuCountChart = path.join(statsDir, "danmu-count.png");
+    const onlineCountChart = path.join(statsDir, "online-count.png");
     const danmuPoints = this.danmuPoints();
     const onlinePoints = this.onlineCountPoints();
-    await writeFileAtomic(path.join(statsDir, "danmu-count.json"), JSON.stringify(statsPayload(meta, "danmu-count", danmuPoints), null, 2));
-    await writeFileAtomic(path.join(statsDir, "online-count.json"), JSON.stringify(statsPayload(meta, "online-count", onlinePoints), null, 2));
-    await writeFileAtomic(path.join(statsDir, "danmu-count.png"), await renderLineChart({
+    await writeFileAtomic(danmuCountJSON, JSON.stringify(statsPayload(meta, "danmu-count", danmuPoints), null, 2));
+    await writeFileAtomic(onlineCountJSON, JSON.stringify(statsPayload(meta, "online-count", onlinePoints), null, 2));
+    await writeFileAtomic(danmuCountChart, await renderLineChart({
       title: "弹幕数量",
       yName: "条",
       seriesName: "累计弹幕",
       points: danmuPoints.map((p) => [p.t, p.total]),
     }));
-    await writeFileAtomic(path.join(statsDir, "online-count.png"), await renderLineChart({
+    await writeFileAtomic(onlineCountChart, await renderLineChart({
       title: "在线人数",
       yName: "人",
       seriesName: "在线人数",
       points: onlinePoints.filter((p) => p.online_count !== null).map((p) => [p.t, p.online_count as number]),
     }));
+    return { danmuCountJSON, onlineCountJSON, danmuCountChart, onlineCountChart };
   }
 }
 

@@ -1,9 +1,6 @@
 {{- $components := dict
-  "monitor" (dict "name" "monitor" "values" .Values.components.monitor "serviceAccount" "" "configMap" "monitor-config")
+  "match-controller" (dict "name" "match-controller" "values" .Values.components.matchController "serviceAccount" .Values.serviceAccount.name "configMap" "match-controller-config")
   "lark-notifier" (dict "name" "lark-notifier" "values" .Values.components.larkNotifier "serviceAccount" "" "configMap" "lark-notifier-config")
-  "record-dispatcher" (dict "name" "record-dispatcher" "values" .Values.components.recordDispatcher "serviceAccount" .Values.serviceAccount.name "configMap" "record-dispatcher-config")
-  "uploader-dispatcher" (dict "name" "uploader-dispatcher" "values" .Values.components.uploaderDispatcher "serviceAccount" .Values.serviceAccount.name "configMap" "uploader-dispatcher-config")
-  "transcode-dispatcher" (dict "name" "transcode-dispatcher" "values" .Values.components.transcodeDispatcher "serviceAccount" .Values.serviceAccount.name "configMap" "transcode-dispatcher-config")
 -}}
 {{- range $component, $cfg := $components }}
 apiVersion: apps/v1
@@ -43,7 +40,7 @@ spec:
               mountPath: {{ include "rm-monitor.configPath" $ }}
               subPath: config.yml
               readOnly: true
-            {{- if or (eq $component "lark-notifier") (eq $component "record-dispatcher") (eq $component "uploader-dispatcher") (eq $component "transcode-dispatcher") }}
+            {{- if or (eq $component "lark-notifier") }}
             - name: records
               mountPath: {{ $.Values.jobs.recordsMountPath }}
               {{- if eq $component "lark-notifier" }}
@@ -54,57 +51,10 @@ spec:
         - name: config
           configMap:
             name: {{ $cfg.configMap }}
-        {{- if or (eq $component "lark-notifier") (eq $component "record-dispatcher") (eq $component "uploader-dispatcher") (eq $component "transcode-dispatcher") }}
+        {{- if or (eq $component "lark-notifier") }}
         - name: records
           persistentVolumeClaim:
             claimName: {{ $.Values.storage.shared.pvcName }}
         {{- end }}
----
-{{- end }}
-{{- if .Values.highlight.enabled }}
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: highlight-dispatcher
-  namespace: {{ include "rm-monitor.namespace" . }}
-  labels:
-{{ include "rm-monitor.commonLabels" . | indent 4 }}
-{{ include "rm-monitor.selectorLabels" (dict "name" "highlight-dispatcher") | indent 4 }}
-spec:
-  replicas: {{ .Values.components.highlightDispatcher.replicas }}
-  selector:
-    matchLabels:
-{{ include "rm-monitor.selectorLabels" (dict "name" "highlight-dispatcher") | indent 6 }}
-  template:
-    metadata:
-      labels:
-{{ include "rm-monitor.selectorLabels" (dict "name" "highlight-dispatcher") | indent 8 }}
-      {{- with .Values.components.highlightDispatcher.annotations }}
-      annotations:
-{{ toYaml . | indent 8 }}
-      {{- end }}
-    spec:
-      serviceAccountName: {{ .Values.serviceAccount.name }}
-      containers:
-        - name: highlight-dispatcher
-          image: {{ include "rm-monitor.image" (dict "root" . "component" "highlight-dispatcher") }}
-          imagePullPolicy: {{ include "rm-monitor.imagePullPolicy" . }}
-          args: ["-f", "{{ include "rm-monitor.configPath" . }}"]
-          resources:
-{{ toYaml .Values.components.highlightDispatcher.resources | indent 12 }}
-          volumeMounts:
-            - name: config
-              mountPath: {{ include "rm-monitor.configPath" . }}
-              subPath: config.yml
-              readOnly: true
-            - name: records
-              mountPath: {{ .Values.jobs.recordsMountPath }}
-      volumes:
-        - name: config
-          configMap:
-            name: highlight-dispatcher-config
-        - name: records
-          persistentVolumeClaim:
-            claimName: {{ .Values.storage.shared.pvcName }}
 ---
 {{- end }}

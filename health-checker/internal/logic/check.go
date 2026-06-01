@@ -8,27 +8,20 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"scutbot.cn/web/rm-monitor/ent"
-	"scutbot.cn/web/rm-monitor/ent/recordtask"
-	"scutbot.cn/web/rm-monitor/ent/transcodetask"
-	"scutbot.cn/web/rm-monitor/ent/uploadtask"
+	"scutbot.cn/web/rm-monitor/pkg/argowf"
 	"scutbot.cn/web/rm-monitor/pkg/config"
-	"scutbot.cn/web/rm-monitor/pkg/kubejob"
 	"scutbot.cn/web/rm-monitor/pkg/logx"
 	"scutbot.cn/web/rm-monitor/pkg/redisx"
 )
 
 const (
-	MonitorHeartbeatKey = "rm-monitor:health:monitor:last_success"
-
-	recentFailureWindow = 24 * time.Hour
-	dispatchingStale    = 10 * time.Minute
-	recordRunningStale  = 2 * time.Hour
-	uploadRunningStale  = 1 * time.Hour
-	transcodeStale      = 18 * time.Hour
+	ControllerHeartbeatKey = "rm-monitor:health:match-controller:last_success"
 )
 
 type CheckConfig struct {
+	ArgoConf   config.ArgoConf
 	K8sJobConf config.K8sJobConf
 }
 
@@ -44,20 +37,16 @@ func Run(ctx context.Context, client *ent.Client, redisClient *redisx.Client, co
 	if err := redisClient.PingCtx(ctx); err != nil {
 		addFailure("redis ping failed: %v", err)
 	}
-	if ok, err := monitorHeartbeatOK(ctx, redisClient); err != nil {
-		addFailure("monitor heartbeat check failed: %v", err)
+	if ok, err := controllerHeartbeatOK(ctx, redisClient); err != nil {
+		addFailure("match-controller heartbeat check failed: %v", err)
 	} else if !ok {
-		addFailure("monitor heartbeat missing or expired")
+		addFailure("match-controller heartbeat missing or expired")
 	}
 
-	now := time.Now()
-	if err := checkTaskTables(ctx, client, now, addFailure); err != nil {
-		addFailure("task status check failed: %v", err)
-	}
 	if err := checkRecordsWritable(conf.K8sJobConf.WithDefaults().RecordsMountPath); err != nil {
 		addFailure("records pvc write check failed: %v", err)
 	}
-	checkFailedRuntimeJobs(ctx, conf.K8sJobConf.WithDefaults().Namespace, addFailure)
+	checkArgoWorkflows(ctx, conf.ArgoConf.WithDefaults(), addFailure)
 
 	if len(failures) > 0 {
 		for _, failure := range failures {
@@ -69,83 +58,45 @@ func Run(ctx context.Context, client *ent.Client, redisClient *redisx.Client, co
 	return nil
 }
 
-func monitorHeartbeatOK(ctx context.Context, redisClient *redisx.Client) (bool, error) {
-	val, err := redisClient.GetCtx(ctx, MonitorHeartbeatKey)
+func controllerHeartbeatOK(ctx context.Context, redisClient *redisx.Client) (bool, error) {
+	val, err := redisClient.GetCtx(ctx, ControllerHeartbeatKey)
 	if err != nil {
 		return false, err
 	}
 	return val != "", nil
 }
 
-func checkTaskTables(ctx context.Context, client *ent.Client, now time.Time, addFailure func(string, ...any)) error {
-	recentCutoff := now.Add(-recentFailureWindow)
-	staleDispatchingCutoff := now.Add(-dispatchingStale)
-
-	recordFailed, err := client.RecordTask.Query().Where(recordtask.StatusEQ(recordtask.StatusFAILED), recordtask.UpdatedAtGTE(recentCutoff)).Count(ctx)
-	if err != nil {
-		return err
-	}
-	recordStale, err := client.RecordTask.Query().Where(recordtask.StatusEQ(recordtask.StatusRUNNING), recordtask.UpdatedAtLTE(now.Add(-recordRunningStale))).Count(ctx)
-	if err != nil {
-		return err
-	}
-	recordDispatching, err := client.RecordTask.Query().Where(recordtask.StatusEQ(recordtask.StatusDISPATCHING), recordtask.UpdatedAtLTE(staleDispatchingCutoff)).Count(ctx)
-	if err != nil {
-		return err
-	}
-	if recordFailed > 0 || recordStale > 0 || recordDispatching > 0 {
-		addFailure("record task abnormal: recent_failed=%d stale_running=%d stale_dispatching=%d", recordFailed, recordStale, recordDispatching)
-	}
-
-	uploadFailed, err := client.UploadTask.Query().Where(uploadtask.StatusEQ(uploadtask.StatusFAILED), uploadtask.UpdatedAtGTE(recentCutoff)).Count(ctx)
-	if err != nil {
-		return err
-	}
-	uploadStale, err := client.UploadTask.Query().Where(uploadtask.StatusEQ(uploadtask.StatusRUNNING), uploadtask.UpdatedAtLTE(now.Add(-uploadRunningStale))).Count(ctx)
-	if err != nil {
-		return err
-	}
-	uploadDispatching, err := client.UploadTask.Query().Where(uploadtask.StatusEQ(uploadtask.StatusDISPATCHING), uploadtask.UpdatedAtLTE(staleDispatchingCutoff)).Count(ctx)
-	if err != nil {
-		return err
-	}
-	if uploadFailed > 0 || uploadStale > 0 || uploadDispatching > 0 {
-		addFailure("upload task abnormal: recent_failed=%d stale_running=%d stale_dispatching=%d", uploadFailed, uploadStale, uploadDispatching)
-	}
-
-	transcodeFailed, err := client.TranscodeTask.Query().Where(transcodetask.StatusEQ(transcodetask.StatusFAILED), transcodetask.UpdatedAtGTE(recentCutoff)).Count(ctx)
-	if err != nil {
-		return err
-	}
-	transcodeRunning, err := client.TranscodeTask.Query().Where(transcodetask.StatusEQ(transcodetask.StatusRUNNING), transcodetask.UpdatedAtLTE(now.Add(-transcodeStale))).Count(ctx)
-	if err != nil {
-		return err
-	}
-	transcodeDispatching, err := client.TranscodeTask.Query().Where(transcodetask.StatusEQ(transcodetask.StatusDISPATCHING), transcodetask.UpdatedAtLTE(staleDispatchingCutoff)).Count(ctx)
-	if err != nil {
-		return err
-	}
-	if transcodeFailed > 0 || transcodeRunning > 0 || transcodeDispatching > 0 {
-		addFailure("transcode task abnormal: recent_failed=%d stale_running=%d stale_dispatching=%d", transcodeFailed, transcodeRunning, transcodeDispatching)
-	}
-	return nil
-}
-
-func checkFailedRuntimeJobs(ctx context.Context, namespace string, addFailure func(string, ...any)) {
-	k8sClient, err := kubejob.NewInClusterClient()
-	if err != nil {
-		logx.Errorf("health check skipped k8s job status: %v", err)
+func checkArgoWorkflows(ctx context.Context, conf config.ArgoConf, addFailure func(string, ...any)) {
+	if !conf.Enabled {
 		return
 	}
-	for _, app := range []string{"stt-job", "manifest-job"} {
-		count, err := k8sClient.CountFailedJobs(ctx, namespace, "rm-monitor/job="+app)
-		if err != nil {
-			addFailure("%s failed job query failed: %v", app, err)
-			continue
+	client, err := argowf.NewInClusterOrKubeconfig(conf.Kubeconfig)
+	if err != nil {
+		addFailure("argo client init failed: %v", err)
+		return
+	}
+	workflows, err := client.ListWorkflows(ctx, conf.Namespace, metav1.ListOptions{
+		LabelSelector: "rm-monitor/workflow=match",
+	})
+	if err != nil {
+		addFailure("argo workflow list failed: %v", err)
+		return
+	}
+	failed := 0
+	errorred := 0
+	for i := range workflows.Items {
+		switch argowf.WorkflowPhase(&workflows.Items[i]) {
+		case "Failed":
+			failed++
+		case "Error":
+			errorred++
 		}
-		if count > 0 {
-			addFailure("%s failed jobs: %d", app, count)
-		}
+	}
+	if failed > 0 {
+		addFailure("failed match workflows: %d", failed)
+	}
+	if errorred > 0 {
+		addFailure("errored match workflows: %d", errorred)
 	}
 }
 

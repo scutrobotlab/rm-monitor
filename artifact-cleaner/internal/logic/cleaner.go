@@ -3,13 +3,13 @@ package logic
 import (
 	"context"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
 	"scutbot.cn/web/rm-monitor/ent"
-	"scutbot.cn/web/rm-monitor/ent/mediaartifact"
-	"scutbot.cn/web/rm-monitor/ent/transcodetask"
-	"scutbot.cn/web/rm-monitor/ent/uploadtask"
+	"scutbot.cn/web/rm-monitor/ent/larkbitablerecord"
 	"scutbot.cn/web/rm-monitor/pkg/logx"
 	"scutbot.cn/web/rm-monitor/pkg/storagepath"
 )
@@ -20,41 +20,48 @@ type Result struct {
 	Skipped int
 }
 
-func CleanExpiredSources(ctx context.Context, client *ent.Client, baseDir string, now time.Time, limit int) (Result, error) {
+func CleanUploadedSources(ctx context.Context, client *ent.Client, baseDir string, now time.Time, retentionDays int, limit int) (Result, error) {
 	if limit <= 0 {
 		limit = 100
 	}
-	artifacts, err := client.MediaArtifact.Query().
+	if retentionDays <= 0 {
+		retentionDays = 7
+	}
+	cutoff := now.Add(-time.Duration(retentionDays) * 24 * time.Hour)
+	records, err := client.LarkBitableRecord.Query().
 		Where(
-			mediaartifact.KindEQ(mediaartifact.KindSource),
-			mediaartifact.StatusEQ(mediaartifact.StatusAVAILABLE),
-			mediaartifact.DeletableAtNotNil(),
-			mediaartifact.DeletableAtLTE(now),
+			larkbitablerecord.AttachmentFileTokenNotNil(),
+			larkbitablerecord.SourceDeletedAtIsNil(),
+			larkbitablerecord.UpdatedAtLTE(cutoff),
 		).
-		WithUploadTask().
-		WithSourceTranscodeTask(func(q *ent.TranscodeTaskQuery) {
-			q.WithArchiveArtifact()
-		}).
+		Order(larkbitablerecord.ByUpdatedAt()).
 		Limit(limit).
 		All(ctx)
 	if err != nil {
-		return Result{}, errors.Wrap(err, "query deletable sources")
+		return Result{}, errors.Wrap(err, "query uploaded lark records")
 	}
-	result := Result{Scanned: len(artifacts)}
-	for _, artifact := range artifacts {
-		if !canDeleteSource(artifact) {
+	result := Result{Scanned: len(records)}
+	for _, record := range records {
+		sourcePath := storagepath.Resolve(baseDir, record.SourcePath)
+		archivePath := archivePathForSource(baseDir, record.SourcePath)
+		if archivePath == "" {
 			result.Skipped++
 			continue
 		}
-		fullPath := storagepath.Resolve(baseDir, artifact.Path)
-		if err := os.Remove(fullPath); err != nil && !os.IsNotExist(err) {
-			logx.Errorf("remove source artifact %s failed: %v", artifact.Path, err)
+		if _, err := os.Stat(archivePath); err != nil {
+			if !os.IsNotExist(err) {
+				logx.Errorf("stat archive %s failed: %v", archivePath, err)
+			}
 			result.Skipped++
 			continue
 		}
-		if err := client.MediaArtifact.UpdateOneID(artifact.ID).
-			SetStatus(mediaartifact.StatusDELETED).
-			SetDeletedAt(now).
+		if err := os.Remove(sourcePath); err != nil && !os.IsNotExist(err) {
+			logx.Errorf("remove source %s failed: %v", sourcePath, err)
+			result.Skipped++
+			continue
+		}
+		if err := client.LarkBitableRecord.UpdateOneID(record.ID).
+			SetSourceDeletedAt(now).
 			Exec(ctx); err != nil {
 			return result, errors.Wrap(err, "mark source deleted")
 		}
@@ -63,14 +70,14 @@ func CleanExpiredSources(ctx context.Context, client *ent.Client, baseDir string
 	return result, nil
 }
 
-func canDeleteSource(artifact *ent.MediaArtifact) bool {
-	transcode := artifact.Edges.SourceTranscodeTask
-	if transcode == nil || transcode.Status != transcodetask.StatusSUCCEEDED || transcode.Edges.ArchiveArtifact == nil {
-		return false
+func archivePathForSource(baseDir, sourcePath string) string {
+	if strings.TrimSpace(sourcePath) == "" {
+		return ""
 	}
-	upload := artifact.Edges.UploadTask
-	if upload == nil {
-		return false
+	resolved := storagepath.Resolve(baseDir, sourcePath)
+	ext := filepath.Ext(resolved)
+	if ext == "" {
+		return ""
 	}
-	return upload.Status == uploadtask.StatusSUCCEEDED || upload.Status == uploadtask.StatusFAILED
+	return strings.TrimSuffix(resolved, ext) + ".mp4"
 }

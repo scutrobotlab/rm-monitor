@@ -2,7 +2,6 @@
 import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
-import time
 
 STATE = {
     "status": "WAITING",
@@ -27,9 +26,9 @@ def schedule():
                                         "id": "e2e-match-1",
                                         "orderNumber": 1,
                                         "status": STATE["status"],
-                                        "matchType": "BO1",
+                                        "matchType": "BO3",
                                         "slug": "e2e-match-1",
-                                        "planGameCount": 1,
+                                        "planGameCount": 3,
                                         "result": STATE["result"],
                                         "winnerPlaceholdName": "",
                                         "loserPlaceholdName": "",
@@ -78,13 +77,22 @@ def live_info():
                 "zoneLiveString": [
                     {"res": "1080p", "src": "http://e2e-media:8080/main.m3u8"}
                 ],
-                "fpvData": [],
+                "fpvData": [
+                    {
+                        "role": "\u7ea2\u65b9\u82f1\u96c4\u7b2c\u4e00\u89c6\u89d2",
+                        "sources": [
+                            {"res": "1080p", "src": "http://e2e-media:8080/main.m3u8"}
+                        ],
+                    }
+                ],
             }
         ]
     }
 
 
 class Handler(BaseHTTPRequestHandler):
+    protocol_version = "HTTP/1.1"
+
     def do_GET(self):
         parsed = urlparse(self.path)
         if parsed.path == "/healthz":
@@ -107,49 +115,6 @@ class Handler(BaseHTTPRequestHandler):
             return
         if parsed.path == "/live_game_info.json":
             self.send(200, live_info())
-            return
-        self.send(404, {"error": "not found"})
-
-    def do_POST(self):
-        parsed = urlparse(self.path)
-        if parsed.path == "/inference":
-            # whisper.cpp compatible enough for stt-job e2e. We intentionally
-            # do not parse multipart content here; this endpoint verifies that
-            # the job can POST media and consume verbose_json.
-            self.send(200, {
-                "text": "红方开局推进。蓝方完成防守反击。",
-                "duration": 8.0,
-                "segments": [
-                    {"id": 0, "start": 0.0, "end": 3.5, "text": "红方开局推进。"},
-                    {"id": 1, "start": 3.5, "end": 8.0, "text": "蓝方完成防守反击。"},
-                ],
-            })
-            return
-        if parsed.path == "/v1/workflows/run":
-            length = int(self.headers.get("content-length") or 0)
-            if length:
-                self.rfile.read(length)
-            now = int(time.time())
-            self.send(200, {
-                "workflow_run_id": "e2e-workflow-run",
-                "task_id": "e2e-task",
-                "data": {
-                    "id": "e2e-run",
-                    "status": "succeeded",
-                    "outputs": {
-                        "report_markdown": "## E2E 战报\n\n红方 1:0 蓝方，本地闭环测试完成。",
-                        "report_json": {
-                            "summary": "local e2e report",
-                            "winner": "red",
-                            "rounds": 1,
-                        },
-                    },
-                    "total_tokens": 16,
-                    "total_steps": 1,
-                    "created_at": now,
-                    "finished_at": now,
-                },
-            })
             return
         self.send(404, {"error": "not found"})
 

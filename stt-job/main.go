@@ -192,22 +192,24 @@ func finishSTT(sttCtx jobcontract.STTContext, info roundInfo) error {
 	if err := writeRoundSubtitle(info); err != nil {
 		return err
 	}
-	return jobcontract.WriteResult(sttJobDir(sttCtx), jobcontract.STTResult{
+	result := jobcontract.STTResult{
 		Schema:       "rm-monitor/stt-result/v1",
-		STTTaskID:    sttCtx.STTTaskID,
 		MatchRoundID: sttCtx.MatchRoundID,
 		STTPath:      sttCtx.STTPath,
 		SubtitlePath: filepath.Join(info.RoundDir, info.SubtitleName),
 		CompletedAt:  time.Now(),
+	}
+	if err := jobcontract.WriteTempResult(result); err != nil {
+		return err
+	}
+	return jobcontract.WriteArgoOutputs(map[string]any{
+		"stt_path":      result.STTPath,
+		"subtitle_path": result.SubtitlePath,
 	})
 }
 
 func sttJobDir(sttCtx jobcontract.STTContext) string {
-	id := sttCtx.STTTaskID
-	if id == 0 {
-		id = sttCtx.MatchRoundID
-	}
-	return filepath.Join(sttCtx.RoundDir, jobcontract.DirName, fmt.Sprintf("stt-%d", id))
+	return filepath.Join(sttCtx.RoundDir, jobcontract.DirName, fmt.Sprintf("stt-%d", sttCtx.MatchRoundID))
 }
 
 func isNoAudio(stderr string) bool {

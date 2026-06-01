@@ -18,6 +18,9 @@ func (MatchRound) Fields() []ent.Field {
 		field.Int("round_no"),
 		field.Enum("status").Values("STARTED", "ENDED"),
 		field.Enum("winner").Values("blue", "red", "draw").Optional().Nillable(),
+		field.String("workflow_name").Optional().Nillable(),
+		field.String("workflow_uid").Optional().Nillable(),
+		field.String("workflow_phase").Optional().Nillable(),
 		field.Time("started_at").Default(time.Now),
 		field.Time("ended_at").Optional().Nillable(),
 		field.Time("created_at").Default(time.Now).Immutable(),
@@ -28,11 +31,8 @@ func (MatchRound) Fields() []ent.Field {
 func (MatchRound) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("match", Match.Type).Ref("rounds").Unique().Required(),
-		edge.To("record_tasks", RecordTask.Type),
-		edge.To("stt_tasks", STTTask.Type),
-		edge.To("analyze_tasks", AnalyzeTask.Type),
 		edge.To("highlight_clips", HighlightClip.Type),
-		edge.To("highlight_states", HighlightRoundState.Type),
+		edge.To("lark_bitable_records", LarkBitableRecord.Type),
 	}
 }
 

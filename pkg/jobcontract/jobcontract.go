@@ -15,12 +15,13 @@ const (
 	ContextFile = "context.json"
 	ResultFile  = "result.json"
 	ErrorFile   = "error.json"
+	TempJobDir  = "/tmp/job"
+	ArgoOutDir  = "/tmp/argo"
 )
 
 type ErrorResult struct {
 	Schema       string    `json:"schema"`
 	TaskType     string    `json:"task_type"`
-	TaskID       int       `json:"task_id"`
 	Status       string    `json:"status"`
 	ErrorMessage string    `json:"error_message"`
 	CompletedAt  time.Time `json:"completed_at"`
@@ -28,9 +29,9 @@ type ErrorResult struct {
 
 type TranscodeContext struct {
 	Schema              string   `json:"schema"`
-	TaskID              int      `json:"task_id"`
-	SourceArtifactID    int      `json:"source_artifact_id"`
-	RecordTaskID        int      `json:"record_task_id"`
+	MatchID             string   `json:"match_id,omitempty"`
+	MatchRoundID        int      `json:"match_round_id,omitempty"`
+	RoundNo             int      `json:"round_no,omitempty"`
 	SourcePath          string   `json:"source_path"`
 	ArchivePath         string   `json:"archive_path"`
 	BaseDir             string   `json:"base_dir"`
@@ -42,22 +43,22 @@ type TranscodeContext struct {
 }
 
 type TranscodeResult struct {
-	Schema           string    `json:"schema"`
-	TaskID           int       `json:"task_id"`
-	SourceArtifactID int       `json:"source_artifact_id"`
-	RecordTaskID     int       `json:"record_task_id"`
-	ArchivePath      string    `json:"archive_path"`
-	Format           string    `json:"format"`
-	Codec            string    `json:"codec"`
-	FileSize         int64     `json:"file_size"`
-	Checksum         string    `json:"checksum"`
-	CompletedAt      time.Time `json:"completed_at"`
+	Schema       string    `json:"schema"`
+	MatchID      string    `json:"match_id,omitempty"`
+	MatchRoundID int       `json:"match_round_id,omitempty"`
+	ArchivePath  string    `json:"archive_path"`
+	Format       string    `json:"format"`
+	Codec        string    `json:"codec"`
+	FileSize     int64     `json:"file_size"`
+	Checksum     string    `json:"checksum"`
+	CompletedAt  time.Time `json:"completed_at"`
 }
 
 type RecordContext struct {
 	Schema       string `json:"schema"`
-	RecordTaskID int    `json:"record_task_id"`
+	MatchID      string `json:"match_id,omitempty"`
 	MatchRoundID int    `json:"match_round_id"`
+	RoundNo      int    `json:"round_no,omitempty"`
 	Role         string `json:"role"`
 	SourceURL    string `json:"source_url"`
 	OutputPath   string `json:"output_path"`
@@ -67,7 +68,8 @@ type RecordContext struct {
 
 type RecordResult struct {
 	Schema       string    `json:"schema"`
-	RecordTaskID int       `json:"record_task_id"`
+	MatchID      string    `json:"match_id,omitempty"`
+	MatchRoundID int       `json:"match_round_id,omitempty"`
 	OutputPath   string    `json:"output_path"`
 	Format       string    `json:"format"`
 	Codec        string    `json:"codec"`
@@ -76,21 +78,31 @@ type RecordResult struct {
 	CompletedAt  time.Time `json:"completed_at"`
 }
 
-type UploadContext struct {
-	Schema              string `json:"schema"`
-	UploadTaskID        int    `json:"upload_task_id"`
-	SourcePath          string `json:"source_path"`
-	BaseDir             string `json:"base_dir"`
-	BitableAppToken     string `json:"bitable_app_token"`
-	BitableTableID      string `json:"bitable_table_id"`
-	BitableRecordID     string `json:"bitable_record_id"`
-	BitableRecordURL    string `json:"bitable_record_url,omitempty"`
-	AttachmentFieldName string `json:"attachment_field_name"`
+type LarkRecordContext struct {
+	Schema              string         `json:"schema"`
+	MatchID             string         `json:"match_id"`
+	MatchRoundID        int            `json:"match_round_id"`
+	RoundNo             int            `json:"round_no"`
+	Role                string         `json:"role"`
+	SourcePath          string         `json:"source_path"`
+	BaseDir             string         `json:"base_dir"`
+	BitableAppToken     string         `json:"bitable_app_token"`
+	BitableTableIDHint  string         `json:"bitable_table_id_hint,omitempty"`
+	BitableTableName    string         `json:"bitable_table_name"`
+	BitableRecordIDHint string         `json:"bitable_record_id_hint,omitempty"`
+	BitableRecordURL    string         `json:"bitable_record_url,omitempty"`
+	AttachmentFieldName string         `json:"attachment_field_name"`
+	RecordFields        map[string]any `json:"record_fields"`
 }
 
-type UploadResult struct {
+type LarkRecordResult struct {
 	Schema              string    `json:"schema"`
-	UploadTaskID        int       `json:"upload_task_id"`
+	MatchID             string    `json:"match_id"`
+	MatchRoundID        int       `json:"match_round_id"`
+	Role                string    `json:"role"`
+	BitableAppToken     string    `json:"bitable_app_token"`
+	BitableTableID      string    `json:"bitable_table_id"`
+	BitableRecordID     string    `json:"bitable_record_id"`
 	AttachmentFileToken string    `json:"attachment_file_token"`
 	BitableRecordURL    string    `json:"bitable_record_url,omitempty"`
 	FileSize            int64     `json:"file_size"`
@@ -99,9 +111,7 @@ type UploadResult struct {
 
 type STTContext struct {
 	Schema            string   `json:"schema"`
-	STTTaskID         int      `json:"stt_task_id"`
 	MatchRoundID      int      `json:"match_round_id"`
-	SourceArtifactID  int      `json:"source_artifact_id"`
 	MatchID           string   `json:"match_id"`
 	RoundNo           int      `json:"round_no"`
 	Role              string   `json:"role"`
@@ -117,7 +127,6 @@ type STTContext struct {
 
 type STTResult struct {
 	Schema       string    `json:"schema"`
-	STTTaskID    int       `json:"stt_task_id"`
 	MatchRoundID int       `json:"match_round_id"`
 	STTPath      string    `json:"stt_path"`
 	SubtitlePath string    `json:"subtitle_path,omitempty"`
@@ -156,9 +165,7 @@ type AnalyzeScanContext struct {
 
 type AnalyzeContext struct {
 	Schema            string             `json:"schema"`
-	AnalyzeTaskID     int                `json:"analyze_task_id"`
 	MatchRoundID      int                `json:"match_round_id"`
-	SourceArtifactID  int                `json:"source_artifact_id"`
 	SourcePath        string             `json:"source_path"`
 	RoundDir          string             `json:"round_dir"`
 	Role              string             `json:"role"`
@@ -169,9 +176,7 @@ type AnalyzeContext struct {
 
 type AnalyzeResult struct {
 	Schema                string    `json:"schema"`
-	AnalyzeTaskID         int       `json:"analyze_task_id"`
 	MatchRoundID          int       `json:"match_round_id"`
-	SourceArtifactID      int       `json:"source_artifact_id"`
 	RoundJSONPath         string    `json:"round_json_path"`
 	SettlementImagePath   string    `json:"settlement_image_path,omitempty"`
 	SettlementStatus      string    `json:"settlement_status"`
@@ -191,23 +196,55 @@ func ContextFromEnv(v any) error {
 	return nil
 }
 
-func WriteContext(dir string, v any) error {
-	return AtomicWriteJSON(filepath.Join(dir, ContextFile), v)
+func WriteContext(_ string, v any) error {
+	return AtomicWriteJSON(filepath.Join(TempJobDir, ContextFile), v)
 }
 
-func WriteResult(dir string, v any) error {
-	return AtomicWriteJSON(filepath.Join(dir, ResultFile), v)
+func WriteResult(_ string, v any) error {
+	return AtomicWriteJSON(filepath.Join(TempJobDir, ResultFile), v)
 }
 
-func WriteError(dir, taskType string, taskID int, err error) error {
+func WriteTempResult(v any) error {
+	return AtomicWriteJSON(filepath.Join(TempJobDir, ResultFile), v)
+}
+
+func WriteArgoOutputs(values map[string]any) error {
+	for name, value := range values {
+		if err := writeArgoOutput(name, value); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func writeArgoOutput(name string, value any) error {
+	if err := os.MkdirAll(ArgoOutDir, 0o755); err != nil {
+		return errors.Wrap(err, "create argo output dir")
+	}
+	var raw []byte
+	switch v := value.(type) {
+	case string:
+		raw = []byte(v)
+	case []byte:
+		raw = v
+	default:
+		b, err := json.Marshal(v)
+		if err != nil {
+			return errors.Wrapf(err, "encode argo output %s", name)
+		}
+		raw = b
+	}
+	return os.WriteFile(filepath.Join(ArgoOutDir, name), raw, 0o644)
+}
+
+func WriteError(_ string, taskType string, _ int, err error) error {
 	msg := ""
 	if err != nil {
 		msg = Tail(err.Error(), 4096)
 	}
-	return AtomicWriteJSON(filepath.Join(dir, ErrorFile), ErrorResult{
+	return AtomicWriteJSON(filepath.Join(TempJobDir, ErrorFile), ErrorResult{
 		Schema:       "rm-monitor/job-error/v1",
 		TaskType:     taskType,
-		TaskID:       taskID,
 		Status:       "FAILED",
 		ErrorMessage: msg,
 		CompletedAt:  time.Now(),

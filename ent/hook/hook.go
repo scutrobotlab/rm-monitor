@@ -9,16 +9,16 @@ import (
 	"scutbot.cn/web/rm-monitor/ent"
 )
 
-// The AnalyzeTaskFunc type is an adapter to allow the use of ordinary
-// function as AnalyzeTask mutator.
-type AnalyzeTaskFunc func(context.Context, *ent.AnalyzeTaskMutation) (ent.Value, error)
+// The BilibiliHighlightPublicationFunc type is an adapter to allow the use of ordinary
+// function as BilibiliHighlightPublication mutator.
+type BilibiliHighlightPublicationFunc func(context.Context, *ent.BilibiliHighlightPublicationMutation) (ent.Value, error)
 
 // Mutate calls f(ctx, m).
-func (f AnalyzeTaskFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	if mv, ok := m.(*ent.AnalyzeTaskMutation); ok {
+func (f BilibiliHighlightPublicationFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.BilibiliHighlightPublicationMutation); ok {
 		return f(ctx, mv)
 	}
-	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.AnalyzeTaskMutation", m)
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.BilibiliHighlightPublicationMutation", m)
 }
 
 // The HighlightClipFunc type is an adapter to allow the use of ordinary
@@ -33,28 +33,16 @@ func (f HighlightClipFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Valu
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.HighlightClipMutation", m)
 }
 
-// The HighlightPublishTaskFunc type is an adapter to allow the use of ordinary
-// function as HighlightPublishTask mutator.
-type HighlightPublishTaskFunc func(context.Context, *ent.HighlightPublishTaskMutation) (ent.Value, error)
+// The LarkBitableRecordFunc type is an adapter to allow the use of ordinary
+// function as LarkBitableRecord mutator.
+type LarkBitableRecordFunc func(context.Context, *ent.LarkBitableRecordMutation) (ent.Value, error)
 
 // Mutate calls f(ctx, m).
-func (f HighlightPublishTaskFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	if mv, ok := m.(*ent.HighlightPublishTaskMutation); ok {
+func (f LarkBitableRecordFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.LarkBitableRecordMutation); ok {
 		return f(ctx, mv)
 	}
-	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.HighlightPublishTaskMutation", m)
-}
-
-// The HighlightRoundStateFunc type is an adapter to allow the use of ordinary
-// function as HighlightRoundState mutator.
-type HighlightRoundStateFunc func(context.Context, *ent.HighlightRoundStateMutation) (ent.Value, error)
-
-// Mutate calls f(ctx, m).
-func (f HighlightRoundStateFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	if mv, ok := m.(*ent.HighlightRoundStateMutation); ok {
-		return f(ctx, mv)
-	}
-	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.HighlightRoundStateMutation", m)
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.LarkBitableRecordMutation", m)
 }
 
 // The LarkMessageFunc type is an adapter to allow the use of ordinary
@@ -93,42 +81,6 @@ func (f MatchRoundFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, 
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.MatchRoundMutation", m)
 }
 
-// The MediaArtifactFunc type is an adapter to allow the use of ordinary
-// function as MediaArtifact mutator.
-type MediaArtifactFunc func(context.Context, *ent.MediaArtifactMutation) (ent.Value, error)
-
-// Mutate calls f(ctx, m).
-func (f MediaArtifactFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	if mv, ok := m.(*ent.MediaArtifactMutation); ok {
-		return f(ctx, mv)
-	}
-	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.MediaArtifactMutation", m)
-}
-
-// The RecordTaskFunc type is an adapter to allow the use of ordinary
-// function as RecordTask mutator.
-type RecordTaskFunc func(context.Context, *ent.RecordTaskMutation) (ent.Value, error)
-
-// Mutate calls f(ctx, m).
-func (f RecordTaskFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	if mv, ok := m.(*ent.RecordTaskMutation); ok {
-		return f(ctx, mv)
-	}
-	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.RecordTaskMutation", m)
-}
-
-// The STTTaskFunc type is an adapter to allow the use of ordinary
-// function as STTTask mutator.
-type STTTaskFunc func(context.Context, *ent.STTTaskMutation) (ent.Value, error)
-
-// Mutate calls f(ctx, m).
-func (f STTTaskFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	if mv, ok := m.(*ent.STTTaskMutation); ok {
-		return f(ctx, mv)
-	}
-	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.STTTaskMutation", m)
-}
-
 // The TeamFunc type is an adapter to allow the use of ordinary
 // function as Team mutator.
 type TeamFunc func(context.Context, *ent.TeamMutation) (ent.Value, error)
@@ -139,30 +91,6 @@ func (f TeamFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error)
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.TeamMutation", m)
-}
-
-// The TranscodeTaskFunc type is an adapter to allow the use of ordinary
-// function as TranscodeTask mutator.
-type TranscodeTaskFunc func(context.Context, *ent.TranscodeTaskMutation) (ent.Value, error)
-
-// Mutate calls f(ctx, m).
-func (f TranscodeTaskFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	if mv, ok := m.(*ent.TranscodeTaskMutation); ok {
-		return f(ctx, mv)
-	}
-	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.TranscodeTaskMutation", m)
-}
-
-// The UploadTaskFunc type is an adapter to allow the use of ordinary
-// function as UploadTask mutator.
-type UploadTaskFunc func(context.Context, *ent.UploadTaskMutation) (ent.Value, error)
-
-// Mutate calls f(ctx, m).
-func (f UploadTaskFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	if mv, ok := m.(*ent.UploadTaskMutation); ok {
-		return f(ctx, mv)
-	}
-	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.UploadTaskMutation", m)
 }
 
 // Condition is a hook condition function.

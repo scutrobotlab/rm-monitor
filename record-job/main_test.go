@@ -45,7 +45,7 @@ func TestWriteRecordMeta(t *testing.T) {
 	done := start.Add(5 * time.Minute)
 	err := writeRecordMeta(dir, recordMeta{
 		Schema:                "rm-monitor/record-meta/v1",
-		RecordTaskID:          42,
+		MatchRoundID:          42,
 		Role:                  "主视角",
 		SourceURL:             "https://example.test/live.m3u8",
 		OutputPath:            "Event/Zone/Match/Round-1/主视角.flv",
@@ -66,7 +66,7 @@ func TestWriteRecordMeta(t *testing.T) {
 	if err := json.Unmarshal(raw, &got); err != nil {
 		t.Fatal(err)
 	}
-	if got.Schema != "rm-monitor/record-meta/v1" || got.RecordTaskID != 42 || got.MediaTimeZeroWallAt != start {
+	if got.Schema != "rm-monitor/record-meta/v1" || got.MatchRoundID != 42 || got.MediaTimeZeroWallAt != start {
 		t.Fatalf("unexpected metadata: %+v", got)
 	}
 	if _, err := os.Stat(filepath.Join(dir, recordMetaFile+".part")); !os.IsNotExist(err) {

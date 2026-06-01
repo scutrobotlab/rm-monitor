@@ -4,14 +4,14 @@ metadata:
   name: artifact-cleaner
   namespace: {{ include "rm-monitor.namespace" . }}
 spec:
-  schedule: {{ .Values.jobs.artifactCleaner.schedule | quote }}
+  schedule: {{ .Values.components.artifactCleaner.schedule | quote }}
   concurrencyPolicy: Forbid
-  successfulJobsHistoryLimit: {{ .Values.jobs.artifactCleaner.successfulJobsHistoryLimit }}
-  failedJobsHistoryLimit: {{ .Values.jobs.artifactCleaner.failedJobsHistoryLimit }}
+  successfulJobsHistoryLimit: {{ .Values.components.artifactCleaner.successfulJobsHistoryLimit }}
+  failedJobsHistoryLimit: {{ .Values.components.artifactCleaner.failedJobsHistoryLimit }}
   jobTemplate:
     spec:
       ttlSecondsAfterFinished: {{ .Values.jobs.ttlSecondsAfterFinished }}
-      backoffLimit: {{ .Values.jobs.backoffLimit }}
+      backoffLimit: 0
       template:
         spec:
           serviceAccountName: {{ .Values.serviceAccount.name }}
@@ -36,4 +36,4 @@ spec:
                 name: artifact-cleaner-config
             - name: records
               persistentVolumeClaim:
-                claimName: {{ .Values.storage.shared.pvcName }}
+                claimName: {{ .Values.storage.record.pvcName }}

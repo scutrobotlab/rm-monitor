@@ -1,10 +1,9 @@
 # analyze-job target configuration shape.
 #
-# OCRServerConf is service/client configuration. Deployment details such as
-# image, replicas, GPU, resources, and model cache PVC belong to Helm values,
-# not application config.
+# OCRServerConf is service/client configuration. The OCR daemon is external
+# infrastructure, like Postgres/Redis; this chart only consumes its endpoint.
 OCRServerConf:
-  BaseURL: http://ppocr-server.rm-monitor.svc.cluster.local:8000
+  BaseURL: http://host.docker.internal:48089
   TimeoutSeconds: 30
 
 AnalyzeConf:

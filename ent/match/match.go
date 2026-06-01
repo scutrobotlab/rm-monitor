@@ -37,6 +37,12 @@ const (
 	FieldLoserPlaceholderName = "loser_placeholder_name"
 	// FieldLatestStatus holds the string denoting the latest_status field in the database.
 	FieldLatestStatus = "latest_status"
+	// FieldWorkflowName holds the string denoting the workflow_name field in the database.
+	FieldWorkflowName = "workflow_name"
+	// FieldWorkflowUID holds the string denoting the workflow_uid field in the database.
+	FieldWorkflowUID = "workflow_uid"
+	// FieldWorkflowPhase holds the string denoting the workflow_phase field in the database.
+	FieldWorkflowPhase = "workflow_phase"
 	// FieldReport holds the string denoting the report field in the database.
 	FieldReport = "report"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
@@ -97,6 +103,9 @@ var Columns = []string{
 	FieldWinnerPlaceholderName,
 	FieldLoserPlaceholderName,
 	FieldLatestStatus,
+	FieldWorkflowName,
+	FieldWorkflowUID,
+	FieldWorkflowPhase,
 	FieldReport,
 	FieldCreatedAt,
 	FieldUpdatedAt,
@@ -230,6 +239,21 @@ func ByLoserPlaceholderName(opts ...sql.OrderTermOption) OrderOption {
 // ByLatestStatus orders the results by the latest_status field.
 func ByLatestStatus(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldLatestStatus, opts...).ToFunc()
+}
+
+// ByWorkflowName orders the results by the workflow_name field.
+func ByWorkflowName(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldWorkflowName, opts...).ToFunc()
+}
+
+// ByWorkflowUID orders the results by the workflow_uid field.
+func ByWorkflowUID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldWorkflowUID, opts...).ToFunc()
+}
+
+// ByWorkflowPhase orders the results by the workflow_phase field.
+func ByWorkflowPhase(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldWorkflowPhase, opts...).ToFunc()
 }
 
 // ByReport orders the results by the report field.

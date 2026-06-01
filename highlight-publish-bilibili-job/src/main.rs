@@ -15,6 +15,7 @@ use bytes::Bytes;
 use chrono::Utc;
 use clap::Parser;
 use futures::StreamExt;
+use postgres::{Client as PgClient, NoTls};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -26,10 +27,18 @@ struct Args {
 
 #[derive(Debug, Deserialize)]
 struct Config {
+    #[serde(rename = "PostgresConf", default)]
+    postgres: PostgresConf,
     #[serde(rename = "RecordConf", default)]
     record: RecordConf,
     #[serde(rename = "PublishConf", default)]
     publish: PublishConf,
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct PostgresConf {
+    #[serde(rename = "DSN", default)]
+    dsn: String,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -139,7 +148,7 @@ fn default_true() -> bool {
 }
 #[derive(Debug, Deserialize, Serialize)]
 struct PublishContext {
-    task_id: i32,
+    highlight_clip_id: i32,
     highlight_index: i32,
     start_seconds: f64,
     peak_seconds: f64,
@@ -219,7 +228,16 @@ async fn run(config: &Config, ctx: &PublishContext) -> Result<()> {
         &copied_cookie,
     )
     .await?;
-    write_result(&output_dir, ctx.task_id, &result)?;
+    write_publication(config, ctx.highlight_clip_id, &result)
+        .context("write bilibili publication")?;
+    write_result(&output_dir, ctx.highlight_clip_id, &result)?;
+    write_argo_outputs(&[
+        (
+            "external_id",
+            result.external_id.clone().unwrap_or_default(),
+        ),
+        ("url", result.url.clone().unwrap_or_default()),
+    ])?;
     update_highlight_json(output_dir.join("highlight.json"), &result)
         .context("update highlight json")?;
     Ok(())
@@ -410,36 +428,69 @@ fn update_highlight_json(path: PathBuf, result: &PublishResult) -> Result<()> {
     atomic_write(&path, &raw)
 }
 
-fn write_result(output_dir: &Path, task_id: i32, result: &PublishResult) -> Result<()> {
-    let raw = serde_json::to_vec_pretty(result)?;
-    atomic_write(&job_dir(output_dir, task_id).join("result.json"), &raw)
+fn write_publication(config: &Config, highlight_clip_id: i32, result: &PublishResult) -> Result<()> {
+    if config.postgres.dsn.trim().is_empty() {
+        bail!("PostgresConf.DSN is required");
+    }
+    let mut client = PgClient::connect(&config.postgres.dsn, NoTls)
+        .context("connect postgres")?;
+    let now = Utc::now();
+    client.execute(
+        r#"
+        insert into bilibili_highlight_publications
+          (highlight_clip_bilibili_publications, external_id, url, payload, published_at, created_at, updated_at)
+        values ($1, $2, $3, $4, $5, $5, $5)
+        on conflict (highlight_clip_bilibili_publications)
+        do update set
+          external_id = excluded.external_id,
+          url = excluded.url,
+          payload = excluded.payload,
+          published_at = excluded.published_at,
+          error_message = null,
+          updated_at = excluded.updated_at
+        "#,
+        &[
+            &highlight_clip_id,
+            &result.external_id,
+            &result.url,
+            &result.raw,
+            &now,
+        ],
+    )?;
+    Ok(())
 }
 
-fn write_error(config: &Config, ctx: &PublishContext, msg: &str) -> Result<()> {
-    let output_dir = resolve_under(Path::new(&config.record.base_dir), &ctx.output_dir)?;
+fn write_result(_output_dir: &Path, _highlight_clip_id: i32, result: &PublishResult) -> Result<()> {
+    let raw = serde_json::to_vec_pretty(result)?;
+    atomic_write(&PathBuf::from("/tmp/job").join("result.json"), &raw)
+}
+
+fn write_error(_config: &Config, ctx: &PublishContext, msg: &str) -> Result<()> {
     let raw = serde_json::to_vec_pretty(&serde_json::json!({
         "status": "failed",
         "task_type": "highlight-publish-bilibili",
-        "task_id": ctx.task_id,
+        "highlight_clip_id": ctx.highlight_clip_id,
         "error_message": msg.chars().take(2000).collect::<String>(),
         "completed_at": Utc::now(),
     }))?;
-    atomic_write(&job_dir(&output_dir, ctx.task_id).join("error.json"), &raw)
+    atomic_write(&PathBuf::from("/tmp/job").join("error.json"), &raw)
 }
 
-fn write_context(config: &Config, ctx: &PublishContext, raw_context: &str) -> Result<()> {
-    let output_dir = resolve_under(Path::new(&config.record.base_dir), &ctx.output_dir)?;
+fn write_context(_config: &Config, _ctx: &PublishContext, raw_context: &str) -> Result<()> {
     let parsed: Value = serde_json::from_str(raw_context)?;
     atomic_write(
-        &job_dir(&output_dir, ctx.task_id).join("context.json"),
+        &PathBuf::from("/tmp/job").join("context.json"),
         &serde_json::to_vec_pretty(&parsed)?,
     )
 }
 
-fn job_dir(output_dir: &Path, task_id: i32) -> PathBuf {
-    output_dir
-        .join(".job")
-        .join(format!("highlight-publish-bilibili-{task_id}"))
+fn write_argo_outputs(values: &[(&str, String)]) -> Result<()> {
+    let dir = PathBuf::from("/tmp/argo");
+    fs::create_dir_all(&dir).context("create argo output dir")?;
+    for (name, value) in values {
+        atomic_write(&dir.join(name), value.as_bytes())?;
+    }
+    Ok(())
 }
 
 fn resolve_under(base: &Path, rel: &str) -> Result<PathBuf> {
@@ -486,12 +537,13 @@ mod tests {
             record: RecordConf {
                 base_dir: "/records".into(),
             },
+            postgres: PostgresConf { dsn: "".into() },
             publish: PublishConf {
                 bilibili: BilibiliConf::default(),
             },
         };
         let ctx = PublishContext {
-            task_id: 1,
+            highlight_clip_id: 1,
             highlight_index: 3,
             start_seconds: 10.0,
             peak_seconds: 20.0,

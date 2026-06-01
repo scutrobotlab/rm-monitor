@@ -12,24 +12,22 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"scutbot.cn/web/rm-monitor/ent/bilibilihighlightpublication"
 	"scutbot.cn/web/rm-monitor/ent/highlightclip"
-	"scutbot.cn/web/rm-monitor/ent/highlightpublishtask"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
-	"scutbot.cn/web/rm-monitor/ent/mediaartifact"
 	"scutbot.cn/web/rm-monitor/ent/predicate"
 )
 
 // HighlightClipQuery is the builder for querying HighlightClip entities.
 type HighlightClipQuery struct {
 	config
-	ctx                *QueryContext
-	order              []highlightclip.OrderOption
-	inters             []Interceptor
-	predicates         []predicate.HighlightClip
-	withMatchRound     *MatchRoundQuery
-	withSourceArtifact *MediaArtifactQuery
-	withPublishTasks   *HighlightPublishTaskQuery
-	withFKs            bool
+	ctx                      *QueryContext
+	order                    []highlightclip.OrderOption
+	inters                   []Interceptor
+	predicates               []predicate.HighlightClip
+	withMatchRound           *MatchRoundQuery
+	withBilibiliPublications *BilibiliHighlightPublicationQuery
+	withFKs                  bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -88,9 +86,9 @@ func (_q *HighlightClipQuery) QueryMatchRound() *MatchRoundQuery {
 	return query
 }
 
-// QuerySourceArtifact chains the current query on the "source_artifact" edge.
-func (_q *HighlightClipQuery) QuerySourceArtifact() *MediaArtifactQuery {
-	query := (&MediaArtifactClient{config: _q.config}).Query()
+// QueryBilibiliPublications chains the current query on the "bilibili_publications" edge.
+func (_q *HighlightClipQuery) QueryBilibiliPublications() *BilibiliHighlightPublicationQuery {
+	query := (&BilibiliHighlightPublicationClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -101,30 +99,8 @@ func (_q *HighlightClipQuery) QuerySourceArtifact() *MediaArtifactQuery {
 		}
 		step := sqlgraph.NewStep(
 			sqlgraph.From(highlightclip.Table, highlightclip.FieldID, selector),
-			sqlgraph.To(mediaartifact.Table, mediaartifact.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, highlightclip.SourceArtifactTable, highlightclip.SourceArtifactColumn),
-		)
-		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
-		return fromU, nil
-	}
-	return query
-}
-
-// QueryPublishTasks chains the current query on the "publish_tasks" edge.
-func (_q *HighlightClipQuery) QueryPublishTasks() *HighlightPublishTaskQuery {
-	query := (&HighlightPublishTaskClient{config: _q.config}).Query()
-	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := _q.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		selector := _q.sqlQuery(ctx)
-		if err := selector.Err(); err != nil {
-			return nil, err
-		}
-		step := sqlgraph.NewStep(
-			sqlgraph.From(highlightclip.Table, highlightclip.FieldID, selector),
-			sqlgraph.To(highlightpublishtask.Table, highlightpublishtask.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, highlightclip.PublishTasksTable, highlightclip.PublishTasksColumn),
+			sqlgraph.To(bilibilihighlightpublication.Table, bilibilihighlightpublication.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, highlightclip.BilibiliPublicationsTable, highlightclip.BilibiliPublicationsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -319,14 +295,13 @@ func (_q *HighlightClipQuery) Clone() *HighlightClipQuery {
 		return nil
 	}
 	return &HighlightClipQuery{
-		config:             _q.config,
-		ctx:                _q.ctx.Clone(),
-		order:              append([]highlightclip.OrderOption{}, _q.order...),
-		inters:             append([]Interceptor{}, _q.inters...),
-		predicates:         append([]predicate.HighlightClip{}, _q.predicates...),
-		withMatchRound:     _q.withMatchRound.Clone(),
-		withSourceArtifact: _q.withSourceArtifact.Clone(),
-		withPublishTasks:   _q.withPublishTasks.Clone(),
+		config:                   _q.config,
+		ctx:                      _q.ctx.Clone(),
+		order:                    append([]highlightclip.OrderOption{}, _q.order...),
+		inters:                   append([]Interceptor{}, _q.inters...),
+		predicates:               append([]predicate.HighlightClip{}, _q.predicates...),
+		withMatchRound:           _q.withMatchRound.Clone(),
+		withBilibiliPublications: _q.withBilibiliPublications.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
@@ -344,25 +319,14 @@ func (_q *HighlightClipQuery) WithMatchRound(opts ...func(*MatchRoundQuery)) *Hi
 	return _q
 }
 
-// WithSourceArtifact tells the query-builder to eager-load the nodes that are connected to
-// the "source_artifact" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *HighlightClipQuery) WithSourceArtifact(opts ...func(*MediaArtifactQuery)) *HighlightClipQuery {
-	query := (&MediaArtifactClient{config: _q.config}).Query()
+// WithBilibiliPublications tells the query-builder to eager-load the nodes that are connected to
+// the "bilibili_publications" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *HighlightClipQuery) WithBilibiliPublications(opts ...func(*BilibiliHighlightPublicationQuery)) *HighlightClipQuery {
+	query := (&BilibiliHighlightPublicationClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	_q.withSourceArtifact = query
-	return _q
-}
-
-// WithPublishTasks tells the query-builder to eager-load the nodes that are connected to
-// the "publish_tasks" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *HighlightClipQuery) WithPublishTasks(opts ...func(*HighlightPublishTaskQuery)) *HighlightClipQuery {
-	query := (&HighlightPublishTaskClient{config: _q.config}).Query()
-	for _, opt := range opts {
-		opt(query)
-	}
-	_q.withPublishTasks = query
+	_q.withBilibiliPublications = query
 	return _q
 }
 
@@ -445,13 +409,12 @@ func (_q *HighlightClipQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([
 		nodes       = []*HighlightClip{}
 		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
-		loadedTypes = [3]bool{
+		loadedTypes = [2]bool{
 			_q.withMatchRound != nil,
-			_q.withSourceArtifact != nil,
-			_q.withPublishTasks != nil,
+			_q.withBilibiliPublications != nil,
 		}
 	)
-	if _q.withMatchRound != nil || _q.withSourceArtifact != nil {
+	if _q.withMatchRound != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -481,17 +444,11 @@ func (_q *HighlightClipQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([
 			return nil, err
 		}
 	}
-	if query := _q.withSourceArtifact; query != nil {
-		if err := _q.loadSourceArtifact(ctx, query, nodes, nil,
-			func(n *HighlightClip, e *MediaArtifact) { n.Edges.SourceArtifact = e }); err != nil {
-			return nil, err
-		}
-	}
-	if query := _q.withPublishTasks; query != nil {
-		if err := _q.loadPublishTasks(ctx, query, nodes,
-			func(n *HighlightClip) { n.Edges.PublishTasks = []*HighlightPublishTask{} },
-			func(n *HighlightClip, e *HighlightPublishTask) {
-				n.Edges.PublishTasks = append(n.Edges.PublishTasks, e)
+	if query := _q.withBilibiliPublications; query != nil {
+		if err := _q.loadBilibiliPublications(ctx, query, nodes,
+			func(n *HighlightClip) { n.Edges.BilibiliPublications = []*BilibiliHighlightPublication{} },
+			func(n *HighlightClip, e *BilibiliHighlightPublication) {
+				n.Edges.BilibiliPublications = append(n.Edges.BilibiliPublications, e)
 			}); err != nil {
 			return nil, err
 		}
@@ -531,39 +488,7 @@ func (_q *HighlightClipQuery) loadMatchRound(ctx context.Context, query *MatchRo
 	}
 	return nil
 }
-func (_q *HighlightClipQuery) loadSourceArtifact(ctx context.Context, query *MediaArtifactQuery, nodes []*HighlightClip, init func(*HighlightClip), assign func(*HighlightClip, *MediaArtifact)) error {
-	ids := make([]int, 0, len(nodes))
-	nodeids := make(map[int][]*HighlightClip)
-	for i := range nodes {
-		if nodes[i].media_artifact_highlight_clips == nil {
-			continue
-		}
-		fk := *nodes[i].media_artifact_highlight_clips
-		if _, ok := nodeids[fk]; !ok {
-			ids = append(ids, fk)
-		}
-		nodeids[fk] = append(nodeids[fk], nodes[i])
-	}
-	if len(ids) == 0 {
-		return nil
-	}
-	query.Where(mediaartifact.IDIn(ids...))
-	neighbors, err := query.All(ctx)
-	if err != nil {
-		return err
-	}
-	for _, n := range neighbors {
-		nodes, ok := nodeids[n.ID]
-		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "media_artifact_highlight_clips" returned %v`, n.ID)
-		}
-		for i := range nodes {
-			assign(nodes[i], n)
-		}
-	}
-	return nil
-}
-func (_q *HighlightClipQuery) loadPublishTasks(ctx context.Context, query *HighlightPublishTaskQuery, nodes []*HighlightClip, init func(*HighlightClip), assign func(*HighlightClip, *HighlightPublishTask)) error {
+func (_q *HighlightClipQuery) loadBilibiliPublications(ctx context.Context, query *BilibiliHighlightPublicationQuery, nodes []*HighlightClip, init func(*HighlightClip), assign func(*HighlightClip, *BilibiliHighlightPublication)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[int]*HighlightClip)
 	for i := range nodes {
@@ -574,21 +499,21 @@ func (_q *HighlightClipQuery) loadPublishTasks(ctx context.Context, query *Highl
 		}
 	}
 	query.withFKs = true
-	query.Where(predicate.HighlightPublishTask(func(s *sql.Selector) {
-		s.Where(sql.InValues(s.C(highlightclip.PublishTasksColumn), fks...))
+	query.Where(predicate.BilibiliHighlightPublication(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(highlightclip.BilibiliPublicationsColumn), fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.highlight_clip_publish_tasks
+		fk := n.highlight_clip_bilibili_publications
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "highlight_clip_publish_tasks" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "highlight_clip_bilibili_publications" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "highlight_clip_publish_tasks" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected referenced foreign-key "highlight_clip_bilibili_publications" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

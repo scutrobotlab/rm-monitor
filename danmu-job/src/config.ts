@@ -5,6 +5,7 @@ export type RecordConf = {
   BaseDir?: string;
   MatchDirTemplate?: string;
   MatchNameTemplate?: string;
+  StopDelaySeconds?: number;
 };
 
 export type DanmuConf = {
@@ -15,6 +16,9 @@ export type DanmuConf = {
 };
 
 export type Config = {
+  PostgresConf?: {
+    DSN?: string;
+  };
   RecordConf?: RecordConf;
   DanmuConf?: DanmuConf;
 };
@@ -29,6 +33,7 @@ export function recordConfWithDefaults(conf?: RecordConf): Required<RecordConf> 
     MatchDirTemplate: conf?.MatchDirTemplate || "{{.Event}}/{{.Zone}}/{{.MatchName}}",
     MatchNameTemplate:
       conf?.MatchNameTemplate || "{{.Order}}. {{.RedSchool}}-{{.RedName}} VS {{.BlueSchool}}-{{.BlueName}}",
+    StopDelaySeconds: conf?.StopDelaySeconds && conf.StopDelaySeconds > 0 ? conf.StopDelaySeconds : 60,
   };
 }
 

@@ -9,21 +9,19 @@ import (
 	"path/filepath"
 	"reflect"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/pkg/errors"
 	"github.com/samber/lo"
 	"scutbot.cn/web/rm-monitor/ent"
-	"scutbot.cn/web/rm-monitor/ent/analyzetask"
 	"scutbot.cn/web/rm-monitor/ent/highlightclip"
+	"scutbot.cn/web/rm-monitor/ent/larkbitablerecord"
 	"scutbot.cn/web/rm-monitor/ent/match"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
-	"scutbot.cn/web/rm-monitor/ent/uploadtask"
 	"scutbot.cn/web/rm-monitor/lark-notifier/internal/svc"
 	"scutbot.cn/web/rm-monitor/lark-notifier/internal/utils"
-	"scutbot.cn/web/rm-monitor/monitor/types"
+	"scutbot.cn/web/rm-monitor/match-controller/types"
 	"scutbot.cn/web/rm-monitor/pkg/highlight"
 	"scutbot.cn/web/rm-monitor/pkg/logx"
 )
@@ -34,167 +32,213 @@ type NotifyLogic struct {
 	logx.Logger
 }
 
+type CardPayload struct {
+	Content *utils.MatchCardContent
+	Bytes   []byte
+	Map     map[string]any
+}
+
 func NewNotifyLogic(ctx context.Context, svcCtx *svc.ServiceContext) *NotifyLogic {
 	return &NotifyLogic{ctx: ctx, svcCtx: svcCtx, Logger: logx.WithContext(ctx)}
 }
 
-func (l *NotifyLogic) Sync(since time.Time) error {
-	if err := l.ensureStartedMessages(); err != nil {
-		return err
-	}
-	if err := l.patchChangedCardsSince(since); err != nil {
-		if isContextDone(err) {
-			return nil
-		}
-		return err
-	}
-	if err := l.patchCardsForUploadsSince(since); err != nil {
-		if isContextDone(err) {
-			return nil
-		}
-		return err
-	}
-	if err := l.patchCardsForHighlightsSince(since); err != nil {
-		if isContextDone(err) {
-			return nil
-		}
-		return err
-	}
-	return nil
-}
-
-func (l *NotifyLogic) SyncEvent(channel, payload string) error {
-	switch channel {
-	case "match_round_changed":
-		id, err := strconv.Atoi(payload)
-		if err != nil {
-			return errors.Wrapf(err, "parse notify payload %q", payload)
-		}
-		return l.syncMatchRound(id)
-	case "match_changed":
-		return l.patchMatchCardsByID(payload)
-	case "upload_task_changed":
-		id, err := strconv.Atoi(payload)
-		if err != nil {
-			return errors.Wrapf(err, "parse notify payload %q", payload)
-		}
-		return l.syncUploadTask(id)
-	case "highlight_clip_changed":
-		id, err := strconv.Atoi(payload)
-		if err != nil {
-			return errors.Wrapf(err, "parse notify payload %q", payload)
-		}
-		return l.syncHighlightClip(id)
-	default:
-		return nil
-	}
-}
-
-func (l *NotifyLogic) syncMatchRound(id int) error {
-	r, err := l.svcCtx.DB.MatchRound.Query().
-		Where(matchround.ID(id)).
-		WithMatch(func(q *ent.MatchQuery) {
-			q.WithRedTeam().
-				WithBlueTeam().
-				WithLarkMessages().
-				WithRounds(func(q *ent.MatchRoundQuery) {
-					q.Order(matchround.ByRoundNo())
-				})
-		}).
-		Only(l.ctx)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil
-		}
-		return errors.Wrap(err, "query notified match round")
-	}
-	m := r.Edges.Match
-	if m == nil {
-		return nil
-	}
-	if r.Status == matchround.StatusSTARTED {
-		if err := l.ensureMatchMessages(m); err != nil {
-			return err
-		}
-	}
-	return l.patchMatchCardsByID(m.ID)
-}
-
-func (l *NotifyLogic) syncUploadTask(id int) error {
-	task, err := l.uploadTaskForCard(id)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil
-		}
-		return err
-	}
-	if task.Edges.RecordTask == nil || task.Edges.RecordTask.Edges.MatchRound == nil || task.Edges.RecordTask.Edges.MatchRound.Edges.Match == nil {
-		return nil
-	}
-	if err := l.patchMatchCardsByID(task.Edges.RecordTask.Edges.MatchRound.Edges.Match.ID); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (l *NotifyLogic) syncHighlightClip(id int) error {
-	clip, err := l.svcCtx.DB.HighlightClip.Query().
-		Where(highlightclip.ID(id), highlightclip.StatusEQ(highlightclip.StatusSUCCEEDED)).
-		WithMatchRound(func(q *ent.MatchRoundQuery) {
-			q.WithMatch()
-		}).
-		Only(l.ctx)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil
-		}
-		return errors.Wrap(err, "query notified highlight clip")
-	}
-	if clip.Edges.MatchRound == nil || clip.Edges.MatchRound.Edges.Match == nil {
-		return nil
-	}
-	return l.patchMatchCardsByID(clip.Edges.MatchRound.Edges.Match.ID)
-}
-
-func (l *NotifyLogic) ensureStartedMessages() error {
-	rounds, err := l.svcCtx.DB.MatchRound.Query().
-		Where(matchround.StatusEQ(matchround.StatusSTARTED)).
-		WithMatch(func(q *ent.MatchQuery) {
-			q.WithRedTeam().WithBlueTeam().WithLarkMessages()
-		}).
-		Limit(100).
-		All(l.ctx)
-	if err != nil {
-		return errors.Wrap(err, "query started rounds")
-	}
-
-	for _, r := range rounds {
-		m := r.Edges.Match
-		if m == nil {
-			continue
-		}
-		if err := l.ensureMatchMessages(m); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (l *NotifyLogic) ensureMatchMessages(m *ent.Match) error {
+func (l *NotifyLogic) SyncWindow(since time.Time) error {
+	const pageSize = 100
 	chatIDs, err := utils.JoinedChatIDs(l.ctx, l.svcCtx)
 	if err != nil {
 		return err
 	}
 	if len(chatIDs) == 0 {
+		l.Infof("lark scan skipped since=%s reason=no_joined_chats", since.Format(time.RFC3339Nano))
 		return nil
 	}
-	realMessages := 0
-	for _, message := range m.Edges.LarkMessages {
-		if cardIDReady(message) {
-			realMessages++
+	total := 0
+	updated := 0
+	for offset := 0; ; offset += pageSize {
+		matches, err := l.matchesForWindow(since, pageSize, offset)
+		if err != nil {
+			return err
+		}
+		for _, m := range matches {
+			if l.ctx.Err() != nil {
+				return nil
+			}
+			total++
+			changed, err := l.syncMatchCard(m, chatIDs)
+			if err != nil {
+				if isContextDone(err) {
+					return nil
+				}
+				return err
+			}
+			if changed {
+				updated++
+			}
+		}
+		if len(matches) < pageSize {
+			break
 		}
 	}
-	if realMessages >= len(chatIDs) {
+	l.Infof("lark scan finished since=%s chats=%d matches=%d changed=%d", since.Format(time.RFC3339Nano), len(chatIDs), total, updated)
+	return nil
+}
+
+func (l *NotifyLogic) matchesForWindow(since time.Time, limit, offset int) ([]*ent.Match, error) {
+	matches, err := l.svcCtx.DB.Match.Query().
+		Where(match.Or(
+			match.LatestStatusNEQ("DONE"),
+			match.UpdatedAtGTE(since),
+			match.HasRoundsWith(matchround.UpdatedAtGTE(since)),
+			match.HasRoundsWith(matchround.HasLarkBitableRecordsWith(larkbitablerecord.UpdatedAtGTE(since))),
+			match.HasRoundsWith(matchround.HasHighlightClipsWith(highlightclip.UpdatedAtGTE(since))),
+		)).
+		Order(match.ByUpdatedAt(), match.ByID()).
+		WithRedTeam().
+		WithBlueTeam().
+		WithLarkMessages().
+		WithRounds(func(q *ent.MatchRoundQuery) {
+			q.Order(matchround.ByRoundNo()).
+				WithLarkBitableRecords().
+				WithHighlightClips(func(q *ent.HighlightClipQuery) {
+					q.Where(highlightclip.StatusEQ(highlightclip.StatusAVAILABLE)).
+						Order(highlightclip.ByHighlightIndex())
+				})
+		}).
+		Limit(limit).
+		Offset(offset).
+		All(l.ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "query lark scan matches")
+	}
+	return matches, nil
+}
+
+func CreateCardPayload(ctx context.Context, svcCtx *svc.ServiceContext, matchID string) ([]byte, error) {
+	payload, err := BuildCardPayload(ctx, svcCtx, matchID)
+	if err != nil {
+		return nil, err
+	}
+	return payload.Bytes, nil
+}
+
+func BuildCardPayload(ctx context.Context, svcCtx *svc.ServiceContext, matchID string) (*CardPayload, error) {
+	m, err := queryMatchForCard(ctx, svcCtx, matchID)
+	if err != nil {
+		return nil, err
+	}
+	return buildCardPayloadForMatch(ctx, svcCtx, m)
+}
+
+func ApplyMatchUpdate(ctx context.Context, svcCtx *svc.ServiceContext, matchID string) (bool, error) {
+	chatIDs, err := utils.JoinedChatIDs(ctx, svcCtx)
+	if err != nil {
+		return false, err
+	}
+	m, err := queryMatchForCard(ctx, svcCtx, matchID)
+	if err != nil {
+		return false, err
+	}
+	return NewNotifyLogic(ctx, svcCtx).syncMatchCard(m, chatIDs)
+}
+
+func buildCardPayloadForMatch(ctx context.Context, svcCtx *svc.ServiceContext, m *ent.Match) (*CardPayload, error) {
+	content, err := NewNotifyLogic(ctx, svcCtx).cardContent(m)
+	if err != nil {
+		return nil, err
+	}
+	raw, payloadMap, err := utils.CardEntityData(content)
+	if err != nil {
+		return nil, err
+	}
+	return &CardPayload{
+		Content: content,
+		Bytes:   []byte(raw),
+		Map:     payloadMap,
+	}, nil
+}
+
+func queryMatchForCard(ctx context.Context, svcCtx *svc.ServiceContext, matchID string) (*ent.Match, error) {
+	m, err := svcCtx.DB.Match.Query().
+		Where(match.ID(matchID)).
+		WithRedTeam().
+		WithBlueTeam().
+		WithLarkMessages().
+		WithRounds(func(q *ent.MatchRoundQuery) {
+			q.Order(matchround.ByRoundNo()).
+				WithLarkBitableRecords().
+				WithHighlightClips(func(q *ent.HighlightClipQuery) {
+					q.Where(highlightclip.StatusEQ(highlightclip.StatusAVAILABLE)).
+						Order(highlightclip.ByHighlightIndex())
+				})
+		}).
+		Only(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "query match for lark card")
+	}
+	return m, nil
+}
+
+func (l *NotifyLogic) syncMatchCard(m *ent.Match, chatIDs []string) (bool, error) {
+	if m == nil || !matchShouldHaveCard(m) {
+		return false, nil
+	}
+	before := cardPayloadFingerprint(m.Edges.LarkMessages)
+	if err := l.ensureMatchMessages(m, chatIDs); err != nil {
+		return false, err
+	}
+	if err := l.patchMatchCards(m); err != nil {
+		return false, err
+	}
+	after := cardPayloadFingerprint(m.Edges.LarkMessages)
+	return before != after, nil
+}
+
+func matchShouldHaveCard(m *ent.Match) bool {
+	if m == nil {
+		return false
+	}
+	if m.LatestStatus == types.MatchStatusSTARTED || m.LatestStatus == "DONE" {
+		return true
+	}
+	return lo.SomeBy(m.Edges.Rounds, func(r *ent.MatchRound) bool {
+		return r.Status == matchround.StatusSTARTED || r.Status == matchround.StatusENDED
+	})
+}
+
+func cardPayloadFingerprint(messages []*ent.LarkMessage) string {
+	parts := make([]string, 0, len(messages))
+	for _, message := range messages {
+		if message == nil {
+			continue
+		}
+		raw, _ := json.Marshal(message.CardPayload)
+		cardID := ""
+		if message.CardID != nil {
+			cardID = *message.CardID
+		}
+		parts = append(parts, fmt.Sprintf("%s:%s:%s", message.MessageID, cardID, string(raw)))
+	}
+	sort.Strings(parts)
+	return strings.Join(parts, "\n")
+}
+
+func (l *NotifyLogic) ensureMatchMessages(m *ent.Match, chatIDs []string) error {
+	if len(chatIDs) == 0 {
+		return nil
+	}
+	legacyReady := 0
+	readyByChatID := make(map[string]struct{}, len(chatIDs))
+	for _, message := range m.Edges.LarkMessages {
+		if !cardIDReady(message) {
+			continue
+		}
+		if message.ChatID != nil && strings.TrimSpace(*message.ChatID) != "" {
+			readyByChatID[strings.TrimSpace(*message.ChatID)] = struct{}{}
+		} else {
+			legacyReady++
+		}
+	}
+	if len(readyByChatID) >= len(chatIDs) || legacyReady >= len(chatIDs) {
 		return nil
 	}
 	content, err := l.cardContent(m)
@@ -204,18 +248,31 @@ func (l *NotifyLogic) ensureMatchMessages(m *ent.Match) error {
 	if err := l.ensureStoredCardIDs(m, content); err != nil {
 		return err
 	}
-	realMessages = 0
+	legacyReady = 0
+	readyByChatID = make(map[string]struct{}, len(chatIDs))
 	for _, message := range m.Edges.LarkMessages {
-		if cardIDReady(message) {
-			realMessages++
+		if !cardIDReady(message) {
+			continue
+		}
+		if message.ChatID != nil && strings.TrimSpace(*message.ChatID) != "" {
+			readyByChatID[strings.TrimSpace(*message.ChatID)] = struct{}{}
+		} else {
+			legacyReady++
 		}
 	}
-	if realMessages >= len(chatIDs) {
+	if len(readyByChatID) >= len(chatIDs) || legacyReady >= len(chatIDs) {
 		return nil
 	}
 	successes := 0
 	failures := 0
 	for _, chatID := range chatIDs {
+		chatID = strings.TrimSpace(chatID)
+		if chatID == "" {
+			continue
+		}
+		if _, ok := readyByChatID[chatID]; ok {
+			continue
+		}
 		cardID, payload, err := utils.CreateCardEntity(l.ctx, l.svcCtx.LarkClient, l.retryLark, content)
 		if err != nil {
 			failures++
@@ -228,19 +285,25 @@ func (l *NotifyLogic) ensureMatchMessages(m *ent.Match) error {
 			l.Error(errors.Wrapf(err, "create lark message match=%s chat=%s", m.ID, chatID))
 			continue
 		}
-		if _, err := l.svcCtx.DB.LarkMessage.Create().
+		created, err := l.svcCtx.DB.LarkMessage.Create().
 			SetMatchID(m.ID).
 			SetMessageID(messageID).
+			SetChatID(chatID).
 			SetCardID(cardID).
 			SetCardPayload(payload).
-			Save(l.ctx); err != nil && !ent.IsConstraintError(err) {
+			Save(l.ctx)
+		if err != nil && !ent.IsConstraintError(err) {
 			failures++
 			l.Error(errors.Wrapf(err, "save lark message match=%s chat=%s message_id=%s card_id=%s", m.ID, chatID, messageID, cardID))
 			continue
 		}
+		if err == nil {
+			m.Edges.LarkMessages = append(m.Edges.LarkMessages, created)
+		}
 		successes++
+		readyByChatID[chatID] = struct{}{}
 	}
-	l.Infof("ensured lark match messages match=%s chats=%d existing_real=%d success=%d failure=%d", m.ID, len(chatIDs), realMessages, successes, failures)
+	l.Infof("ensured lark match messages match=%s chats=%d existing_by_chat=%d legacy_ready=%d success=%d failure=%d", m.ID, len(chatIDs), len(readyByChatID), legacyReady, successes, failures)
 	return nil
 }
 
@@ -271,107 +334,20 @@ func (l *NotifyLogic) ensureStoredCardIDs(m *ent.Match, content *utils.MatchCard
 	return nil
 }
 
-func (l *NotifyLogic) patchChangedCardsSince(since time.Time) error {
-	seen := map[string]struct{}{}
-	const pageSize = 100
-	for offset := 0; ; offset += pageSize {
-		rounds, err := l.svcCtx.DB.MatchRound.Query().
-			Where(matchround.UpdatedAtGTE(since)).
-			Order(matchround.ByUpdatedAt(), matchround.ByID()).
-			WithMatch().
-			Limit(pageSize).
-			Offset(offset).
-			All(l.ctx)
-		if err != nil {
-			return errors.Wrap(err, "query recently changed rounds")
-		}
-		for _, r := range rounds {
-			m := r.Edges.Match
-			if m == nil {
-				continue
-			}
-			seen[m.ID] = struct{}{}
-		}
-		if len(rounds) < pageSize {
-			break
-		}
-	}
-	for offset := 0; ; offset += pageSize {
-		matches, err := l.svcCtx.DB.Match.Query().
-			Where(match.UpdatedAtGTE(since)).
-			Order(match.ByUpdatedAt(), match.ByID()).
-			Limit(pageSize).
-			Offset(offset).
-			All(l.ctx)
-		if err != nil {
-			return errors.Wrap(err, "query recently changed matches")
-		}
-		for _, m := range matches {
-			seen[m.ID] = struct{}{}
-		}
-		if len(matches) < pageSize {
-			break
-		}
-	}
-	l.Infof("lark compensation scan since=%s matches=%d", since.Format(time.RFC3339Nano), len(seen))
-	for id := range seen {
-		if l.ctx.Err() != nil {
-			return nil
-		}
-		if err := l.patchMatchCardsByID(id); err != nil {
-			if isContextDone(err) {
-				return nil
-			}
-			return err
-		}
-	}
-	return nil
-}
-
 func isContextDone(err error) bool {
 	return errors.Cause(err) == context.Canceled || errors.Cause(err) == context.DeadlineExceeded
-}
-
-func (l *NotifyLogic) patchMatchCardsByID(matchID string) error {
-	m, err := l.matchForPatch(matchID)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil
-		}
-		return err
-	}
-	return l.patchMatchCards(m)
-}
-
-func (l *NotifyLogic) matchForPatch(matchID string) (*ent.Match, error) {
-	return l.svcCtx.DB.Match.Query().
-		Where(match.ID(matchID)).
-		WithRedTeam().
-		WithBlueTeam().
-		WithLarkMessages().
-		WithRounds(func(q *ent.MatchRoundQuery) {
-			q.Order(matchround.ByRoundNo()).
-				WithRecordTasks(func(q *ent.RecordTaskQuery) {
-					q.WithUploadTask()
-				}).
-				WithAnalyzeTasks().
-				WithHighlightClips(func(q *ent.HighlightClipQuery) {
-					q.Where(highlightclip.StatusEQ(highlightclip.StatusSUCCEEDED)).
-						Order(highlightclip.ByHighlightIndex())
-				})
-		}).
-		Only(l.ctx)
 }
 
 func (l *NotifyLogic) patchMatchCards(m *ent.Match) error {
 	if m == nil {
 		return nil
 	}
-	content, err := l.cardContent(m)
+	payload, err := buildCardPayloadForMatch(l.ctx, l.svcCtx, m)
 	if err != nil {
 		return err
 	}
-	contentMap := utils.ToMap(content)
+	content := payload.Content
+	contentMap := payload.Map
 	dataUpdatedAt := cardDataUpdatedAt(m)
 	sequence := dataUpdatedAt.Unix()
 	attempted := 0
@@ -397,6 +373,7 @@ func (l *NotifyLogic) patchMatchCards(m *ent.Match) error {
 				if err := l.svcCtx.DB.LarkMessage.UpdateOneID(card.ID).SetCardPayload(contentMap).Exec(l.ctx); err != nil {
 					l.Error(errors.Wrap(err, "update lark card payload after idempotent card update"))
 				}
+				card.CardPayload = contentMap
 				updated++
 				l.Infof("lark card update already applied match=%s message=%s card=%s", m.ID, card.MessageID, *card.CardID)
 				continue
@@ -410,6 +387,7 @@ func (l *NotifyLogic) patchMatchCards(m *ent.Match) error {
 			l.Error(errors.Wrap(err, "update lark card payload"))
 			continue
 		}
+		card.CardPayload = payload
 		updated++
 		l.Infof("updated lark card match=%s message=%s card=%s", m.ID, card.MessageID, *card.CardID)
 	}
@@ -426,12 +404,9 @@ func cardDataUpdatedAt(m *ent.Match) time.Time {
 		if r.UpdatedAt.After(updatedAt) {
 			updatedAt = r.UpdatedAt
 		}
-		for _, task := range r.Edges.RecordTasks {
-			if task.UpdatedAt.After(updatedAt) {
-				updatedAt = task.UpdatedAt
-			}
-			if task.Edges.UploadTask != nil && task.Edges.UploadTask.UpdatedAt.After(updatedAt) {
-				updatedAt = task.Edges.UploadTask.UpdatedAt
+		for _, record := range r.Edges.LarkBitableRecords {
+			if record.UpdatedAt.After(updatedAt) {
+				updatedAt = record.UpdatedAt
 			}
 		}
 		for _, clip := range r.Edges.HighlightClips {
@@ -439,85 +414,8 @@ func cardDataUpdatedAt(m *ent.Match) time.Time {
 				updatedAt = clip.UpdatedAt
 			}
 		}
-		for _, task := range r.Edges.AnalyzeTasks {
-			if task.UpdatedAt.After(updatedAt) {
-				updatedAt = task.UpdatedAt
-			}
-		}
 	}
 	return updatedAt
-}
-
-func (l *NotifyLogic) patchCardsForUploadsSince(since time.Time) error {
-	tasks, err := l.svcCtx.DB.UploadTask.Query().
-		Where(uploadtask.UpdatedAtGTE(since), uploadtask.StatusEQ(uploadtask.StatusSUCCEEDED), uploadtask.BitableRecordURLNotNil()).
-		WithRecordTask(func(q *ent.RecordTaskQuery) {
-			q.WithMatchRound(func(q *ent.MatchRoundQuery) {
-				q.WithMatch()
-			})
-		}).Limit(200).
-		All(l.ctx)
-	if err != nil {
-		return errors.Wrap(err, "query completed uploads")
-	}
-	seen := map[string]struct{}{}
-	for _, task := range tasks {
-		if task.Edges.RecordTask == nil || task.Edges.RecordTask.Edges.MatchRound == nil || task.Edges.RecordTask.Edges.MatchRound.Edges.Match == nil {
-			continue
-		}
-		seen[task.Edges.RecordTask.Edges.MatchRound.Edges.Match.ID] = struct{}{}
-	}
-	for id := range seen {
-		if err := l.patchMatchCardsByID(id); err != nil {
-			if isContextDone(err) {
-				return nil
-			}
-			return err
-		}
-	}
-	return nil
-}
-
-func (l *NotifyLogic) patchCardsForHighlightsSince(since time.Time) error {
-	clips, err := l.svcCtx.DB.HighlightClip.Query().
-		Where(highlightclip.UpdatedAtGTE(since), highlightclip.StatusEQ(highlightclip.StatusSUCCEEDED)).
-		WithMatchRound(func(q *ent.MatchRoundQuery) {
-			q.WithMatch()
-		}).
-		Limit(200).
-		All(l.ctx)
-	if err != nil {
-		return errors.Wrap(err, "query completed highlights")
-	}
-	seen := map[string]struct{}{}
-	for _, clip := range clips {
-		if clip.Edges.MatchRound == nil || clip.Edges.MatchRound.Edges.Match == nil {
-			continue
-		}
-		seen[clip.Edges.MatchRound.Edges.Match.ID] = struct{}{}
-	}
-	for id := range seen {
-		if err := l.patchMatchCardsByID(id); err != nil {
-			if isContextDone(err) {
-				return nil
-			}
-			return err
-		}
-	}
-	return nil
-}
-
-func (l *NotifyLogic) uploadTaskForCard(id int) (*ent.UploadTask, error) {
-	return l.svcCtx.DB.UploadTask.Query().
-		Where(uploadtask.ID(id), uploadtask.StatusEQ(uploadtask.StatusSUCCEEDED), uploadtask.BitableRecordURLNotNil()).
-		WithRecordTask(func(q *ent.RecordTaskQuery) {
-			q.WithMatchRound(func(q *ent.MatchRoundQuery) {
-				q.WithMatch(func(q *ent.MatchQuery) {
-					q.WithLarkMessages()
-				})
-			})
-		}).
-		Only(l.ctx)
 }
 
 func (l *NotifyLogic) retryLark(chatID string, f func() error) error {
@@ -633,22 +531,23 @@ func (l *NotifyLogic) roundSettlementImageKey(r *ent.MatchRound) string {
 	if r == nil {
 		return ""
 	}
-	for _, task := range r.Edges.AnalyzeTasks {
-		if task.Status != analyzetask.StatusSUCCEEDED ||
-			task.SettlementStatus == nil ||
-			*task.SettlementStatus != analyzetask.SettlementStatusCONFIRMED ||
-			task.SettlementImagePath == nil ||
-			strings.TrimSpace(*task.SettlementImagePath) == "" {
-			continue
-		}
-		imageKey, err := utils.GetLocalImageKey(l.ctx, l.svcCtx, *task.SettlementImagePath)
-		if err != nil {
-			l.Error(errors.Wrapf(err, "upload settlement image round=%d path=%s", r.ID, *task.SettlementImagePath))
-			return ""
-		}
-		return imageKey
+	roundDir := l.roundDirFromRecords(r)
+	if roundDir == "" {
+		return ""
 	}
-	return ""
+	if !roundSettlementConfirmed(filepath.Join(roundDir, "round.json")) {
+		return ""
+	}
+	imagePath := filepath.Join(roundDir, "settlement.jpg")
+	if !fileExists(imagePath) {
+		return ""
+	}
+	imageKey, err := utils.GetLocalImageKey(l.ctx, l.svcCtx, imagePath)
+	if err != nil {
+		l.Error(errors.Wrapf(err, "upload settlement image round=%d path=%s", r.ID, imagePath))
+		return ""
+	}
+	return imageKey
 }
 
 func roundScoreTitle(redWins, blueWins int) string {
@@ -659,25 +558,60 @@ func roundRecordLinks(r *ent.MatchRound) string {
 	if r == nil {
 		return "暂无录制"
 	}
-	tasks := append([]*ent.RecordTask(nil), r.Edges.RecordTasks...)
-	sort.Slice(tasks, func(i, j int) bool {
-		return tasks[i].Role < tasks[j].Role
+	records := append([]*ent.LarkBitableRecord(nil), r.Edges.LarkBitableRecords...)
+	sort.Slice(records, func(i, j int) bool {
+		return records[i].Role < records[j].Role
 	})
 	links := make([]string, 0)
-	for _, task := range tasks {
-		if task.Edges.UploadTask == nil || task.Edges.UploadTask.BitableRecordURL == nil || *task.Edges.UploadTask.BitableRecordURL == "" {
+	for _, record := range records {
+		if record.RecordURL == nil || strings.TrimSpace(*record.RecordURL) == "" {
 			continue
 		}
 		links = append(links, fmt.Sprintf(
 			"<link icon='video_outlined' url='%s' pc_url='' ios_url='' android_url=''>%s</link>",
-			html.EscapeString(*task.Edges.UploadTask.BitableRecordURL),
-			html.EscapeString(task.Role),
+			html.EscapeString(strings.TrimSpace(*record.RecordURL)),
+			html.EscapeString(record.Role),
 		))
 	}
 	if len(links) == 0 {
 		return "暂无录制"
 	}
 	return strings.Join(links, "\n")
+}
+
+func (l *NotifyLogic) roundDirFromRecords(r *ent.MatchRound) string {
+	if r == nil {
+		return ""
+	}
+	baseDir := "/records"
+	if l.svcCtx == nil {
+		baseDir = "/records"
+	} else {
+		baseDir = strings.TrimSpace(l.svcCtx.Config.RecordConf.BaseDir)
+	}
+	if baseDir == "" {
+		baseDir = "/records"
+	}
+	for _, record := range r.Edges.LarkBitableRecords {
+		if strings.TrimSpace(record.SourcePath) == "" {
+			continue
+		}
+		return filepath.Dir(filepath.Join(baseDir, filepath.FromSlash(record.SourcePath)))
+	}
+	return ""
+}
+
+func roundSettlementConfirmed(path string) bool {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return false
+	}
+	var doc struct {
+		Settlement struct {
+			Status string `json:"status"`
+		} `json:"settlement"`
+	}
+	return json.Unmarshal(raw, &doc) == nil && doc.Settlement.Status == "CONFIRMED"
 }
 
 func (l *NotifyLogic) highlightPresentation(m *ent.Match) ([]utils.HighlightBullet, []utils.HighlightImage) {
@@ -756,7 +690,7 @@ func selectedHighlightClips(m *ent.Match, perRoundLimit, totalLimit int, role, a
 	candidates := make([]highlight.FeaturedCandidate, 0)
 	for _, r := range m.Edges.Rounds {
 		for _, clip := range r.Edges.HighlightClips {
-			if clip.Status != highlightclip.StatusSUCCEEDED {
+			if clip.Status != highlightclip.StatusAVAILABLE {
 				continue
 			}
 			if role != "" && clip.Role != role {

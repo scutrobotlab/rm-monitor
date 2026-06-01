@@ -46,7 +46,9 @@ def run_sample(source: Path, output_dir: Path, ocr_server_url: str) -> dict:
     round_json = json.loads(round_json_path.read_text(encoding="utf-8"))
     settlement = round_json.get("settlement", {}) or {}
     settlement_ocr = settlement.get("ocr") or {}
-    settlement_data = settlement_ocr.get("data", {})
+    settlement_data = {}
+    if settlement_ocr:
+        settlement_data = settlement_ocr.get("data", {})
     return {
         "sample": source.name,
         "status": round_json.get("analysis", {}).get("status", "UNKNOWN"),

@@ -12,10 +12,9 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/dialect/sql/sqljson"
 	"entgo.io/ent/schema/field"
+	"scutbot.cn/web/rm-monitor/ent/bilibilihighlightpublication"
 	"scutbot.cn/web/rm-monitor/ent/highlightclip"
-	"scutbot.cn/web/rm-monitor/ent/highlightpublishtask"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
-	"scutbot.cn/web/rm-monitor/ent/mediaartifact"
 	"scutbot.cn/web/rm-monitor/ent/predicate"
 )
 
@@ -116,47 +115,6 @@ func (_u *HighlightClipUpdate) AddPriority(v int) *HighlightClipUpdate {
 	return _u
 }
 
-// SetK8sJobName sets the "k8s_job_name" field.
-func (_u *HighlightClipUpdate) SetK8sJobName(v string) *HighlightClipUpdate {
-	_u.mutation.SetK8sJobName(v)
-	return _u
-}
-
-// SetNillableK8sJobName sets the "k8s_job_name" field if the given value is not nil.
-func (_u *HighlightClipUpdate) SetNillableK8sJobName(v *string) *HighlightClipUpdate {
-	if v != nil {
-		_u.SetK8sJobName(*v)
-	}
-	return _u
-}
-
-// ClearK8sJobName clears the value of the "k8s_job_name" field.
-func (_u *HighlightClipUpdate) ClearK8sJobName() *HighlightClipUpdate {
-	_u.mutation.ClearK8sJobName()
-	return _u
-}
-
-// SetAttempts sets the "attempts" field.
-func (_u *HighlightClipUpdate) SetAttempts(v int) *HighlightClipUpdate {
-	_u.mutation.ResetAttempts()
-	_u.mutation.SetAttempts(v)
-	return _u
-}
-
-// SetNillableAttempts sets the "attempts" field if the given value is not nil.
-func (_u *HighlightClipUpdate) SetNillableAttempts(v *int) *HighlightClipUpdate {
-	if v != nil {
-		_u.SetAttempts(*v)
-	}
-	return _u
-}
-
-// AddAttempts adds value to the "attempts" field.
-func (_u *HighlightClipUpdate) AddAttempts(v int) *HighlightClipUpdate {
-	_u.mutation.AddAttempts(v)
-	return _u
-}
-
 // SetStartSeconds sets the "start_seconds" field.
 func (_u *HighlightClipUpdate) SetStartSeconds(v float64) *HighlightClipUpdate {
 	_u.mutation.ResetStartSeconds()
@@ -217,6 +175,20 @@ func (_u *HighlightClipUpdate) SetNillablePeakSeconds(v *float64) *HighlightClip
 // AddPeakSeconds adds value to the "peak_seconds" field.
 func (_u *HighlightClipUpdate) AddPeakSeconds(v float64) *HighlightClipUpdate {
 	_u.mutation.AddPeakSeconds(v)
+	return _u
+}
+
+// SetSourcePath sets the "source_path" field.
+func (_u *HighlightClipUpdate) SetSourcePath(v string) *HighlightClipUpdate {
+	_u.mutation.SetSourcePath(v)
+	return _u
+}
+
+// SetNillableSourcePath sets the "source_path" field if the given value is not nil.
+func (_u *HighlightClipUpdate) SetNillableSourcePath(v *string) *HighlightClipUpdate {
+	if v != nil {
+		_u.SetSourcePath(*v)
+	}
 	return _u
 }
 
@@ -333,46 +305,6 @@ func (_u *HighlightClipUpdate) ClearModelPayload() *HighlightClipUpdate {
 	return _u
 }
 
-// SetErrorMessage sets the "error_message" field.
-func (_u *HighlightClipUpdate) SetErrorMessage(v string) *HighlightClipUpdate {
-	_u.mutation.SetErrorMessage(v)
-	return _u
-}
-
-// SetNillableErrorMessage sets the "error_message" field if the given value is not nil.
-func (_u *HighlightClipUpdate) SetNillableErrorMessage(v *string) *HighlightClipUpdate {
-	if v != nil {
-		_u.SetErrorMessage(*v)
-	}
-	return _u
-}
-
-// ClearErrorMessage clears the value of the "error_message" field.
-func (_u *HighlightClipUpdate) ClearErrorMessage() *HighlightClipUpdate {
-	_u.mutation.ClearErrorMessage()
-	return _u
-}
-
-// SetStartedAt sets the "started_at" field.
-func (_u *HighlightClipUpdate) SetStartedAt(v time.Time) *HighlightClipUpdate {
-	_u.mutation.SetStartedAt(v)
-	return _u
-}
-
-// SetNillableStartedAt sets the "started_at" field if the given value is not nil.
-func (_u *HighlightClipUpdate) SetNillableStartedAt(v *time.Time) *HighlightClipUpdate {
-	if v != nil {
-		_u.SetStartedAt(*v)
-	}
-	return _u
-}
-
-// ClearStartedAt clears the value of the "started_at" field.
-func (_u *HighlightClipUpdate) ClearStartedAt() *HighlightClipUpdate {
-	_u.mutation.ClearStartedAt()
-	return _u
-}
-
 // SetCompletedAt sets the "completed_at" field.
 func (_u *HighlightClipUpdate) SetCompletedAt(v time.Time) *HighlightClipUpdate {
 	_u.mutation.SetCompletedAt(v)
@@ -410,30 +342,19 @@ func (_u *HighlightClipUpdate) SetMatchRound(v *MatchRound) *HighlightClipUpdate
 	return _u.SetMatchRoundID(v.ID)
 }
 
-// SetSourceArtifactID sets the "source_artifact" edge to the MediaArtifact entity by ID.
-func (_u *HighlightClipUpdate) SetSourceArtifactID(id int) *HighlightClipUpdate {
-	_u.mutation.SetSourceArtifactID(id)
+// AddBilibiliPublicationIDs adds the "bilibili_publications" edge to the BilibiliHighlightPublication entity by IDs.
+func (_u *HighlightClipUpdate) AddBilibiliPublicationIDs(ids ...int) *HighlightClipUpdate {
+	_u.mutation.AddBilibiliPublicationIDs(ids...)
 	return _u
 }
 
-// SetSourceArtifact sets the "source_artifact" edge to the MediaArtifact entity.
-func (_u *HighlightClipUpdate) SetSourceArtifact(v *MediaArtifact) *HighlightClipUpdate {
-	return _u.SetSourceArtifactID(v.ID)
-}
-
-// AddPublishTaskIDs adds the "publish_tasks" edge to the HighlightPublishTask entity by IDs.
-func (_u *HighlightClipUpdate) AddPublishTaskIDs(ids ...int) *HighlightClipUpdate {
-	_u.mutation.AddPublishTaskIDs(ids...)
-	return _u
-}
-
-// AddPublishTasks adds the "publish_tasks" edges to the HighlightPublishTask entity.
-func (_u *HighlightClipUpdate) AddPublishTasks(v ...*HighlightPublishTask) *HighlightClipUpdate {
+// AddBilibiliPublications adds the "bilibili_publications" edges to the BilibiliHighlightPublication entity.
+func (_u *HighlightClipUpdate) AddBilibiliPublications(v ...*BilibiliHighlightPublication) *HighlightClipUpdate {
 	ids := make([]int, len(v))
 	for i := range v {
 		ids[i] = v[i].ID
 	}
-	return _u.AddPublishTaskIDs(ids...)
+	return _u.AddBilibiliPublicationIDs(ids...)
 }
 
 // Mutation returns the HighlightClipMutation object of the builder.
@@ -447,31 +368,25 @@ func (_u *HighlightClipUpdate) ClearMatchRound() *HighlightClipUpdate {
 	return _u
 }
 
-// ClearSourceArtifact clears the "source_artifact" edge to the MediaArtifact entity.
-func (_u *HighlightClipUpdate) ClearSourceArtifact() *HighlightClipUpdate {
-	_u.mutation.ClearSourceArtifact()
+// ClearBilibiliPublications clears all "bilibili_publications" edges to the BilibiliHighlightPublication entity.
+func (_u *HighlightClipUpdate) ClearBilibiliPublications() *HighlightClipUpdate {
+	_u.mutation.ClearBilibiliPublications()
 	return _u
 }
 
-// ClearPublishTasks clears all "publish_tasks" edges to the HighlightPublishTask entity.
-func (_u *HighlightClipUpdate) ClearPublishTasks() *HighlightClipUpdate {
-	_u.mutation.ClearPublishTasks()
+// RemoveBilibiliPublicationIDs removes the "bilibili_publications" edge to BilibiliHighlightPublication entities by IDs.
+func (_u *HighlightClipUpdate) RemoveBilibiliPublicationIDs(ids ...int) *HighlightClipUpdate {
+	_u.mutation.RemoveBilibiliPublicationIDs(ids...)
 	return _u
 }
 
-// RemovePublishTaskIDs removes the "publish_tasks" edge to HighlightPublishTask entities by IDs.
-func (_u *HighlightClipUpdate) RemovePublishTaskIDs(ids ...int) *HighlightClipUpdate {
-	_u.mutation.RemovePublishTaskIDs(ids...)
-	return _u
-}
-
-// RemovePublishTasks removes "publish_tasks" edges to HighlightPublishTask entities.
-func (_u *HighlightClipUpdate) RemovePublishTasks(v ...*HighlightPublishTask) *HighlightClipUpdate {
+// RemoveBilibiliPublications removes "bilibili_publications" edges to BilibiliHighlightPublication entities.
+func (_u *HighlightClipUpdate) RemoveBilibiliPublications(v ...*BilibiliHighlightPublication) *HighlightClipUpdate {
 	ids := make([]int, len(v))
 	for i := range v {
 		ids[i] = v[i].ID
 	}
-	return _u.RemovePublishTaskIDs(ids...)
+	return _u.RemoveBilibiliPublicationIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -520,9 +435,6 @@ func (_u *HighlightClipUpdate) check() error {
 	if _u.mutation.MatchRoundCleared() && len(_u.mutation.MatchRoundIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "HighlightClip.match_round"`)
 	}
-	if _u.mutation.SourceArtifactCleared() && len(_u.mutation.SourceArtifactIDs()) > 0 {
-		return errors.New(`ent: clearing a required unique edge "HighlightClip.source_artifact"`)
-	}
 	return nil
 }
 
@@ -559,18 +471,6 @@ func (_u *HighlightClipUpdate) sqlSave(ctx context.Context) (_node int, err erro
 	if value, ok := _u.mutation.AddedPriority(); ok {
 		_spec.AddField(highlightclip.FieldPriority, field.TypeInt, value)
 	}
-	if value, ok := _u.mutation.K8sJobName(); ok {
-		_spec.SetField(highlightclip.FieldK8sJobName, field.TypeString, value)
-	}
-	if _u.mutation.K8sJobNameCleared() {
-		_spec.ClearField(highlightclip.FieldK8sJobName, field.TypeString)
-	}
-	if value, ok := _u.mutation.Attempts(); ok {
-		_spec.SetField(highlightclip.FieldAttempts, field.TypeInt, value)
-	}
-	if value, ok := _u.mutation.AddedAttempts(); ok {
-		_spec.AddField(highlightclip.FieldAttempts, field.TypeInt, value)
-	}
 	if value, ok := _u.mutation.StartSeconds(); ok {
 		_spec.SetField(highlightclip.FieldStartSeconds, field.TypeFloat64, value)
 	}
@@ -588,6 +488,9 @@ func (_u *HighlightClipUpdate) sqlSave(ctx context.Context) (_node int, err erro
 	}
 	if value, ok := _u.mutation.AddedPeakSeconds(); ok {
 		_spec.AddField(highlightclip.FieldPeakSeconds, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.SourcePath(); ok {
+		_spec.SetField(highlightclip.FieldSourcePath, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.OutputDir(); ok {
 		_spec.SetField(highlightclip.FieldOutputDir, field.TypeString, value)
@@ -627,18 +530,6 @@ func (_u *HighlightClipUpdate) sqlSave(ctx context.Context) (_node int, err erro
 	if _u.mutation.ModelPayloadCleared() {
 		_spec.ClearField(highlightclip.FieldModelPayload, field.TypeString)
 	}
-	if value, ok := _u.mutation.ErrorMessage(); ok {
-		_spec.SetField(highlightclip.FieldErrorMessage, field.TypeString, value)
-	}
-	if _u.mutation.ErrorMessageCleared() {
-		_spec.ClearField(highlightclip.FieldErrorMessage, field.TypeString)
-	}
-	if value, ok := _u.mutation.StartedAt(); ok {
-		_spec.SetField(highlightclip.FieldStartedAt, field.TypeTime, value)
-	}
-	if _u.mutation.StartedAtCleared() {
-		_spec.ClearField(highlightclip.FieldStartedAt, field.TypeTime)
-	}
 	if value, ok := _u.mutation.CompletedAt(); ok {
 		_spec.SetField(highlightclip.FieldCompletedAt, field.TypeTime, value)
 	}
@@ -677,57 +568,28 @@ func (_u *HighlightClipUpdate) sqlSave(ctx context.Context) (_node int, err erro
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if _u.mutation.SourceArtifactCleared() {
+	if _u.mutation.BilibiliPublicationsCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   highlightclip.SourceArtifactTable,
-			Columns: []string{highlightclip.SourceArtifactColumn},
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   highlightclip.BilibiliPublicationsTable,
+			Columns: []string{highlightclip.BilibiliPublicationsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(mediaartifact.FieldID, field.TypeInt),
+				IDSpec: sqlgraph.NewFieldSpec(bilibilihighlightpublication.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := _u.mutation.SourceArtifactIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   highlightclip.SourceArtifactTable,
-			Columns: []string{highlightclip.SourceArtifactColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(mediaartifact.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if _u.mutation.PublishTasksCleared() {
+	if nodes := _u.mutation.RemovedBilibiliPublicationsIDs(); len(nodes) > 0 && !_u.mutation.BilibiliPublicationsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   highlightclip.PublishTasksTable,
-			Columns: []string{highlightclip.PublishTasksColumn},
+			Table:   highlightclip.BilibiliPublicationsTable,
+			Columns: []string{highlightclip.BilibiliPublicationsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(highlightpublishtask.FieldID, field.TypeInt),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.RemovedPublishTasksIDs(); len(nodes) > 0 && !_u.mutation.PublishTasksCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   highlightclip.PublishTasksTable,
-			Columns: []string{highlightclip.PublishTasksColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(highlightpublishtask.FieldID, field.TypeInt),
+				IDSpec: sqlgraph.NewFieldSpec(bilibilihighlightpublication.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -735,15 +597,15 @@ func (_u *HighlightClipUpdate) sqlSave(ctx context.Context) (_node int, err erro
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := _u.mutation.PublishTasksIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.BilibiliPublicationsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   highlightclip.PublishTasksTable,
-			Columns: []string{highlightclip.PublishTasksColumn},
+			Table:   highlightclip.BilibiliPublicationsTable,
+			Columns: []string{highlightclip.BilibiliPublicationsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(highlightpublishtask.FieldID, field.TypeInt),
+				IDSpec: sqlgraph.NewFieldSpec(bilibilihighlightpublication.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -855,47 +717,6 @@ func (_u *HighlightClipUpdateOne) AddPriority(v int) *HighlightClipUpdateOne {
 	return _u
 }
 
-// SetK8sJobName sets the "k8s_job_name" field.
-func (_u *HighlightClipUpdateOne) SetK8sJobName(v string) *HighlightClipUpdateOne {
-	_u.mutation.SetK8sJobName(v)
-	return _u
-}
-
-// SetNillableK8sJobName sets the "k8s_job_name" field if the given value is not nil.
-func (_u *HighlightClipUpdateOne) SetNillableK8sJobName(v *string) *HighlightClipUpdateOne {
-	if v != nil {
-		_u.SetK8sJobName(*v)
-	}
-	return _u
-}
-
-// ClearK8sJobName clears the value of the "k8s_job_name" field.
-func (_u *HighlightClipUpdateOne) ClearK8sJobName() *HighlightClipUpdateOne {
-	_u.mutation.ClearK8sJobName()
-	return _u
-}
-
-// SetAttempts sets the "attempts" field.
-func (_u *HighlightClipUpdateOne) SetAttempts(v int) *HighlightClipUpdateOne {
-	_u.mutation.ResetAttempts()
-	_u.mutation.SetAttempts(v)
-	return _u
-}
-
-// SetNillableAttempts sets the "attempts" field if the given value is not nil.
-func (_u *HighlightClipUpdateOne) SetNillableAttempts(v *int) *HighlightClipUpdateOne {
-	if v != nil {
-		_u.SetAttempts(*v)
-	}
-	return _u
-}
-
-// AddAttempts adds value to the "attempts" field.
-func (_u *HighlightClipUpdateOne) AddAttempts(v int) *HighlightClipUpdateOne {
-	_u.mutation.AddAttempts(v)
-	return _u
-}
-
 // SetStartSeconds sets the "start_seconds" field.
 func (_u *HighlightClipUpdateOne) SetStartSeconds(v float64) *HighlightClipUpdateOne {
 	_u.mutation.ResetStartSeconds()
@@ -956,6 +777,20 @@ func (_u *HighlightClipUpdateOne) SetNillablePeakSeconds(v *float64) *HighlightC
 // AddPeakSeconds adds value to the "peak_seconds" field.
 func (_u *HighlightClipUpdateOne) AddPeakSeconds(v float64) *HighlightClipUpdateOne {
 	_u.mutation.AddPeakSeconds(v)
+	return _u
+}
+
+// SetSourcePath sets the "source_path" field.
+func (_u *HighlightClipUpdateOne) SetSourcePath(v string) *HighlightClipUpdateOne {
+	_u.mutation.SetSourcePath(v)
+	return _u
+}
+
+// SetNillableSourcePath sets the "source_path" field if the given value is not nil.
+func (_u *HighlightClipUpdateOne) SetNillableSourcePath(v *string) *HighlightClipUpdateOne {
+	if v != nil {
+		_u.SetSourcePath(*v)
+	}
 	return _u
 }
 
@@ -1072,46 +907,6 @@ func (_u *HighlightClipUpdateOne) ClearModelPayload() *HighlightClipUpdateOne {
 	return _u
 }
 
-// SetErrorMessage sets the "error_message" field.
-func (_u *HighlightClipUpdateOne) SetErrorMessage(v string) *HighlightClipUpdateOne {
-	_u.mutation.SetErrorMessage(v)
-	return _u
-}
-
-// SetNillableErrorMessage sets the "error_message" field if the given value is not nil.
-func (_u *HighlightClipUpdateOne) SetNillableErrorMessage(v *string) *HighlightClipUpdateOne {
-	if v != nil {
-		_u.SetErrorMessage(*v)
-	}
-	return _u
-}
-
-// ClearErrorMessage clears the value of the "error_message" field.
-func (_u *HighlightClipUpdateOne) ClearErrorMessage() *HighlightClipUpdateOne {
-	_u.mutation.ClearErrorMessage()
-	return _u
-}
-
-// SetStartedAt sets the "started_at" field.
-func (_u *HighlightClipUpdateOne) SetStartedAt(v time.Time) *HighlightClipUpdateOne {
-	_u.mutation.SetStartedAt(v)
-	return _u
-}
-
-// SetNillableStartedAt sets the "started_at" field if the given value is not nil.
-func (_u *HighlightClipUpdateOne) SetNillableStartedAt(v *time.Time) *HighlightClipUpdateOne {
-	if v != nil {
-		_u.SetStartedAt(*v)
-	}
-	return _u
-}
-
-// ClearStartedAt clears the value of the "started_at" field.
-func (_u *HighlightClipUpdateOne) ClearStartedAt() *HighlightClipUpdateOne {
-	_u.mutation.ClearStartedAt()
-	return _u
-}
-
 // SetCompletedAt sets the "completed_at" field.
 func (_u *HighlightClipUpdateOne) SetCompletedAt(v time.Time) *HighlightClipUpdateOne {
 	_u.mutation.SetCompletedAt(v)
@@ -1149,30 +944,19 @@ func (_u *HighlightClipUpdateOne) SetMatchRound(v *MatchRound) *HighlightClipUpd
 	return _u.SetMatchRoundID(v.ID)
 }
 
-// SetSourceArtifactID sets the "source_artifact" edge to the MediaArtifact entity by ID.
-func (_u *HighlightClipUpdateOne) SetSourceArtifactID(id int) *HighlightClipUpdateOne {
-	_u.mutation.SetSourceArtifactID(id)
+// AddBilibiliPublicationIDs adds the "bilibili_publications" edge to the BilibiliHighlightPublication entity by IDs.
+func (_u *HighlightClipUpdateOne) AddBilibiliPublicationIDs(ids ...int) *HighlightClipUpdateOne {
+	_u.mutation.AddBilibiliPublicationIDs(ids...)
 	return _u
 }
 
-// SetSourceArtifact sets the "source_artifact" edge to the MediaArtifact entity.
-func (_u *HighlightClipUpdateOne) SetSourceArtifact(v *MediaArtifact) *HighlightClipUpdateOne {
-	return _u.SetSourceArtifactID(v.ID)
-}
-
-// AddPublishTaskIDs adds the "publish_tasks" edge to the HighlightPublishTask entity by IDs.
-func (_u *HighlightClipUpdateOne) AddPublishTaskIDs(ids ...int) *HighlightClipUpdateOne {
-	_u.mutation.AddPublishTaskIDs(ids...)
-	return _u
-}
-
-// AddPublishTasks adds the "publish_tasks" edges to the HighlightPublishTask entity.
-func (_u *HighlightClipUpdateOne) AddPublishTasks(v ...*HighlightPublishTask) *HighlightClipUpdateOne {
+// AddBilibiliPublications adds the "bilibili_publications" edges to the BilibiliHighlightPublication entity.
+func (_u *HighlightClipUpdateOne) AddBilibiliPublications(v ...*BilibiliHighlightPublication) *HighlightClipUpdateOne {
 	ids := make([]int, len(v))
 	for i := range v {
 		ids[i] = v[i].ID
 	}
-	return _u.AddPublishTaskIDs(ids...)
+	return _u.AddBilibiliPublicationIDs(ids...)
 }
 
 // Mutation returns the HighlightClipMutation object of the builder.
@@ -1186,31 +970,25 @@ func (_u *HighlightClipUpdateOne) ClearMatchRound() *HighlightClipUpdateOne {
 	return _u
 }
 
-// ClearSourceArtifact clears the "source_artifact" edge to the MediaArtifact entity.
-func (_u *HighlightClipUpdateOne) ClearSourceArtifact() *HighlightClipUpdateOne {
-	_u.mutation.ClearSourceArtifact()
+// ClearBilibiliPublications clears all "bilibili_publications" edges to the BilibiliHighlightPublication entity.
+func (_u *HighlightClipUpdateOne) ClearBilibiliPublications() *HighlightClipUpdateOne {
+	_u.mutation.ClearBilibiliPublications()
 	return _u
 }
 
-// ClearPublishTasks clears all "publish_tasks" edges to the HighlightPublishTask entity.
-func (_u *HighlightClipUpdateOne) ClearPublishTasks() *HighlightClipUpdateOne {
-	_u.mutation.ClearPublishTasks()
+// RemoveBilibiliPublicationIDs removes the "bilibili_publications" edge to BilibiliHighlightPublication entities by IDs.
+func (_u *HighlightClipUpdateOne) RemoveBilibiliPublicationIDs(ids ...int) *HighlightClipUpdateOne {
+	_u.mutation.RemoveBilibiliPublicationIDs(ids...)
 	return _u
 }
 
-// RemovePublishTaskIDs removes the "publish_tasks" edge to HighlightPublishTask entities by IDs.
-func (_u *HighlightClipUpdateOne) RemovePublishTaskIDs(ids ...int) *HighlightClipUpdateOne {
-	_u.mutation.RemovePublishTaskIDs(ids...)
-	return _u
-}
-
-// RemovePublishTasks removes "publish_tasks" edges to HighlightPublishTask entities.
-func (_u *HighlightClipUpdateOne) RemovePublishTasks(v ...*HighlightPublishTask) *HighlightClipUpdateOne {
+// RemoveBilibiliPublications removes "bilibili_publications" edges to BilibiliHighlightPublication entities.
+func (_u *HighlightClipUpdateOne) RemoveBilibiliPublications(v ...*BilibiliHighlightPublication) *HighlightClipUpdateOne {
 	ids := make([]int, len(v))
 	for i := range v {
 		ids[i] = v[i].ID
 	}
-	return _u.RemovePublishTaskIDs(ids...)
+	return _u.RemoveBilibiliPublicationIDs(ids...)
 }
 
 // Where appends a list predicates to the HighlightClipUpdate builder.
@@ -1272,9 +1050,6 @@ func (_u *HighlightClipUpdateOne) check() error {
 	if _u.mutation.MatchRoundCleared() && len(_u.mutation.MatchRoundIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "HighlightClip.match_round"`)
 	}
-	if _u.mutation.SourceArtifactCleared() && len(_u.mutation.SourceArtifactIDs()) > 0 {
-		return errors.New(`ent: clearing a required unique edge "HighlightClip.source_artifact"`)
-	}
 	return nil
 }
 
@@ -1328,18 +1103,6 @@ func (_u *HighlightClipUpdateOne) sqlSave(ctx context.Context) (_node *Highlight
 	if value, ok := _u.mutation.AddedPriority(); ok {
 		_spec.AddField(highlightclip.FieldPriority, field.TypeInt, value)
 	}
-	if value, ok := _u.mutation.K8sJobName(); ok {
-		_spec.SetField(highlightclip.FieldK8sJobName, field.TypeString, value)
-	}
-	if _u.mutation.K8sJobNameCleared() {
-		_spec.ClearField(highlightclip.FieldK8sJobName, field.TypeString)
-	}
-	if value, ok := _u.mutation.Attempts(); ok {
-		_spec.SetField(highlightclip.FieldAttempts, field.TypeInt, value)
-	}
-	if value, ok := _u.mutation.AddedAttempts(); ok {
-		_spec.AddField(highlightclip.FieldAttempts, field.TypeInt, value)
-	}
 	if value, ok := _u.mutation.StartSeconds(); ok {
 		_spec.SetField(highlightclip.FieldStartSeconds, field.TypeFloat64, value)
 	}
@@ -1357,6 +1120,9 @@ func (_u *HighlightClipUpdateOne) sqlSave(ctx context.Context) (_node *Highlight
 	}
 	if value, ok := _u.mutation.AddedPeakSeconds(); ok {
 		_spec.AddField(highlightclip.FieldPeakSeconds, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.SourcePath(); ok {
+		_spec.SetField(highlightclip.FieldSourcePath, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.OutputDir(); ok {
 		_spec.SetField(highlightclip.FieldOutputDir, field.TypeString, value)
@@ -1396,18 +1162,6 @@ func (_u *HighlightClipUpdateOne) sqlSave(ctx context.Context) (_node *Highlight
 	if _u.mutation.ModelPayloadCleared() {
 		_spec.ClearField(highlightclip.FieldModelPayload, field.TypeString)
 	}
-	if value, ok := _u.mutation.ErrorMessage(); ok {
-		_spec.SetField(highlightclip.FieldErrorMessage, field.TypeString, value)
-	}
-	if _u.mutation.ErrorMessageCleared() {
-		_spec.ClearField(highlightclip.FieldErrorMessage, field.TypeString)
-	}
-	if value, ok := _u.mutation.StartedAt(); ok {
-		_spec.SetField(highlightclip.FieldStartedAt, field.TypeTime, value)
-	}
-	if _u.mutation.StartedAtCleared() {
-		_spec.ClearField(highlightclip.FieldStartedAt, field.TypeTime)
-	}
 	if value, ok := _u.mutation.CompletedAt(); ok {
 		_spec.SetField(highlightclip.FieldCompletedAt, field.TypeTime, value)
 	}
@@ -1446,57 +1200,28 @@ func (_u *HighlightClipUpdateOne) sqlSave(ctx context.Context) (_node *Highlight
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if _u.mutation.SourceArtifactCleared() {
+	if _u.mutation.BilibiliPublicationsCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   highlightclip.SourceArtifactTable,
-			Columns: []string{highlightclip.SourceArtifactColumn},
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   highlightclip.BilibiliPublicationsTable,
+			Columns: []string{highlightclip.BilibiliPublicationsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(mediaartifact.FieldID, field.TypeInt),
+				IDSpec: sqlgraph.NewFieldSpec(bilibilihighlightpublication.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := _u.mutation.SourceArtifactIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   highlightclip.SourceArtifactTable,
-			Columns: []string{highlightclip.SourceArtifactColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(mediaartifact.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if _u.mutation.PublishTasksCleared() {
+	if nodes := _u.mutation.RemovedBilibiliPublicationsIDs(); len(nodes) > 0 && !_u.mutation.BilibiliPublicationsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   highlightclip.PublishTasksTable,
-			Columns: []string{highlightclip.PublishTasksColumn},
+			Table:   highlightclip.BilibiliPublicationsTable,
+			Columns: []string{highlightclip.BilibiliPublicationsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(highlightpublishtask.FieldID, field.TypeInt),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.RemovedPublishTasksIDs(); len(nodes) > 0 && !_u.mutation.PublishTasksCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   highlightclip.PublishTasksTable,
-			Columns: []string{highlightclip.PublishTasksColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(highlightpublishtask.FieldID, field.TypeInt),
+				IDSpec: sqlgraph.NewFieldSpec(bilibilihighlightpublication.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -1504,15 +1229,15 @@ func (_u *HighlightClipUpdateOne) sqlSave(ctx context.Context) (_node *Highlight
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := _u.mutation.PublishTasksIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.BilibiliPublicationsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   highlightclip.PublishTasksTable,
-			Columns: []string{highlightclip.PublishTasksColumn},
+			Table:   highlightclip.BilibiliPublicationsTable,
+			Columns: []string{highlightclip.BilibiliPublicationsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(highlightpublishtask.FieldID, field.TypeInt),
+				IDSpec: sqlgraph.NewFieldSpec(bilibilihighlightpublication.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

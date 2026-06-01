@@ -165,6 +165,7 @@
             {{- end }}
             {
                 "tag": "markdown",
+                "element_id": "match_report",
                 "content": "{{jsonText .Report}}",
                 "text_align": "left",
                 "text_size": "normal_v2",

@@ -130,10 +130,10 @@ async fn main() -> Result<()> {
         std::env::var("RM_MONITOR_JOB_CONTEXT").context("RM_MONITOR_JOB_CONTEXT is required")?;
     let ctx: HighlightContext =
         serde_json::from_str(&raw_context).context("parse highlight context")?;
-    let _ = reset_job_dir(&config, &ctx);
-    let _ = write_context(&config, &ctx, &raw_context);
+    let _ = reset_job_dir();
+    let _ = write_context(&raw_context);
     if let Err(err) = run(&config, &ctx).await {
-        let _ = write_error(&config, &ctx, &err.to_string());
+        let _ = write_error(&ctx, &err.to_string());
         return Err(err);
     }
     Ok(())
@@ -193,7 +193,7 @@ async fn run(config: &Config, ctx: &HighlightContext) -> Result<()> {
     let highlight_json = build_highlight_json(ctx, &model_payload, preview);
     atomic_write_json(&output_dir.join("highlight.json"), &highlight_json)?;
     atomic_write_json(
-        &job_dir(&base_dir, ctx)?.join("result.json"),
+        &PathBuf::from("/tmp/job").join("result.json"),
         &HighlightResult {
             highlight_clip_id: ctx.highlight_clip_id,
             output_dir: ctx.output_dir.clone(),
@@ -205,6 +205,22 @@ async fn run(config: &Config, ctx: &HighlightContext) -> Result<()> {
             completed_at: Utc::now(),
         },
     )?;
+    write_argo_outputs(&[
+        ("highlight_clip_id", ctx.highlight_clip_id.to_string()),
+        ("output_dir", ctx.output_dir.clone()),
+        ("video_path", format!("{}/video.mp4", ctx.output_dir)),
+        (
+            "video_artifact_path",
+            format!("{}/video-artifact.mp4", ctx.output_dir),
+        ),
+        (
+            "highlight_json_path",
+            format!("{}/highlight.json", ctx.output_dir),
+        ),
+        ("cover_path", format!("{}/cover.jpg", ctx.output_dir)),
+        ("preview_gif", format!("{}/preview.gif", ctx.output_dir)),
+        ("title", ctx.title.clone()),
+    ])?;
     Ok(())
 }
 
@@ -709,11 +725,9 @@ fn atomic_write(path: &Path, data: &[u8]) -> Result<()> {
     Ok(())
 }
 
-fn write_error(config: &Config, ctx: &HighlightContext, msg: &str) -> Result<()> {
-    let base_dir = Path::new(&config.record.base_dir);
-    let dir = job_dir(base_dir, ctx)?;
+fn write_error(ctx: &HighlightContext, msg: &str) -> Result<()> {
     atomic_write_json(
-        &dir.join("error.json"),
+        &PathBuf::from("/tmp/job").join("error.json"),
         &serde_json::json!({
             "status": "failed",
             "task_type": "highlight",
@@ -724,9 +738,8 @@ fn write_error(config: &Config, ctx: &HighlightContext, msg: &str) -> Result<()>
     )
 }
 
-fn reset_job_dir(config: &Config, ctx: &HighlightContext) -> Result<()> {
-    let base_dir = Path::new(&config.record.base_dir);
-    let dir = job_dir(base_dir, ctx)?;
+fn reset_job_dir() -> Result<()> {
+    let dir = PathBuf::from("/tmp/job");
     if dir.exists() {
         fs::remove_dir_all(&dir)?;
     }
@@ -734,17 +747,18 @@ fn reset_job_dir(config: &Config, ctx: &HighlightContext) -> Result<()> {
     Ok(())
 }
 
-fn write_context(config: &Config, ctx: &HighlightContext, raw_context: &str) -> Result<()> {
-    let base_dir = Path::new(&config.record.base_dir);
-    let dir = job_dir(base_dir, ctx)?;
+fn write_context(raw_context: &str) -> Result<()> {
     let parsed: Value = serde_json::from_str(raw_context)?;
-    atomic_write_json(&dir.join("context.json"), &parsed)
+    atomic_write_json(&PathBuf::from("/tmp/job").join("context.json"), &parsed)
 }
 
-fn job_dir(base_dir: &Path, ctx: &HighlightContext) -> Result<PathBuf> {
-    Ok(resolve_under(base_dir, &ctx.output_dir)?
-        .join(".job")
-        .join(format!("highlight-{}", ctx.highlight_clip_id)))
+fn write_argo_outputs(values: &[(&str, String)]) -> Result<()> {
+    let dir = PathBuf::from("/tmp/argo");
+    fs::create_dir_all(&dir).context("create argo output dir")?;
+    for (name, value) in values {
+        atomic_write(&dir.join(name), value.as_bytes())?;
+    }
+    Ok(())
 }
 
 #[cfg(test)]

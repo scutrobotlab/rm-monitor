@@ -17,6 +17,24 @@ type MonitorConf struct {
 	ScheduleURL string `json:",optional"`
 }
 
+type ArgoConf struct {
+	Enabled               bool   `json:",optional"`
+	Namespace             string `json:",optional"`
+	MatchWorkflowTemplate string `json:",optional"`
+	Kubeconfig            string `json:",optional"`
+}
+
+func (c *ArgoConf) WithDefaults() ArgoConf {
+	out := *c
+	if out.Namespace == "" {
+		out.Namespace = "rm-monitor"
+	}
+	if out.MatchWorkflowTemplate == "" {
+		out.MatchWorkflowTemplate = "rm-match-workflow"
+	}
+	return out
+}
+
 func (c *MonitorConf) WithDefaults() MonitorConf {
 	out := *c
 	if out.ScheduleURL == "" {
