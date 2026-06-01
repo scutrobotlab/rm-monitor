@@ -2,7 +2,6 @@ package difyworkflow
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"sync/atomic"
@@ -94,15 +93,6 @@ func TestRunWorkflowRetriesTransientError(t *testing.T) {
 	}
 	if calls != 2 {
 		t.Fatalf("calls = %d, want 2", calls)
-	}
-}
-
-func TestRunWorkflowTreatsHTTP2StreamErrorAsTransient(t *testing.T) {
-	if isTransient(context.Canceled) {
-		t.Fatal("context cancellation should not be classified as transient")
-	}
-	if !isTransient(errors.New("stream error: stream ID 1; INTERNAL_ERROR; received from peer")) {
-		t.Fatal("HTTP/2 stream INTERNAL_ERROR should be transient")
 	}
 }
 

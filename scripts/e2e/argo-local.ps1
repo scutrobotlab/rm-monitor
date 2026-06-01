@@ -555,7 +555,13 @@ do {
 
 Run "kubectl --context $context -n $namespace get wf $workflowName"
 if ($phase -ne "Succeeded") {
-  kubectl --context $context -n $namespace get wf $workflowName -o jsonpath='{range .status.nodes.*}{.displayName}{\"`t\"}{.phase}{\"`t\"}{.message}{\"`n\"}{end}'
+  $wf = kubectl --context $context -n $namespace get wf $workflowName -o json | ConvertFrom-Json
+  foreach ($nodeProp in $wf.status.nodes.PSObject.Properties) {
+    $node = $nodeProp.Value
+    if ($node.phase -in @("Failed", "Error", "Omitted")) {
+      Write-Host "$($node.displayName)`t$($node.phase)`t$($node.message)"
+    }
+  }
   throw "workflow phase is $phase"
 }
 
