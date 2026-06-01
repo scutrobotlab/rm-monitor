@@ -16,6 +16,8 @@ const (
 	FieldID = "id"
 	// FieldMessageID holds the string denoting the message_id field in the database.
 	FieldMessageID = "message_id"
+	// FieldChatID holds the string denoting the chat_id field in the database.
+	FieldChatID = "chat_id"
 	// FieldCardID holds the string denoting the card_id field in the database.
 	FieldCardID = "card_id"
 	// FieldCardPayload holds the string denoting the card_payload field in the database.
@@ -41,6 +43,7 @@ const (
 var Columns = []string{
 	FieldID,
 	FieldMessageID,
+	FieldChatID,
 	FieldCardID,
 	FieldCardPayload,
 	FieldCreatedAt,
@@ -88,6 +91,11 @@ func ByID(opts ...sql.OrderTermOption) OrderOption {
 // ByMessageID orders the results by the message_id field.
 func ByMessageID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldMessageID, opts...).ToFunc()
+}
+
+// ByChatID orders the results by the chat_id field.
+func ByChatID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldChatID, opts...).ToFunc()
 }
 
 // ByCardID orders the results by the card_id field.

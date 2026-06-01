@@ -1,0 +1,5 @@
+data/
+debug/
+ocr-daemon/
+__pycache__/
+*/__pycache__/

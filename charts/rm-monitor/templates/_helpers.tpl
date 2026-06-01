@@ -49,6 +49,13 @@ RedisConf:
   Type: {{ .Values.redis.type }}
 {{- end -}}
 
+{{- define "rm-monitor.argoConf" -}}
+ArgoConf:
+  Enabled: {{ .Values.argo.enabled }}
+  Namespace: {{ .Values.argo.namespace | default (include "rm-monitor.namespace" .) }}
+  MatchWorkflowTemplate: {{ .Values.argo.matchWorkflowTemplate | quote }}
+{{- end -}}
+
 {{- define "rm-monitor.recordConf" -}}
 RecordConf:
   Res: {{ .Values.record.res }}
@@ -60,9 +67,35 @@ RecordConf:
 {{ toYaml .Values.record.audioRoles | indent 4 }}
   RoleBlackList:
 {{ toYaml .Values.record.roleBlackList | indent 4 }}
+  StopDelaySeconds: {{ .Values.record.stopDelaySeconds }}
   {{- if .Values.stt.enabled }}
   STTRole: {{ .Values.stt.role | quote }}
   {{- end }}
+{{- end -}}
+
+{{- define "rm-monitor.analyzeConf" -}}
+AnalyzeConf:
+  Enabled: {{ .Values.analyze.enabled }}
+  Role: {{ .Values.analyze.role | quote }}
+  MaxConcurrentJobs: {{ .Values.analyze.maxConcurrentJobs }}
+  Scan:
+    FPS: {{ .Values.analyze.scan.fps }}
+    Width: {{ .Values.analyze.scan.width }}
+    Height: {{ .Values.analyze.scan.height }}
+    MaxStartScanSeconds: {{ .Values.analyze.scan.maxStartScanSeconds }}
+    MaxSettlementScanSeconds: {{ .Values.analyze.scan.maxSettlementScanSeconds }}
+    SettlementChunkSeconds: {{ .Values.analyze.scan.settlementChunkSeconds }}
+    MinSettlementSecond: {{ .Values.analyze.scan.minSettlementSecond }}
+    MinRoundSeconds: {{ .Values.analyze.scan.minRoundSeconds }}
+    SettlementTailSeconds: {{ .Values.analyze.scan.settlementTailSeconds }}
+    SettlementRefineWindowSeconds: {{ .Values.analyze.scan.settlementRefineWindowSeconds }}
+    SettlementRefineFPS: {{ .Values.analyze.scan.settlementRefineFPS }}
+{{- end -}}
+
+{{- define "rm-monitor.ocrServerConf" -}}
+OCRServerConf:
+  BaseURL: {{ if .Values.ocrServer.enabled }}{{ printf "http://ocr-server.%s.svc.cluster.local:%v" (include "rm-monitor.namespace" .) .Values.ocrServer.port }}{{ else }}""{{ end }}
+  TimeoutSeconds: {{ .Values.ocrServer.timeoutSeconds | default 30 }}
 {{- end -}}
 
 {{- define "rm-monitor.danmuConf" -}}
@@ -71,15 +104,6 @@ DanmuConf:
   AppID: {{ .Values.danmu.appId | quote }}
   AppKey: {{ .Values.danmu.appKey | quote }}
   VideoOffsetSeconds: {{ .Values.danmu.videoOffsetSeconds }}
-{{- end -}}
-
-{{- define "rm-monitor.ocrConf" -}}
-OCRConf:
-  Enabled: {{ .Values.ocr.enabled }}
-  Role: {{ .Values.ocr.role | quote }}
-  FrameInterval: {{ .Values.ocr.frameInterval }}
-  SimilarityThreshold: {{ .Values.ocr.similarityThreshold }}
-  MaxConcurrentJobs: {{ .Values.ocr.maxConcurrentJobs }}
 {{- end -}}
 
 {{- define "rm-monitor.highlightConf" -}}

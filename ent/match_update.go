@@ -224,6 +224,66 @@ func (_u *MatchUpdate) SetNillableLatestStatus(v *string) *MatchUpdate {
 	return _u
 }
 
+// SetWorkflowName sets the "workflow_name" field.
+func (_u *MatchUpdate) SetWorkflowName(v string) *MatchUpdate {
+	_u.mutation.SetWorkflowName(v)
+	return _u
+}
+
+// SetNillableWorkflowName sets the "workflow_name" field if the given value is not nil.
+func (_u *MatchUpdate) SetNillableWorkflowName(v *string) *MatchUpdate {
+	if v != nil {
+		_u.SetWorkflowName(*v)
+	}
+	return _u
+}
+
+// ClearWorkflowName clears the value of the "workflow_name" field.
+func (_u *MatchUpdate) ClearWorkflowName() *MatchUpdate {
+	_u.mutation.ClearWorkflowName()
+	return _u
+}
+
+// SetWorkflowUID sets the "workflow_uid" field.
+func (_u *MatchUpdate) SetWorkflowUID(v string) *MatchUpdate {
+	_u.mutation.SetWorkflowUID(v)
+	return _u
+}
+
+// SetNillableWorkflowUID sets the "workflow_uid" field if the given value is not nil.
+func (_u *MatchUpdate) SetNillableWorkflowUID(v *string) *MatchUpdate {
+	if v != nil {
+		_u.SetWorkflowUID(*v)
+	}
+	return _u
+}
+
+// ClearWorkflowUID clears the value of the "workflow_uid" field.
+func (_u *MatchUpdate) ClearWorkflowUID() *MatchUpdate {
+	_u.mutation.ClearWorkflowUID()
+	return _u
+}
+
+// SetWorkflowPhase sets the "workflow_phase" field.
+func (_u *MatchUpdate) SetWorkflowPhase(v string) *MatchUpdate {
+	_u.mutation.SetWorkflowPhase(v)
+	return _u
+}
+
+// SetNillableWorkflowPhase sets the "workflow_phase" field if the given value is not nil.
+func (_u *MatchUpdate) SetNillableWorkflowPhase(v *string) *MatchUpdate {
+	if v != nil {
+		_u.SetWorkflowPhase(*v)
+	}
+	return _u
+}
+
+// ClearWorkflowPhase clears the value of the "workflow_phase" field.
+func (_u *MatchUpdate) ClearWorkflowPhase() *MatchUpdate {
+	_u.mutation.ClearWorkflowPhase()
+	return _u
+}
+
 // SetReport sets the "report" field.
 func (_u *MatchUpdate) SetReport(v string) *MatchUpdate {
 	_u.mutation.SetReport(v)
@@ -475,6 +535,24 @@ func (_u *MatchUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.LatestStatus(); ok {
 		_spec.SetField(match.FieldLatestStatus, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.WorkflowName(); ok {
+		_spec.SetField(match.FieldWorkflowName, field.TypeString, value)
+	}
+	if _u.mutation.WorkflowNameCleared() {
+		_spec.ClearField(match.FieldWorkflowName, field.TypeString)
+	}
+	if value, ok := _u.mutation.WorkflowUID(); ok {
+		_spec.SetField(match.FieldWorkflowUID, field.TypeString, value)
+	}
+	if _u.mutation.WorkflowUIDCleared() {
+		_spec.ClearField(match.FieldWorkflowUID, field.TypeString)
+	}
+	if value, ok := _u.mutation.WorkflowPhase(); ok {
+		_spec.SetField(match.FieldWorkflowPhase, field.TypeString, value)
+	}
+	if _u.mutation.WorkflowPhaseCleared() {
+		_spec.ClearField(match.FieldWorkflowPhase, field.TypeString)
 	}
 	if value, ok := _u.mutation.Report(); ok {
 		_spec.SetField(match.FieldReport, field.TypeString, value)
@@ -846,6 +924,66 @@ func (_u *MatchUpdateOne) SetNillableLatestStatus(v *string) *MatchUpdateOne {
 	return _u
 }
 
+// SetWorkflowName sets the "workflow_name" field.
+func (_u *MatchUpdateOne) SetWorkflowName(v string) *MatchUpdateOne {
+	_u.mutation.SetWorkflowName(v)
+	return _u
+}
+
+// SetNillableWorkflowName sets the "workflow_name" field if the given value is not nil.
+func (_u *MatchUpdateOne) SetNillableWorkflowName(v *string) *MatchUpdateOne {
+	if v != nil {
+		_u.SetWorkflowName(*v)
+	}
+	return _u
+}
+
+// ClearWorkflowName clears the value of the "workflow_name" field.
+func (_u *MatchUpdateOne) ClearWorkflowName() *MatchUpdateOne {
+	_u.mutation.ClearWorkflowName()
+	return _u
+}
+
+// SetWorkflowUID sets the "workflow_uid" field.
+func (_u *MatchUpdateOne) SetWorkflowUID(v string) *MatchUpdateOne {
+	_u.mutation.SetWorkflowUID(v)
+	return _u
+}
+
+// SetNillableWorkflowUID sets the "workflow_uid" field if the given value is not nil.
+func (_u *MatchUpdateOne) SetNillableWorkflowUID(v *string) *MatchUpdateOne {
+	if v != nil {
+		_u.SetWorkflowUID(*v)
+	}
+	return _u
+}
+
+// ClearWorkflowUID clears the value of the "workflow_uid" field.
+func (_u *MatchUpdateOne) ClearWorkflowUID() *MatchUpdateOne {
+	_u.mutation.ClearWorkflowUID()
+	return _u
+}
+
+// SetWorkflowPhase sets the "workflow_phase" field.
+func (_u *MatchUpdateOne) SetWorkflowPhase(v string) *MatchUpdateOne {
+	_u.mutation.SetWorkflowPhase(v)
+	return _u
+}
+
+// SetNillableWorkflowPhase sets the "workflow_phase" field if the given value is not nil.
+func (_u *MatchUpdateOne) SetNillableWorkflowPhase(v *string) *MatchUpdateOne {
+	if v != nil {
+		_u.SetWorkflowPhase(*v)
+	}
+	return _u
+}
+
+// ClearWorkflowPhase clears the value of the "workflow_phase" field.
+func (_u *MatchUpdateOne) ClearWorkflowPhase() *MatchUpdateOne {
+	_u.mutation.ClearWorkflowPhase()
+	return _u
+}
+
 // SetReport sets the "report" field.
 func (_u *MatchUpdateOne) SetReport(v string) *MatchUpdateOne {
 	_u.mutation.SetReport(v)
@@ -1127,6 +1265,24 @@ func (_u *MatchUpdateOne) sqlSave(ctx context.Context) (_node *Match, err error)
 	}
 	if value, ok := _u.mutation.LatestStatus(); ok {
 		_spec.SetField(match.FieldLatestStatus, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.WorkflowName(); ok {
+		_spec.SetField(match.FieldWorkflowName, field.TypeString, value)
+	}
+	if _u.mutation.WorkflowNameCleared() {
+		_spec.ClearField(match.FieldWorkflowName, field.TypeString)
+	}
+	if value, ok := _u.mutation.WorkflowUID(); ok {
+		_spec.SetField(match.FieldWorkflowUID, field.TypeString, value)
+	}
+	if _u.mutation.WorkflowUIDCleared() {
+		_spec.ClearField(match.FieldWorkflowUID, field.TypeString)
+	}
+	if value, ok := _u.mutation.WorkflowPhase(); ok {
+		_spec.SetField(match.FieldWorkflowPhase, field.TypeString, value)
+	}
+	if _u.mutation.WorkflowPhaseCleared() {
+		_spec.ClearField(match.FieldWorkflowPhase, field.TypeString)
 	}
 	if value, ok := _u.mutation.Report(); ok {
 		_spec.SetField(match.FieldReport, field.TypeString, value)

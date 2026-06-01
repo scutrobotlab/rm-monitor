@@ -12,7 +12,7 @@ import (
 
 	"github.com/pkg/errors"
 	"scutbot.cn/web/rm-monitor/lark-notifier/internal/svc"
-	"scutbot.cn/web/rm-monitor/monitor/types"
+	"scutbot.cn/web/rm-monitor/match-controller/types"
 )
 
 //go:embed card.json.tpl
@@ -26,10 +26,11 @@ var matchCardTemplate = template.Must(template.New("match-card").
 	Parse(matchCardTemplateSource))
 
 type MatchRoundCard struct {
-	PanelID   string
-	ContentID string
-	Title     string
-	Content   string
+	PanelID            string
+	ContentID          string
+	Title              string
+	Content            string
+	SettlementImageKey string
 }
 
 type HighlightImage struct {

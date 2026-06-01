@@ -38,7 +38,7 @@ func main() {
 	redisClient := redisx.MustNew(c.RedisConf.WithDefaults())
 	defer redisClient.Close()
 
-	if err := logic.Run(ctx, client, redisClient, logic.CheckConfig{K8sJobConf: c.K8sJobConf}); err != nil {
+	if err := logic.Run(ctx, client, redisClient, logic.CheckConfig{ArgoConf: c.ArgoConf, K8sJobConf: c.K8sJobConf}); err != nil {
 		logx.Error(err)
 		os.Exit(1)
 	}

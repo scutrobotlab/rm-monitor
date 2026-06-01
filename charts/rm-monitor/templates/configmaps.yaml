@@ -14,14 +14,27 @@ data:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: monitor-config
+  name: match-controller-config
   namespace: {{ include "rm-monitor.namespace" . }}
 data:
   config.yml: |
     MonitorConf:
-      ScheduleURL: {{ .Values.monitor.scheduleURL }}
+      ScheduleURL: {{ .Values.controller.scheduleURL | quote }}
+{{ include "rm-monitor.argoConf" . | indent 4 }}
 {{ include "rm-monitor.postgresConf" . | indent 4 }}
 {{ include "rm-monitor.redisConf" . | indent 4 }}
+{{ include "rm-monitor.recordConf" . | indent 4 }}
+{{ include "rm-monitor.danmuConf" . | indent 4 }}
+{{ include "rm-monitor.analyzeConf" . | indent 4 }}
+{{ include "rm-monitor.highlightConf" . | indent 4 }}
+    UploadConf:
+      BitableAppToken: {{ .Values.upload.bitableAppToken | quote }}
+      Concurrency: {{ .Values.upload.concurrency }}
+      PartRetries: {{ .Values.upload.partRetries }}
+      RetryBackoff: {{ .Values.upload.retryBackoff }}
+      RateLimitPerMinute: {{ .Values.upload.rateLimitPerMinute }}
+    WhisperServerUrls:
+{{ toYaml .Values.stt.whisperServerUrls | nindent 6 }}
 {{ include "rm-monitor.priority" . | indent 4 }}
 ---
 apiVersion: v1
@@ -42,54 +55,7 @@ data:
       Concurrency: {{ .Values.upload.concurrency }}
       PartRetries: {{ .Values.upload.partRetries }}
       RetryBackoff: {{ .Values.upload.retryBackoff }}
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: record-dispatcher-config
-  namespace: {{ include "rm-monitor.namespace" . }}
-data:
-  config.yml: |
-{{ include "rm-monitor.postgresConf" . | indent 4 }}
-{{ include "rm-monitor.redisConf" . | indent 4 }}
-{{ include "rm-monitor.recordConf" . | indent 4 }}
-{{ include "rm-monitor.highlightConf" . | indent 4 }}
-    WhisperServerUrls:
-{{ toYaml .Values.stt.whisperServerUrls | nindent 6 }}
-    K8sJobConf:
-{{ include "rm-monitor.jobConf" (dict "root" . "component" "record-job" "configMapName" "record-job-config" "recordsPVC" .Values.storage.record.pvcName) | indent 6 }}
-    ManifestJobConf:
-{{ include "rm-monitor.jobConf" (dict "root" . "component" "manifest-job" "configMapName" "manifest-job-config" "recordsPVC" .Values.storage.shared.pvcName) | indent 6 }}
-    STTJobConf:
-{{- if .Values.stt.enabled }}
-{{ include "rm-monitor.jobConf" (dict "root" . "component" "stt-job" "configMapName" "stt-job-config" "recordsPVC" .Values.storage.record.pvcName) | indent 6 }}
-{{- else }}
-      Namespace: {{ include "rm-monitor.namespace" . }}
-      Image: ""
-      ConfigMapName: stt-job-config
-      ServiceAccountName: {{ .Values.serviceAccount.name }}
-      RecordsPVC: {{ .Values.storage.record.pvcName }}
-      RecordsMountPath: {{ .Values.jobs.recordsMountPath }}
-      ImagePullPolicy: {{ include "rm-monitor.jobImagePullPolicy" . }}
-      BackoffLimit: {{ .Values.jobs.backoffLimit }}
-      TTLSecondsAfterFinished: {{ .Values.jobs.ttlSecondsAfterFinished }}
-{{- end }}
-    DanmuJobConf:
-{{- if .Values.danmu.enabled }}
-{{ include "rm-monitor.jobConf" (dict "root" . "component" "danmu-job" "configMapName" "danmu-job-config" "recordsPVC" .Values.storage.record.pvcName) | indent 6 }}
-{{- else }}
-      Namespace: {{ include "rm-monitor.namespace" . }}
-      Image: ""
-      ConfigMapName: danmu-job-config
-      ServiceAccountName: {{ .Values.serviceAccount.name }}
-      RecordsPVC: {{ .Values.storage.record.pvcName }}
-      RecordsMountPath: {{ .Values.jobs.recordsMountPath }}
-      ImagePullPolicy: {{ include "rm-monitor.jobImagePullPolicy" . }}
-      BackoffLimit: {{ .Values.jobs.backoffLimit }}
-      TTLSecondsAfterFinished: {{ .Values.jobs.ttlSecondsAfterFinished }}
-{{- end }}
-{{ include "rm-monitor.danmuConf" . | indent 4 }}
-{{ include "rm-monitor.priority" . | indent 4 }}
+
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -98,6 +64,7 @@ metadata:
   namespace: {{ include "rm-monitor.namespace" . }}
 data:
   config.yml: |
+{{ include "rm-monitor.postgresConf" . | indent 4 }}
 {{ include "rm-monitor.recordConf" . | indent 4 }}
 ---
 apiVersion: v1
@@ -122,46 +89,19 @@ metadata:
   namespace: {{ include "rm-monitor.namespace" . }}
 data:
   config.yml: |
+{{ include "rm-monitor.postgresConf" . | indent 4 }}
 {{ include "rm-monitor.danmuConf" . | indent 4 }}
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: ocr-dispatcher-config
+  name: analyze-job-config
   namespace: {{ include "rm-monitor.namespace" . }}
 data:
   config.yml: |
-{{ include "rm-monitor.postgresConf" . | indent 4 }}
-{{ include "rm-monitor.ocrConf" . | indent 4 }}
-    K8sJobConf:
-{{ include "rm-monitor.jobConf" (dict "root" . "component" "ocr-job" "configMapName" "ocr-job-config" "recordsPVC" .Values.storage.record.pvcName) | indent 6 }}
-{{ include "rm-monitor.priority" . | indent 4 }}
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: ocr-job-config
-  namespace: {{ include "rm-monitor.namespace" . }}
-data:
-  config.yml: |
-{{ include "rm-monitor.ocrConf" . | indent 4 }}
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: highlight-dispatcher-config
-  namespace: {{ include "rm-monitor.namespace" . }}
-data:
-  config.yml: |
-{{ include "rm-monitor.postgresConf" . | indent 4 }}
-{{ include "rm-monitor.recordConf" . | indent 4 }}
-{{ include "rm-monitor.difyConf" . | indent 4 }}
-{{ include "rm-monitor.highlightConf" . | indent 4 }}
-{{ include "rm-monitor.publishConf" . | indent 4 }}
-    K8sJobConf:
-{{ include "rm-monitor.jobConf" (dict "root" . "component" "highlight-artifact-job" "configMapName" "highlight-artifact-job-config" "recordsPVC" .Values.storage.shared.pvcName) | indent 6 }}
-    BilibiliJobConf:
-{{ include "rm-monitor.jobConf" (dict "root" . "component" "highlight-publish-bilibili-job" "configMapName" "highlight-publish-bilibili-job-config" "recordsPVC" .Values.storage.shared.pvcName) | indent 6 }}
+{{ include "rm-monitor.analyzeConf" . | indent 4 }}
+{{ include "rm-monitor.ocrServerConf" . | indent 4 }}
+
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -176,10 +116,23 @@ data:
 apiVersion: v1
 kind: ConfigMap
 metadata:
+  name: highlight-job-config
+  namespace: {{ include "rm-monitor.namespace" . }}
+data:
+  config.yml: |
+{{ include "rm-monitor.postgresConf" . | indent 4 }}
+{{ include "rm-monitor.recordConf" . | indent 4 }}
+{{ include "rm-monitor.difyConf" . | indent 4 }}
+{{ include "rm-monitor.highlightConf" . | indent 4 }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
   name: highlight-publish-bilibili-job-config
   namespace: {{ include "rm-monitor.namespace" . }}
 data:
   config.yml: |
+{{ include "rm-monitor.postgresConf" . | indent 4 }}
 {{ include "rm-monitor.recordConf" . | indent 4 }}
 {{ include "rm-monitor.publishConf" . | indent 4 }}
 ---
@@ -196,60 +149,26 @@ data:
 {{ include "rm-monitor.difyConf" . | indent 4 }}
     ManifestConf:
       ReportWorkflowAPIKey: {{ .Values.manifest.reportWorkflowAPIKey | quote }}
+
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: uploader-dispatcher-config
+  name: lark-record-job-config
   namespace: {{ include "rm-monitor.namespace" . }}
 data:
   config.yml: |
+    LarkConf:
+      AppId: {{ .Values.lark.appId }}
+      AppSecret: {{ .Values.lark.appSecret }}
 {{ include "rm-monitor.postgresConf" . | indent 4 }}
 {{ include "rm-monitor.redisConf" . | indent 4 }}
-    LarkConf:
-      AppId: {{ .Values.lark.appId }}
-      AppSecret: {{ .Values.lark.appSecret }}
     UploadConf:
-      BitableAppToken: {{ .Values.upload.bitableAppToken }}
-      Concurrency: {{ .Values.upload.concurrency }}
-    K8sJobConf:
-{{ include "rm-monitor.jobConf" (dict "root" . "component" "uploader-job" "configMapName" "uploader-job-config" "recordsPVC" .Values.storage.shared.pvcName) | indent 6 }}
-{{ include "rm-monitor.priority" . | indent 4 }}
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: uploader-job-config
-  namespace: {{ include "rm-monitor.namespace" . }}
-data:
-  config.yml: |
-    LarkConf:
-      AppId: {{ .Values.lark.appId }}
-      AppSecret: {{ .Values.lark.appSecret }}
-{{ include "rm-monitor.redisConf" . | indent 4 }}
-    UploadConf:
+      BitableAppToken: {{ .Values.upload.bitableAppToken | quote }}
       PartRetries: {{ .Values.upload.partRetries }}
       RetryBackoff: {{ .Values.upload.retryBackoff }}
       RateLimitPerMinute: {{ .Values.upload.rateLimitPerMinute }}
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: transcode-dispatcher-config
-  namespace: {{ include "rm-monitor.namespace" . }}
-data:
-  config.yml: |
-{{ include "rm-monitor.postgresConf" . | indent 4 }}
-    TranscodeConf:
-      SourceRetentionDays: {{ .Values.transcode.sourceRetentionDays }}
-      MaxConcurrent: {{ .Values.transcode.maxConcurrent }}
-      CPURequest: {{ .Values.transcode.cpuRequest | quote }}
-      CPULimit: {{ .Values.transcode.cpuLimit | quote }}
-      MemoryRequest: {{ .Values.transcode.memoryRequest | quote }}
-      MemoryLimit: {{ .Values.transcode.memoryLimit | quote }}
-    K8sJobConf:
-{{ include "rm-monitor.jobConf" (dict "root" . "component" "transcode-job" "configMapName" "transcode-job-config" "recordsPVC" .Values.storage.shared.pvcName) | indent 6 }}
-{{ include "rm-monitor.priority" . | indent 4 }}
+
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -258,8 +177,19 @@ metadata:
   namespace: {{ include "rm-monitor.namespace" . }}
 data:
   config.yml: |
+    TranscodeConf:
+      SourceRetentionDays: {{ .Values.transcode.sourceRetentionDays }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: artifact-cleaner-config
+  namespace: {{ include "rm-monitor.namespace" . }}
+data:
+  config.yml: |
 {{ include "rm-monitor.postgresConf" . | indent 4 }}
     TranscodeConf:
+      BaseDir: {{ .Values.record.baseDir }}
       SourceRetentionDays: {{ .Values.transcode.sourceRetentionDays }}
 ---
 apiVersion: v1
@@ -271,6 +201,7 @@ data:
   config.yml: |
 {{ include "rm-monitor.postgresConf" . | indent 4 }}
 {{ include "rm-monitor.redisConf" . | indent 4 }}
+{{ include "rm-monitor.argoConf" . | indent 4 }}
     K8sJobConf:
       Namespace: {{ include "rm-monitor.namespace" . }}
       Image: {{ include "rm-monitor.image" (dict "root" . "component" "health-checker") }}
@@ -278,14 +209,3 @@ data:
       RecordsPVC: {{ .Values.storage.shared.pvcName }}
       RecordsMountPath: {{ .Values.jobs.recordsMountPath }}
       ImagePullPolicy: {{ include "rm-monitor.imagePullPolicy" . }}
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: artifact-cleaner-config
-  namespace: {{ include "rm-monitor.namespace" . }}
-data:
-  config.yml: |
-{{ include "rm-monitor.postgresConf" . | indent 4 }}
-    TranscodeConf:
-      SourceRetentionDays: {{ .Values.transcode.sourceRetentionDays }}

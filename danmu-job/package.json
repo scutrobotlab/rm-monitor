@@ -8,9 +8,11 @@
     "test": "npm run build && node --test dist/**/*.test.js"
   },
   "dependencies": {
+    "@types/pg": "^8.20.0",
     "@visactor/vchart": "^2.0.22",
     "canvas": "^3.2.3",
     "leancloud-realtime": "5.0.0-rc.8",
+    "pg": "^8.21.0",
     "xmlbuilder2": "^4.0.3",
     "yaml": "^2.8.2"
   },

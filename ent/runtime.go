@@ -5,94 +5,76 @@ package ent
 import (
 	"time"
 
+	"scutbot.cn/web/rm-monitor/ent/bilibilihighlightpublication"
 	"scutbot.cn/web/rm-monitor/ent/highlightclip"
-	"scutbot.cn/web/rm-monitor/ent/highlightpublishtask"
-	"scutbot.cn/web/rm-monitor/ent/highlightroundstate"
+	"scutbot.cn/web/rm-monitor/ent/larkbitablerecord"
 	"scutbot.cn/web/rm-monitor/ent/larkmessage"
 	"scutbot.cn/web/rm-monitor/ent/match"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
-	"scutbot.cn/web/rm-monitor/ent/mediaartifact"
-	"scutbot.cn/web/rm-monitor/ent/ocrtask"
-	"scutbot.cn/web/rm-monitor/ent/recordtask"
 	"scutbot.cn/web/rm-monitor/ent/schema"
-	"scutbot.cn/web/rm-monitor/ent/stttask"
 	"scutbot.cn/web/rm-monitor/ent/team"
-	"scutbot.cn/web/rm-monitor/ent/transcodetask"
-	"scutbot.cn/web/rm-monitor/ent/uploadtask"
 )
 
 // The init function reads all schema descriptors with runtime code
 // (default values, validators, hooks and policies) and stitches it
 // to their package variables.
 func init() {
+	bilibilihighlightpublicationFields := schema.BilibiliHighlightPublication{}.Fields()
+	_ = bilibilihighlightpublicationFields
+	// bilibilihighlightpublicationDescCreatedAt is the schema descriptor for created_at field.
+	bilibilihighlightpublicationDescCreatedAt := bilibilihighlightpublicationFields[5].Descriptor()
+	// bilibilihighlightpublication.DefaultCreatedAt holds the default value on creation for the created_at field.
+	bilibilihighlightpublication.DefaultCreatedAt = bilibilihighlightpublicationDescCreatedAt.Default.(func() time.Time)
+	// bilibilihighlightpublicationDescUpdatedAt is the schema descriptor for updated_at field.
+	bilibilihighlightpublicationDescUpdatedAt := bilibilihighlightpublicationFields[6].Descriptor()
+	// bilibilihighlightpublication.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	bilibilihighlightpublication.DefaultUpdatedAt = bilibilihighlightpublicationDescUpdatedAt.Default.(func() time.Time)
+	// bilibilihighlightpublication.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	bilibilihighlightpublication.UpdateDefaultUpdatedAt = bilibilihighlightpublicationDescUpdatedAt.UpdateDefault.(func() time.Time)
 	highlightclipFields := schema.HighlightClip{}.Fields()
 	_ = highlightclipFields
 	// highlightclipDescPriority is the schema descriptor for priority field.
 	highlightclipDescPriority := highlightclipFields[4].Descriptor()
 	// highlightclip.DefaultPriority holds the default value on creation for the priority field.
 	highlightclip.DefaultPriority = highlightclipDescPriority.Default.(int)
-	// highlightclipDescAttempts is the schema descriptor for attempts field.
-	highlightclipDescAttempts := highlightclipFields[6].Descriptor()
-	// highlightclip.DefaultAttempts holds the default value on creation for the attempts field.
-	highlightclip.DefaultAttempts = highlightclipDescAttempts.Default.(int)
 	// highlightclipDescScore is the schema descriptor for score field.
-	highlightclipDescScore := highlightclipFields[14].Descriptor()
+	highlightclipDescScore := highlightclipFields[13].Descriptor()
 	// highlightclip.DefaultScore holds the default value on creation for the score field.
 	highlightclip.DefaultScore = highlightclipDescScore.Default.(float64)
 	// highlightclipDescCreatedAt is the schema descriptor for created_at field.
-	highlightclipDescCreatedAt := highlightclipFields[19].Descriptor()
+	highlightclipDescCreatedAt := highlightclipFields[16].Descriptor()
 	// highlightclip.DefaultCreatedAt holds the default value on creation for the created_at field.
 	highlightclip.DefaultCreatedAt = highlightclipDescCreatedAt.Default.(func() time.Time)
 	// highlightclipDescUpdatedAt is the schema descriptor for updated_at field.
-	highlightclipDescUpdatedAt := highlightclipFields[20].Descriptor()
+	highlightclipDescUpdatedAt := highlightclipFields[17].Descriptor()
 	// highlightclip.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	highlightclip.DefaultUpdatedAt = highlightclipDescUpdatedAt.Default.(func() time.Time)
 	// highlightclip.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	highlightclip.UpdateDefaultUpdatedAt = highlightclipDescUpdatedAt.UpdateDefault.(func() time.Time)
-	highlightpublishtaskFields := schema.HighlightPublishTask{}.Fields()
-	_ = highlightpublishtaskFields
-	// highlightpublishtaskDescPriority is the schema descriptor for priority field.
-	highlightpublishtaskDescPriority := highlightpublishtaskFields[2].Descriptor()
-	// highlightpublishtask.DefaultPriority holds the default value on creation for the priority field.
-	highlightpublishtask.DefaultPriority = highlightpublishtaskDescPriority.Default.(int)
-	// highlightpublishtaskDescAttempts is the schema descriptor for attempts field.
-	highlightpublishtaskDescAttempts := highlightpublishtaskFields[4].Descriptor()
-	// highlightpublishtask.DefaultAttempts holds the default value on creation for the attempts field.
-	highlightpublishtask.DefaultAttempts = highlightpublishtaskDescAttempts.Default.(int)
-	// highlightpublishtaskDescCreatedAt is the schema descriptor for created_at field.
-	highlightpublishtaskDescCreatedAt := highlightpublishtaskFields[10].Descriptor()
-	// highlightpublishtask.DefaultCreatedAt holds the default value on creation for the created_at field.
-	highlightpublishtask.DefaultCreatedAt = highlightpublishtaskDescCreatedAt.Default.(func() time.Time)
-	// highlightpublishtaskDescUpdatedAt is the schema descriptor for updated_at field.
-	highlightpublishtaskDescUpdatedAt := highlightpublishtaskFields[11].Descriptor()
-	// highlightpublishtask.DefaultUpdatedAt holds the default value on creation for the updated_at field.
-	highlightpublishtask.DefaultUpdatedAt = highlightpublishtaskDescUpdatedAt.Default.(func() time.Time)
-	// highlightpublishtask.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
-	highlightpublishtask.UpdateDefaultUpdatedAt = highlightpublishtaskDescUpdatedAt.UpdateDefault.(func() time.Time)
-	highlightroundstateFields := schema.HighlightRoundState{}.Fields()
-	_ = highlightroundstateFields
-	// highlightroundstateDescCandidateCount is the schema descriptor for candidate_count field.
-	highlightroundstateDescCandidateCount := highlightroundstateFields[3].Descriptor()
-	// highlightroundstate.DefaultCandidateCount holds the default value on creation for the candidate_count field.
-	highlightroundstate.DefaultCandidateCount = highlightroundstateDescCandidateCount.Default.(int)
-	// highlightroundstateDescCreatedAt is the schema descriptor for created_at field.
-	highlightroundstateDescCreatedAt := highlightroundstateFields[5].Descriptor()
-	// highlightroundstate.DefaultCreatedAt holds the default value on creation for the created_at field.
-	highlightroundstate.DefaultCreatedAt = highlightroundstateDescCreatedAt.Default.(func() time.Time)
-	// highlightroundstateDescUpdatedAt is the schema descriptor for updated_at field.
-	highlightroundstateDescUpdatedAt := highlightroundstateFields[6].Descriptor()
-	// highlightroundstate.DefaultUpdatedAt holds the default value on creation for the updated_at field.
-	highlightroundstate.DefaultUpdatedAt = highlightroundstateDescUpdatedAt.Default.(func() time.Time)
-	// highlightroundstate.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
-	highlightroundstate.UpdateDefaultUpdatedAt = highlightroundstateDescUpdatedAt.UpdateDefault.(func() time.Time)
+	larkbitablerecordFields := schema.LarkBitableRecord{}.Fields()
+	_ = larkbitablerecordFields
+	// larkbitablerecordDescFileSize is the schema descriptor for file_size field.
+	larkbitablerecordDescFileSize := larkbitablerecordFields[7].Descriptor()
+	// larkbitablerecord.DefaultFileSize holds the default value on creation for the file_size field.
+	larkbitablerecord.DefaultFileSize = larkbitablerecordDescFileSize.Default.(int64)
+	// larkbitablerecordDescCreatedAt is the schema descriptor for created_at field.
+	larkbitablerecordDescCreatedAt := larkbitablerecordFields[9].Descriptor()
+	// larkbitablerecord.DefaultCreatedAt holds the default value on creation for the created_at field.
+	larkbitablerecord.DefaultCreatedAt = larkbitablerecordDescCreatedAt.Default.(func() time.Time)
+	// larkbitablerecordDescUpdatedAt is the schema descriptor for updated_at field.
+	larkbitablerecordDescUpdatedAt := larkbitablerecordFields[10].Descriptor()
+	// larkbitablerecord.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	larkbitablerecord.DefaultUpdatedAt = larkbitablerecordDescUpdatedAt.Default.(func() time.Time)
+	// larkbitablerecord.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	larkbitablerecord.UpdateDefaultUpdatedAt = larkbitablerecordDescUpdatedAt.UpdateDefault.(func() time.Time)
 	larkmessageFields := schema.LarkMessage{}.Fields()
 	_ = larkmessageFields
 	// larkmessageDescCreatedAt is the schema descriptor for created_at field.
-	larkmessageDescCreatedAt := larkmessageFields[3].Descriptor()
+	larkmessageDescCreatedAt := larkmessageFields[4].Descriptor()
 	// larkmessage.DefaultCreatedAt holds the default value on creation for the created_at field.
 	larkmessage.DefaultCreatedAt = larkmessageDescCreatedAt.Default.(func() time.Time)
 	// larkmessageDescUpdatedAt is the schema descriptor for updated_at field.
-	larkmessageDescUpdatedAt := larkmessageFields[4].Descriptor()
+	larkmessageDescUpdatedAt := larkmessageFields[5].Descriptor()
 	// larkmessage.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	larkmessage.DefaultUpdatedAt = larkmessageDescUpdatedAt.Default.(func() time.Time)
 	// larkmessage.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
@@ -116,11 +98,11 @@ func init() {
 	// match.DefaultLatestStatus holds the default value on creation for the latest_status field.
 	match.DefaultLatestStatus = matchDescLatestStatus.Default.(string)
 	// matchDescCreatedAt is the schema descriptor for created_at field.
-	matchDescCreatedAt := matchFields[13].Descriptor()
+	matchDescCreatedAt := matchFields[16].Descriptor()
 	// match.DefaultCreatedAt holds the default value on creation for the created_at field.
 	match.DefaultCreatedAt = matchDescCreatedAt.Default.(func() time.Time)
 	// matchDescUpdatedAt is the schema descriptor for updated_at field.
-	matchDescUpdatedAt := matchFields[14].Descriptor()
+	matchDescUpdatedAt := matchFields[17].Descriptor()
 	// match.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	match.DefaultUpdatedAt = matchDescUpdatedAt.Default.(func() time.Time)
 	// match.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
@@ -128,91 +110,19 @@ func init() {
 	matchroundFields := schema.MatchRound{}.Fields()
 	_ = matchroundFields
 	// matchroundDescStartedAt is the schema descriptor for started_at field.
-	matchroundDescStartedAt := matchroundFields[3].Descriptor()
+	matchroundDescStartedAt := matchroundFields[6].Descriptor()
 	// matchround.DefaultStartedAt holds the default value on creation for the started_at field.
 	matchround.DefaultStartedAt = matchroundDescStartedAt.Default.(func() time.Time)
 	// matchroundDescCreatedAt is the schema descriptor for created_at field.
-	matchroundDescCreatedAt := matchroundFields[5].Descriptor()
+	matchroundDescCreatedAt := matchroundFields[8].Descriptor()
 	// matchround.DefaultCreatedAt holds the default value on creation for the created_at field.
 	matchround.DefaultCreatedAt = matchroundDescCreatedAt.Default.(func() time.Time)
 	// matchroundDescUpdatedAt is the schema descriptor for updated_at field.
-	matchroundDescUpdatedAt := matchroundFields[6].Descriptor()
+	matchroundDescUpdatedAt := matchroundFields[9].Descriptor()
 	// matchround.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	matchround.DefaultUpdatedAt = matchroundDescUpdatedAt.Default.(func() time.Time)
 	// matchround.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	matchround.UpdateDefaultUpdatedAt = matchroundDescUpdatedAt.UpdateDefault.(func() time.Time)
-	mediaartifactFields := schema.MediaArtifact{}.Fields()
-	_ = mediaartifactFields
-	// mediaartifactDescCreatedAt is the schema descriptor for created_at field.
-	mediaartifactDescCreatedAt := mediaartifactFields[9].Descriptor()
-	// mediaartifact.DefaultCreatedAt holds the default value on creation for the created_at field.
-	mediaartifact.DefaultCreatedAt = mediaartifactDescCreatedAt.Default.(func() time.Time)
-	// mediaartifactDescUpdatedAt is the schema descriptor for updated_at field.
-	mediaartifactDescUpdatedAt := mediaartifactFields[10].Descriptor()
-	// mediaartifact.DefaultUpdatedAt holds the default value on creation for the updated_at field.
-	mediaartifact.DefaultUpdatedAt = mediaartifactDescUpdatedAt.Default.(func() time.Time)
-	// mediaartifact.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
-	mediaartifact.UpdateDefaultUpdatedAt = mediaartifactDescUpdatedAt.UpdateDefault.(func() time.Time)
-	ocrtaskFields := schema.OCRTask{}.Fields()
-	_ = ocrtaskFields
-	// ocrtaskDescPriority is the schema descriptor for priority field.
-	ocrtaskDescPriority := ocrtaskFields[2].Descriptor()
-	// ocrtask.DefaultPriority holds the default value on creation for the priority field.
-	ocrtask.DefaultPriority = ocrtaskDescPriority.Default.(int)
-	// ocrtaskDescAttempts is the schema descriptor for attempts field.
-	ocrtaskDescAttempts := ocrtaskFields[4].Descriptor()
-	// ocrtask.DefaultAttempts holds the default value on creation for the attempts field.
-	ocrtask.DefaultAttempts = ocrtaskDescAttempts.Default.(int)
-	// ocrtaskDescCreatedAt is the schema descriptor for created_at field.
-	ocrtaskDescCreatedAt := ocrtaskFields[10].Descriptor()
-	// ocrtask.DefaultCreatedAt holds the default value on creation for the created_at field.
-	ocrtask.DefaultCreatedAt = ocrtaskDescCreatedAt.Default.(func() time.Time)
-	// ocrtaskDescUpdatedAt is the schema descriptor for updated_at field.
-	ocrtaskDescUpdatedAt := ocrtaskFields[11].Descriptor()
-	// ocrtask.DefaultUpdatedAt holds the default value on creation for the updated_at field.
-	ocrtask.DefaultUpdatedAt = ocrtaskDescUpdatedAt.Default.(func() time.Time)
-	// ocrtask.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
-	ocrtask.UpdateDefaultUpdatedAt = ocrtaskDescUpdatedAt.UpdateDefault.(func() time.Time)
-	recordtaskFields := schema.RecordTask{}.Fields()
-	_ = recordtaskFields
-	// recordtaskDescAttempts is the schema descriptor for attempts field.
-	recordtaskDescAttempts := recordtaskFields[5].Descriptor()
-	// recordtask.DefaultAttempts holds the default value on creation for the attempts field.
-	recordtask.DefaultAttempts = recordtaskDescAttempts.Default.(int)
-	// recordtaskDescPriority is the schema descriptor for priority field.
-	recordtaskDescPriority := recordtaskFields[6].Descriptor()
-	// recordtask.DefaultPriority holds the default value on creation for the priority field.
-	recordtask.DefaultPriority = recordtaskDescPriority.Default.(int)
-	// recordtaskDescCreatedAt is the schema descriptor for created_at field.
-	recordtaskDescCreatedAt := recordtaskFields[12].Descriptor()
-	// recordtask.DefaultCreatedAt holds the default value on creation for the created_at field.
-	recordtask.DefaultCreatedAt = recordtaskDescCreatedAt.Default.(func() time.Time)
-	// recordtaskDescUpdatedAt is the schema descriptor for updated_at field.
-	recordtaskDescUpdatedAt := recordtaskFields[13].Descriptor()
-	// recordtask.DefaultUpdatedAt holds the default value on creation for the updated_at field.
-	recordtask.DefaultUpdatedAt = recordtaskDescUpdatedAt.Default.(func() time.Time)
-	// recordtask.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
-	recordtask.UpdateDefaultUpdatedAt = recordtaskDescUpdatedAt.UpdateDefault.(func() time.Time)
-	stttaskFields := schema.STTTask{}.Fields()
-	_ = stttaskFields
-	// stttaskDescPriority is the schema descriptor for priority field.
-	stttaskDescPriority := stttaskFields[2].Descriptor()
-	// stttask.DefaultPriority holds the default value on creation for the priority field.
-	stttask.DefaultPriority = stttaskDescPriority.Default.(int)
-	// stttaskDescAttempts is the schema descriptor for attempts field.
-	stttaskDescAttempts := stttaskFields[4].Descriptor()
-	// stttask.DefaultAttempts holds the default value on creation for the attempts field.
-	stttask.DefaultAttempts = stttaskDescAttempts.Default.(int)
-	// stttaskDescCreatedAt is the schema descriptor for created_at field.
-	stttaskDescCreatedAt := stttaskFields[10].Descriptor()
-	// stttask.DefaultCreatedAt holds the default value on creation for the created_at field.
-	stttask.DefaultCreatedAt = stttaskDescCreatedAt.Default.(func() time.Time)
-	// stttaskDescUpdatedAt is the schema descriptor for updated_at field.
-	stttaskDescUpdatedAt := stttaskFields[11].Descriptor()
-	// stttask.DefaultUpdatedAt holds the default value on creation for the updated_at field.
-	stttask.DefaultUpdatedAt = stttaskDescUpdatedAt.Default.(func() time.Time)
-	// stttask.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
-	stttask.UpdateDefaultUpdatedAt = stttaskDescUpdatedAt.UpdateDefault.(func() time.Time)
 	teamFields := schema.Team{}.Fields()
 	_ = teamFields
 	// teamDescName is the schema descriptor for name field.
@@ -237,44 +147,4 @@ func init() {
 	team.DefaultUpdatedAt = teamDescUpdatedAt.Default.(func() time.Time)
 	// team.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	team.UpdateDefaultUpdatedAt = teamDescUpdatedAt.UpdateDefault.(func() time.Time)
-	transcodetaskFields := schema.TranscodeTask{}.Fields()
-	_ = transcodetaskFields
-	// transcodetaskDescAttempts is the schema descriptor for attempts field.
-	transcodetaskDescAttempts := transcodetaskFields[2].Descriptor()
-	// transcodetask.DefaultAttempts holds the default value on creation for the attempts field.
-	transcodetask.DefaultAttempts = transcodetaskDescAttempts.Default.(int)
-	// transcodetaskDescPriority is the schema descriptor for priority field.
-	transcodetaskDescPriority := transcodetaskFields[3].Descriptor()
-	// transcodetask.DefaultPriority holds the default value on creation for the priority field.
-	transcodetask.DefaultPriority = transcodetaskDescPriority.Default.(int)
-	// transcodetaskDescCreatedAt is the schema descriptor for created_at field.
-	transcodetaskDescCreatedAt := transcodetaskFields[7].Descriptor()
-	// transcodetask.DefaultCreatedAt holds the default value on creation for the created_at field.
-	transcodetask.DefaultCreatedAt = transcodetaskDescCreatedAt.Default.(func() time.Time)
-	// transcodetaskDescUpdatedAt is the schema descriptor for updated_at field.
-	transcodetaskDescUpdatedAt := transcodetaskFields[8].Descriptor()
-	// transcodetask.DefaultUpdatedAt holds the default value on creation for the updated_at field.
-	transcodetask.DefaultUpdatedAt = transcodetaskDescUpdatedAt.Default.(func() time.Time)
-	// transcodetask.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
-	transcodetask.UpdateDefaultUpdatedAt = transcodetaskDescUpdatedAt.UpdateDefault.(func() time.Time)
-	uploadtaskFields := schema.UploadTask{}.Fields()
-	_ = uploadtaskFields
-	// uploadtaskDescAttempts is the schema descriptor for attempts field.
-	uploadtaskDescAttempts := uploadtaskFields[3].Descriptor()
-	// uploadtask.DefaultAttempts holds the default value on creation for the attempts field.
-	uploadtask.DefaultAttempts = uploadtaskDescAttempts.Default.(int)
-	// uploadtaskDescPriority is the schema descriptor for priority field.
-	uploadtaskDescPriority := uploadtaskFields[4].Descriptor()
-	// uploadtask.DefaultPriority holds the default value on creation for the priority field.
-	uploadtask.DefaultPriority = uploadtaskDescPriority.Default.(int)
-	// uploadtaskDescCreatedAt is the schema descriptor for created_at field.
-	uploadtaskDescCreatedAt := uploadtaskFields[13].Descriptor()
-	// uploadtask.DefaultCreatedAt holds the default value on creation for the created_at field.
-	uploadtask.DefaultCreatedAt = uploadtaskDescCreatedAt.Default.(func() time.Time)
-	// uploadtaskDescUpdatedAt is the schema descriptor for updated_at field.
-	uploadtaskDescUpdatedAt := uploadtaskFields[14].Descriptor()
-	// uploadtask.DefaultUpdatedAt holds the default value on creation for the updated_at field.
-	uploadtask.DefaultUpdatedAt = uploadtaskDescUpdatedAt.Default.(func() time.Time)
-	// uploadtask.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
-	uploadtask.UpdateDefaultUpdatedAt = uploadtaskDescUpdatedAt.UpdateDefault.(func() time.Time)
 }

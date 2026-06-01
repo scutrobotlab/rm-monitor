@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import { setTimeout as sleep } from "node:timers/promises";
 import path from "node:path";
+import { Client as PgClient } from "pg";
 import { danmuConfWithDefaults, loadConfig } from "./config.js";
 import { DanmuStats, statsBucketSeconds } from "./stats.js";
 import { BilibiliXMLWriter, type DanmuMessage } from "./xml.js";
@@ -10,7 +11,7 @@ const historyLimit = 80;
 const leancloudConnectTimeoutMs = 10000;
 const leancloudHistoryTimeoutMs = 10000;
 const leancloudOnlineCountTimeoutMs = 5000;
-const outputFileName = "主视角.danmuku.xml";
+const outputFileName = "主视角.raw.danmuku.xml";
 const recordMetaFileName = "record-meta.json";
 
 type RoundInfo = {
@@ -30,7 +31,7 @@ type DanmuJobContext = {
 
 type RecordMeta = {
   schema: string;
-  record_task_id: number;
+  match_round_id: number;
   role: string;
   source_url: string;
   output_path: string;
@@ -71,6 +72,7 @@ const chatRoomID = String(jobContext.chat_room_id || "").trim();
 
 const config = loadConfig(configFile);
 const danmuConf = danmuConfWithDefaults(config.DanmuConf);
+const postgresDSN = String(config.PostgresConf?.DSN || "").trim();
 
 if (!danmuConf.Enabled) {
   process.exit(0);
@@ -163,7 +165,7 @@ async function run() {
   stopSampling();
   const finalRound = { ...round, endedAt: new Date() };
   await writer.close();
-  await stats.writeOutputs(roundDir, {
+  const statsOutputs = await stats.writeOutputs(roundDir, {
     roundNo: finalRound.roundNo,
     startedAt: finalRound.startedAt,
     endedAt: finalRound.endedAt,
@@ -172,7 +174,7 @@ async function run() {
     videoOffsetSeconds: danmuConf.VideoOffsetSeconds,
     mediaTimeZeroWallAt,
   });
-  await writeJobResult(outputPath);
+  await writeJobResult(outputPath, statsOutputs);
 }
 
 async function connectLeanCloudWithRetry(roomID: string, round: RoundInfo): Promise<LeanRuntime | null> {
@@ -453,11 +455,24 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: str
 }
 
 async function waitUntilStopped() {
-  for (;;) {
-    if (shuttingDown) {
-      return;
+  if (!postgresDSN) {
+    throw new Error("PostgresConf.DSN is required for danmu round polling");
+  }
+  const client = new PgClient({ connectionString: postgresDSN });
+  await client.connect();
+  try {
+    for (;;) {
+      if (shuttingDown) {
+        return;
+      }
+      const result = await client.query<{ status: string }>("select status from match_rounds where id = $1", [roundID]);
+      if (result.rows[0]?.status === "ENDED") {
+        return;
+      }
+      await sleep(1000);
     }
-    await sleep(1000);
+  } finally {
+    await client.end().catch(() => undefined);
   }
 }
 
@@ -543,18 +558,22 @@ function loadJobContext(): DanmuJobContext {
 }
 
 function jobDir(): string {
-  return path.join(jobContext.round_dir, ".job", `danmu-${roundID}`);
+  return "/tmp/job";
 }
 
 async function writeJobContext() {
   await atomicWriteJSON(path.join(jobDir(), "context.json"), jobContext);
 }
 
-async function writeJobResult(outputPath: string) {
-  await atomicWriteJSON(path.join(jobDir(), "result.json"), {
+async function writeJobResult(outputPath: string, statsOutputs: { danmuCountJSON: string; onlineCountJSON: string; danmuCountChart: string; onlineCountChart: string }) {
+  const result = {
     schema: "rm-monitor/danmu-result/v1",
     match_round_id: roundID,
     output_path: outputPath,
+    danmu_count_json: statsOutputs.danmuCountJSON,
+    online_count_json: statsOutputs.onlineCountJSON,
+    danmu_count_chart: statsOutputs.danmuCountChart,
+    online_count_chart: statsOutputs.onlineCountChart,
     diagnostics: {
       connected: diagnostics.connectedAt !== null,
       connected_at: diagnostics.connectedAt,
@@ -567,6 +586,14 @@ async function writeJobResult(outputPath: string) {
       online_sample_timeouts: diagnostics.onlineSampleTimeouts,
     },
     completed_at: new Date().toISOString(),
+  };
+  await atomicWriteJSON(path.join(jobDir(), "result.json"), result);
+  await writeArgoOutputs({
+    output_path: outputPath,
+    danmu_count_json: statsOutputs.danmuCountJSON,
+    online_count_json: statsOutputs.onlineCountJSON,
+    danmu_count_svg: statsOutputs.danmuCountChart,
+    online_count_svg: statsOutputs.onlineCountChart,
   });
 }
 
@@ -588,6 +615,12 @@ async function atomicWriteJSON(filePath: string, value: unknown) {
   const tmp = `${filePath}.tmp-${process.pid}-${Date.now()}`;
   await fs.promises.writeFile(tmp, `${JSON.stringify(value, null, 2)}\n`, "utf8");
   await fs.promises.rename(tmp, filePath);
+}
+
+async function writeArgoOutputs(values: Record<string, unknown>) {
+  const dir = "/tmp/argo";
+  await fs.promises.mkdir(dir, { recursive: true });
+  await Promise.all(Object.entries(values).map(([key, value]) => fs.promises.writeFile(path.join(dir, key), String(value ?? ""))));
 }
 
 function roundNumberFromDir(roundDir: string): number {

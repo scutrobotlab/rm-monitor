@@ -1,0 +1,434 @@
+{{- if .Values.argo.enabled }}
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: rm-match-workflow
+  namespace: {{ include "rm-monitor.namespace" . }}
+spec:
+  entrypoint: match
+  serviceAccountName: {{ .Values.serviceAccount.name }}
+  arguments:
+    parameters:
+      - name: match_id
+      - name: event
+        value: ""
+      - name: zone
+        value: ""
+      - name: order
+        value: "0"
+      - name: match_type
+        value: ""
+      - name: plan_game_count
+        value: "5"
+      - name: role_specs
+        value: "[]"
+      - name: chat_room_id
+        value: ""
+  volumes:
+    - name: records
+      persistentVolumeClaim:
+        claimName: {{ .Values.storage.record.pvcName }}
+    - name: shared-records
+      persistentVolumeClaim:
+        claimName: {{ .Values.storage.shared.pvcName }}
+    - name: match-controller-config
+      configMap:
+        name: match-controller-config
+    - name: record-job-config
+      configMap:
+        name: record-job-config
+    - name: stt-job-config
+      configMap:
+        name: stt-job-config
+    - name: danmu-job-config
+      configMap:
+        name: danmu-job-config
+    - name: lark-record-job-config
+      configMap:
+        name: lark-record-job-config
+    - name: transcode-job-config
+      configMap:
+        name: transcode-job-config
+    - name: highlight-artifact-job-config
+      configMap:
+        name: highlight-artifact-job-config
+    - name: highlight-job-config
+      configMap:
+        name: highlight-job-config
+    - name: manifest-job-config
+      configMap:
+        name: manifest-job-config
+  templates:
+    - name: match
+      dag:
+        tasks:
+{{- range $round := untilStep 1 6 1 }}
+          - name: round-{{ $round }}-gate
+            template: round-gate
+            arguments:
+              parameters:
+                - name: round-no
+                  value: "{{ $round }}"
+          - name: round-{{ $round }}-record
+            when: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.round_active}}`}} == true"
+            dependencies: [round-{{ $round }}-gate]
+            template: record
+            arguments:
+              parameters:
+                - name: context
+                  value: "{{`{{item}}`}}"
+            withParam: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.record_contexts}}`}}"
+          - name: round-{{ $round }}-danmu
+            when: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.round_active}}`}} == true && {{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.danmu_enabled}}`}} == true"
+            dependencies: [round-{{ $round }}-gate]
+            template: danmu
+            arguments:
+              parameters:
+                - name: context
+                  value: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.danmu_context}}`}}"
+          - name: round-{{ $round }}-analyze
+            when: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.main_source_available}}`}} == true"
+            dependencies: [round-{{ $round }}-record]
+            template: analyze
+            arguments:
+              parameters:
+                - name: context
+                  value: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.analyze_context}}`}}"
+          - name: round-{{ $round }}-stt
+            when: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.main_source_available}}`}} == true"
+            dependencies: [round-{{ $round }}-record, round-{{ $round }}-analyze]
+            template: stt
+            arguments:
+              parameters:
+                - name: context
+                  value: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.stt_context}}`}}"
+          - name: round-{{ $round }}-lark-record
+            when: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.lark_record_enabled}}`}} == true"
+            dependencies: [round-{{ $round }}-record]
+            template: lark-record
+            arguments:
+              parameters:
+                - name: context
+                  value: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.lark_record_context}}`}}"
+          - name: round-{{ $round }}-transcode
+            when: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.main_source_available}}`}} == true"
+            dependencies: [round-{{ $round }}-record, round-{{ $round }}-analyze]
+            template: transcode
+            arguments:
+              parameters:
+                - name: context
+                  value: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.transcode_context}}`}}"
+          - name: round-{{ $round }}-highlight
+            when: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.main_source_available}}`}} == true && {{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.danmu_enabled}}`}} == true"
+            dependencies: [round-{{ $round }}-analyze, round-{{ $round }}-stt, round-{{ $round }}-danmu]
+            template: highlight
+            arguments:
+              parameters:
+                - name: context
+                  value: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.highlight_context}}`}}"
+          - name: round-{{ $round }}-highlight-artifact
+            when: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.main_source_available}}`}} == true && {{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.danmu_enabled}}`}} == true"
+            dependencies: [round-{{ $round }}-highlight]
+            template: highlight-artifact
+            arguments:
+              parameters:
+                - name: context
+                  value: "{{`{{item}}`}}"
+            withParam: "{{`{{tasks.round-`}}{{ $round }}{{`-highlight.outputs.parameters.highlight_contexts}}`}}"
+          - name: round-{{ $round }}-ready
+            depends: "round-{{ $round }}-gate.Succeeded && (round-{{ $round }}-analyze.Succeeded || round-{{ $round }}-analyze.Skipped || round-{{ $round }}-analyze.Omitted) && (round-{{ $round }}-stt.Succeeded || round-{{ $round }}-stt.Skipped || round-{{ $round }}-stt.Omitted) && (round-{{ $round }}-lark-record.Succeeded || round-{{ $round }}-lark-record.Skipped || round-{{ $round }}-lark-record.Omitted) && (round-{{ $round }}-highlight-artifact.Succeeded || round-{{ $round }}-highlight-artifact.Skipped || round-{{ $round }}-highlight-artifact.Omitted)"
+            template: noop
+{{- end }}
+          - name: manifest
+            depends: "round-1-ready.Succeeded && round-2-ready.Succeeded && round-3-ready.Succeeded && round-4-ready.Succeeded && round-5-ready.Succeeded"
+            template: manifest
+    - name: noop
+      container:
+        image: alpine:3.20
+        command: [sh, -c]
+        args: ["echo ok"]
+    - name: round-gate
+      inputs:
+        parameters:
+          - name: round-no
+      container:
+        image: {{ include "rm-monitor.image" (dict "root" . "component" "match-controller") }}
+        imagePullPolicy: {{ include "rm-monitor.jobImagePullPolicy" . }}
+        args:
+          - "-f"
+          - "{{ include "rm-monitor.configPath" . }}"
+          - "-round-gate"
+          - "-match"
+          - "{{`{{workflow.parameters.match_id}}`}}"
+          - "-round"
+          - "{{`{{inputs.parameters.round-no}}`}}"
+          - "-plan-game-count"
+          - "{{`{{workflow.parameters.plan_game_count}}`}}"
+          - "-role-specs"
+          - "{{`{{workflow.parameters.role_specs}}`}}"
+          - "-chat-room-id"
+          - "{{`{{workflow.parameters.chat_room_id}}`}}"
+        volumeMounts:
+          - name: match-controller-config
+            mountPath: {{ include "rm-monitor.configPath" . }}
+            subPath: config.yml
+            readOnly: true
+      outputs:
+        parameters:
+          - name: round_active
+            valueFrom: {path: /tmp/argo/round_active}
+          - name: round_skip_reason
+            valueFrom: {path: /tmp/argo/round_skip_reason}
+          - name: round_dir
+            valueFrom: {path: /tmp/argo/round_dir}
+          - name: record_contexts
+            valueFrom: {path: /tmp/argo/record_contexts}
+          - name: danmu_enabled
+            valueFrom: {path: /tmp/argo/danmu_enabled}
+          - name: danmu_context
+            valueFrom: {path: /tmp/argo/danmu_context}
+          - name: main_source_available
+            valueFrom: {path: /tmp/argo/main_source_available}
+          - name: analyze_context
+            valueFrom: {path: /tmp/argo/analyze_context}
+          - name: stt_context
+            valueFrom: {path: /tmp/argo/stt_context}
+          - name: lark_record_enabled
+            valueFrom: {path: /tmp/argo/lark_record_enabled}
+          - name: lark_record_context
+            valueFrom: {path: /tmp/argo/lark_record_context}
+          - name: transcode_context
+            valueFrom: {path: /tmp/argo/transcode_context}
+          - name: highlight_context
+            valueFrom: {path: /tmp/argo/highlight_context}
+    - name: record
+      inputs:
+        parameters:
+          - name: context
+      container:
+        image: {{ include "rm-monitor.image" (dict "root" . "component" "record-job") }}
+        imagePullPolicy: {{ include "rm-monitor.jobImagePullPolicy" . }}
+        args: ["-f", "{{ include "rm-monitor.configPath" . }}"]
+        env:
+          - name: RM_MONITOR_JOB_CONTEXT
+            value: "{{`{{inputs.parameters.context}}`}}"
+        volumeMounts:
+          - name: records
+            mountPath: {{ .Values.jobs.recordsMountPath }}
+          - name: record-job-config
+            mountPath: {{ include "rm-monitor.configPath" . }}
+            subPath: config.yml
+            readOnly: true
+      outputs:
+        parameters:
+          - name: output_path
+            valueFrom: {path: /tmp/argo/output_path}
+          - name: role
+            valueFrom: {path: /tmp/argo/role}
+          - name: file_size
+            valueFrom: {path: /tmp/argo/file_size}
+          - name: checksum
+            valueFrom: {path: /tmp/argo/checksum}
+    - name: danmu
+      inputs:
+        parameters:
+          - name: context
+      container:
+        image: {{ include "rm-monitor.image" (dict "root" . "component" "danmu-job") }}
+        imagePullPolicy: {{ include "rm-monitor.jobImagePullPolicy" . }}
+        args: ["-f", "{{ include "rm-monitor.configPath" . }}"]
+        env:
+          - name: RM_MONITOR_JOB_CONTEXT
+            value: "{{`{{inputs.parameters.context}}`}}"
+        volumeMounts:
+          - name: records
+            mountPath: {{ .Values.jobs.recordsMountPath }}
+          - name: danmu-job-config
+            mountPath: {{ include "rm-monitor.configPath" . }}
+            subPath: config.yml
+            readOnly: true
+      outputs:
+        parameters:
+          - name: output_path
+            valueFrom: {path: /tmp/argo/output_path}
+          - name: danmu_count_json
+            valueFrom: {path: /tmp/argo/danmu_count_json}
+          - name: online_count_json
+            valueFrom: {path: /tmp/argo/online_count_json}
+    - name: analyze
+      inputs:
+        parameters:
+          - name: context
+      container:
+        image: {{ include "rm-monitor.image" (dict "root" . "component" "analyze-job") }}
+        imagePullPolicy: {{ include "rm-monitor.jobImagePullPolicy" . }}
+        env:
+          - name: RM_MONITOR_JOB_CONTEXT
+            value: "{{`{{inputs.parameters.context}}`}}"
+        volumeMounts:
+          - name: records
+            mountPath: {{ .Values.jobs.recordsMountPath }}
+      outputs:
+        parameters:
+          - name: round_json_path
+            valueFrom: {path: /tmp/argo/round_json_path}
+          - name: settlement_image_path
+            valueFrom: {path: /tmp/argo/settlement_image_path}
+          - name: settlement_status
+            valueFrom: {path: /tmp/argo/settlement_status}
+          - name: effective_start_seconds
+            valueFrom: {path: /tmp/argo/effective_start_seconds}
+          - name: effective_end_seconds
+            valueFrom: {path: /tmp/argo/effective_end_seconds}
+    - name: stt
+      inputs:
+        parameters:
+          - name: context
+      container:
+        image: {{ include "rm-monitor.image" (dict "root" . "component" "stt-job") }}
+        imagePullPolicy: {{ include "rm-monitor.jobImagePullPolicy" . }}
+        args: ["-f", "{{ include "rm-monitor.configPath" . }}"]
+        env:
+          - name: RM_MONITOR_JOB_CONTEXT
+            value: "{{`{{inputs.parameters.context}}`}}"
+        volumeMounts:
+          - name: records
+            mountPath: {{ .Values.jobs.recordsMountPath }}
+          - name: stt-job-config
+            mountPath: {{ include "rm-monitor.configPath" . }}
+            subPath: config.yml
+            readOnly: true
+      outputs:
+        parameters:
+          - name: stt_path
+            valueFrom: {path: /tmp/argo/stt_path}
+          - name: subtitle_path
+            valueFrom: {path: /tmp/argo/subtitle_path}
+    - name: lark-record
+      inputs:
+        parameters:
+          - name: context
+      container:
+        image: {{ include "rm-monitor.image" (dict "root" . "component" "lark-record-job") }}
+        imagePullPolicy: {{ include "rm-monitor.jobImagePullPolicy" . }}
+        args: ["-f", "{{ include "rm-monitor.configPath" . }}"]
+        env:
+          - name: RM_MONITOR_JOB_CONTEXT
+            value: "{{`{{inputs.parameters.context}}`}}"
+        volumeMounts:
+          - name: records
+            mountPath: {{ .Values.jobs.recordsMountPath }}
+          - name: lark-record-job-config
+            mountPath: {{ include "rm-monitor.configPath" . }}
+            subPath: config.yml
+            readOnly: true
+      outputs:
+        parameters:
+          - name: attachment_file_token
+            valueFrom: {path: /tmp/argo/attachment_file_token}
+          - name: bitable_record_url
+            valueFrom: {path: /tmp/argo/bitable_record_url}
+    - name: transcode
+      synchronization:
+        semaphore:
+          configMapKeyRef:
+            name: rm-monitor-argo-semaphores
+            key: transcode
+      inputs:
+        parameters:
+          - name: context
+      container:
+        image: {{ include "rm-monitor.image" (dict "root" . "component" "transcode-job") }}
+        imagePullPolicy: {{ include "rm-monitor.jobImagePullPolicy" . }}
+        args: ["-f", "{{ include "rm-monitor.configPath" . }}"]
+        env:
+          - name: RM_MONITOR_JOB_CONTEXT
+            value: "{{`{{inputs.parameters.context}}`}}"
+        volumeMounts:
+          - name: records
+            mountPath: {{ .Values.jobs.recordsMountPath }}
+          - name: transcode-job-config
+            mountPath: {{ include "rm-monitor.configPath" . }}
+            subPath: config.yml
+            readOnly: true
+      outputs:
+        parameters:
+          - name: archive_path
+            valueFrom: {path: /tmp/argo/archive_path}
+          - name: file_size
+            valueFrom: {path: /tmp/argo/file_size}
+          - name: checksum
+            valueFrom: {path: /tmp/argo/checksum}
+    - name: highlight
+      inputs:
+        parameters:
+          - name: context
+      container:
+        image: {{ include "rm-monitor.image" (dict "root" . "component" "highlight-job") }}
+        imagePullPolicy: {{ include "rm-monitor.jobImagePullPolicy" . }}
+        args: ["-f", "{{ include "rm-monitor.configPath" . }}"]
+        env:
+          - name: RM_MONITOR_JOB_CONTEXT
+            value: "{{`{{inputs.parameters.context}}`}}"
+        volumeMounts:
+          - name: records
+            mountPath: {{ .Values.jobs.recordsMountPath }}
+          - name: highlight-job-config
+            mountPath: {{ include "rm-monitor.configPath" . }}
+            subPath: config.yml
+            readOnly: true
+      outputs:
+        parameters:
+          - name: highlight_contexts
+            valueFrom: {path: /tmp/argo/highlight_contexts}
+          - name: highlight_count
+            valueFrom: {path: /tmp/argo/highlight_count}
+    - name: highlight-artifact
+      inputs:
+        parameters:
+          - name: context
+      container:
+        image: {{ include "rm-monitor.image" (dict "root" . "component" "highlight-artifact-job") }}
+        imagePullPolicy: {{ include "rm-monitor.jobImagePullPolicy" . }}
+        args: ["-f", "{{ include "rm-monitor.configPath" . }}"]
+        env:
+          - name: RM_MONITOR_JOB_CONTEXT
+            value: "{{`{{inputs.parameters.context}}`}}"
+        volumeMounts:
+          - name: records
+            mountPath: {{ .Values.jobs.recordsMountPath }}
+          - name: highlight-artifact-job-config
+            mountPath: {{ include "rm-monitor.configPath" . }}
+            subPath: config.yml
+            readOnly: true
+      outputs:
+        parameters:
+          - name: output_dir
+            valueFrom: {path: /tmp/argo/output_dir}
+          - name: video_artifact_path
+            valueFrom: {path: /tmp/argo/video_artifact_path}
+          - name: highlight_json_path
+            valueFrom: {path: /tmp/argo/highlight_json_path}
+          - name: title
+            valueFrom: {path: /tmp/argo/title}
+    - name: manifest
+      container:
+        image: {{ include "rm-monitor.image" (dict "root" . "component" "manifest-job") }}
+        imagePullPolicy: {{ include "rm-monitor.jobImagePullPolicy" . }}
+        args: ["-f", "{{ include "rm-monitor.configPath" . }}", "-match", "{{`{{workflow.parameters.match_id}}`}}"]
+        volumeMounts:
+          - name: shared-records
+            mountPath: {{ .Values.jobs.recordsMountPath }}
+          - name: manifest-job-config
+            mountPath: {{ include "rm-monitor.configPath" . }}
+            subPath: config.yml
+            readOnly: true
+      outputs:
+        parameters:
+          - name: readme_path
+            valueFrom: {path: /tmp/argo/readme_path}
+          - name: report_json_path
+            valueFrom: {path: /tmp/argo/report_json_path}
+          - name: report_written
+            valueFrom: {path: /tmp/argo/report_written}
+{{- end }}

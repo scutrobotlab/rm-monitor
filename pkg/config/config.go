@@ -17,6 +17,24 @@ type MonitorConf struct {
 	ScheduleURL string `json:",optional"`
 }
 
+type ArgoConf struct {
+	Enabled               bool   `json:",optional"`
+	Namespace             string `json:",optional"`
+	MatchWorkflowTemplate string `json:",optional"`
+	Kubeconfig            string `json:",optional"`
+}
+
+func (c *ArgoConf) WithDefaults() ArgoConf {
+	out := *c
+	if out.Namespace == "" {
+		out.Namespace = "rm-monitor"
+	}
+	if out.MatchWorkflowTemplate == "" {
+		out.MatchWorkflowTemplate = "rm-match-workflow"
+	}
+	return out
+}
+
 func (c *MonitorConf) WithDefaults() MonitorConf {
 	out := *c
 	if out.ScheduleURL == "" {
@@ -35,6 +53,7 @@ type RecordConf struct {
 	RoleBlackList     []string `json:",optional"`
 	AudioRoles        []string `json:",optional"`
 	STTRole           string   `json:",optional"`
+	StopDelaySeconds  int      `json:",optional"`
 }
 
 type DanmuConf struct {
@@ -52,31 +71,6 @@ func (c *DanmuConf) WithDefaults() DanmuConf {
 	return out
 }
 
-type OCRConf struct {
-	Enabled             bool    `json:",optional"`
-	Role                string  `json:",optional"`
-	FrameInterval       int     `json:",optional"`
-	SimilarityThreshold float64 `json:",optional"`
-	MaxConcurrentJobs   int     `json:",optional"`
-}
-
-func (c *OCRConf) WithDefaults() OCRConf {
-	out := *c
-	if out.Role == "" {
-		out.Role = "主视角"
-	}
-	if out.FrameInterval <= 0 {
-		out.FrameInterval = 1
-	}
-	if out.SimilarityThreshold <= 0 {
-		out.SimilarityThreshold = 0.6
-	}
-	if out.MaxConcurrentJobs <= 0 {
-		out.MaxConcurrentJobs = 1
-	}
-	return out
-}
-
 type DifyConf struct {
 	BaseURL        string `json:",optional"`
 	TimeoutSeconds int    `json:",optional"`
@@ -86,6 +80,90 @@ func (c *DifyConf) WithDefaults() DifyConf {
 	out := *c
 	if out.TimeoutSeconds <= 0 {
 		out.TimeoutSeconds = 180
+	}
+	return out
+}
+
+type OCRServerConf struct {
+	BaseURL        string `json:",optional"`
+	TimeoutSeconds int    `json:",optional"`
+}
+
+func (c *OCRServerConf) WithDefaults() OCRServerConf {
+	out := *c
+	if out.TimeoutSeconds <= 0 {
+		out.TimeoutSeconds = 30
+	}
+	return out
+}
+
+type AnalyzeConf struct {
+	Enabled           bool            `json:",optional"`
+	Role              string          `json:",optional"`
+	MaxConcurrentJobs int             `json:",optional"`
+	Scan              AnalyzeScanConf `json:",optional"`
+}
+
+type AnalyzeScanConf struct {
+	FPS                           float64 `json:",optional"`
+	Width                         int     `json:",optional"`
+	Height                        int     `json:",optional"`
+	MaxStartScanSeconds           int     `json:",optional"`
+	MaxSettlementScanSeconds      int     `json:",optional"`
+	SettlementChunkSeconds        int     `json:",optional"`
+	MinSettlementSecond           int     `json:",optional"`
+	MinRoundSeconds               int     `json:",optional"`
+	SettlementTailSeconds         int     `json:",optional"`
+	SettlementRefineWindowSeconds int     `json:",optional"`
+	SettlementRefineFPS           float64 `json:",optional"`
+}
+
+func (c *AnalyzeConf) WithDefaults() AnalyzeConf {
+	out := *c
+	if out.Role == "" {
+		out.Role = "主视角"
+	}
+	if out.MaxConcurrentJobs <= 0 {
+		out.MaxConcurrentJobs = 1
+	}
+	out.Scan = out.Scan.WithDefaults()
+	return out
+}
+
+func (c *AnalyzeScanConf) WithDefaults() AnalyzeScanConf {
+	out := *c
+	if out.FPS <= 0 {
+		out.FPS = 1
+	}
+	if out.Width <= 0 {
+		out.Width = 320
+	}
+	if out.Height <= 0 {
+		out.Height = 180
+	}
+	if out.MaxStartScanSeconds <= 0 {
+		out.MaxStartScanSeconds = 1800
+	}
+	if out.MaxSettlementScanSeconds <= 0 {
+		out.MaxSettlementScanSeconds = 1800
+	}
+	if out.SettlementChunkSeconds <= 0 {
+		out.SettlementChunkSeconds = 90
+	}
+	if out.MinSettlementSecond <= 0 {
+		out.MinSettlementSecond = 60
+	}
+	if out.MinRoundSeconds <= 0 {
+		out.MinRoundSeconds = 60
+	}
+	if out.SettlementTailSeconds <= 0 {
+		out.SettlementTailSeconds = 5
+	}
+	if out.SettlementRefineWindowSeconds <= 0 {
+		out.SettlementRefineWindowSeconds = 8
+	}
+	if out.SettlementRefineFPS <= 0 {
+		out.SettlementRefineFPS = 3
 	}
 	return out
 }
@@ -251,6 +329,9 @@ func (c *RecordConf) WithDefaults() RecordConf {
 	}
 	if len(out.AudioRoles) == 0 {
 		out.AudioRoles = []string{"主视角"}
+	}
+	if out.StopDelaySeconds <= 0 {
+		out.StopDelaySeconds = 60
 	}
 	return out
 }

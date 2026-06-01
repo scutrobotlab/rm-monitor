@@ -1,0 +1,8 @@
+PostgresConf:
+  DSN: ""
+RecordConf:
+  BaseDir: /records
+DifyConf:
+  BaseURL: ""
+HighlightConf:
+  Enabled: true

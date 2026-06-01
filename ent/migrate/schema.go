@@ -8,32 +8,66 @@ import (
 )
 
 var (
+	// BilibiliHighlightPublicationsColumns holds the columns for the "bilibili_highlight_publications" table.
+	BilibiliHighlightPublicationsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "external_id", Type: field.TypeString, Nullable: true},
+		{Name: "url", Type: field.TypeString, Nullable: true},
+		{Name: "payload", Type: field.TypeJSON, Nullable: true},
+		{Name: "error_message", Type: field.TypeString, Nullable: true, Size: 2147483647},
+		{Name: "published_at", Type: field.TypeTime, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "highlight_clip_bilibili_publications", Type: field.TypeInt},
+	}
+	// BilibiliHighlightPublicationsTable holds the schema information for the "bilibili_highlight_publications" table.
+	BilibiliHighlightPublicationsTable = &schema.Table{
+		Name:       "bilibili_highlight_publications",
+		Columns:    BilibiliHighlightPublicationsColumns,
+		PrimaryKey: []*schema.Column{BilibiliHighlightPublicationsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "bilibili_highlight_publications_highlight_clips_bilibili_publications",
+				Columns:    []*schema.Column{BilibiliHighlightPublicationsColumns[8]},
+				RefColumns: []*schema.Column{HighlightClipsColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "bilibilihighlightpublication_highlight_clip_bilibili_publications",
+				Unique:  true,
+				Columns: []*schema.Column{BilibiliHighlightPublicationsColumns[8]},
+			},
+			{
+				Name:    "bilibilihighlightpublication_updated_at",
+				Unique:  false,
+				Columns: []*schema.Column{BilibiliHighlightPublicationsColumns[7]},
+			},
+		},
+	}
 	// HighlightClipsColumns holds the columns for the "highlight_clips" table.
 	HighlightClipsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
 		{Name: "highlight_index", Type: field.TypeInt},
 		{Name: "role", Type: field.TypeString},
 		{Name: "algorithm_version", Type: field.TypeString},
-		{Name: "status", Type: field.TypeEnum, Enums: []string{"PENDING", "DISPATCHING", "RUNNING", "SUCCEEDED", "FAILED", "SKIPPED"}, Default: "PENDING"},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"AVAILABLE", "FAILED", "SKIPPED"}, Default: "AVAILABLE"},
 		{Name: "priority", Type: field.TypeInt, Default: 0},
-		{Name: "k8s_job_name", Type: field.TypeString, Nullable: true},
-		{Name: "attempts", Type: field.TypeInt, Default: 0},
 		{Name: "start_seconds", Type: field.TypeFloat64},
 		{Name: "end_seconds", Type: field.TypeFloat64},
 		{Name: "peak_seconds", Type: field.TypeFloat64},
+		{Name: "source_path", Type: field.TypeString},
 		{Name: "output_dir", Type: field.TypeString},
 		{Name: "title", Type: field.TypeString, Nullable: true},
 		{Name: "description", Type: field.TypeString, Nullable: true, Size: 2147483647},
 		{Name: "tags", Type: field.TypeJSON, Nullable: true},
 		{Name: "score", Type: field.TypeFloat64, Default: 0},
 		{Name: "model_payload", Type: field.TypeString, Nullable: true, Size: 2147483647},
-		{Name: "error_message", Type: field.TypeString, Nullable: true},
-		{Name: "started_at", Type: field.TypeTime, Nullable: true},
 		{Name: "completed_at", Type: field.TypeTime, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "match_round_highlight_clips", Type: field.TypeInt},
-		{Name: "media_artifact_highlight_clips", Type: field.TypeInt},
 	}
 	// HighlightClipsTable holds the schema information for the "highlight_clips" table.
 	HighlightClipsTable = &schema.Table{
@@ -43,14 +77,8 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "highlight_clips_match_rounds_highlight_clips",
-				Columns:    []*schema.Column{HighlightClipsColumns[22]},
+				Columns:    []*schema.Column{HighlightClipsColumns[19]},
 				RefColumns: []*schema.Column{MatchRoundsColumns[0]},
-				OnDelete:   schema.NoAction,
-			},
-			{
-				Symbol:     "highlight_clips_media_artifacts_highlight_clips",
-				Columns:    []*schema.Column{HighlightClipsColumns[23]},
-				RefColumns: []*schema.Column{MediaArtifactsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 		},
@@ -58,118 +86,54 @@ var (
 			{
 				Name:    "highlightclip_role_algorithm_version_highlight_index_match_round_highlight_clips",
 				Unique:  true,
-				Columns: []*schema.Column{HighlightClipsColumns[2], HighlightClipsColumns[3], HighlightClipsColumns[1], HighlightClipsColumns[22]},
+				Columns: []*schema.Column{HighlightClipsColumns[2], HighlightClipsColumns[3], HighlightClipsColumns[1], HighlightClipsColumns[19]},
 			},
 			{
 				Name:    "highlightclip_status",
 				Unique:  false,
 				Columns: []*schema.Column{HighlightClipsColumns[4]},
 			},
-			{
-				Name:    "highlightclip_status_priority_created_at",
-				Unique:  false,
-				Columns: []*schema.Column{HighlightClipsColumns[4], HighlightClipsColumns[5], HighlightClipsColumns[20]},
-			},
-			{
-				Name:    "highlightclip_status_updated_at",
-				Unique:  false,
-				Columns: []*schema.Column{HighlightClipsColumns[4], HighlightClipsColumns[21]},
-			},
 		},
 	}
-	// HighlightPublishTasksColumns holds the columns for the "highlight_publish_tasks" table.
-	HighlightPublishTasksColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeInt, Increment: true},
-		{Name: "platform", Type: field.TypeEnum, Enums: []string{"bilibili"}},
-		{Name: "status", Type: field.TypeEnum, Enums: []string{"PENDING", "DISPATCHING", "RUNNING", "SUCCEEDED", "FAILED"}, Default: "PENDING"},
-		{Name: "priority", Type: field.TypeInt, Default: 0},
-		{Name: "k8s_job_name", Type: field.TypeString, Nullable: true},
-		{Name: "attempts", Type: field.TypeInt, Default: 0},
-		{Name: "publish_url", Type: field.TypeString, Nullable: true},
-		{Name: "external_id", Type: field.TypeString, Nullable: true},
-		{Name: "error_message", Type: field.TypeString, Nullable: true},
-		{Name: "started_at", Type: field.TypeTime, Nullable: true},
-		{Name: "completed_at", Type: field.TypeTime, Nullable: true},
-		{Name: "created_at", Type: field.TypeTime},
-		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "highlight_clip_publish_tasks", Type: field.TypeInt},
-	}
-	// HighlightPublishTasksTable holds the schema information for the "highlight_publish_tasks" table.
-	HighlightPublishTasksTable = &schema.Table{
-		Name:       "highlight_publish_tasks",
-		Columns:    HighlightPublishTasksColumns,
-		PrimaryKey: []*schema.Column{HighlightPublishTasksColumns[0]},
-		ForeignKeys: []*schema.ForeignKey{
-			{
-				Symbol:     "highlight_publish_tasks_highlight_clips_publish_tasks",
-				Columns:    []*schema.Column{HighlightPublishTasksColumns[13]},
-				RefColumns: []*schema.Column{HighlightClipsColumns[0]},
-				OnDelete:   schema.NoAction,
-			},
-		},
-		Indexes: []*schema.Index{
-			{
-				Name:    "highlightpublishtask_platform_highlight_clip_publish_tasks",
-				Unique:  true,
-				Columns: []*schema.Column{HighlightPublishTasksColumns[1], HighlightPublishTasksColumns[13]},
-			},
-			{
-				Name:    "highlightpublishtask_status",
-				Unique:  false,
-				Columns: []*schema.Column{HighlightPublishTasksColumns[2]},
-			},
-			{
-				Name:    "highlightpublishtask_status_priority_created_at",
-				Unique:  false,
-				Columns: []*schema.Column{HighlightPublishTasksColumns[2], HighlightPublishTasksColumns[3], HighlightPublishTasksColumns[11]},
-			},
-			{
-				Name:    "highlightpublishtask_status_updated_at",
-				Unique:  false,
-				Columns: []*schema.Column{HighlightPublishTasksColumns[2], HighlightPublishTasksColumns[12]},
-			},
-		},
-	}
-	// HighlightRoundStatesColumns holds the columns for the "highlight_round_states" table.
-	HighlightRoundStatesColumns = []*schema.Column{
+	// LarkBitableRecordsColumns holds the columns for the "lark_bitable_records" table.
+	LarkBitableRecordsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
 		{Name: "role", Type: field.TypeString},
-		{Name: "algorithm_version", Type: field.TypeString},
-		{Name: "status", Type: field.TypeEnum, Enums: []string{"PENDING", "COMPLETED"}, Default: "PENDING"},
-		{Name: "candidate_count", Type: field.TypeInt, Default: 0},
-		{Name: "completed_at", Type: field.TypeTime, Nullable: true},
+		{Name: "app_token", Type: field.TypeString},
+		{Name: "table_id", Type: field.TypeString},
+		{Name: "record_id", Type: field.TypeString},
+		{Name: "record_url", Type: field.TypeString, Nullable: true},
+		{Name: "attachment_file_token", Type: field.TypeString, Nullable: true},
+		{Name: "source_path", Type: field.TypeString},
+		{Name: "file_size", Type: field.TypeInt64, Default: 0},
+		{Name: "source_deleted_at", Type: field.TypeTime, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "match_round_highlight_states", Type: field.TypeInt},
+		{Name: "match_round_lark_bitable_records", Type: field.TypeInt},
 	}
-	// HighlightRoundStatesTable holds the schema information for the "highlight_round_states" table.
-	HighlightRoundStatesTable = &schema.Table{
-		Name:       "highlight_round_states",
-		Columns:    HighlightRoundStatesColumns,
-		PrimaryKey: []*schema.Column{HighlightRoundStatesColumns[0]},
+	// LarkBitableRecordsTable holds the schema information for the "lark_bitable_records" table.
+	LarkBitableRecordsTable = &schema.Table{
+		Name:       "lark_bitable_records",
+		Columns:    LarkBitableRecordsColumns,
+		PrimaryKey: []*schema.Column{LarkBitableRecordsColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "highlight_round_states_match_rounds_highlight_states",
-				Columns:    []*schema.Column{HighlightRoundStatesColumns[8]},
+				Symbol:     "lark_bitable_records_match_rounds_lark_bitable_records",
+				Columns:    []*schema.Column{LarkBitableRecordsColumns[12]},
 				RefColumns: []*schema.Column{MatchRoundsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 		},
 		Indexes: []*schema.Index{
 			{
-				Name:    "highlightroundstate_role_algorithm_version_match_round_highlight_states",
+				Name:    "larkbitablerecord_role_match_round_lark_bitable_records",
 				Unique:  true,
-				Columns: []*schema.Column{HighlightRoundStatesColumns[1], HighlightRoundStatesColumns[2], HighlightRoundStatesColumns[8]},
+				Columns: []*schema.Column{LarkBitableRecordsColumns[1], LarkBitableRecordsColumns[12]},
 			},
 			{
-				Name:    "highlightroundstate_status",
+				Name:    "larkbitablerecord_updated_at",
 				Unique:  false,
-				Columns: []*schema.Column{HighlightRoundStatesColumns[3]},
-			},
-			{
-				Name:    "highlightroundstate_updated_at",
-				Unique:  false,
-				Columns: []*schema.Column{HighlightRoundStatesColumns[7]},
+				Columns: []*schema.Column{LarkBitableRecordsColumns[11]},
 			},
 		},
 	}
@@ -177,6 +141,7 @@ var (
 	LarkMessagesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
 		{Name: "message_id", Type: field.TypeString, Unique: true},
+		{Name: "chat_id", Type: field.TypeString, Nullable: true},
 		{Name: "card_id", Type: field.TypeString, Unique: true, Nullable: true},
 		{Name: "card_payload", Type: field.TypeJSON, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
@@ -191,9 +156,16 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "lark_messages_matches_lark_messages",
-				Columns:    []*schema.Column{LarkMessagesColumns[6]},
+				Columns:    []*schema.Column{LarkMessagesColumns[7]},
 				RefColumns: []*schema.Column{MatchesColumns[0]},
 				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "larkmessage_chat_id_match_lark_messages",
+				Unique:  true,
+				Columns: []*schema.Column{LarkMessagesColumns[2], LarkMessagesColumns[7]},
 			},
 		},
 	}
@@ -211,6 +183,9 @@ var (
 		{Name: "winner_placeholder_name", Type: field.TypeString, Nullable: true},
 		{Name: "loser_placeholder_name", Type: field.TypeString, Nullable: true},
 		{Name: "latest_status", Type: field.TypeString, Default: ""},
+		{Name: "workflow_name", Type: field.TypeString, Nullable: true},
+		{Name: "workflow_uid", Type: field.TypeString, Nullable: true},
+		{Name: "workflow_phase", Type: field.TypeString, Nullable: true},
 		{Name: "report", Type: field.TypeString, Nullable: true, Size: 2147483647},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
@@ -225,13 +200,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "matches_teams_red_matches",
-				Columns:    []*schema.Column{MatchesColumns[15]},
+				Columns:    []*schema.Column{MatchesColumns[18]},
 				RefColumns: []*schema.Column{TeamsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "matches_teams_blue_matches",
-				Columns:    []*schema.Column{MatchesColumns[16]},
+				Columns:    []*schema.Column{MatchesColumns[19]},
 				RefColumns: []*schema.Column{TeamsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -240,12 +215,12 @@ var (
 			{
 				Name:    "match_updated_at",
 				Unique:  false,
-				Columns: []*schema.Column{MatchesColumns[14]},
+				Columns: []*schema.Column{MatchesColumns[17]},
 			},
 			{
 				Name:    "match_latest_status_updated_at",
 				Unique:  false,
-				Columns: []*schema.Column{MatchesColumns[11], MatchesColumns[14]},
+				Columns: []*schema.Column{MatchesColumns[11], MatchesColumns[17]},
 			},
 		},
 	}
@@ -255,6 +230,9 @@ var (
 		{Name: "round_no", Type: field.TypeInt},
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"STARTED", "ENDED"}},
 		{Name: "winner", Type: field.TypeEnum, Nullable: true, Enums: []string{"blue", "red", "draw"}},
+		{Name: "workflow_name", Type: field.TypeString, Nullable: true},
+		{Name: "workflow_uid", Type: field.TypeString, Nullable: true},
+		{Name: "workflow_phase", Type: field.TypeString, Nullable: true},
 		{Name: "started_at", Type: field.TypeTime},
 		{Name: "ended_at", Type: field.TypeTime, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
@@ -269,7 +247,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "match_rounds_matches_rounds",
-				Columns:    []*schema.Column{MatchRoundsColumns[8]},
+				Columns:    []*schema.Column{MatchRoundsColumns[11]},
 				RefColumns: []*schema.Column{MatchesColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -278,7 +256,7 @@ var (
 			{
 				Name:    "matchround_round_no_match_rounds",
 				Unique:  true,
-				Columns: []*schema.Column{MatchRoundsColumns[1], MatchRoundsColumns[8]},
+				Columns: []*schema.Column{MatchRoundsColumns[1], MatchRoundsColumns[11]},
 			},
 			{
 				Name:    "matchround_status",
@@ -288,244 +266,12 @@ var (
 			{
 				Name:    "matchround_updated_at",
 				Unique:  false,
-				Columns: []*schema.Column{MatchRoundsColumns[7]},
+				Columns: []*schema.Column{MatchRoundsColumns[10]},
 			},
 			{
 				Name:    "matchround_status_updated_at",
 				Unique:  false,
-				Columns: []*schema.Column{MatchRoundsColumns[2], MatchRoundsColumns[7]},
-			},
-		},
-	}
-	// MediaArtifactsColumns holds the columns for the "media_artifacts" table.
-	MediaArtifactsColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeInt, Increment: true},
-		{Name: "kind", Type: field.TypeEnum, Enums: []string{"source", "archive"}},
-		{Name: "path", Type: field.TypeString},
-		{Name: "format", Type: field.TypeEnum, Enums: []string{"flv", "mp4"}},
-		{Name: "codec", Type: field.TypeEnum, Enums: []string{"copy", "av1"}},
-		{Name: "file_size", Type: field.TypeInt64, Nullable: true},
-		{Name: "checksum", Type: field.TypeString, Nullable: true},
-		{Name: "status", Type: field.TypeEnum, Enums: []string{"AVAILABLE", "DELETED"}, Default: "AVAILABLE"},
-		{Name: "deletable_at", Type: field.TypeTime, Nullable: true},
-		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
-		{Name: "created_at", Type: field.TypeTime},
-		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "record_task_media_artifacts", Type: field.TypeInt},
-	}
-	// MediaArtifactsTable holds the schema information for the "media_artifacts" table.
-	MediaArtifactsTable = &schema.Table{
-		Name:       "media_artifacts",
-		Columns:    MediaArtifactsColumns,
-		PrimaryKey: []*schema.Column{MediaArtifactsColumns[0]},
-		ForeignKeys: []*schema.ForeignKey{
-			{
-				Symbol:     "media_artifacts_record_tasks_media_artifacts",
-				Columns:    []*schema.Column{MediaArtifactsColumns[12]},
-				RefColumns: []*schema.Column{RecordTasksColumns[0]},
-				OnDelete:   schema.NoAction,
-			},
-		},
-		Indexes: []*schema.Index{
-			{
-				Name:    "mediaartifact_kind_record_task_media_artifacts",
-				Unique:  true,
-				Columns: []*schema.Column{MediaArtifactsColumns[1], MediaArtifactsColumns[12]},
-			},
-			{
-				Name:    "mediaartifact_status",
-				Unique:  false,
-				Columns: []*schema.Column{MediaArtifactsColumns[7]},
-			},
-			{
-				Name:    "mediaartifact_kind_format_codec",
-				Unique:  false,
-				Columns: []*schema.Column{MediaArtifactsColumns[1], MediaArtifactsColumns[3], MediaArtifactsColumns[4]},
-			},
-			{
-				Name:    "mediaartifact_kind_status_created_at",
-				Unique:  false,
-				Columns: []*schema.Column{MediaArtifactsColumns[1], MediaArtifactsColumns[7], MediaArtifactsColumns[10]},
-			},
-			{
-				Name:    "mediaartifact_kind_status_deletable_at",
-				Unique:  false,
-				Columns: []*schema.Column{MediaArtifactsColumns[1], MediaArtifactsColumns[7], MediaArtifactsColumns[8]},
-			},
-		},
-	}
-	// OcrTasksColumns holds the columns for the "ocr_tasks" table.
-	OcrTasksColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeInt, Increment: true},
-		{Name: "role", Type: field.TypeString},
-		{Name: "status", Type: field.TypeEnum, Enums: []string{"PENDING", "DISPATCHING", "RUNNING", "SUCCEEDED", "FAILED"}, Default: "PENDING"},
-		{Name: "priority", Type: field.TypeInt, Default: 0},
-		{Name: "k8s_job_name", Type: field.TypeString, Nullable: true},
-		{Name: "attempts", Type: field.TypeInt, Default: 0},
-		{Name: "settlement_path", Type: field.TypeString, Nullable: true},
-		{Name: "settlement_json", Type: field.TypeString, Nullable: true},
-		{Name: "error_message", Type: field.TypeString, Nullable: true},
-		{Name: "started_at", Type: field.TypeTime, Nullable: true},
-		{Name: "completed_at", Type: field.TypeTime, Nullable: true},
-		{Name: "created_at", Type: field.TypeTime},
-		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "match_round_ocr_tasks", Type: field.TypeInt},
-		{Name: "media_artifact_ocr_tasks", Type: field.TypeInt},
-	}
-	// OcrTasksTable holds the schema information for the "ocr_tasks" table.
-	OcrTasksTable = &schema.Table{
-		Name:       "ocr_tasks",
-		Columns:    OcrTasksColumns,
-		PrimaryKey: []*schema.Column{OcrTasksColumns[0]},
-		ForeignKeys: []*schema.ForeignKey{
-			{
-				Symbol:     "ocr_tasks_match_rounds_ocr_tasks",
-				Columns:    []*schema.Column{OcrTasksColumns[13]},
-				RefColumns: []*schema.Column{MatchRoundsColumns[0]},
-				OnDelete:   schema.NoAction,
-			},
-			{
-				Symbol:     "ocr_tasks_media_artifacts_ocr_tasks",
-				Columns:    []*schema.Column{OcrTasksColumns[14]},
-				RefColumns: []*schema.Column{MediaArtifactsColumns[0]},
-				OnDelete:   schema.NoAction,
-			},
-		},
-		Indexes: []*schema.Index{
-			{
-				Name:    "ocrtask_role_match_round_ocr_tasks",
-				Unique:  true,
-				Columns: []*schema.Column{OcrTasksColumns[1], OcrTasksColumns[13]},
-			},
-			{
-				Name:    "ocrtask_status",
-				Unique:  false,
-				Columns: []*schema.Column{OcrTasksColumns[2]},
-			},
-			{
-				Name:    "ocrtask_status_priority_created_at",
-				Unique:  false,
-				Columns: []*schema.Column{OcrTasksColumns[2], OcrTasksColumns[3], OcrTasksColumns[11]},
-			},
-			{
-				Name:    "ocrtask_status_updated_at",
-				Unique:  false,
-				Columns: []*schema.Column{OcrTasksColumns[2], OcrTasksColumns[12]},
-			},
-		},
-	}
-	// RecordTasksColumns holds the columns for the "record_tasks" table.
-	RecordTasksColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeInt, Increment: true},
-		{Name: "role", Type: field.TypeString},
-		{Name: "source_url", Type: field.TypeString},
-		{Name: "output_path", Type: field.TypeString},
-		{Name: "status", Type: field.TypeEnum, Enums: []string{"PENDING", "DISPATCHING", "RUNNING", "SUCCEEDED", "FAILED", "CANCEL_REQUESTED", "CANCELED"}, Default: "PENDING"},
-		{Name: "k8s_job_name", Type: field.TypeString, Nullable: true},
-		{Name: "attempts", Type: field.TypeInt, Default: 0},
-		{Name: "priority", Type: field.TypeInt, Default: 0},
-		{Name: "file_size", Type: field.TypeInt64, Nullable: true},
-		{Name: "checksum", Type: field.TypeString, Nullable: true},
-		{Name: "error_message", Type: field.TypeString, Nullable: true},
-		{Name: "started_at", Type: field.TypeTime, Nullable: true},
-		{Name: "completed_at", Type: field.TypeTime, Nullable: true},
-		{Name: "created_at", Type: field.TypeTime},
-		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "match_round_record_tasks", Type: field.TypeInt},
-	}
-	// RecordTasksTable holds the schema information for the "record_tasks" table.
-	RecordTasksTable = &schema.Table{
-		Name:       "record_tasks",
-		Columns:    RecordTasksColumns,
-		PrimaryKey: []*schema.Column{RecordTasksColumns[0]},
-		ForeignKeys: []*schema.ForeignKey{
-			{
-				Symbol:     "record_tasks_match_rounds_record_tasks",
-				Columns:    []*schema.Column{RecordTasksColumns[15]},
-				RefColumns: []*schema.Column{MatchRoundsColumns[0]},
-				OnDelete:   schema.NoAction,
-			},
-		},
-		Indexes: []*schema.Index{
-			{
-				Name:    "recordtask_role_match_round_record_tasks",
-				Unique:  true,
-				Columns: []*schema.Column{RecordTasksColumns[1], RecordTasksColumns[15]},
-			},
-			{
-				Name:    "recordtask_status",
-				Unique:  false,
-				Columns: []*schema.Column{RecordTasksColumns[4]},
-			},
-			{
-				Name:    "recordtask_status_priority_created_at",
-				Unique:  false,
-				Columns: []*schema.Column{RecordTasksColumns[4], RecordTasksColumns[7], RecordTasksColumns[13]},
-			},
-			{
-				Name:    "recordtask_status_updated_at",
-				Unique:  false,
-				Columns: []*schema.Column{RecordTasksColumns[4], RecordTasksColumns[14]},
-			},
-		},
-	}
-	// SttTasksColumns holds the columns for the "stt_tasks" table.
-	SttTasksColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeInt, Increment: true},
-		{Name: "role", Type: field.TypeString},
-		{Name: "status", Type: field.TypeEnum, Enums: []string{"PENDING", "DISPATCHING", "RUNNING", "SUCCEEDED", "FAILED"}, Default: "PENDING"},
-		{Name: "priority", Type: field.TypeInt, Default: 0},
-		{Name: "k8s_job_name", Type: field.TypeString, Nullable: true},
-		{Name: "attempts", Type: field.TypeInt, Default: 0},
-		{Name: "stt_path", Type: field.TypeString, Nullable: true},
-		{Name: "subtitle_path", Type: field.TypeString, Nullable: true},
-		{Name: "error_message", Type: field.TypeString, Nullable: true},
-		{Name: "started_at", Type: field.TypeTime, Nullable: true},
-		{Name: "completed_at", Type: field.TypeTime, Nullable: true},
-		{Name: "created_at", Type: field.TypeTime},
-		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "match_round_stt_tasks", Type: field.TypeInt},
-		{Name: "media_artifact_stt_tasks", Type: field.TypeInt},
-	}
-	// SttTasksTable holds the schema information for the "stt_tasks" table.
-	SttTasksTable = &schema.Table{
-		Name:       "stt_tasks",
-		Columns:    SttTasksColumns,
-		PrimaryKey: []*schema.Column{SttTasksColumns[0]},
-		ForeignKeys: []*schema.ForeignKey{
-			{
-				Symbol:     "stt_tasks_match_rounds_stt_tasks",
-				Columns:    []*schema.Column{SttTasksColumns[13]},
-				RefColumns: []*schema.Column{MatchRoundsColumns[0]},
-				OnDelete:   schema.NoAction,
-			},
-			{
-				Symbol:     "stt_tasks_media_artifacts_stt_tasks",
-				Columns:    []*schema.Column{SttTasksColumns[14]},
-				RefColumns: []*schema.Column{MediaArtifactsColumns[0]},
-				OnDelete:   schema.NoAction,
-			},
-		},
-		Indexes: []*schema.Index{
-			{
-				Name:    "stttask_role_match_round_stt_tasks",
-				Unique:  true,
-				Columns: []*schema.Column{SttTasksColumns[1], SttTasksColumns[13]},
-			},
-			{
-				Name:    "stttask_status",
-				Unique:  false,
-				Columns: []*schema.Column{SttTasksColumns[2]},
-			},
-			{
-				Name:    "stttask_status_priority_created_at",
-				Unique:  false,
-				Columns: []*schema.Column{SttTasksColumns[2], SttTasksColumns[3], SttTasksColumns[11]},
-			},
-			{
-				Name:    "stttask_status_updated_at",
-				Unique:  false,
-				Columns: []*schema.Column{SttTasksColumns[2], SttTasksColumns[12]},
+				Columns: []*schema.Column{MatchRoundsColumns[2], MatchRoundsColumns[10]},
 			},
 		},
 	}
@@ -544,166 +290,24 @@ var (
 		Columns:    TeamsColumns,
 		PrimaryKey: []*schema.Column{TeamsColumns[0]},
 	}
-	// TranscodeTasksColumns holds the columns for the "transcode_tasks" table.
-	TranscodeTasksColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeInt, Increment: true},
-		{Name: "status", Type: field.TypeEnum, Enums: []string{"PENDING", "DISPATCHING", "RUNNING", "SUCCEEDED", "FAILED"}, Default: "PENDING"},
-		{Name: "k8s_job_name", Type: field.TypeString, Nullable: true},
-		{Name: "attempts", Type: field.TypeInt, Default: 0},
-		{Name: "priority", Type: field.TypeInt, Default: 0},
-		{Name: "error_message", Type: field.TypeString, Nullable: true},
-		{Name: "started_at", Type: field.TypeTime, Nullable: true},
-		{Name: "completed_at", Type: field.TypeTime, Nullable: true},
-		{Name: "created_at", Type: field.TypeTime},
-		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "media_artifact_source_transcode_task", Type: field.TypeInt, Unique: true},
-		{Name: "media_artifact_archive_transcode_task", Type: field.TypeInt, Unique: true, Nullable: true},
-	}
-	// TranscodeTasksTable holds the schema information for the "transcode_tasks" table.
-	TranscodeTasksTable = &schema.Table{
-		Name:       "transcode_tasks",
-		Columns:    TranscodeTasksColumns,
-		PrimaryKey: []*schema.Column{TranscodeTasksColumns[0]},
-		ForeignKeys: []*schema.ForeignKey{
-			{
-				Symbol:     "transcode_tasks_media_artifacts_source_transcode_task",
-				Columns:    []*schema.Column{TranscodeTasksColumns[10]},
-				RefColumns: []*schema.Column{MediaArtifactsColumns[0]},
-				OnDelete:   schema.NoAction,
-			},
-			{
-				Symbol:     "transcode_tasks_media_artifacts_archive_transcode_task",
-				Columns:    []*schema.Column{TranscodeTasksColumns[11]},
-				RefColumns: []*schema.Column{MediaArtifactsColumns[0]},
-				OnDelete:   schema.SetNull,
-			},
-		},
-		Indexes: []*schema.Index{
-			{
-				Name:    "transcodetask_media_artifact_source_transcode_task",
-				Unique:  true,
-				Columns: []*schema.Column{TranscodeTasksColumns[10]},
-			},
-			{
-				Name:    "transcodetask_status",
-				Unique:  false,
-				Columns: []*schema.Column{TranscodeTasksColumns[1]},
-			},
-			{
-				Name:    "transcodetask_status_priority_created_at",
-				Unique:  false,
-				Columns: []*schema.Column{TranscodeTasksColumns[1], TranscodeTasksColumns[4], TranscodeTasksColumns[8]},
-			},
-			{
-				Name:    "transcodetask_status_updated_at",
-				Unique:  false,
-				Columns: []*schema.Column{TranscodeTasksColumns[1], TranscodeTasksColumns[9]},
-			},
-		},
-	}
-	// UploadTasksColumns holds the columns for the "upload_tasks" table.
-	UploadTasksColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeInt, Increment: true},
-		{Name: "source_path", Type: field.TypeString},
-		{Name: "status", Type: field.TypeEnum, Enums: []string{"PENDING", "DISPATCHING", "RUNNING", "SUCCEEDED", "FAILED"}, Default: "PENDING"},
-		{Name: "k8s_job_name", Type: field.TypeString, Nullable: true},
-		{Name: "attempts", Type: field.TypeInt, Default: 0},
-		{Name: "priority", Type: field.TypeInt, Default: 0},
-		{Name: "bitable_app_token", Type: field.TypeString, Nullable: true},
-		{Name: "bitable_table_id", Type: field.TypeString, Nullable: true},
-		{Name: "bitable_record_id", Type: field.TypeString, Nullable: true},
-		{Name: "bitable_record_url", Type: field.TypeString, Nullable: true},
-		{Name: "attachment_file_token", Type: field.TypeString, Nullable: true},
-		{Name: "error_message", Type: field.TypeString, Nullable: true},
-		{Name: "started_at", Type: field.TypeTime, Nullable: true},
-		{Name: "completed_at", Type: field.TypeTime, Nullable: true},
-		{Name: "created_at", Type: field.TypeTime},
-		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "media_artifact_upload_task", Type: field.TypeInt, Unique: true, Nullable: true},
-		{Name: "record_task_upload_task", Type: field.TypeInt, Unique: true},
-	}
-	// UploadTasksTable holds the schema information for the "upload_tasks" table.
-	UploadTasksTable = &schema.Table{
-		Name:       "upload_tasks",
-		Columns:    UploadTasksColumns,
-		PrimaryKey: []*schema.Column{UploadTasksColumns[0]},
-		ForeignKeys: []*schema.ForeignKey{
-			{
-				Symbol:     "upload_tasks_media_artifacts_upload_task",
-				Columns:    []*schema.Column{UploadTasksColumns[16]},
-				RefColumns: []*schema.Column{MediaArtifactsColumns[0]},
-				OnDelete:   schema.SetNull,
-			},
-			{
-				Symbol:     "upload_tasks_record_tasks_upload_task",
-				Columns:    []*schema.Column{UploadTasksColumns[17]},
-				RefColumns: []*schema.Column{RecordTasksColumns[0]},
-				OnDelete:   schema.NoAction,
-			},
-		},
-		Indexes: []*schema.Index{
-			{
-				Name:    "uploadtask_record_task_upload_task",
-				Unique:  true,
-				Columns: []*schema.Column{UploadTasksColumns[17]},
-			},
-			{
-				Name:    "uploadtask_media_artifact_upload_task",
-				Unique:  true,
-				Columns: []*schema.Column{UploadTasksColumns[16]},
-			},
-			{
-				Name:    "uploadtask_status",
-				Unique:  false,
-				Columns: []*schema.Column{UploadTasksColumns[2]},
-			},
-			{
-				Name:    "uploadtask_status_priority_created_at",
-				Unique:  false,
-				Columns: []*schema.Column{UploadTasksColumns[2], UploadTasksColumns[5], UploadTasksColumns[14]},
-			},
-			{
-				Name:    "uploadtask_status_updated_at",
-				Unique:  false,
-				Columns: []*schema.Column{UploadTasksColumns[2], UploadTasksColumns[15]},
-			},
-		},
-	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
+		BilibiliHighlightPublicationsTable,
 		HighlightClipsTable,
-		HighlightPublishTasksTable,
-		HighlightRoundStatesTable,
+		LarkBitableRecordsTable,
 		LarkMessagesTable,
 		MatchesTable,
 		MatchRoundsTable,
-		MediaArtifactsTable,
-		OcrTasksTable,
-		RecordTasksTable,
-		SttTasksTable,
 		TeamsTable,
-		TranscodeTasksTable,
-		UploadTasksTable,
 	}
 )
 
 func init() {
+	BilibiliHighlightPublicationsTable.ForeignKeys[0].RefTable = HighlightClipsTable
 	HighlightClipsTable.ForeignKeys[0].RefTable = MatchRoundsTable
-	HighlightClipsTable.ForeignKeys[1].RefTable = MediaArtifactsTable
-	HighlightPublishTasksTable.ForeignKeys[0].RefTable = HighlightClipsTable
-	HighlightRoundStatesTable.ForeignKeys[0].RefTable = MatchRoundsTable
+	LarkBitableRecordsTable.ForeignKeys[0].RefTable = MatchRoundsTable
 	LarkMessagesTable.ForeignKeys[0].RefTable = MatchesTable
 	MatchesTable.ForeignKeys[0].RefTable = TeamsTable
 	MatchesTable.ForeignKeys[1].RefTable = TeamsTable
 	MatchRoundsTable.ForeignKeys[0].RefTable = MatchesTable
-	MediaArtifactsTable.ForeignKeys[0].RefTable = RecordTasksTable
-	OcrTasksTable.ForeignKeys[0].RefTable = MatchRoundsTable
-	OcrTasksTable.ForeignKeys[1].RefTable = MediaArtifactsTable
-	RecordTasksTable.ForeignKeys[0].RefTable = MatchRoundsTable
-	SttTasksTable.ForeignKeys[0].RefTable = MatchRoundsTable
-	SttTasksTable.ForeignKeys[1].RefTable = MediaArtifactsTable
-	TranscodeTasksTable.ForeignKeys[0].RefTable = MediaArtifactsTable
-	TranscodeTasksTable.ForeignKeys[1].RefTable = MediaArtifactsTable
-	UploadTasksTable.ForeignKeys[0].RefTable = MediaArtifactsTable
-	UploadTasksTable.ForeignKeys[1].RefTable = RecordTasksTable
 }

@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/xml"
 	"flag"
 	"fmt"
 	"io"
@@ -12,6 +13,7 @@ import (
 	"os/exec"
 	pathpkg "path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -56,15 +58,15 @@ func main() {
 		os.Exit(1)
 	}
 	if err := run(context.Background(), jobCtx, jobDir); err != nil {
-		_ = jobcontract.WriteError(jobDir, "transcode", jobCtx.TaskID, err)
+		_ = jobcontract.WriteError(jobDir, "transcode", 0, err)
 		logx.Error(err)
 		os.Exit(1)
 	}
 }
 
 func run(ctx context.Context, jobCtx jobcontract.TranscodeContext, jobDir string) error {
-	if jobCtx.TaskID == 0 {
-		return errors.New("task_id is required")
+	if strings.TrimSpace(jobCtx.SourcePath) == "" {
+		return errors.New("source_path is required")
 	}
 	sourceRel, sourceMountedPath, err := artifactPath(jobCtx.BaseDir, jobCtx.SourcePath)
 	if err != nil {
@@ -78,7 +80,7 @@ func run(ctx context.Context, jobCtx jobcontract.TranscodeContext, jobDir string
 	if err != nil {
 		return err
 	}
-	tmpArchiveRel := fmt.Sprintf("%s.tmp-%d", archiveRel, jobCtx.TaskID)
+	tmpArchiveRel := fmt.Sprintf("%s.tmp-%d", archiveRel, jobCtx.MatchRoundID)
 	tmpArchiveMountedPath := filepath.Join(jobCtx.BaseDir, filepath.FromSlash(tmpArchiveRel))
 
 	if err := ensureSVTAV1(ctx); err != nil {
@@ -89,11 +91,20 @@ func run(ctx context.Context, jobCtx jobcontract.TranscodeContext, jobDir string
 	}
 	_ = os.Remove(tmpArchiveMountedPath)
 
-	cmd := exec.CommandContext(ctx,
-		"ffmpeg",
+	ffmpegArgs := []string{
 		"-hide_banner",
 		"-loglevel", "info",
+	}
+	if jobCtx.TrimStartSeconds != nil && *jobCtx.TrimStartSeconds > 0 {
+		ffmpegArgs = append(ffmpegArgs, "-ss", fmt.Sprintf("%.3f", *jobCtx.TrimStartSeconds))
+	}
+	ffmpegArgs = append(ffmpegArgs,
 		"-i", sourceMountedPath,
+	)
+	if jobCtx.TrimStartSeconds != nil && jobCtx.TrimEndSeconds != nil && *jobCtx.TrimEndSeconds > *jobCtx.TrimStartSeconds {
+		ffmpegArgs = append(ffmpegArgs, "-t", fmt.Sprintf("%.3f", *jobCtx.TrimEndSeconds-*jobCtx.TrimStartSeconds))
+	}
+	ffmpegArgs = append(ffmpegArgs,
 		"-map", "0:v:0",
 		"-an",
 		"-sn",
@@ -107,6 +118,7 @@ func run(ctx context.Context, jobCtx jobcontract.TranscodeContext, jobDir string
 		"-f", "mp4",
 		"-y", tmpArchiveMountedPath,
 	)
+	cmd := exec.CommandContext(ctx, "ffmpeg", ffmpegArgs...)
 	var stderr bytes.Buffer
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = io.MultiWriter(os.Stderr, &stderr)
@@ -142,19 +154,104 @@ func run(ctx context.Context, jobCtx jobcontract.TranscodeContext, jobDir string
 		err := errors.Errorf("published archive size mismatch: local=%d published=%d", stat.Size(), published.Size())
 		return err
 	}
+	if err := cropRoundDanmu(jobCtx); err != nil {
+		return err
+	}
 
-	return jobcontract.WriteResult(jobDir, jobcontract.TranscodeResult{
+	result := jobcontract.TranscodeResult{
 		Schema:           "rm-monitor/transcode-result/v1",
-		TaskID:           jobCtx.TaskID,
-		SourceArtifactID: jobCtx.SourceArtifactID,
-		RecordTaskID:     jobCtx.RecordTaskID,
+		MatchID:          jobCtx.MatchID,
+		MatchRoundID:     jobCtx.MatchRoundID,
 		ArchivePath:      archiveRel,
 		Format:           "mp4",
 		Codec:            "av1",
 		FileSize:         stat.Size(),
 		Checksum:         sum,
 		CompletedAt:      time.Now(),
+	}
+	if err := jobcontract.WriteTempResult(result); err != nil {
+		return err
+	}
+	return jobcontract.WriteArgoOutputs(map[string]any{
+		"archive_path": result.ArchivePath,
+		"format":       result.Format,
+		"codec":        result.Codec,
+		"file_size":    result.FileSize,
+		"checksum":     result.Checksum,
 	})
+}
+
+type bilibiliXML struct {
+	XMLName xml.Name `xml:"i"`
+	Danmaku []danmuD `xml:"d"`
+}
+
+type danmuD struct {
+	XMLName xml.Name   `xml:"d"`
+	P       string     `xml:"p,attr"`
+	Attrs   []xml.Attr `xml:",any,attr"`
+	Text    string     `xml:",chardata"`
+}
+
+func cropRoundDanmu(jobCtx jobcontract.TranscodeContext) error {
+	roundDir := strings.TrimSpace(jobCtx.RoundDir)
+	if roundDir == "" {
+		return nil
+	}
+	role := strings.TrimSpace(jobCtx.Role)
+	if role == "" {
+		role = "主视角"
+	}
+	rawPath := filepath.Join(roundDir, role+".raw.danmuku.xml")
+	finalPath := filepath.Join(roundDir, role+".danmuku.xml")
+	raw, err := os.ReadFile(rawPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return errors.Wrap(err, "read raw danmu xml")
+	}
+	var doc bilibiliXML
+	if err := xml.Unmarshal(raw, &doc); err != nil {
+		return errors.Wrap(err, "parse raw danmu xml")
+	}
+	start := 0.0
+	end := 0.0
+	hasWindow := jobCtx.TrimStartSeconds != nil && jobCtx.TrimEndSeconds != nil && *jobCtx.TrimEndSeconds > *jobCtx.TrimStartSeconds
+	if hasWindow {
+		start = *jobCtx.TrimStartSeconds
+		end = *jobCtx.TrimEndSeconds
+	}
+	filtered := make([]danmuD, 0, len(doc.Danmaku))
+	for _, item := range doc.Danmaku {
+		p := strings.Split(item.P, ",")
+		if len(p) == 0 {
+			continue
+		}
+		t, err := strconv.ParseFloat(strings.TrimSpace(p[0]), 64)
+		if err != nil {
+			continue
+		}
+		if hasWindow {
+			if t < start || t > end {
+				continue
+			}
+			t -= start
+		}
+		p[0] = fmt.Sprintf("%.3f", t)
+		item.P = strings.Join(p, ",")
+		filtered = append(filtered, item)
+	}
+	doc.Danmaku = filtered
+	out, err := xml.MarshalIndent(doc, "", "  ")
+	if err != nil {
+		return errors.Wrap(err, "marshal final danmu xml")
+	}
+	tmp := finalPath + ".tmp"
+	if err := os.WriteFile(tmp, append([]byte(xml.Header), out...), 0o644); err != nil {
+		return errors.Wrap(err, "write final danmu xml")
+	}
+	return errors.Wrap(os.Rename(tmp, finalPath), "publish final danmu xml")
 }
 
 func transcodeJobDir(jobCtx jobcontract.TranscodeContext) (string, error) {
@@ -170,7 +267,7 @@ func transcodeJobDir(jobCtx jobcontract.TranscodeContext) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(jobCtx.BaseDir, filepath.FromSlash(pathpkg.Dir(archiveRel)), jobcontract.DirName, fmt.Sprintf("transcode-%d", jobCtx.TaskID)), nil
+	return filepath.Join(jobCtx.BaseDir, filepath.FromSlash(pathpkg.Dir(archiveRel)), jobcontract.DirName, fmt.Sprintf("transcode-%d", jobCtx.MatchRoundID)), nil
 }
 
 func artifactPath(baseDir, artifactPath string) (string, string, error) {

@@ -60,6 +60,11 @@ func MessageID(v string) predicate.LarkMessage {
 	return predicate.LarkMessage(sql.FieldEQ(FieldMessageID, v))
 }
 
+// ChatID applies equality check predicate on the "chat_id" field. It's identical to ChatIDEQ.
+func ChatID(v string) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldEQ(FieldChatID, v))
+}
+
 // CardID applies equality check predicate on the "card_id" field. It's identical to CardIDEQ.
 func CardID(v string) predicate.LarkMessage {
 	return predicate.LarkMessage(sql.FieldEQ(FieldCardID, v))
@@ -138,6 +143,81 @@ func MessageIDEqualFold(v string) predicate.LarkMessage {
 // MessageIDContainsFold applies the ContainsFold predicate on the "message_id" field.
 func MessageIDContainsFold(v string) predicate.LarkMessage {
 	return predicate.LarkMessage(sql.FieldContainsFold(FieldMessageID, v))
+}
+
+// ChatIDEQ applies the EQ predicate on the "chat_id" field.
+func ChatIDEQ(v string) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldEQ(FieldChatID, v))
+}
+
+// ChatIDNEQ applies the NEQ predicate on the "chat_id" field.
+func ChatIDNEQ(v string) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldNEQ(FieldChatID, v))
+}
+
+// ChatIDIn applies the In predicate on the "chat_id" field.
+func ChatIDIn(vs ...string) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldIn(FieldChatID, vs...))
+}
+
+// ChatIDNotIn applies the NotIn predicate on the "chat_id" field.
+func ChatIDNotIn(vs ...string) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldNotIn(FieldChatID, vs...))
+}
+
+// ChatIDGT applies the GT predicate on the "chat_id" field.
+func ChatIDGT(v string) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldGT(FieldChatID, v))
+}
+
+// ChatIDGTE applies the GTE predicate on the "chat_id" field.
+func ChatIDGTE(v string) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldGTE(FieldChatID, v))
+}
+
+// ChatIDLT applies the LT predicate on the "chat_id" field.
+func ChatIDLT(v string) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldLT(FieldChatID, v))
+}
+
+// ChatIDLTE applies the LTE predicate on the "chat_id" field.
+func ChatIDLTE(v string) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldLTE(FieldChatID, v))
+}
+
+// ChatIDContains applies the Contains predicate on the "chat_id" field.
+func ChatIDContains(v string) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldContains(FieldChatID, v))
+}
+
+// ChatIDHasPrefix applies the HasPrefix predicate on the "chat_id" field.
+func ChatIDHasPrefix(v string) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldHasPrefix(FieldChatID, v))
+}
+
+// ChatIDHasSuffix applies the HasSuffix predicate on the "chat_id" field.
+func ChatIDHasSuffix(v string) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldHasSuffix(FieldChatID, v))
+}
+
+// ChatIDIsNil applies the IsNil predicate on the "chat_id" field.
+func ChatIDIsNil() predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldIsNull(FieldChatID))
+}
+
+// ChatIDNotNil applies the NotNil predicate on the "chat_id" field.
+func ChatIDNotNil() predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldNotNull(FieldChatID))
+}
+
+// ChatIDEqualFold applies the EqualFold predicate on the "chat_id" field.
+func ChatIDEqualFold(v string) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldEqualFold(FieldChatID, v))
+}
+
+// ChatIDContainsFold applies the ContainsFold predicate on the "chat_id" field.
+func ChatIDContainsFold(v string) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldContainsFold(FieldChatID, v))
 }
 
 // CardIDEQ applies the EQ predicate on the "card_id" field.

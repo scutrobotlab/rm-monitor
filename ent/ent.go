@@ -12,19 +12,13 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"scutbot.cn/web/rm-monitor/ent/bilibilihighlightpublication"
 	"scutbot.cn/web/rm-monitor/ent/highlightclip"
-	"scutbot.cn/web/rm-monitor/ent/highlightpublishtask"
-	"scutbot.cn/web/rm-monitor/ent/highlightroundstate"
+	"scutbot.cn/web/rm-monitor/ent/larkbitablerecord"
 	"scutbot.cn/web/rm-monitor/ent/larkmessage"
 	"scutbot.cn/web/rm-monitor/ent/match"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
-	"scutbot.cn/web/rm-monitor/ent/mediaartifact"
-	"scutbot.cn/web/rm-monitor/ent/ocrtask"
-	"scutbot.cn/web/rm-monitor/ent/recordtask"
-	"scutbot.cn/web/rm-monitor/ent/stttask"
 	"scutbot.cn/web/rm-monitor/ent/team"
-	"scutbot.cn/web/rm-monitor/ent/transcodetask"
-	"scutbot.cn/web/rm-monitor/ent/uploadtask"
 )
 
 // ent aliases to avoid import conflicts in user's code.
@@ -85,19 +79,13 @@ var (
 func checkColumn(t, c string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
-			highlightclip.Table:        highlightclip.ValidColumn,
-			highlightpublishtask.Table: highlightpublishtask.ValidColumn,
-			highlightroundstate.Table:  highlightroundstate.ValidColumn,
-			larkmessage.Table:          larkmessage.ValidColumn,
-			match.Table:                match.ValidColumn,
-			matchround.Table:           matchround.ValidColumn,
-			mediaartifact.Table:        mediaartifact.ValidColumn,
-			ocrtask.Table:              ocrtask.ValidColumn,
-			recordtask.Table:           recordtask.ValidColumn,
-			stttask.Table:              stttask.ValidColumn,
-			team.Table:                 team.ValidColumn,
-			transcodetask.Table:        transcodetask.ValidColumn,
-			uploadtask.Table:           uploadtask.ValidColumn,
+			bilibilihighlightpublication.Table: bilibilihighlightpublication.ValidColumn,
+			highlightclip.Table:                highlightclip.ValidColumn,
+			larkbitablerecord.Table:            larkbitablerecord.ValidColumn,
+			larkmessage.Table:                  larkmessage.ValidColumn,
+			match.Table:                        match.ValidColumn,
+			matchround.Table:                   matchround.ValidColumn,
+			team.Table:                         team.ValidColumn,
 		})
 	})
 	return columnCheck(t, c)

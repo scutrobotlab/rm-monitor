@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"time"
 
-	"entgo.io/ent/dialect"
-	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"scutbot.cn/web/rm-monitor/ent/larkmessage"
@@ -23,7 +21,6 @@ type MatchCreate struct {
 	config
 	mutation *MatchMutation
 	hooks    []Hook
-	conflict []sql.ConflictOption
 }
 
 // SetEvent sets the "event" field.
@@ -152,6 +149,48 @@ func (_c *MatchCreate) SetLatestStatus(v string) *MatchCreate {
 func (_c *MatchCreate) SetNillableLatestStatus(v *string) *MatchCreate {
 	if v != nil {
 		_c.SetLatestStatus(*v)
+	}
+	return _c
+}
+
+// SetWorkflowName sets the "workflow_name" field.
+func (_c *MatchCreate) SetWorkflowName(v string) *MatchCreate {
+	_c.mutation.SetWorkflowName(v)
+	return _c
+}
+
+// SetNillableWorkflowName sets the "workflow_name" field if the given value is not nil.
+func (_c *MatchCreate) SetNillableWorkflowName(v *string) *MatchCreate {
+	if v != nil {
+		_c.SetWorkflowName(*v)
+	}
+	return _c
+}
+
+// SetWorkflowUID sets the "workflow_uid" field.
+func (_c *MatchCreate) SetWorkflowUID(v string) *MatchCreate {
+	_c.mutation.SetWorkflowUID(v)
+	return _c
+}
+
+// SetNillableWorkflowUID sets the "workflow_uid" field if the given value is not nil.
+func (_c *MatchCreate) SetNillableWorkflowUID(v *string) *MatchCreate {
+	if v != nil {
+		_c.SetWorkflowUID(*v)
+	}
+	return _c
+}
+
+// SetWorkflowPhase sets the "workflow_phase" field.
+func (_c *MatchCreate) SetWorkflowPhase(v string) *MatchCreate {
+	_c.mutation.SetWorkflowPhase(v)
+	return _c
+}
+
+// SetNillableWorkflowPhase sets the "workflow_phase" field if the given value is not nil.
+func (_c *MatchCreate) SetNillableWorkflowPhase(v *string) *MatchCreate {
+	if v != nil {
+		_c.SetWorkflowPhase(*v)
 	}
 	return _c
 }
@@ -395,7 +434,6 @@ func (_c *MatchCreate) createSpec() (*Match, *sqlgraph.CreateSpec) {
 		_node = &Match{config: _c.config}
 		_spec = sqlgraph.NewCreateSpec(match.Table, sqlgraph.NewFieldSpec(match.FieldID, field.TypeString))
 	)
-	_spec.OnConflict = _c.conflict
 	if id, ok := _c.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = id
@@ -443,6 +481,18 @@ func (_c *MatchCreate) createSpec() (*Match, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.LatestStatus(); ok {
 		_spec.SetField(match.FieldLatestStatus, field.TypeString, value)
 		_node.LatestStatus = value
+	}
+	if value, ok := _c.mutation.WorkflowName(); ok {
+		_spec.SetField(match.FieldWorkflowName, field.TypeString, value)
+		_node.WorkflowName = &value
+	}
+	if value, ok := _c.mutation.WorkflowUID(); ok {
+		_spec.SetField(match.FieldWorkflowUID, field.TypeString, value)
+		_node.WorkflowUID = &value
+	}
+	if value, ok := _c.mutation.WorkflowPhase(); ok {
+		_spec.SetField(match.FieldWorkflowPhase, field.TypeString, value)
+		_node.WorkflowPhase = &value
 	}
 	if value, ok := _c.mutation.Report(); ok {
 		_spec.SetField(match.FieldReport, field.TypeString, value)
@@ -525,579 +575,11 @@ func (_c *MatchCreate) createSpec() (*Match, *sqlgraph.CreateSpec) {
 	return _node, _spec
 }
 
-// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
-// of the `INSERT` statement. For example:
-//
-//	client.Match.Create().
-//		SetEvent(v).
-//		OnConflict(
-//			// Update the row with the new values
-//			// the was proposed for insertion.
-//			sql.ResolveWithNewValues(),
-//		).
-//		// Override some of the fields with custom
-//		// update values.
-//		Update(func(u *ent.MatchUpsert) {
-//			SetEvent(v+v).
-//		}).
-//		Exec(ctx)
-func (_c *MatchCreate) OnConflict(opts ...sql.ConflictOption) *MatchUpsertOne {
-	_c.conflict = opts
-	return &MatchUpsertOne{
-		create: _c,
-	}
-}
-
-// OnConflictColumns calls `OnConflict` and configures the columns
-// as conflict target. Using this option is equivalent to using:
-//
-//	client.Match.Create().
-//		OnConflict(sql.ConflictColumns(columns...)).
-//		Exec(ctx)
-func (_c *MatchCreate) OnConflictColumns(columns ...string) *MatchUpsertOne {
-	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
-	return &MatchUpsertOne{
-		create: _c,
-	}
-}
-
-type (
-	// MatchUpsertOne is the builder for "upsert"-ing
-	//  one Match node.
-	MatchUpsertOne struct {
-		create *MatchCreate
-	}
-
-	// MatchUpsert is the "OnConflict" setter.
-	MatchUpsert struct {
-		*sql.UpdateSet
-	}
-)
-
-// SetEvent sets the "event" field.
-func (u *MatchUpsert) SetEvent(v string) *MatchUpsert {
-	u.Set(match.FieldEvent, v)
-	return u
-}
-
-// UpdateEvent sets the "event" field to the value that was provided on create.
-func (u *MatchUpsert) UpdateEvent() *MatchUpsert {
-	u.SetExcluded(match.FieldEvent)
-	return u
-}
-
-// SetZone sets the "zone" field.
-func (u *MatchUpsert) SetZone(v string) *MatchUpsert {
-	u.Set(match.FieldZone, v)
-	return u
-}
-
-// UpdateZone sets the "zone" field to the value that was provided on create.
-func (u *MatchUpsert) UpdateZone() *MatchUpsert {
-	u.SetExcluded(match.FieldZone)
-	return u
-}
-
-// SetOrder sets the "order" field.
-func (u *MatchUpsert) SetOrder(v int) *MatchUpsert {
-	u.Set(match.FieldOrder, v)
-	return u
-}
-
-// UpdateOrder sets the "order" field to the value that was provided on create.
-func (u *MatchUpsert) UpdateOrder() *MatchUpsert {
-	u.SetExcluded(match.FieldOrder)
-	return u
-}
-
-// AddOrder adds v to the "order" field.
-func (u *MatchUpsert) AddOrder(v int) *MatchUpsert {
-	u.Add(match.FieldOrder, v)
-	return u
-}
-
-// SetMatchType sets the "match_type" field.
-func (u *MatchUpsert) SetMatchType(v string) *MatchUpsert {
-	u.Set(match.FieldMatchType, v)
-	return u
-}
-
-// UpdateMatchType sets the "match_type" field to the value that was provided on create.
-func (u *MatchUpsert) UpdateMatchType() *MatchUpsert {
-	u.SetExcluded(match.FieldMatchType)
-	return u
-}
-
-// SetMatchSlug sets the "match_slug" field.
-func (u *MatchUpsert) SetMatchSlug(v string) *MatchUpsert {
-	u.Set(match.FieldMatchSlug, v)
-	return u
-}
-
-// UpdateMatchSlug sets the "match_slug" field to the value that was provided on create.
-func (u *MatchUpsert) UpdateMatchSlug() *MatchUpsert {
-	u.SetExcluded(match.FieldMatchSlug)
-	return u
-}
-
-// ClearMatchSlug clears the value of the "match_slug" field.
-func (u *MatchUpsert) ClearMatchSlug() *MatchUpsert {
-	u.SetNull(match.FieldMatchSlug)
-	return u
-}
-
-// SetTotalRounds sets the "total_rounds" field.
-func (u *MatchUpsert) SetTotalRounds(v int) *MatchUpsert {
-	u.Set(match.FieldTotalRounds, v)
-	return u
-}
-
-// UpdateTotalRounds sets the "total_rounds" field to the value that was provided on create.
-func (u *MatchUpsert) UpdateTotalRounds() *MatchUpsert {
-	u.SetExcluded(match.FieldTotalRounds)
-	return u
-}
-
-// AddTotalRounds adds v to the "total_rounds" field.
-func (u *MatchUpsert) AddTotalRounds(v int) *MatchUpsert {
-	u.Add(match.FieldTotalRounds, v)
-	return u
-}
-
-// SetPriority sets the "priority" field.
-func (u *MatchUpsert) SetPriority(v int) *MatchUpsert {
-	u.Set(match.FieldPriority, v)
-	return u
-}
-
-// UpdatePriority sets the "priority" field to the value that was provided on create.
-func (u *MatchUpsert) UpdatePriority() *MatchUpsert {
-	u.SetExcluded(match.FieldPriority)
-	return u
-}
-
-// AddPriority adds v to the "priority" field.
-func (u *MatchUpsert) AddPriority(v int) *MatchUpsert {
-	u.Add(match.FieldPriority, v)
-	return u
-}
-
-// SetResult sets the "result" field.
-func (u *MatchUpsert) SetResult(v match.Result) *MatchUpsert {
-	u.Set(match.FieldResult, v)
-	return u
-}
-
-// UpdateResult sets the "result" field to the value that was provided on create.
-func (u *MatchUpsert) UpdateResult() *MatchUpsert {
-	u.SetExcluded(match.FieldResult)
-	return u
-}
-
-// SetWinnerPlaceholderName sets the "winner_placeholder_name" field.
-func (u *MatchUpsert) SetWinnerPlaceholderName(v string) *MatchUpsert {
-	u.Set(match.FieldWinnerPlaceholderName, v)
-	return u
-}
-
-// UpdateWinnerPlaceholderName sets the "winner_placeholder_name" field to the value that was provided on create.
-func (u *MatchUpsert) UpdateWinnerPlaceholderName() *MatchUpsert {
-	u.SetExcluded(match.FieldWinnerPlaceholderName)
-	return u
-}
-
-// ClearWinnerPlaceholderName clears the value of the "winner_placeholder_name" field.
-func (u *MatchUpsert) ClearWinnerPlaceholderName() *MatchUpsert {
-	u.SetNull(match.FieldWinnerPlaceholderName)
-	return u
-}
-
-// SetLoserPlaceholderName sets the "loser_placeholder_name" field.
-func (u *MatchUpsert) SetLoserPlaceholderName(v string) *MatchUpsert {
-	u.Set(match.FieldLoserPlaceholderName, v)
-	return u
-}
-
-// UpdateLoserPlaceholderName sets the "loser_placeholder_name" field to the value that was provided on create.
-func (u *MatchUpsert) UpdateLoserPlaceholderName() *MatchUpsert {
-	u.SetExcluded(match.FieldLoserPlaceholderName)
-	return u
-}
-
-// ClearLoserPlaceholderName clears the value of the "loser_placeholder_name" field.
-func (u *MatchUpsert) ClearLoserPlaceholderName() *MatchUpsert {
-	u.SetNull(match.FieldLoserPlaceholderName)
-	return u
-}
-
-// SetLatestStatus sets the "latest_status" field.
-func (u *MatchUpsert) SetLatestStatus(v string) *MatchUpsert {
-	u.Set(match.FieldLatestStatus, v)
-	return u
-}
-
-// UpdateLatestStatus sets the "latest_status" field to the value that was provided on create.
-func (u *MatchUpsert) UpdateLatestStatus() *MatchUpsert {
-	u.SetExcluded(match.FieldLatestStatus)
-	return u
-}
-
-// SetReport sets the "report" field.
-func (u *MatchUpsert) SetReport(v string) *MatchUpsert {
-	u.Set(match.FieldReport, v)
-	return u
-}
-
-// UpdateReport sets the "report" field to the value that was provided on create.
-func (u *MatchUpsert) UpdateReport() *MatchUpsert {
-	u.SetExcluded(match.FieldReport)
-	return u
-}
-
-// ClearReport clears the value of the "report" field.
-func (u *MatchUpsert) ClearReport() *MatchUpsert {
-	u.SetNull(match.FieldReport)
-	return u
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (u *MatchUpsert) SetUpdatedAt(v time.Time) *MatchUpsert {
-	u.Set(match.FieldUpdatedAt, v)
-	return u
-}
-
-// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
-func (u *MatchUpsert) UpdateUpdatedAt() *MatchUpsert {
-	u.SetExcluded(match.FieldUpdatedAt)
-	return u
-}
-
-// UpdateNewValues updates the mutable fields using the new values that were set on create except the ID field.
-// Using this option is equivalent to using:
-//
-//	client.Match.Create().
-//		OnConflict(
-//			sql.ResolveWithNewValues(),
-//			sql.ResolveWith(func(u *sql.UpdateSet) {
-//				u.SetIgnore(match.FieldID)
-//			}),
-//		).
-//		Exec(ctx)
-func (u *MatchUpsertOne) UpdateNewValues() *MatchUpsertOne {
-	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
-	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
-		if _, exists := u.create.mutation.ID(); exists {
-			s.SetIgnore(match.FieldID)
-		}
-		if _, exists := u.create.mutation.CreatedAt(); exists {
-			s.SetIgnore(match.FieldCreatedAt)
-		}
-	}))
-	return u
-}
-
-// Ignore sets each column to itself in case of conflict.
-// Using this option is equivalent to using:
-//
-//	client.Match.Create().
-//	    OnConflict(sql.ResolveWithIgnore()).
-//	    Exec(ctx)
-func (u *MatchUpsertOne) Ignore() *MatchUpsertOne {
-	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
-	return u
-}
-
-// DoNothing configures the conflict_action to `DO NOTHING`.
-// Supported only by SQLite and PostgreSQL.
-func (u *MatchUpsertOne) DoNothing() *MatchUpsertOne {
-	u.create.conflict = append(u.create.conflict, sql.DoNothing())
-	return u
-}
-
-// Update allows overriding fields `UPDATE` values. See the MatchCreate.OnConflict
-// documentation for more info.
-func (u *MatchUpsertOne) Update(set func(*MatchUpsert)) *MatchUpsertOne {
-	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
-		set(&MatchUpsert{UpdateSet: update})
-	}))
-	return u
-}
-
-// SetEvent sets the "event" field.
-func (u *MatchUpsertOne) SetEvent(v string) *MatchUpsertOne {
-	return u.Update(func(s *MatchUpsert) {
-		s.SetEvent(v)
-	})
-}
-
-// UpdateEvent sets the "event" field to the value that was provided on create.
-func (u *MatchUpsertOne) UpdateEvent() *MatchUpsertOne {
-	return u.Update(func(s *MatchUpsert) {
-		s.UpdateEvent()
-	})
-}
-
-// SetZone sets the "zone" field.
-func (u *MatchUpsertOne) SetZone(v string) *MatchUpsertOne {
-	return u.Update(func(s *MatchUpsert) {
-		s.SetZone(v)
-	})
-}
-
-// UpdateZone sets the "zone" field to the value that was provided on create.
-func (u *MatchUpsertOne) UpdateZone() *MatchUpsertOne {
-	return u.Update(func(s *MatchUpsert) {
-		s.UpdateZone()
-	})
-}
-
-// SetOrder sets the "order" field.
-func (u *MatchUpsertOne) SetOrder(v int) *MatchUpsertOne {
-	return u.Update(func(s *MatchUpsert) {
-		s.SetOrder(v)
-	})
-}
-
-// AddOrder adds v to the "order" field.
-func (u *MatchUpsertOne) AddOrder(v int) *MatchUpsertOne {
-	return u.Update(func(s *MatchUpsert) {
-		s.AddOrder(v)
-	})
-}
-
-// UpdateOrder sets the "order" field to the value that was provided on create.
-func (u *MatchUpsertOne) UpdateOrder() *MatchUpsertOne {
-	return u.Update(func(s *MatchUpsert) {
-		s.UpdateOrder()
-	})
-}
-
-// SetMatchType sets the "match_type" field.
-func (u *MatchUpsertOne) SetMatchType(v string) *MatchUpsertOne {
-	return u.Update(func(s *MatchUpsert) {
-		s.SetMatchType(v)
-	})
-}
-
-// UpdateMatchType sets the "match_type" field to the value that was provided on create.
-func (u *MatchUpsertOne) UpdateMatchType() *MatchUpsertOne {
-	return u.Update(func(s *MatchUpsert) {
-		s.UpdateMatchType()
-	})
-}
-
-// SetMatchSlug sets the "match_slug" field.
-func (u *MatchUpsertOne) SetMatchSlug(v string) *MatchUpsertOne {
-	return u.Update(func(s *MatchUpsert) {
-		s.SetMatchSlug(v)
-	})
-}
-
-// UpdateMatchSlug sets the "match_slug" field to the value that was provided on create.
-func (u *MatchUpsertOne) UpdateMatchSlug() *MatchUpsertOne {
-	return u.Update(func(s *MatchUpsert) {
-		s.UpdateMatchSlug()
-	})
-}
-
-// ClearMatchSlug clears the value of the "match_slug" field.
-func (u *MatchUpsertOne) ClearMatchSlug() *MatchUpsertOne {
-	return u.Update(func(s *MatchUpsert) {
-		s.ClearMatchSlug()
-	})
-}
-
-// SetTotalRounds sets the "total_rounds" field.
-func (u *MatchUpsertOne) SetTotalRounds(v int) *MatchUpsertOne {
-	return u.Update(func(s *MatchUpsert) {
-		s.SetTotalRounds(v)
-	})
-}
-
-// AddTotalRounds adds v to the "total_rounds" field.
-func (u *MatchUpsertOne) AddTotalRounds(v int) *MatchUpsertOne {
-	return u.Update(func(s *MatchUpsert) {
-		s.AddTotalRounds(v)
-	})
-}
-
-// UpdateTotalRounds sets the "total_rounds" field to the value that was provided on create.
-func (u *MatchUpsertOne) UpdateTotalRounds() *MatchUpsertOne {
-	return u.Update(func(s *MatchUpsert) {
-		s.UpdateTotalRounds()
-	})
-}
-
-// SetPriority sets the "priority" field.
-func (u *MatchUpsertOne) SetPriority(v int) *MatchUpsertOne {
-	return u.Update(func(s *MatchUpsert) {
-		s.SetPriority(v)
-	})
-}
-
-// AddPriority adds v to the "priority" field.
-func (u *MatchUpsertOne) AddPriority(v int) *MatchUpsertOne {
-	return u.Update(func(s *MatchUpsert) {
-		s.AddPriority(v)
-	})
-}
-
-// UpdatePriority sets the "priority" field to the value that was provided on create.
-func (u *MatchUpsertOne) UpdatePriority() *MatchUpsertOne {
-	return u.Update(func(s *MatchUpsert) {
-		s.UpdatePriority()
-	})
-}
-
-// SetResult sets the "result" field.
-func (u *MatchUpsertOne) SetResult(v match.Result) *MatchUpsertOne {
-	return u.Update(func(s *MatchUpsert) {
-		s.SetResult(v)
-	})
-}
-
-// UpdateResult sets the "result" field to the value that was provided on create.
-func (u *MatchUpsertOne) UpdateResult() *MatchUpsertOne {
-	return u.Update(func(s *MatchUpsert) {
-		s.UpdateResult()
-	})
-}
-
-// SetWinnerPlaceholderName sets the "winner_placeholder_name" field.
-func (u *MatchUpsertOne) SetWinnerPlaceholderName(v string) *MatchUpsertOne {
-	return u.Update(func(s *MatchUpsert) {
-		s.SetWinnerPlaceholderName(v)
-	})
-}
-
-// UpdateWinnerPlaceholderName sets the "winner_placeholder_name" field to the value that was provided on create.
-func (u *MatchUpsertOne) UpdateWinnerPlaceholderName() *MatchUpsertOne {
-	return u.Update(func(s *MatchUpsert) {
-		s.UpdateWinnerPlaceholderName()
-	})
-}
-
-// ClearWinnerPlaceholderName clears the value of the "winner_placeholder_name" field.
-func (u *MatchUpsertOne) ClearWinnerPlaceholderName() *MatchUpsertOne {
-	return u.Update(func(s *MatchUpsert) {
-		s.ClearWinnerPlaceholderName()
-	})
-}
-
-// SetLoserPlaceholderName sets the "loser_placeholder_name" field.
-func (u *MatchUpsertOne) SetLoserPlaceholderName(v string) *MatchUpsertOne {
-	return u.Update(func(s *MatchUpsert) {
-		s.SetLoserPlaceholderName(v)
-	})
-}
-
-// UpdateLoserPlaceholderName sets the "loser_placeholder_name" field to the value that was provided on create.
-func (u *MatchUpsertOne) UpdateLoserPlaceholderName() *MatchUpsertOne {
-	return u.Update(func(s *MatchUpsert) {
-		s.UpdateLoserPlaceholderName()
-	})
-}
-
-// ClearLoserPlaceholderName clears the value of the "loser_placeholder_name" field.
-func (u *MatchUpsertOne) ClearLoserPlaceholderName() *MatchUpsertOne {
-	return u.Update(func(s *MatchUpsert) {
-		s.ClearLoserPlaceholderName()
-	})
-}
-
-// SetLatestStatus sets the "latest_status" field.
-func (u *MatchUpsertOne) SetLatestStatus(v string) *MatchUpsertOne {
-	return u.Update(func(s *MatchUpsert) {
-		s.SetLatestStatus(v)
-	})
-}
-
-// UpdateLatestStatus sets the "latest_status" field to the value that was provided on create.
-func (u *MatchUpsertOne) UpdateLatestStatus() *MatchUpsertOne {
-	return u.Update(func(s *MatchUpsert) {
-		s.UpdateLatestStatus()
-	})
-}
-
-// SetReport sets the "report" field.
-func (u *MatchUpsertOne) SetReport(v string) *MatchUpsertOne {
-	return u.Update(func(s *MatchUpsert) {
-		s.SetReport(v)
-	})
-}
-
-// UpdateReport sets the "report" field to the value that was provided on create.
-func (u *MatchUpsertOne) UpdateReport() *MatchUpsertOne {
-	return u.Update(func(s *MatchUpsert) {
-		s.UpdateReport()
-	})
-}
-
-// ClearReport clears the value of the "report" field.
-func (u *MatchUpsertOne) ClearReport() *MatchUpsertOne {
-	return u.Update(func(s *MatchUpsert) {
-		s.ClearReport()
-	})
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (u *MatchUpsertOne) SetUpdatedAt(v time.Time) *MatchUpsertOne {
-	return u.Update(func(s *MatchUpsert) {
-		s.SetUpdatedAt(v)
-	})
-}
-
-// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
-func (u *MatchUpsertOne) UpdateUpdatedAt() *MatchUpsertOne {
-	return u.Update(func(s *MatchUpsert) {
-		s.UpdateUpdatedAt()
-	})
-}
-
-// Exec executes the query.
-func (u *MatchUpsertOne) Exec(ctx context.Context) error {
-	if len(u.create.conflict) == 0 {
-		return errors.New("ent: missing options for MatchCreate.OnConflict")
-	}
-	return u.create.Exec(ctx)
-}
-
-// ExecX is like Exec, but panics if an error occurs.
-func (u *MatchUpsertOne) ExecX(ctx context.Context) {
-	if err := u.create.Exec(ctx); err != nil {
-		panic(err)
-	}
-}
-
-// Exec executes the UPSERT query and returns the inserted/updated ID.
-func (u *MatchUpsertOne) ID(ctx context.Context) (id string, err error) {
-	if u.create.driver.Dialect() == dialect.MySQL {
-		// In case of "ON CONFLICT", there is no way to get back non-numeric ID
-		// fields from the database since MySQL does not support the RETURNING clause.
-		return id, errors.New("ent: MatchUpsertOne.ID is not supported by MySQL driver. Use MatchUpsertOne.Exec instead")
-	}
-	node, err := u.create.Save(ctx)
-	if err != nil {
-		return id, err
-	}
-	return node.ID, nil
-}
-
-// IDX is like ID, but panics if an error occurs.
-func (u *MatchUpsertOne) IDX(ctx context.Context) string {
-	id, err := u.ID(ctx)
-	if err != nil {
-		panic(err)
-	}
-	return id
-}
-
 // MatchCreateBulk is the builder for creating many Match entities in bulk.
 type MatchCreateBulk struct {
 	config
 	err      error
 	builders []*MatchCreate
-	conflict []sql.ConflictOption
 }
 
 // Save creates the Match entities in the database.
@@ -1127,7 +609,6 @@ func (_c *MatchCreateBulk) Save(ctx context.Context) ([]*Match, error) {
 					_, err = mutators[i+1].Mutate(root, _c.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
-					spec.OnConflict = _c.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
 					if err = sqlgraph.BatchCreate(ctx, _c.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
@@ -1174,354 +655,6 @@ func (_c *MatchCreateBulk) Exec(ctx context.Context) error {
 // ExecX is like Exec, but panics if an error occurs.
 func (_c *MatchCreateBulk) ExecX(ctx context.Context) {
 	if err := _c.Exec(ctx); err != nil {
-		panic(err)
-	}
-}
-
-// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
-// of the `INSERT` statement. For example:
-//
-//	client.Match.CreateBulk(builders...).
-//		OnConflict(
-//			// Update the row with the new values
-//			// the was proposed for insertion.
-//			sql.ResolveWithNewValues(),
-//		).
-//		// Override some of the fields with custom
-//		// update values.
-//		Update(func(u *ent.MatchUpsert) {
-//			SetEvent(v+v).
-//		}).
-//		Exec(ctx)
-func (_c *MatchCreateBulk) OnConflict(opts ...sql.ConflictOption) *MatchUpsertBulk {
-	_c.conflict = opts
-	return &MatchUpsertBulk{
-		create: _c,
-	}
-}
-
-// OnConflictColumns calls `OnConflict` and configures the columns
-// as conflict target. Using this option is equivalent to using:
-//
-//	client.Match.Create().
-//		OnConflict(sql.ConflictColumns(columns...)).
-//		Exec(ctx)
-func (_c *MatchCreateBulk) OnConflictColumns(columns ...string) *MatchUpsertBulk {
-	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
-	return &MatchUpsertBulk{
-		create: _c,
-	}
-}
-
-// MatchUpsertBulk is the builder for "upsert"-ing
-// a bulk of Match nodes.
-type MatchUpsertBulk struct {
-	create *MatchCreateBulk
-}
-
-// UpdateNewValues updates the mutable fields using the new values that
-// were set on create. Using this option is equivalent to using:
-//
-//	client.Match.Create().
-//		OnConflict(
-//			sql.ResolveWithNewValues(),
-//			sql.ResolveWith(func(u *sql.UpdateSet) {
-//				u.SetIgnore(match.FieldID)
-//			}),
-//		).
-//		Exec(ctx)
-func (u *MatchUpsertBulk) UpdateNewValues() *MatchUpsertBulk {
-	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
-	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
-		for _, b := range u.create.builders {
-			if _, exists := b.mutation.ID(); exists {
-				s.SetIgnore(match.FieldID)
-			}
-			if _, exists := b.mutation.CreatedAt(); exists {
-				s.SetIgnore(match.FieldCreatedAt)
-			}
-		}
-	}))
-	return u
-}
-
-// Ignore sets each column to itself in case of conflict.
-// Using this option is equivalent to using:
-//
-//	client.Match.Create().
-//		OnConflict(sql.ResolveWithIgnore()).
-//		Exec(ctx)
-func (u *MatchUpsertBulk) Ignore() *MatchUpsertBulk {
-	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
-	return u
-}
-
-// DoNothing configures the conflict_action to `DO NOTHING`.
-// Supported only by SQLite and PostgreSQL.
-func (u *MatchUpsertBulk) DoNothing() *MatchUpsertBulk {
-	u.create.conflict = append(u.create.conflict, sql.DoNothing())
-	return u
-}
-
-// Update allows overriding fields `UPDATE` values. See the MatchCreateBulk.OnConflict
-// documentation for more info.
-func (u *MatchUpsertBulk) Update(set func(*MatchUpsert)) *MatchUpsertBulk {
-	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
-		set(&MatchUpsert{UpdateSet: update})
-	}))
-	return u
-}
-
-// SetEvent sets the "event" field.
-func (u *MatchUpsertBulk) SetEvent(v string) *MatchUpsertBulk {
-	return u.Update(func(s *MatchUpsert) {
-		s.SetEvent(v)
-	})
-}
-
-// UpdateEvent sets the "event" field to the value that was provided on create.
-func (u *MatchUpsertBulk) UpdateEvent() *MatchUpsertBulk {
-	return u.Update(func(s *MatchUpsert) {
-		s.UpdateEvent()
-	})
-}
-
-// SetZone sets the "zone" field.
-func (u *MatchUpsertBulk) SetZone(v string) *MatchUpsertBulk {
-	return u.Update(func(s *MatchUpsert) {
-		s.SetZone(v)
-	})
-}
-
-// UpdateZone sets the "zone" field to the value that was provided on create.
-func (u *MatchUpsertBulk) UpdateZone() *MatchUpsertBulk {
-	return u.Update(func(s *MatchUpsert) {
-		s.UpdateZone()
-	})
-}
-
-// SetOrder sets the "order" field.
-func (u *MatchUpsertBulk) SetOrder(v int) *MatchUpsertBulk {
-	return u.Update(func(s *MatchUpsert) {
-		s.SetOrder(v)
-	})
-}
-
-// AddOrder adds v to the "order" field.
-func (u *MatchUpsertBulk) AddOrder(v int) *MatchUpsertBulk {
-	return u.Update(func(s *MatchUpsert) {
-		s.AddOrder(v)
-	})
-}
-
-// UpdateOrder sets the "order" field to the value that was provided on create.
-func (u *MatchUpsertBulk) UpdateOrder() *MatchUpsertBulk {
-	return u.Update(func(s *MatchUpsert) {
-		s.UpdateOrder()
-	})
-}
-
-// SetMatchType sets the "match_type" field.
-func (u *MatchUpsertBulk) SetMatchType(v string) *MatchUpsertBulk {
-	return u.Update(func(s *MatchUpsert) {
-		s.SetMatchType(v)
-	})
-}
-
-// UpdateMatchType sets the "match_type" field to the value that was provided on create.
-func (u *MatchUpsertBulk) UpdateMatchType() *MatchUpsertBulk {
-	return u.Update(func(s *MatchUpsert) {
-		s.UpdateMatchType()
-	})
-}
-
-// SetMatchSlug sets the "match_slug" field.
-func (u *MatchUpsertBulk) SetMatchSlug(v string) *MatchUpsertBulk {
-	return u.Update(func(s *MatchUpsert) {
-		s.SetMatchSlug(v)
-	})
-}
-
-// UpdateMatchSlug sets the "match_slug" field to the value that was provided on create.
-func (u *MatchUpsertBulk) UpdateMatchSlug() *MatchUpsertBulk {
-	return u.Update(func(s *MatchUpsert) {
-		s.UpdateMatchSlug()
-	})
-}
-
-// ClearMatchSlug clears the value of the "match_slug" field.
-func (u *MatchUpsertBulk) ClearMatchSlug() *MatchUpsertBulk {
-	return u.Update(func(s *MatchUpsert) {
-		s.ClearMatchSlug()
-	})
-}
-
-// SetTotalRounds sets the "total_rounds" field.
-func (u *MatchUpsertBulk) SetTotalRounds(v int) *MatchUpsertBulk {
-	return u.Update(func(s *MatchUpsert) {
-		s.SetTotalRounds(v)
-	})
-}
-
-// AddTotalRounds adds v to the "total_rounds" field.
-func (u *MatchUpsertBulk) AddTotalRounds(v int) *MatchUpsertBulk {
-	return u.Update(func(s *MatchUpsert) {
-		s.AddTotalRounds(v)
-	})
-}
-
-// UpdateTotalRounds sets the "total_rounds" field to the value that was provided on create.
-func (u *MatchUpsertBulk) UpdateTotalRounds() *MatchUpsertBulk {
-	return u.Update(func(s *MatchUpsert) {
-		s.UpdateTotalRounds()
-	})
-}
-
-// SetPriority sets the "priority" field.
-func (u *MatchUpsertBulk) SetPriority(v int) *MatchUpsertBulk {
-	return u.Update(func(s *MatchUpsert) {
-		s.SetPriority(v)
-	})
-}
-
-// AddPriority adds v to the "priority" field.
-func (u *MatchUpsertBulk) AddPriority(v int) *MatchUpsertBulk {
-	return u.Update(func(s *MatchUpsert) {
-		s.AddPriority(v)
-	})
-}
-
-// UpdatePriority sets the "priority" field to the value that was provided on create.
-func (u *MatchUpsertBulk) UpdatePriority() *MatchUpsertBulk {
-	return u.Update(func(s *MatchUpsert) {
-		s.UpdatePriority()
-	})
-}
-
-// SetResult sets the "result" field.
-func (u *MatchUpsertBulk) SetResult(v match.Result) *MatchUpsertBulk {
-	return u.Update(func(s *MatchUpsert) {
-		s.SetResult(v)
-	})
-}
-
-// UpdateResult sets the "result" field to the value that was provided on create.
-func (u *MatchUpsertBulk) UpdateResult() *MatchUpsertBulk {
-	return u.Update(func(s *MatchUpsert) {
-		s.UpdateResult()
-	})
-}
-
-// SetWinnerPlaceholderName sets the "winner_placeholder_name" field.
-func (u *MatchUpsertBulk) SetWinnerPlaceholderName(v string) *MatchUpsertBulk {
-	return u.Update(func(s *MatchUpsert) {
-		s.SetWinnerPlaceholderName(v)
-	})
-}
-
-// UpdateWinnerPlaceholderName sets the "winner_placeholder_name" field to the value that was provided on create.
-func (u *MatchUpsertBulk) UpdateWinnerPlaceholderName() *MatchUpsertBulk {
-	return u.Update(func(s *MatchUpsert) {
-		s.UpdateWinnerPlaceholderName()
-	})
-}
-
-// ClearWinnerPlaceholderName clears the value of the "winner_placeholder_name" field.
-func (u *MatchUpsertBulk) ClearWinnerPlaceholderName() *MatchUpsertBulk {
-	return u.Update(func(s *MatchUpsert) {
-		s.ClearWinnerPlaceholderName()
-	})
-}
-
-// SetLoserPlaceholderName sets the "loser_placeholder_name" field.
-func (u *MatchUpsertBulk) SetLoserPlaceholderName(v string) *MatchUpsertBulk {
-	return u.Update(func(s *MatchUpsert) {
-		s.SetLoserPlaceholderName(v)
-	})
-}
-
-// UpdateLoserPlaceholderName sets the "loser_placeholder_name" field to the value that was provided on create.
-func (u *MatchUpsertBulk) UpdateLoserPlaceholderName() *MatchUpsertBulk {
-	return u.Update(func(s *MatchUpsert) {
-		s.UpdateLoserPlaceholderName()
-	})
-}
-
-// ClearLoserPlaceholderName clears the value of the "loser_placeholder_name" field.
-func (u *MatchUpsertBulk) ClearLoserPlaceholderName() *MatchUpsertBulk {
-	return u.Update(func(s *MatchUpsert) {
-		s.ClearLoserPlaceholderName()
-	})
-}
-
-// SetLatestStatus sets the "latest_status" field.
-func (u *MatchUpsertBulk) SetLatestStatus(v string) *MatchUpsertBulk {
-	return u.Update(func(s *MatchUpsert) {
-		s.SetLatestStatus(v)
-	})
-}
-
-// UpdateLatestStatus sets the "latest_status" field to the value that was provided on create.
-func (u *MatchUpsertBulk) UpdateLatestStatus() *MatchUpsertBulk {
-	return u.Update(func(s *MatchUpsert) {
-		s.UpdateLatestStatus()
-	})
-}
-
-// SetReport sets the "report" field.
-func (u *MatchUpsertBulk) SetReport(v string) *MatchUpsertBulk {
-	return u.Update(func(s *MatchUpsert) {
-		s.SetReport(v)
-	})
-}
-
-// UpdateReport sets the "report" field to the value that was provided on create.
-func (u *MatchUpsertBulk) UpdateReport() *MatchUpsertBulk {
-	return u.Update(func(s *MatchUpsert) {
-		s.UpdateReport()
-	})
-}
-
-// ClearReport clears the value of the "report" field.
-func (u *MatchUpsertBulk) ClearReport() *MatchUpsertBulk {
-	return u.Update(func(s *MatchUpsert) {
-		s.ClearReport()
-	})
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (u *MatchUpsertBulk) SetUpdatedAt(v time.Time) *MatchUpsertBulk {
-	return u.Update(func(s *MatchUpsert) {
-		s.SetUpdatedAt(v)
-	})
-}
-
-// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
-func (u *MatchUpsertBulk) UpdateUpdatedAt() *MatchUpsertBulk {
-	return u.Update(func(s *MatchUpsert) {
-		s.UpdateUpdatedAt()
-	})
-}
-
-// Exec executes the query.
-func (u *MatchUpsertBulk) Exec(ctx context.Context) error {
-	if u.create.err != nil {
-		return u.create.err
-	}
-	for i, b := range u.create.builders {
-		if len(b.conflict) != 0 {
-			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the MatchCreateBulk instead", i)
-		}
-	}
-	if len(u.create.conflict) == 0 {
-		return errors.New("ent: missing options for MatchCreateBulk.OnConflict")
-	}
-	return u.create.Exec(ctx)
-}
-
-// ExecX is like Exec, but panics if an error occurs.
-func (u *MatchUpsertBulk) ExecX(ctx context.Context) {
-	if err := u.create.Exec(ctx); err != nil {
 		panic(err)
 	}
 }

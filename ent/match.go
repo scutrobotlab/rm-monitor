@@ -40,6 +40,12 @@ type Match struct {
 	LoserPlaceholderName *string `json:"loser_placeholder_name,omitempty"`
 	// LatestStatus holds the value of the "latest_status" field.
 	LatestStatus string `json:"latest_status,omitempty"`
+	// WorkflowName holds the value of the "workflow_name" field.
+	WorkflowName *string `json:"workflow_name,omitempty"`
+	// WorkflowUID holds the value of the "workflow_uid" field.
+	WorkflowUID *string `json:"workflow_uid,omitempty"`
+	// WorkflowPhase holds the value of the "workflow_phase" field.
+	WorkflowPhase *string `json:"workflow_phase,omitempty"`
 	// Report holds the value of the "report" field.
 	Report *string `json:"report,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
@@ -116,7 +122,7 @@ func (*Match) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case match.FieldOrder, match.FieldTotalRounds, match.FieldPriority:
 			values[i] = new(sql.NullInt64)
-		case match.FieldID, match.FieldEvent, match.FieldZone, match.FieldMatchType, match.FieldMatchSlug, match.FieldResult, match.FieldWinnerPlaceholderName, match.FieldLoserPlaceholderName, match.FieldLatestStatus, match.FieldReport:
+		case match.FieldID, match.FieldEvent, match.FieldZone, match.FieldMatchType, match.FieldMatchSlug, match.FieldResult, match.FieldWinnerPlaceholderName, match.FieldLoserPlaceholderName, match.FieldLatestStatus, match.FieldWorkflowName, match.FieldWorkflowUID, match.FieldWorkflowPhase, match.FieldReport:
 			values[i] = new(sql.NullString)
 		case match.FieldCreatedAt, match.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -213,6 +219,27 @@ func (_m *Match) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field latest_status", values[i])
 			} else if value.Valid {
 				_m.LatestStatus = value.String
+			}
+		case match.FieldWorkflowName:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field workflow_name", values[i])
+			} else if value.Valid {
+				_m.WorkflowName = new(string)
+				*_m.WorkflowName = value.String
+			}
+		case match.FieldWorkflowUID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field workflow_uid", values[i])
+			} else if value.Valid {
+				_m.WorkflowUID = new(string)
+				*_m.WorkflowUID = value.String
+			}
+		case match.FieldWorkflowPhase:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field workflow_phase", values[i])
+			} else if value.Valid {
+				_m.WorkflowPhase = new(string)
+				*_m.WorkflowPhase = value.String
 			}
 		case match.FieldReport:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -341,6 +368,21 @@ func (_m *Match) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("latest_status=")
 	builder.WriteString(_m.LatestStatus)
+	builder.WriteString(", ")
+	if v := _m.WorkflowName; v != nil {
+		builder.WriteString("workflow_name=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	if v := _m.WorkflowUID; v != nil {
+		builder.WriteString("workflow_uid=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	if v := _m.WorkflowPhase; v != nil {
+		builder.WriteString("workflow_phase=")
+		builder.WriteString(*v)
+	}
 	builder.WriteString(", ")
 	if v := _m.Report; v != nil {
 		builder.WriteString("report=")

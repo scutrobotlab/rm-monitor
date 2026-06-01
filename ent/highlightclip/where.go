@@ -75,16 +75,6 @@ func Priority(v int) predicate.HighlightClip {
 	return predicate.HighlightClip(sql.FieldEQ(FieldPriority, v))
 }
 
-// K8sJobName applies equality check predicate on the "k8s_job_name" field. It's identical to K8sJobNameEQ.
-func K8sJobName(v string) predicate.HighlightClip {
-	return predicate.HighlightClip(sql.FieldEQ(FieldK8sJobName, v))
-}
-
-// Attempts applies equality check predicate on the "attempts" field. It's identical to AttemptsEQ.
-func Attempts(v int) predicate.HighlightClip {
-	return predicate.HighlightClip(sql.FieldEQ(FieldAttempts, v))
-}
-
 // StartSeconds applies equality check predicate on the "start_seconds" field. It's identical to StartSecondsEQ.
 func StartSeconds(v float64) predicate.HighlightClip {
 	return predicate.HighlightClip(sql.FieldEQ(FieldStartSeconds, v))
@@ -98,6 +88,11 @@ func EndSeconds(v float64) predicate.HighlightClip {
 // PeakSeconds applies equality check predicate on the "peak_seconds" field. It's identical to PeakSecondsEQ.
 func PeakSeconds(v float64) predicate.HighlightClip {
 	return predicate.HighlightClip(sql.FieldEQ(FieldPeakSeconds, v))
+}
+
+// SourcePath applies equality check predicate on the "source_path" field. It's identical to SourcePathEQ.
+func SourcePath(v string) predicate.HighlightClip {
+	return predicate.HighlightClip(sql.FieldEQ(FieldSourcePath, v))
 }
 
 // OutputDir applies equality check predicate on the "output_dir" field. It's identical to OutputDirEQ.
@@ -123,16 +118,6 @@ func Score(v float64) predicate.HighlightClip {
 // ModelPayload applies equality check predicate on the "model_payload" field. It's identical to ModelPayloadEQ.
 func ModelPayload(v string) predicate.HighlightClip {
 	return predicate.HighlightClip(sql.FieldEQ(FieldModelPayload, v))
-}
-
-// ErrorMessage applies equality check predicate on the "error_message" field. It's identical to ErrorMessageEQ.
-func ErrorMessage(v string) predicate.HighlightClip {
-	return predicate.HighlightClip(sql.FieldEQ(FieldErrorMessage, v))
-}
-
-// StartedAt applies equality check predicate on the "started_at" field. It's identical to StartedAtEQ.
-func StartedAt(v time.Time) predicate.HighlightClip {
-	return predicate.HighlightClip(sql.FieldEQ(FieldStartedAt, v))
 }
 
 // CompletedAt applies equality check predicate on the "completed_at" field. It's identical to CompletedAtEQ.
@@ -380,121 +365,6 @@ func PriorityLTE(v int) predicate.HighlightClip {
 	return predicate.HighlightClip(sql.FieldLTE(FieldPriority, v))
 }
 
-// K8sJobNameEQ applies the EQ predicate on the "k8s_job_name" field.
-func K8sJobNameEQ(v string) predicate.HighlightClip {
-	return predicate.HighlightClip(sql.FieldEQ(FieldK8sJobName, v))
-}
-
-// K8sJobNameNEQ applies the NEQ predicate on the "k8s_job_name" field.
-func K8sJobNameNEQ(v string) predicate.HighlightClip {
-	return predicate.HighlightClip(sql.FieldNEQ(FieldK8sJobName, v))
-}
-
-// K8sJobNameIn applies the In predicate on the "k8s_job_name" field.
-func K8sJobNameIn(vs ...string) predicate.HighlightClip {
-	return predicate.HighlightClip(sql.FieldIn(FieldK8sJobName, vs...))
-}
-
-// K8sJobNameNotIn applies the NotIn predicate on the "k8s_job_name" field.
-func K8sJobNameNotIn(vs ...string) predicate.HighlightClip {
-	return predicate.HighlightClip(sql.FieldNotIn(FieldK8sJobName, vs...))
-}
-
-// K8sJobNameGT applies the GT predicate on the "k8s_job_name" field.
-func K8sJobNameGT(v string) predicate.HighlightClip {
-	return predicate.HighlightClip(sql.FieldGT(FieldK8sJobName, v))
-}
-
-// K8sJobNameGTE applies the GTE predicate on the "k8s_job_name" field.
-func K8sJobNameGTE(v string) predicate.HighlightClip {
-	return predicate.HighlightClip(sql.FieldGTE(FieldK8sJobName, v))
-}
-
-// K8sJobNameLT applies the LT predicate on the "k8s_job_name" field.
-func K8sJobNameLT(v string) predicate.HighlightClip {
-	return predicate.HighlightClip(sql.FieldLT(FieldK8sJobName, v))
-}
-
-// K8sJobNameLTE applies the LTE predicate on the "k8s_job_name" field.
-func K8sJobNameLTE(v string) predicate.HighlightClip {
-	return predicate.HighlightClip(sql.FieldLTE(FieldK8sJobName, v))
-}
-
-// K8sJobNameContains applies the Contains predicate on the "k8s_job_name" field.
-func K8sJobNameContains(v string) predicate.HighlightClip {
-	return predicate.HighlightClip(sql.FieldContains(FieldK8sJobName, v))
-}
-
-// K8sJobNameHasPrefix applies the HasPrefix predicate on the "k8s_job_name" field.
-func K8sJobNameHasPrefix(v string) predicate.HighlightClip {
-	return predicate.HighlightClip(sql.FieldHasPrefix(FieldK8sJobName, v))
-}
-
-// K8sJobNameHasSuffix applies the HasSuffix predicate on the "k8s_job_name" field.
-func K8sJobNameHasSuffix(v string) predicate.HighlightClip {
-	return predicate.HighlightClip(sql.FieldHasSuffix(FieldK8sJobName, v))
-}
-
-// K8sJobNameIsNil applies the IsNil predicate on the "k8s_job_name" field.
-func K8sJobNameIsNil() predicate.HighlightClip {
-	return predicate.HighlightClip(sql.FieldIsNull(FieldK8sJobName))
-}
-
-// K8sJobNameNotNil applies the NotNil predicate on the "k8s_job_name" field.
-func K8sJobNameNotNil() predicate.HighlightClip {
-	return predicate.HighlightClip(sql.FieldNotNull(FieldK8sJobName))
-}
-
-// K8sJobNameEqualFold applies the EqualFold predicate on the "k8s_job_name" field.
-func K8sJobNameEqualFold(v string) predicate.HighlightClip {
-	return predicate.HighlightClip(sql.FieldEqualFold(FieldK8sJobName, v))
-}
-
-// K8sJobNameContainsFold applies the ContainsFold predicate on the "k8s_job_name" field.
-func K8sJobNameContainsFold(v string) predicate.HighlightClip {
-	return predicate.HighlightClip(sql.FieldContainsFold(FieldK8sJobName, v))
-}
-
-// AttemptsEQ applies the EQ predicate on the "attempts" field.
-func AttemptsEQ(v int) predicate.HighlightClip {
-	return predicate.HighlightClip(sql.FieldEQ(FieldAttempts, v))
-}
-
-// AttemptsNEQ applies the NEQ predicate on the "attempts" field.
-func AttemptsNEQ(v int) predicate.HighlightClip {
-	return predicate.HighlightClip(sql.FieldNEQ(FieldAttempts, v))
-}
-
-// AttemptsIn applies the In predicate on the "attempts" field.
-func AttemptsIn(vs ...int) predicate.HighlightClip {
-	return predicate.HighlightClip(sql.FieldIn(FieldAttempts, vs...))
-}
-
-// AttemptsNotIn applies the NotIn predicate on the "attempts" field.
-func AttemptsNotIn(vs ...int) predicate.HighlightClip {
-	return predicate.HighlightClip(sql.FieldNotIn(FieldAttempts, vs...))
-}
-
-// AttemptsGT applies the GT predicate on the "attempts" field.
-func AttemptsGT(v int) predicate.HighlightClip {
-	return predicate.HighlightClip(sql.FieldGT(FieldAttempts, v))
-}
-
-// AttemptsGTE applies the GTE predicate on the "attempts" field.
-func AttemptsGTE(v int) predicate.HighlightClip {
-	return predicate.HighlightClip(sql.FieldGTE(FieldAttempts, v))
-}
-
-// AttemptsLT applies the LT predicate on the "attempts" field.
-func AttemptsLT(v int) predicate.HighlightClip {
-	return predicate.HighlightClip(sql.FieldLT(FieldAttempts, v))
-}
-
-// AttemptsLTE applies the LTE predicate on the "attempts" field.
-func AttemptsLTE(v int) predicate.HighlightClip {
-	return predicate.HighlightClip(sql.FieldLTE(FieldAttempts, v))
-}
-
 // StartSecondsEQ applies the EQ predicate on the "start_seconds" field.
 func StartSecondsEQ(v float64) predicate.HighlightClip {
 	return predicate.HighlightClip(sql.FieldEQ(FieldStartSeconds, v))
@@ -613,6 +483,71 @@ func PeakSecondsLT(v float64) predicate.HighlightClip {
 // PeakSecondsLTE applies the LTE predicate on the "peak_seconds" field.
 func PeakSecondsLTE(v float64) predicate.HighlightClip {
 	return predicate.HighlightClip(sql.FieldLTE(FieldPeakSeconds, v))
+}
+
+// SourcePathEQ applies the EQ predicate on the "source_path" field.
+func SourcePathEQ(v string) predicate.HighlightClip {
+	return predicate.HighlightClip(sql.FieldEQ(FieldSourcePath, v))
+}
+
+// SourcePathNEQ applies the NEQ predicate on the "source_path" field.
+func SourcePathNEQ(v string) predicate.HighlightClip {
+	return predicate.HighlightClip(sql.FieldNEQ(FieldSourcePath, v))
+}
+
+// SourcePathIn applies the In predicate on the "source_path" field.
+func SourcePathIn(vs ...string) predicate.HighlightClip {
+	return predicate.HighlightClip(sql.FieldIn(FieldSourcePath, vs...))
+}
+
+// SourcePathNotIn applies the NotIn predicate on the "source_path" field.
+func SourcePathNotIn(vs ...string) predicate.HighlightClip {
+	return predicate.HighlightClip(sql.FieldNotIn(FieldSourcePath, vs...))
+}
+
+// SourcePathGT applies the GT predicate on the "source_path" field.
+func SourcePathGT(v string) predicate.HighlightClip {
+	return predicate.HighlightClip(sql.FieldGT(FieldSourcePath, v))
+}
+
+// SourcePathGTE applies the GTE predicate on the "source_path" field.
+func SourcePathGTE(v string) predicate.HighlightClip {
+	return predicate.HighlightClip(sql.FieldGTE(FieldSourcePath, v))
+}
+
+// SourcePathLT applies the LT predicate on the "source_path" field.
+func SourcePathLT(v string) predicate.HighlightClip {
+	return predicate.HighlightClip(sql.FieldLT(FieldSourcePath, v))
+}
+
+// SourcePathLTE applies the LTE predicate on the "source_path" field.
+func SourcePathLTE(v string) predicate.HighlightClip {
+	return predicate.HighlightClip(sql.FieldLTE(FieldSourcePath, v))
+}
+
+// SourcePathContains applies the Contains predicate on the "source_path" field.
+func SourcePathContains(v string) predicate.HighlightClip {
+	return predicate.HighlightClip(sql.FieldContains(FieldSourcePath, v))
+}
+
+// SourcePathHasPrefix applies the HasPrefix predicate on the "source_path" field.
+func SourcePathHasPrefix(v string) predicate.HighlightClip {
+	return predicate.HighlightClip(sql.FieldHasPrefix(FieldSourcePath, v))
+}
+
+// SourcePathHasSuffix applies the HasSuffix predicate on the "source_path" field.
+func SourcePathHasSuffix(v string) predicate.HighlightClip {
+	return predicate.HighlightClip(sql.FieldHasSuffix(FieldSourcePath, v))
+}
+
+// SourcePathEqualFold applies the EqualFold predicate on the "source_path" field.
+func SourcePathEqualFold(v string) predicate.HighlightClip {
+	return predicate.HighlightClip(sql.FieldEqualFold(FieldSourcePath, v))
+}
+
+// SourcePathContainsFold applies the ContainsFold predicate on the "source_path" field.
+func SourcePathContainsFold(v string) predicate.HighlightClip {
+	return predicate.HighlightClip(sql.FieldContainsFold(FieldSourcePath, v))
 }
 
 // OutputDirEQ applies the EQ predicate on the "output_dir" field.
@@ -955,131 +890,6 @@ func ModelPayloadContainsFold(v string) predicate.HighlightClip {
 	return predicate.HighlightClip(sql.FieldContainsFold(FieldModelPayload, v))
 }
 
-// ErrorMessageEQ applies the EQ predicate on the "error_message" field.
-func ErrorMessageEQ(v string) predicate.HighlightClip {
-	return predicate.HighlightClip(sql.FieldEQ(FieldErrorMessage, v))
-}
-
-// ErrorMessageNEQ applies the NEQ predicate on the "error_message" field.
-func ErrorMessageNEQ(v string) predicate.HighlightClip {
-	return predicate.HighlightClip(sql.FieldNEQ(FieldErrorMessage, v))
-}
-
-// ErrorMessageIn applies the In predicate on the "error_message" field.
-func ErrorMessageIn(vs ...string) predicate.HighlightClip {
-	return predicate.HighlightClip(sql.FieldIn(FieldErrorMessage, vs...))
-}
-
-// ErrorMessageNotIn applies the NotIn predicate on the "error_message" field.
-func ErrorMessageNotIn(vs ...string) predicate.HighlightClip {
-	return predicate.HighlightClip(sql.FieldNotIn(FieldErrorMessage, vs...))
-}
-
-// ErrorMessageGT applies the GT predicate on the "error_message" field.
-func ErrorMessageGT(v string) predicate.HighlightClip {
-	return predicate.HighlightClip(sql.FieldGT(FieldErrorMessage, v))
-}
-
-// ErrorMessageGTE applies the GTE predicate on the "error_message" field.
-func ErrorMessageGTE(v string) predicate.HighlightClip {
-	return predicate.HighlightClip(sql.FieldGTE(FieldErrorMessage, v))
-}
-
-// ErrorMessageLT applies the LT predicate on the "error_message" field.
-func ErrorMessageLT(v string) predicate.HighlightClip {
-	return predicate.HighlightClip(sql.FieldLT(FieldErrorMessage, v))
-}
-
-// ErrorMessageLTE applies the LTE predicate on the "error_message" field.
-func ErrorMessageLTE(v string) predicate.HighlightClip {
-	return predicate.HighlightClip(sql.FieldLTE(FieldErrorMessage, v))
-}
-
-// ErrorMessageContains applies the Contains predicate on the "error_message" field.
-func ErrorMessageContains(v string) predicate.HighlightClip {
-	return predicate.HighlightClip(sql.FieldContains(FieldErrorMessage, v))
-}
-
-// ErrorMessageHasPrefix applies the HasPrefix predicate on the "error_message" field.
-func ErrorMessageHasPrefix(v string) predicate.HighlightClip {
-	return predicate.HighlightClip(sql.FieldHasPrefix(FieldErrorMessage, v))
-}
-
-// ErrorMessageHasSuffix applies the HasSuffix predicate on the "error_message" field.
-func ErrorMessageHasSuffix(v string) predicate.HighlightClip {
-	return predicate.HighlightClip(sql.FieldHasSuffix(FieldErrorMessage, v))
-}
-
-// ErrorMessageIsNil applies the IsNil predicate on the "error_message" field.
-func ErrorMessageIsNil() predicate.HighlightClip {
-	return predicate.HighlightClip(sql.FieldIsNull(FieldErrorMessage))
-}
-
-// ErrorMessageNotNil applies the NotNil predicate on the "error_message" field.
-func ErrorMessageNotNil() predicate.HighlightClip {
-	return predicate.HighlightClip(sql.FieldNotNull(FieldErrorMessage))
-}
-
-// ErrorMessageEqualFold applies the EqualFold predicate on the "error_message" field.
-func ErrorMessageEqualFold(v string) predicate.HighlightClip {
-	return predicate.HighlightClip(sql.FieldEqualFold(FieldErrorMessage, v))
-}
-
-// ErrorMessageContainsFold applies the ContainsFold predicate on the "error_message" field.
-func ErrorMessageContainsFold(v string) predicate.HighlightClip {
-	return predicate.HighlightClip(sql.FieldContainsFold(FieldErrorMessage, v))
-}
-
-// StartedAtEQ applies the EQ predicate on the "started_at" field.
-func StartedAtEQ(v time.Time) predicate.HighlightClip {
-	return predicate.HighlightClip(sql.FieldEQ(FieldStartedAt, v))
-}
-
-// StartedAtNEQ applies the NEQ predicate on the "started_at" field.
-func StartedAtNEQ(v time.Time) predicate.HighlightClip {
-	return predicate.HighlightClip(sql.FieldNEQ(FieldStartedAt, v))
-}
-
-// StartedAtIn applies the In predicate on the "started_at" field.
-func StartedAtIn(vs ...time.Time) predicate.HighlightClip {
-	return predicate.HighlightClip(sql.FieldIn(FieldStartedAt, vs...))
-}
-
-// StartedAtNotIn applies the NotIn predicate on the "started_at" field.
-func StartedAtNotIn(vs ...time.Time) predicate.HighlightClip {
-	return predicate.HighlightClip(sql.FieldNotIn(FieldStartedAt, vs...))
-}
-
-// StartedAtGT applies the GT predicate on the "started_at" field.
-func StartedAtGT(v time.Time) predicate.HighlightClip {
-	return predicate.HighlightClip(sql.FieldGT(FieldStartedAt, v))
-}
-
-// StartedAtGTE applies the GTE predicate on the "started_at" field.
-func StartedAtGTE(v time.Time) predicate.HighlightClip {
-	return predicate.HighlightClip(sql.FieldGTE(FieldStartedAt, v))
-}
-
-// StartedAtLT applies the LT predicate on the "started_at" field.
-func StartedAtLT(v time.Time) predicate.HighlightClip {
-	return predicate.HighlightClip(sql.FieldLT(FieldStartedAt, v))
-}
-
-// StartedAtLTE applies the LTE predicate on the "started_at" field.
-func StartedAtLTE(v time.Time) predicate.HighlightClip {
-	return predicate.HighlightClip(sql.FieldLTE(FieldStartedAt, v))
-}
-
-// StartedAtIsNil applies the IsNil predicate on the "started_at" field.
-func StartedAtIsNil() predicate.HighlightClip {
-	return predicate.HighlightClip(sql.FieldIsNull(FieldStartedAt))
-}
-
-// StartedAtNotNil applies the NotNil predicate on the "started_at" field.
-func StartedAtNotNil() predicate.HighlightClip {
-	return predicate.HighlightClip(sql.FieldNotNull(FieldStartedAt))
-}
-
 // CompletedAtEQ applies the EQ predicate on the "completed_at" field.
 func CompletedAtEQ(v time.Time) predicate.HighlightClip {
 	return predicate.HighlightClip(sql.FieldEQ(FieldCompletedAt, v))
@@ -1233,44 +1043,21 @@ func HasMatchRoundWith(preds ...predicate.MatchRound) predicate.HighlightClip {
 	})
 }
 
-// HasSourceArtifact applies the HasEdge predicate on the "source_artifact" edge.
-func HasSourceArtifact() predicate.HighlightClip {
+// HasBilibiliPublications applies the HasEdge predicate on the "bilibili_publications" edge.
+func HasBilibiliPublications() predicate.HighlightClip {
 	return predicate.HighlightClip(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, SourceArtifactTable, SourceArtifactColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, BilibiliPublicationsTable, BilibiliPublicationsColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasSourceArtifactWith applies the HasEdge predicate on the "source_artifact" edge with a given conditions (other predicates).
-func HasSourceArtifactWith(preds ...predicate.MediaArtifact) predicate.HighlightClip {
+// HasBilibiliPublicationsWith applies the HasEdge predicate on the "bilibili_publications" edge with a given conditions (other predicates).
+func HasBilibiliPublicationsWith(preds ...predicate.BilibiliHighlightPublication) predicate.HighlightClip {
 	return predicate.HighlightClip(func(s *sql.Selector) {
-		step := newSourceArtifactStep()
-		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
-			for _, p := range preds {
-				p(s)
-			}
-		})
-	})
-}
-
-// HasPublishTasks applies the HasEdge predicate on the "publish_tasks" edge.
-func HasPublishTasks() predicate.HighlightClip {
-	return predicate.HighlightClip(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, PublishTasksTable, PublishTasksColumn),
-		)
-		sqlgraph.HasNeighbors(s, step)
-	})
-}
-
-// HasPublishTasksWith applies the HasEdge predicate on the "publish_tasks" edge with a given conditions (other predicates).
-func HasPublishTasksWith(preds ...predicate.HighlightPublishTask) predicate.HighlightClip {
-	return predicate.HighlightClip(func(s *sql.Selector) {
-		step := newPublishTasksStep()
+		step := newBilibiliPublicationsStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

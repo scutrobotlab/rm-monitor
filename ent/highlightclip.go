@@ -12,7 +12,6 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"scutbot.cn/web/rm-monitor/ent/highlightclip"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
-	"scutbot.cn/web/rm-monitor/ent/mediaartifact"
 )
 
 // HighlightClip is the model entity for the HighlightClip schema.
@@ -30,16 +29,14 @@ type HighlightClip struct {
 	Status highlightclip.Status `json:"status,omitempty"`
 	// Priority holds the value of the "priority" field.
 	Priority int `json:"priority,omitempty"`
-	// K8sJobName holds the value of the "k8s_job_name" field.
-	K8sJobName *string `json:"k8s_job_name,omitempty"`
-	// Attempts holds the value of the "attempts" field.
-	Attempts int `json:"attempts,omitempty"`
 	// StartSeconds holds the value of the "start_seconds" field.
 	StartSeconds float64 `json:"start_seconds,omitempty"`
 	// EndSeconds holds the value of the "end_seconds" field.
 	EndSeconds float64 `json:"end_seconds,omitempty"`
 	// PeakSeconds holds the value of the "peak_seconds" field.
 	PeakSeconds float64 `json:"peak_seconds,omitempty"`
+	// SourcePath holds the value of the "source_path" field.
+	SourcePath string `json:"source_path,omitempty"`
 	// OutputDir holds the value of the "output_dir" field.
 	OutputDir string `json:"output_dir,omitempty"`
 	// Title holds the value of the "title" field.
@@ -52,10 +49,6 @@ type HighlightClip struct {
 	Score float64 `json:"score,omitempty"`
 	// ModelPayload holds the value of the "model_payload" field.
 	ModelPayload *string `json:"model_payload,omitempty"`
-	// ErrorMessage holds the value of the "error_message" field.
-	ErrorMessage *string `json:"error_message,omitempty"`
-	// StartedAt holds the value of the "started_at" field.
-	StartedAt *time.Time `json:"started_at,omitempty"`
 	// CompletedAt holds the value of the "completed_at" field.
 	CompletedAt *time.Time `json:"completed_at,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
@@ -64,23 +57,20 @@ type HighlightClip struct {
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the HighlightClipQuery when eager-loading is set.
-	Edges                          HighlightClipEdges `json:"edges"`
-	match_round_highlight_clips    *int
-	media_artifact_highlight_clips *int
-	selectValues                   sql.SelectValues
+	Edges                       HighlightClipEdges `json:"edges"`
+	match_round_highlight_clips *int
+	selectValues                sql.SelectValues
 }
 
 // HighlightClipEdges holds the relations/edges for other nodes in the graph.
 type HighlightClipEdges struct {
 	// MatchRound holds the value of the match_round edge.
 	MatchRound *MatchRound `json:"match_round,omitempty"`
-	// SourceArtifact holds the value of the source_artifact edge.
-	SourceArtifact *MediaArtifact `json:"source_artifact,omitempty"`
-	// PublishTasks holds the value of the publish_tasks edge.
-	PublishTasks []*HighlightPublishTask `json:"publish_tasks,omitempty"`
+	// BilibiliPublications holds the value of the bilibili_publications edge.
+	BilibiliPublications []*BilibiliHighlightPublication `json:"bilibili_publications,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [3]bool
+	loadedTypes [2]bool
 }
 
 // MatchRoundOrErr returns the MatchRound value or an error if the edge
@@ -94,24 +84,13 @@ func (e HighlightClipEdges) MatchRoundOrErr() (*MatchRound, error) {
 	return nil, &NotLoadedError{edge: "match_round"}
 }
 
-// SourceArtifactOrErr returns the SourceArtifact value or an error if the edge
-// was not loaded in eager-loading, or loaded but was not found.
-func (e HighlightClipEdges) SourceArtifactOrErr() (*MediaArtifact, error) {
-	if e.SourceArtifact != nil {
-		return e.SourceArtifact, nil
-	} else if e.loadedTypes[1] {
-		return nil, &NotFoundError{label: mediaartifact.Label}
-	}
-	return nil, &NotLoadedError{edge: "source_artifact"}
-}
-
-// PublishTasksOrErr returns the PublishTasks value or an error if the edge
+// BilibiliPublicationsOrErr returns the BilibiliPublications value or an error if the edge
 // was not loaded in eager-loading.
-func (e HighlightClipEdges) PublishTasksOrErr() ([]*HighlightPublishTask, error) {
-	if e.loadedTypes[2] {
-		return e.PublishTasks, nil
+func (e HighlightClipEdges) BilibiliPublicationsOrErr() ([]*BilibiliHighlightPublication, error) {
+	if e.loadedTypes[1] {
+		return e.BilibiliPublications, nil
 	}
-	return nil, &NotLoadedError{edge: "publish_tasks"}
+	return nil, &NotLoadedError{edge: "bilibili_publications"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -123,15 +102,13 @@ func (*HighlightClip) scanValues(columns []string) ([]any, error) {
 			values[i] = new([]byte)
 		case highlightclip.FieldStartSeconds, highlightclip.FieldEndSeconds, highlightclip.FieldPeakSeconds, highlightclip.FieldScore:
 			values[i] = new(sql.NullFloat64)
-		case highlightclip.FieldID, highlightclip.FieldHighlightIndex, highlightclip.FieldPriority, highlightclip.FieldAttempts:
+		case highlightclip.FieldID, highlightclip.FieldHighlightIndex, highlightclip.FieldPriority:
 			values[i] = new(sql.NullInt64)
-		case highlightclip.FieldRole, highlightclip.FieldAlgorithmVersion, highlightclip.FieldStatus, highlightclip.FieldK8sJobName, highlightclip.FieldOutputDir, highlightclip.FieldTitle, highlightclip.FieldDescription, highlightclip.FieldModelPayload, highlightclip.FieldErrorMessage:
+		case highlightclip.FieldRole, highlightclip.FieldAlgorithmVersion, highlightclip.FieldStatus, highlightclip.FieldSourcePath, highlightclip.FieldOutputDir, highlightclip.FieldTitle, highlightclip.FieldDescription, highlightclip.FieldModelPayload:
 			values[i] = new(sql.NullString)
-		case highlightclip.FieldStartedAt, highlightclip.FieldCompletedAt, highlightclip.FieldCreatedAt, highlightclip.FieldUpdatedAt:
+		case highlightclip.FieldCompletedAt, highlightclip.FieldCreatedAt, highlightclip.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
 		case highlightclip.ForeignKeys[0]: // match_round_highlight_clips
-			values[i] = new(sql.NullInt64)
-		case highlightclip.ForeignKeys[1]: // media_artifact_highlight_clips
 			values[i] = new(sql.NullInt64)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -184,19 +161,6 @@ func (_m *HighlightClip) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.Priority = int(value.Int64)
 			}
-		case highlightclip.FieldK8sJobName:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field k8s_job_name", values[i])
-			} else if value.Valid {
-				_m.K8sJobName = new(string)
-				*_m.K8sJobName = value.String
-			}
-		case highlightclip.FieldAttempts:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field attempts", values[i])
-			} else if value.Valid {
-				_m.Attempts = int(value.Int64)
-			}
 		case highlightclip.FieldStartSeconds:
 			if value, ok := values[i].(*sql.NullFloat64); !ok {
 				return fmt.Errorf("unexpected type %T for field start_seconds", values[i])
@@ -214,6 +178,12 @@ func (_m *HighlightClip) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field peak_seconds", values[i])
 			} else if value.Valid {
 				_m.PeakSeconds = value.Float64
+			}
+		case highlightclip.FieldSourcePath:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field source_path", values[i])
+			} else if value.Valid {
+				_m.SourcePath = value.String
 			}
 		case highlightclip.FieldOutputDir:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -256,20 +226,6 @@ func (_m *HighlightClip) assignValues(columns []string, values []any) error {
 				_m.ModelPayload = new(string)
 				*_m.ModelPayload = value.String
 			}
-		case highlightclip.FieldErrorMessage:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field error_message", values[i])
-			} else if value.Valid {
-				_m.ErrorMessage = new(string)
-				*_m.ErrorMessage = value.String
-			}
-		case highlightclip.FieldStartedAt:
-			if value, ok := values[i].(*sql.NullTime); !ok {
-				return fmt.Errorf("unexpected type %T for field started_at", values[i])
-			} else if value.Valid {
-				_m.StartedAt = new(time.Time)
-				*_m.StartedAt = value.Time
-			}
 		case highlightclip.FieldCompletedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field completed_at", values[i])
@@ -296,13 +252,6 @@ func (_m *HighlightClip) assignValues(columns []string, values []any) error {
 				_m.match_round_highlight_clips = new(int)
 				*_m.match_round_highlight_clips = int(value.Int64)
 			}
-		case highlightclip.ForeignKeys[1]:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for edge-field media_artifact_highlight_clips", value)
-			} else if value.Valid {
-				_m.media_artifact_highlight_clips = new(int)
-				*_m.media_artifact_highlight_clips = int(value.Int64)
-			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
 		}
@@ -321,14 +270,9 @@ func (_m *HighlightClip) QueryMatchRound() *MatchRoundQuery {
 	return NewHighlightClipClient(_m.config).QueryMatchRound(_m)
 }
 
-// QuerySourceArtifact queries the "source_artifact" edge of the HighlightClip entity.
-func (_m *HighlightClip) QuerySourceArtifact() *MediaArtifactQuery {
-	return NewHighlightClipClient(_m.config).QuerySourceArtifact(_m)
-}
-
-// QueryPublishTasks queries the "publish_tasks" edge of the HighlightClip entity.
-func (_m *HighlightClip) QueryPublishTasks() *HighlightPublishTaskQuery {
-	return NewHighlightClipClient(_m.config).QueryPublishTasks(_m)
+// QueryBilibiliPublications queries the "bilibili_publications" edge of the HighlightClip entity.
+func (_m *HighlightClip) QueryBilibiliPublications() *BilibiliHighlightPublicationQuery {
+	return NewHighlightClipClient(_m.config).QueryBilibiliPublications(_m)
 }
 
 // Update returns a builder for updating this HighlightClip.
@@ -369,14 +313,6 @@ func (_m *HighlightClip) String() string {
 	builder.WriteString("priority=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Priority))
 	builder.WriteString(", ")
-	if v := _m.K8sJobName; v != nil {
-		builder.WriteString("k8s_job_name=")
-		builder.WriteString(*v)
-	}
-	builder.WriteString(", ")
-	builder.WriteString("attempts=")
-	builder.WriteString(fmt.Sprintf("%v", _m.Attempts))
-	builder.WriteString(", ")
 	builder.WriteString("start_seconds=")
 	builder.WriteString(fmt.Sprintf("%v", _m.StartSeconds))
 	builder.WriteString(", ")
@@ -385,6 +321,9 @@ func (_m *HighlightClip) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("peak_seconds=")
 	builder.WriteString(fmt.Sprintf("%v", _m.PeakSeconds))
+	builder.WriteString(", ")
+	builder.WriteString("source_path=")
+	builder.WriteString(_m.SourcePath)
 	builder.WriteString(", ")
 	builder.WriteString("output_dir=")
 	builder.WriteString(_m.OutputDir)
@@ -408,16 +347,6 @@ func (_m *HighlightClip) String() string {
 	if v := _m.ModelPayload; v != nil {
 		builder.WriteString("model_payload=")
 		builder.WriteString(*v)
-	}
-	builder.WriteString(", ")
-	if v := _m.ErrorMessage; v != nil {
-		builder.WriteString("error_message=")
-		builder.WriteString(*v)
-	}
-	builder.WriteString(", ")
-	if v := _m.StartedAt; v != nil {
-		builder.WriteString("started_at=")
-		builder.WriteString(v.Format(time.ANSIC))
 	}
 	builder.WriteString(", ")
 	if v := _m.CompletedAt; v != nil {

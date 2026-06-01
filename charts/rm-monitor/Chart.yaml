@@ -1,6 +1,6 @@
 apiVersion: v2
 name: rm-monitor
-description: RoboMaster match monitor, recorder dispatchers, notifier, and media jobs.
+description: RoboMaster match controller, Argo workflows, notifier, and media jobs.
 type: application
 version: 0.1.0
 appVersion: "dev"

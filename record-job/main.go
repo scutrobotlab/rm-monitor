@@ -20,7 +20,9 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"scutbot.cn/web/rm-monitor/ent/matchround"
 	"scutbot.cn/web/rm-monitor/pkg/app"
+	"scutbot.cn/web/rm-monitor/pkg/db"
 	"scutbot.cn/web/rm-monitor/pkg/jobcontract"
 	"scutbot.cn/web/rm-monitor/pkg/logx"
 	"scutbot.cn/web/rm-monitor/pkg/storagepath"
@@ -51,22 +53,28 @@ func main() {
 	if jobCtx.BaseDir == "" {
 		jobCtx.BaseDir = c.RecordConf.WithDefaults().BaseDir
 	}
-	jobDir := recordJobDir(jobCtx.BaseDir, jobCtx.OutputPath, jobCtx.RecordTaskID)
+	jobDir := recordJobDir(jobCtx.BaseDir, jobCtx.OutputPath, jobCtx.MatchRoundID, jobCtx.Role)
 	if err := jobcontract.WriteContext(jobDir, jobCtx); err != nil {
 		logx.Error(err)
 		os.Exit(1)
 	}
-	if err := run(context.Background(), jobCtx, jobDir); err != nil {
-		_ = jobcontract.WriteError(jobDir, "record", jobCtx.RecordTaskID, err)
+	if err := run(context.Background(), c, jobCtx, jobDir); err != nil {
+		_ = jobcontract.WriteError(jobDir, "record", 0, err)
 		logx.Error(err)
 		os.Exit(1)
 	}
 }
 
-func run(ctx context.Context, jobCtx jobcontract.RecordContext, jobDir string) error {
-	if jobCtx.RecordTaskID == 0 {
-		return errors.New("record_task_id is required")
+func run(ctx context.Context, c config.Config, jobCtx jobcontract.RecordContext, jobDir string) error {
+	if jobCtx.MatchRoundID == 0 {
+		return errors.New("match_round_id is required")
 	}
+	client, err := db.Open(ctx, c.PostgresConf)
+	if err != nil {
+		return errors.Wrap(err, "open postgres")
+	}
+	defer client.Close()
+
 	fullPath := storagepath.Resolve(jobCtx.BaseDir, jobCtx.OutputPath)
 	if err := os.MkdirAll(filepath.Dir(fullPath), 0o755); err != nil {
 		return errors.Wrap(err, "create output dir")
@@ -74,19 +82,42 @@ func run(ctx context.Context, jobCtx jobcontract.RecordContext, jobDir string) e
 	partPath := fullPath + ".part"
 	_ = os.Remove(partPath)
 
-	runCtx, cancel := signal.NotifyContext(ctx, syscall.SIGTERM, syscall.SIGINT)
+	signalCtx, stopSignal := signal.NotifyContext(ctx, syscall.SIGTERM, syscall.SIGINT)
+	defer stopSignal()
+	runCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	var stopRequested atomic.Bool
 	go func() {
-		<-runCtx.Done()
-		stopRequested.Store(true)
+		<-signalCtx.Done()
+		cancel()
+	}()
+	go func() {
+		t := time.NewTicker(time.Second)
+		defer t.Stop()
+		for {
+			select {
+			case <-runCtx.Done():
+				return
+			case <-t.C:
+				r, err := client.MatchRound.Get(ctx, jobCtx.MatchRoundID)
+				if err != nil {
+					logx.Errorf("poll round status match_round_id=%d err=%v", jobCtx.MatchRoundID, err)
+					continue
+				}
+				if r.Status == matchround.StatusENDED {
+					stopRequested.Store(true)
+					cancel()
+					return
+				}
+			}
+		}
 	}()
 
 	recordStartedAt := time.Now()
 	if jobCtx.KeepAudio {
 		if err := writeRecordMeta(filepath.Dir(fullPath), recordMeta{
 			Schema:                "rm-monitor/record-meta/v1",
-			RecordTaskID:          jobCtx.RecordTaskID,
+			MatchRoundID:          jobCtx.MatchRoundID,
 			Role:                  jobCtx.Role,
 			SourceURL:             jobCtx.SourceURL,
 			OutputPath:            jobCtx.OutputPath,
@@ -113,7 +144,7 @@ func run(ctx context.Context, jobCtx jobcontract.RecordContext, jobDir string) e
 	}
 	cmd.WaitDelay = 10 * time.Second
 	logx.Infof("recording %s to %s", jobCtx.SourceURL, path.Clean(jobCtx.OutputPath))
-	err := cmd.Run()
+	err = cmd.Run()
 	if err != nil && !stopRequested.Load() {
 		if jobCtx.KeepAudio {
 			_ = removeRecordMeta(filepath.Dir(fullPath))
@@ -125,7 +156,7 @@ func run(ctx context.Context, jobCtx jobcontract.RecordContext, jobDir string) e
 		if jobCtx.KeepAudio {
 			_ = removeRecordMeta(filepath.Dir(fullPath))
 		}
-		return errors.New("ffmpeg exited before dispatcher requested stop")
+		return errors.New("ffmpeg exited before round stop was requested")
 	}
 
 	if err := os.Rename(partPath, fullPath); err != nil {
@@ -152,7 +183,7 @@ func run(ctx context.Context, jobCtx jobcontract.RecordContext, jobDir string) e
 	if jobCtx.KeepAudio {
 		if err := writeRecordMeta(filepath.Dir(fullPath), recordMeta{
 			Schema:                "rm-monitor/record-meta/v1",
-			RecordTaskID:          jobCtx.RecordTaskID,
+			MatchRoundID:          jobCtx.MatchRoundID,
 			Role:                  jobCtx.Role,
 			SourceURL:             jobCtx.SourceURL,
 			OutputPath:            jobCtx.OutputPath,
@@ -166,21 +197,36 @@ func run(ctx context.Context, jobCtx jobcontract.RecordContext, jobDir string) e
 			return errors.Wrap(err, "write final record metadata")
 		}
 	}
-	return jobcontract.WriteResult(jobDir, jobcontract.RecordResult{
+	result := jobcontract.RecordResult{
 		Schema:       "rm-monitor/record-result/v1",
-		RecordTaskID: jobCtx.RecordTaskID,
+		MatchID:      jobCtx.MatchID,
+		MatchRoundID: jobCtx.MatchRoundID,
 		OutputPath:   jobCtx.OutputPath,
 		Format:       "flv",
 		Codec:        "copy",
 		FileSize:     stat.Size(),
 		Checksum:     sum,
 		CompletedAt:  completedAt,
-	})
+	}
+	if err := jobcontract.WriteTempResult(result); err != nil {
+		return err
+	}
+	if err := jobcontract.WriteArgoOutputs(map[string]any{
+		"output_path": jobCtx.OutputPath,
+		"role":        jobCtx.Role,
+		"format":      result.Format,
+		"codec":       result.Codec,
+		"file_size":   result.FileSize,
+		"checksum":    result.Checksum,
+	}); err != nil {
+		return err
+	}
+	return nil
 }
 
 type recordMeta struct {
 	Schema                string     `json:"schema"`
-	RecordTaskID          int        `json:"record_task_id"`
+	MatchRoundID          int        `json:"match_round_id"`
 	Role                  string     `json:"role"`
 	SourceURL             string     `json:"source_url"`
 	OutputPath            string     `json:"output_path"`
@@ -227,9 +273,26 @@ func roleKeepsAudio(audioRoles []string, role string) bool {
 	return false
 }
 
-func recordJobDir(baseDir, outputPath string, taskID int) string {
+func recordJobDir(baseDir, outputPath string, roundID int, role string) string {
 	fullPath := storagepath.Resolve(baseDir, outputPath)
-	return filepath.Join(filepath.Dir(fullPath), jobcontract.DirName, fmt.Sprintf("record-%d", taskID))
+	return filepath.Join(filepath.Dir(fullPath), jobcontract.DirName, fmt.Sprintf("record-%d-%s", roundID, safeName(role)))
+}
+
+func safeName(s string) string {
+	s = strings.ToLower(strings.TrimSpace(s))
+	var b strings.Builder
+	for _, r := range s {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '-' {
+			b.WriteRune(r)
+		} else {
+			b.WriteByte('-')
+		}
+	}
+	out := strings.Trim(b.String(), "-")
+	if out == "" {
+		return "role"
+	}
+	return out
 }
 
 func recordFFmpegArgs(sourceURL, outputPath string, keepAudio bool) []string {

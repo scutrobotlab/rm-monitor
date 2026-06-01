@@ -15,6 +15,9 @@ export type DanmuConf = {
 };
 
 export type Config = {
+  PostgresConf?: {
+    DSN?: string;
+  };
   RecordConf?: RecordConf;
   DanmuConf?: DanmuConf;
 };

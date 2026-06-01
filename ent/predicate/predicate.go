@@ -6,14 +6,14 @@ import (
 	"entgo.io/ent/dialect/sql"
 )
 
+// BilibiliHighlightPublication is the predicate function for bilibilihighlightpublication builders.
+type BilibiliHighlightPublication func(*sql.Selector)
+
 // HighlightClip is the predicate function for highlightclip builders.
 type HighlightClip func(*sql.Selector)
 
-// HighlightPublishTask is the predicate function for highlightpublishtask builders.
-type HighlightPublishTask func(*sql.Selector)
-
-// HighlightRoundState is the predicate function for highlightroundstate builders.
-type HighlightRoundState func(*sql.Selector)
+// LarkBitableRecord is the predicate function for larkbitablerecord builders.
+type LarkBitableRecord func(*sql.Selector)
 
 // LarkMessage is the predicate function for larkmessage builders.
 type LarkMessage func(*sql.Selector)
@@ -24,23 +24,5 @@ type Match func(*sql.Selector)
 // MatchRound is the predicate function for matchround builders.
 type MatchRound func(*sql.Selector)
 
-// MediaArtifact is the predicate function for mediaartifact builders.
-type MediaArtifact func(*sql.Selector)
-
-// OCRTask is the predicate function for ocrtask builders.
-type OCRTask func(*sql.Selector)
-
-// RecordTask is the predicate function for recordtask builders.
-type RecordTask func(*sql.Selector)
-
-// STTTask is the predicate function for stttask builders.
-type STTTask func(*sql.Selector)
-
 // Team is the predicate function for team builders.
 type Team func(*sql.Selector)
-
-// TranscodeTask is the predicate function for transcodetask builders.
-type TranscodeTask func(*sql.Selector)
-
-// UploadTask is the predicate function for uploadtask builders.
-type UploadTask func(*sql.Selector)

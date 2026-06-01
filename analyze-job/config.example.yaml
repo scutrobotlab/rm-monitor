@@ -1,0 +1,26 @@
+# analyze-job target configuration shape.
+#
+# OCRServerConf is service/client configuration. Deployment details such as
+# image, replicas, GPU, resources, and model cache PVC belong to Helm values,
+# not application config.
+OCRServerConf:
+  BaseURL: http://ppocr-server.rm-monitor.svc.cluster.local:8000
+  TimeoutSeconds: 30
+
+AnalyzeConf:
+  Enabled: false
+  Role: "主视角"
+  MaxConcurrentJobs: 1
+  Scan:
+    FPS: 1
+    Width: 320
+    Height: 180
+    MaxStartScanSeconds: 1800
+    MaxSettlementScanSeconds: 1800
+    SettlementChunkSeconds: 90
+    MinSettlementSecond: 60
+    MinRoundSeconds: 60
+    SettlementTailSeconds: 5
+    SettlementRefineWindowSeconds: 8
+    SettlementRefineFPS: 3
+

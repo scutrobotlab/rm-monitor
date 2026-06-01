@@ -121,7 +121,7 @@ func TestCardEntityDataRendersCardJSON(t *testing.T) {
 			if m["direction"] != "vertical" || m["horizontal_align"] != "center" || m["vertical_align"] != "center" {
 				t.Fatalf("unexpected panel alignment: %#v", m)
 			}
-			if m["expanded"] != false || m["background_color"] != "grey-200" {
+			if m["expanded"] != true || m["background_color"] != "grey-200" {
 				t.Fatalf("unexpected panel display settings: %#v", m)
 			}
 			header := m["header"].(map[string]any)
@@ -337,14 +337,14 @@ func TestSelectedHighlightClipsLimitsPerRoundAndTotal(t *testing.T) {
 	title := "高光"
 	m := &ent.Match{Edges: ent.MatchEdges{Rounds: []*ent.MatchRound{
 		{RoundNo: 1, Edges: ent.MatchRoundEdges{HighlightClips: []*ent.HighlightClip{
-			{ID: 1, HighlightIndex: 1, Status: highlightclip.StatusSUCCEEDED, Score: 1, Title: &title},
-			{ID: 2, HighlightIndex: 2, Status: highlightclip.StatusSUCCEEDED, Score: 5, Title: &title},
-			{ID: 3, HighlightIndex: 3, Status: highlightclip.StatusSUCCEEDED, Score: 4, Title: &title},
-			{ID: 6, HighlightIndex: 4, Status: highlightclip.StatusSUCCEEDED, Score: 10, Title: &title, AlgorithmVersion: "old"},
+			{ID: 1, HighlightIndex: 1, Status: highlightclip.StatusAVAILABLE, Score: 1, Title: &title},
+			{ID: 2, HighlightIndex: 2, Status: highlightclip.StatusAVAILABLE, Score: 5, Title: &title},
+			{ID: 3, HighlightIndex: 3, Status: highlightclip.StatusAVAILABLE, Score: 4, Title: &title},
+			{ID: 6, HighlightIndex: 4, Status: highlightclip.StatusAVAILABLE, Score: 10, Title: &title, AlgorithmVersion: "old"},
 		}}},
 		{RoundNo: 2, Edges: ent.MatchRoundEdges{HighlightClips: []*ent.HighlightClip{
 			{ID: 4, HighlightIndex: 1, Status: highlightclip.StatusFAILED, Score: 99, Title: &title},
-			{ID: 5, HighlightIndex: 2, Status: highlightclip.StatusSUCCEEDED, Score: 3, Title: &title},
+			{ID: 5, HighlightIndex: 2, Status: highlightclip.StatusAVAILABLE, Score: 3, Title: &title},
 		}}},
 	}}}
 	for _, r := range m.Edges.Rounds {
@@ -382,7 +382,7 @@ func TestSelectedHighlightClipsFiltersCurrentAlgorithmAndDedupesOutput(t *testin
 				HighlightIndex:   1,
 				Role:             "主视角",
 				AlgorithmVersion: "danmu-zscore-v1",
-				Status:           highlightclip.StatusSUCCEEDED,
+				Status:           highlightclip.StatusAVAILABLE,
 				Score:            9,
 				OutputDir:        "Round-1/highlights/Highlight-01",
 				Title:            &title,
@@ -392,7 +392,7 @@ func TestSelectedHighlightClipsFiltersCurrentAlgorithmAndDedupesOutput(t *testin
 				HighlightIndex:   1,
 				Role:             "主视角",
 				AlgorithmVersion: "danmu-zscore-dify-v1",
-				Status:           highlightclip.StatusSUCCEEDED,
+				Status:           highlightclip.StatusAVAILABLE,
 				Score:            8,
 				OutputDir:        "Round-1/highlights/Highlight-01",
 				Title:            &title,
@@ -402,7 +402,7 @@ func TestSelectedHighlightClipsFiltersCurrentAlgorithmAndDedupesOutput(t *testin
 				HighlightIndex:   2,
 				Role:             "蓝方英雄第一视角",
 				AlgorithmVersion: "danmu-zscore-dify-v1",
-				Status:           highlightclip.StatusSUCCEEDED,
+				Status:           highlightclip.StatusAVAILABLE,
 				Score:            7,
 				OutputDir:        "Round-1/highlights/Highlight-02",
 				Title:            &title,
@@ -412,7 +412,7 @@ func TestSelectedHighlightClipsFiltersCurrentAlgorithmAndDedupesOutput(t *testin
 				HighlightIndex:   3,
 				Role:             "主视角",
 				AlgorithmVersion: "danmu-zscore-dify-v1",
-				Status:           highlightclip.StatusSUCCEEDED,
+				Status:           highlightclip.StatusAVAILABLE,
 				Score:            6,
 				OutputDir:        "Round-1/highlights/Highlight-03",
 				Title:            &title,
@@ -475,12 +475,10 @@ func TestRoundCardsIncludeUploadLinks(t *testing.T) {
 			RoundNo: 1,
 			Status:  matchround.StatusENDED,
 			Winner:  &winner,
-			Edges: ent.MatchRoundEdges{RecordTasks: []*ent.RecordTask{
+			Edges: ent.MatchRoundEdges{LarkBitableRecords: []*ent.LarkBitableRecord{
 				{
-					Role: "主视角",
-					Edges: ent.RecordTaskEdges{UploadTask: &ent.UploadTask{
-						BitableRecordURL: &url,
-					}},
+					Role:      "主视角",
+					RecordURL: &url,
 				},
 			}},
 		},

@@ -21,6 +21,12 @@ const (
 	FieldStatus = "status"
 	// FieldWinner holds the string denoting the winner field in the database.
 	FieldWinner = "winner"
+	// FieldWorkflowName holds the string denoting the workflow_name field in the database.
+	FieldWorkflowName = "workflow_name"
+	// FieldWorkflowUID holds the string denoting the workflow_uid field in the database.
+	FieldWorkflowUID = "workflow_uid"
+	// FieldWorkflowPhase holds the string denoting the workflow_phase field in the database.
+	FieldWorkflowPhase = "workflow_phase"
 	// FieldStartedAt holds the string denoting the started_at field in the database.
 	FieldStartedAt = "started_at"
 	// FieldEndedAt holds the string denoting the ended_at field in the database.
@@ -31,16 +37,10 @@ const (
 	FieldUpdatedAt = "updated_at"
 	// EdgeMatch holds the string denoting the match edge name in mutations.
 	EdgeMatch = "match"
-	// EdgeRecordTasks holds the string denoting the record_tasks edge name in mutations.
-	EdgeRecordTasks = "record_tasks"
-	// EdgeSttTasks holds the string denoting the stt_tasks edge name in mutations.
-	EdgeSttTasks = "stt_tasks"
 	// EdgeHighlightClips holds the string denoting the highlight_clips edge name in mutations.
 	EdgeHighlightClips = "highlight_clips"
-	// EdgeHighlightStates holds the string denoting the highlight_states edge name in mutations.
-	EdgeHighlightStates = "highlight_states"
-	// EdgeOcrTasks holds the string denoting the ocr_tasks edge name in mutations.
-	EdgeOcrTasks = "ocr_tasks"
+	// EdgeLarkBitableRecords holds the string denoting the lark_bitable_records edge name in mutations.
+	EdgeLarkBitableRecords = "lark_bitable_records"
 	// Table holds the table name of the matchround in the database.
 	Table = "match_rounds"
 	// MatchTable is the table that holds the match relation/edge.
@@ -50,20 +50,6 @@ const (
 	MatchInverseTable = "matches"
 	// MatchColumn is the table column denoting the match relation/edge.
 	MatchColumn = "match_rounds"
-	// RecordTasksTable is the table that holds the record_tasks relation/edge.
-	RecordTasksTable = "record_tasks"
-	// RecordTasksInverseTable is the table name for the RecordTask entity.
-	// It exists in this package in order to avoid circular dependency with the "recordtask" package.
-	RecordTasksInverseTable = "record_tasks"
-	// RecordTasksColumn is the table column denoting the record_tasks relation/edge.
-	RecordTasksColumn = "match_round_record_tasks"
-	// SttTasksTable is the table that holds the stt_tasks relation/edge.
-	SttTasksTable = "stt_tasks"
-	// SttTasksInverseTable is the table name for the STTTask entity.
-	// It exists in this package in order to avoid circular dependency with the "stttask" package.
-	SttTasksInverseTable = "stt_tasks"
-	// SttTasksColumn is the table column denoting the stt_tasks relation/edge.
-	SttTasksColumn = "match_round_stt_tasks"
 	// HighlightClipsTable is the table that holds the highlight_clips relation/edge.
 	HighlightClipsTable = "highlight_clips"
 	// HighlightClipsInverseTable is the table name for the HighlightClip entity.
@@ -71,20 +57,13 @@ const (
 	HighlightClipsInverseTable = "highlight_clips"
 	// HighlightClipsColumn is the table column denoting the highlight_clips relation/edge.
 	HighlightClipsColumn = "match_round_highlight_clips"
-	// HighlightStatesTable is the table that holds the highlight_states relation/edge.
-	HighlightStatesTable = "highlight_round_states"
-	// HighlightStatesInverseTable is the table name for the HighlightRoundState entity.
-	// It exists in this package in order to avoid circular dependency with the "highlightroundstate" package.
-	HighlightStatesInverseTable = "highlight_round_states"
-	// HighlightStatesColumn is the table column denoting the highlight_states relation/edge.
-	HighlightStatesColumn = "match_round_highlight_states"
-	// OcrTasksTable is the table that holds the ocr_tasks relation/edge.
-	OcrTasksTable = "ocr_tasks"
-	// OcrTasksInverseTable is the table name for the OCRTask entity.
-	// It exists in this package in order to avoid circular dependency with the "ocrtask" package.
-	OcrTasksInverseTable = "ocr_tasks"
-	// OcrTasksColumn is the table column denoting the ocr_tasks relation/edge.
-	OcrTasksColumn = "match_round_ocr_tasks"
+	// LarkBitableRecordsTable is the table that holds the lark_bitable_records relation/edge.
+	LarkBitableRecordsTable = "lark_bitable_records"
+	// LarkBitableRecordsInverseTable is the table name for the LarkBitableRecord entity.
+	// It exists in this package in order to avoid circular dependency with the "larkbitablerecord" package.
+	LarkBitableRecordsInverseTable = "lark_bitable_records"
+	// LarkBitableRecordsColumn is the table column denoting the lark_bitable_records relation/edge.
+	LarkBitableRecordsColumn = "match_round_lark_bitable_records"
 )
 
 // Columns holds all SQL columns for matchround fields.
@@ -93,6 +72,9 @@ var Columns = []string{
 	FieldRoundNo,
 	FieldStatus,
 	FieldWinner,
+	FieldWorkflowName,
+	FieldWorkflowUID,
+	FieldWorkflowPhase,
 	FieldStartedAt,
 	FieldEndedAt,
 	FieldCreatedAt,
@@ -201,6 +183,21 @@ func ByWinner(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldWinner, opts...).ToFunc()
 }
 
+// ByWorkflowName orders the results by the workflow_name field.
+func ByWorkflowName(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldWorkflowName, opts...).ToFunc()
+}
+
+// ByWorkflowUID orders the results by the workflow_uid field.
+func ByWorkflowUID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldWorkflowUID, opts...).ToFunc()
+}
+
+// ByWorkflowPhase orders the results by the workflow_phase field.
+func ByWorkflowPhase(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldWorkflowPhase, opts...).ToFunc()
+}
+
 // ByStartedAt orders the results by the started_at field.
 func ByStartedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldStartedAt, opts...).ToFunc()
@@ -228,34 +225,6 @@ func ByMatchField(field string, opts ...sql.OrderTermOption) OrderOption {
 	}
 }
 
-// ByRecordTasksCount orders the results by record_tasks count.
-func ByRecordTasksCount(opts ...sql.OrderTermOption) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newRecordTasksStep(), opts...)
-	}
-}
-
-// ByRecordTasks orders the results by record_tasks terms.
-func ByRecordTasks(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newRecordTasksStep(), append([]sql.OrderTerm{term}, terms...)...)
-	}
-}
-
-// BySttTasksCount orders the results by stt_tasks count.
-func BySttTasksCount(opts ...sql.OrderTermOption) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newSttTasksStep(), opts...)
-	}
-}
-
-// BySttTasks orders the results by stt_tasks terms.
-func BySttTasks(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newSttTasksStep(), append([]sql.OrderTerm{term}, terms...)...)
-	}
-}
-
 // ByHighlightClipsCount orders the results by highlight_clips count.
 func ByHighlightClipsCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -270,31 +239,17 @@ func ByHighlightClips(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	}
 }
 
-// ByHighlightStatesCount orders the results by highlight_states count.
-func ByHighlightStatesCount(opts ...sql.OrderTermOption) OrderOption {
+// ByLarkBitableRecordsCount orders the results by lark_bitable_records count.
+func ByLarkBitableRecordsCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newHighlightStatesStep(), opts...)
+		sqlgraph.OrderByNeighborsCount(s, newLarkBitableRecordsStep(), opts...)
 	}
 }
 
-// ByHighlightStates orders the results by highlight_states terms.
-func ByHighlightStates(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+// ByLarkBitableRecords orders the results by lark_bitable_records terms.
+func ByLarkBitableRecords(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newHighlightStatesStep(), append([]sql.OrderTerm{term}, terms...)...)
-	}
-}
-
-// ByOcrTasksCount orders the results by ocr_tasks count.
-func ByOcrTasksCount(opts ...sql.OrderTermOption) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newOcrTasksStep(), opts...)
-	}
-}
-
-// ByOcrTasks orders the results by ocr_tasks terms.
-func ByOcrTasks(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newOcrTasksStep(), append([]sql.OrderTerm{term}, terms...)...)
+		sqlgraph.OrderByNeighborTerms(s, newLarkBitableRecordsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
 func newMatchStep() *sqlgraph.Step {
@@ -304,20 +259,6 @@ func newMatchStep() *sqlgraph.Step {
 		sqlgraph.Edge(sqlgraph.M2O, true, MatchTable, MatchColumn),
 	)
 }
-func newRecordTasksStep() *sqlgraph.Step {
-	return sqlgraph.NewStep(
-		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(RecordTasksInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, false, RecordTasksTable, RecordTasksColumn),
-	)
-}
-func newSttTasksStep() *sqlgraph.Step {
-	return sqlgraph.NewStep(
-		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(SttTasksInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, false, SttTasksTable, SttTasksColumn),
-	)
-}
 func newHighlightClipsStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -325,17 +266,10 @@ func newHighlightClipsStep() *sqlgraph.Step {
 		sqlgraph.Edge(sqlgraph.O2M, false, HighlightClipsTable, HighlightClipsColumn),
 	)
 }
-func newHighlightStatesStep() *sqlgraph.Step {
+func newLarkBitableRecordsStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(HighlightStatesInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, false, HighlightStatesTable, HighlightStatesColumn),
-	)
-}
-func newOcrTasksStep() *sqlgraph.Step {
-	return sqlgraph.NewStep(
-		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(OcrTasksInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, false, OcrTasksTable, OcrTasksColumn),
+		sqlgraph.To(LarkBitableRecordsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, LarkBitableRecordsTable, LarkBitableRecordsColumn),
 	)
 }

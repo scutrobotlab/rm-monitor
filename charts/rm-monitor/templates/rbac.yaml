@@ -10,9 +10,12 @@ metadata:
   name: {{ .Values.serviceAccount.name }}
   namespace: {{ include "rm-monitor.namespace" . }}
 rules:
-  - apiGroups: ["batch"]
-    resources: ["jobs"]
-    verbs: ["create", "get", "list", "watch", "delete"]
+  - apiGroups: ["argoproj.io"]
+    resources: ["workflows", "workflows/finalizers"]
+    verbs: ["create", "get", "list", "watch", "patch", "update", "delete"]
+  - apiGroups: [""]
+    resources: ["pods", "pods/log"]
+    verbs: ["get", "list", "watch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding

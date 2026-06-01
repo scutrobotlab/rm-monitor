@@ -52,8 +52,33 @@ func Migrate(ctx context.Context, c config.PostgresConf) error {
 	if err := migrateLegacyLarkMessages(ctx, sqlDB); err != nil {
 		return err
 	}
+	if err := dropLegacyTaskTables(ctx, sqlDB); err != nil {
+		return err
+	}
 	if err := client.Schema.Create(ctx, migrate.WithDropColumn(true)); err != nil {
 		return errors.Wrap(err, "run ent schema migration")
+	}
+	return nil
+}
+
+func dropLegacyTaskTables(ctx context.Context, db *stdsql.DB) error {
+	tables := []string{
+		"analyze_tasks",
+		"external_publications",
+		"highlight_publish_tasks",
+		"highlight_round_states",
+		"media_artifacts",
+		"ocr_tasks",
+		"record_tasks",
+		"round_analyses",
+		"stt_tasks",
+		"transcode_tasks",
+		"upload_tasks",
+	}
+	for _, table := range tables {
+		if _, err := db.ExecContext(ctx, "DROP TABLE IF EXISTS "+table+" CASCADE"); err != nil {
+			return errors.Wrapf(err, "drop legacy table %s", table)
+		}
 	}
 	return nil
 }

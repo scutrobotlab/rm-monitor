@@ -108,7 +108,7 @@ func runSTT(ctx context.Context, sttCtx jobcontract.STTContext, conf jobconfig.C
 	defer os.RemoveAll(tmpDir)
 
 	audioPath := filepath.Join(tmpDir, "audio.m4a")
-	if err := extractAudio(ctx, sttCtx.SourcePath, audioPath); err != nil {
+	if err := extractAudio(ctx, sttCtx.SourcePath, audioPath, sttCtx.TrimStartSeconds, sttCtx.TrimEndSeconds); err != nil {
 		if isNoAudio(err.Error()) {
 			if err := appendLine(info.STTPath, sttLine{Index: 0, Start: 0, End: 0, Status: "NO_AUDIO"}); err != nil {
 				return err
@@ -130,17 +130,27 @@ func runSTT(ctx context.Context, sttCtx jobcontract.STTContext, conf jobconfig.C
 	return finishSTT(sttCtx, info)
 }
 
-func extractAudio(ctx context.Context, sourcePath, audioPath string) error {
+func extractAudio(ctx context.Context, sourcePath, audioPath string, trimStart, trimEnd *float64) error {
 	args := []string{
 		"-hide_banner",
 		"-nostdin",
 		"-loglevel", "error",
+	}
+	if trimStart != nil && *trimStart > 0 {
+		args = append(args, "-ss", fmt.Sprintf("%.3f", *trimStart))
+	}
+	args = append(args,
 		"-i", sourcePath,
+	)
+	if trimStart != nil && trimEnd != nil && *trimEnd > *trimStart {
+		args = append(args, "-t", fmt.Sprintf("%.3f", *trimEnd-*trimStart))
+	}
+	args = append(args,
 		"-vn",
 		"-map", "0:a:0",
 		"-c:a", "copy",
 		"-y", audioPath,
-	}
+	)
 	cmd := exec.CommandContext(ctx, "ffmpeg", args...)
 	var stderr bytes.Buffer
 	cmd.Stdout = os.Stdout
@@ -182,22 +192,24 @@ func finishSTT(sttCtx jobcontract.STTContext, info roundInfo) error {
 	if err := writeRoundSubtitle(info); err != nil {
 		return err
 	}
-	return jobcontract.WriteResult(sttJobDir(sttCtx), jobcontract.STTResult{
+	result := jobcontract.STTResult{
 		Schema:       "rm-monitor/stt-result/v1",
-		STTTaskID:    sttCtx.STTTaskID,
 		MatchRoundID: sttCtx.MatchRoundID,
 		STTPath:      sttCtx.STTPath,
 		SubtitlePath: filepath.Join(info.RoundDir, info.SubtitleName),
 		CompletedAt:  time.Now(),
+	}
+	if err := jobcontract.WriteTempResult(result); err != nil {
+		return err
+	}
+	return jobcontract.WriteArgoOutputs(map[string]any{
+		"stt_path":      result.STTPath,
+		"subtitle_path": result.SubtitlePath,
 	})
 }
 
 func sttJobDir(sttCtx jobcontract.STTContext) string {
-	id := sttCtx.STTTaskID
-	if id == 0 {
-		id = sttCtx.MatchRoundID
-	}
-	return filepath.Join(sttCtx.RoundDir, jobcontract.DirName, fmt.Sprintf("stt-%d", id))
+	return filepath.Join(sttCtx.RoundDir, jobcontract.DirName, fmt.Sprintf("stt-%d", sttCtx.MatchRoundID))
 }
 
 func isNoAudio(stderr string) bool {

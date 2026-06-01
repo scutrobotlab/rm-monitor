@@ -2,7 +2,12 @@ imagePullPolicy: Always
 jobImagePullPolicy: IfNotPresent
 
 serviceAccount:
-  name: dispatcher
+  name: rm-monitor-workflow
+
+argo:
+  enabled: true
+  namespace: rm-monitor
+  matchWorkflowTemplate: rm-match-workflow
 
 priorityClasses:
   recordCritical:
@@ -31,13 +36,14 @@ upload:
   retryBackoff: 2
   rateLimitPerMinute: 30
 
-monitor:
+controller:
   scheduleURL: ""
 
 record:
   res: middle
   liveInfoURL: ""
   baseDir: /records
+  stopDelaySeconds: 60
   audioRoles:
     - "主视角"
   roleBlackList:
@@ -65,12 +71,43 @@ danmu:
   appKey: ""
   videoOffsetSeconds: -3
 
-ocr:
+ocrServer:
+  enabled: false
+  replicas: 1
+  timeoutSeconds: 30
+  device: cpu
+  lang: ch
+  version: PP-OCRv5
+  enableMKLDNN: true
+  cpuThreads: 4
+  maxBatch: 32
+  port: 8000
+  modelCachePVCName: ""
+  nodeSelector: {}
+  resources:
+    requests:
+      cpu: "1"
+      memory: 2Gi
+    limits:
+      cpu: "4"
+      memory: 6Gi
+
+analyze:
   enabled: false
   role: "主视角"
-  frameInterval: 1
-  similarityThreshold: 0.6
   maxConcurrentJobs: 1
+  scan:
+    fps: 1
+    width: 320
+    height: 180
+    maxStartScanSeconds: 1800
+    maxSettlementScanSeconds: 1800
+    settlementChunkSeconds: 90
+    minSettlementSecond: 60
+    minRoundSeconds: 60
+    settlementTailSeconds: 5
+    settlementRefineWindowSeconds: 8
+    settlementRefineFPS: 3
 
 highlight:
   enabled: false
@@ -144,10 +181,6 @@ jobs:
   migrate:
     backoffLimit: 1
     ttlSecondsAfterFinished: 86400
-  artifactCleaner:
-    schedule: "0 0 * * *"
-    successfulJobsHistoryLimit: 3
-    failedJobsHistoryLimit: 3
 
 components:
   migrateJob:
@@ -158,7 +191,7 @@ components:
       limits:
         cpu: 500m
         memory: 256Mi
-  monitor:
+  matchController:
     replicas: 1
     resources:
       requests:
@@ -176,55 +209,10 @@ components:
       limits:
         cpu: "1"
         memory: 512Mi
-  recordDispatcher:
-    replicas: 1
-    resources:
-      requests:
-        cpu: 50m
-        memory: 64Mi
-      limits:
-        cpu: 500m
-        memory: 256Mi
-  uploaderDispatcher:
-    replicas: 1
-    resources:
-      requests:
-        cpu: 50m
-        memory: 96Mi
-      limits:
-        cpu: 500m
-        memory: 256Mi
-  transcodeDispatcher:
-    replicas: 1
-    annotations: {}
-    resources:
-      requests:
-        cpu: 50m
-        memory: 96Mi
-      limits:
-        cpu: 500m
-        memory: 256Mi
-  highlightDispatcher:
-    replicas: 1
-    annotations: {}
-    resources:
-      requests:
-        cpu: 50m
-        memory: 96Mi
-      limits:
-        cpu: 500m
-        memory: 256Mi
-  ocrDispatcher:
-    replicas: 1
-    annotations: {}
-    resources:
-      requests:
-        cpu: 50m
-        memory: 96Mi
-      limits:
-        cpu: 500m
-        memory: 256Mi
-  artifactCleaner:
+  healthChecker:
+    schedule: "*/1 * * * *"
+    successfulJobsHistoryLimit: 3
+    failedJobsHistoryLimit: 5
     resources:
       requests:
         cpu: 20m
@@ -232,8 +220,8 @@ components:
       limits:
         cpu: 200m
         memory: 256Mi
-  healthChecker:
-    schedule: "*/1 * * * *"
+  artifactCleaner:
+    schedule: "0 0 * * *"
     successfulJobsHistoryLimit: 3
     failedJobsHistoryLimit: 5
     resources:
