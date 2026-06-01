@@ -1,18 +1,31 @@
 package logic
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
+	"entgo.io/ent/dialect"
+	"github.com/alicebob/miniredis/v2"
+	_ "github.com/mattn/go-sqlite3"
 	"scutbot.cn/web/rm-monitor/ent"
+	"scutbot.cn/web/rm-monitor/ent/enttest"
 	"scutbot.cn/web/rm-monitor/ent/highlightclip"
 	"scutbot.cn/web/rm-monitor/ent/match"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
+	notifierconfig "scutbot.cn/web/rm-monitor/lark-notifier/internal/config"
+	"scutbot.cn/web/rm-monitor/lark-notifier/internal/svc"
 	"scutbot.cn/web/rm-monitor/lark-notifier/internal/utils"
+	common "scutbot.cn/web/rm-monitor/pkg/config"
+	"scutbot.cn/web/rm-monitor/pkg/redisx"
 )
 
 func TestMatchCardCompleted(t *testing.T) {
@@ -167,6 +180,138 @@ func TestCardEntityDataRendersCardJSON(t *testing.T) {
 	}
 }
 
+func TestCreateCardPayload(t *testing.T) {
+	ctx := context.Background()
+	client := enttest.Open(t, dialect.SQLite, "file:create_card_payload?mode=memory&cache=shared&_fk=1")
+	defer client.Close()
+	mini := miniredis.RunT(t)
+	baseDir := t.TempDir()
+	svcCtx := &svc.ServiceContext{
+		Config: notifierconfig.Config{
+			RecordConf: struct{ BaseDir string }{BaseDir: baseDir},
+			HighlightConf: common.HighlightConf{
+				Enabled:          true,
+				Role:             "主视角",
+				AlgorithmVersion: "danmu-zscore-dify-v1",
+			},
+		},
+		DB:          client,
+		RedisClient: redisx.New(redisx.Conf{Host: mini.Addr()}),
+	}
+	defer svcCtx.RedisClient.Close()
+
+	red := client.Team.Create().SetID("red").SetSchoolName("红方大学").SetName("Alpha").SaveX(ctx)
+	blue := client.Team.Create().SetID("blue").SetSchoolName("蓝方大学").SetName("Beta").SaveX(ctx)
+	report := "这是一段战报。"
+	m := client.Match.Create().
+		SetID("match-1").
+		SetEvent("RMUC").
+		SetZone("南部赛区").
+		SetOrder(32).
+		SetMatchType("BO3").
+		SetTotalRounds(3).
+		SetLatestStatus("DONE").
+		SetResult(match.ResultRED).
+		SetReport(report).
+		SetRedTeam(red).
+		SetBlueTeam(blue).
+		SaveX(ctx)
+	winner := matchround.WinnerRed
+	round := client.MatchRound.Create().
+		SetMatch(m).
+		SetRoundNo(1).
+		SetStatus(matchround.StatusENDED).
+		SetWinner(winner).
+		SaveX(ctx)
+
+	sourcePath := "RMUC/南部赛区/32. 红方大学-Alpha VS 蓝方大学-Beta/Round-1/主视角.flv"
+	recordURL := "https://example.test/bitable/record"
+	client.LarkBitableRecord.Create().
+		SetMatchRound(round).
+		SetRole("主视角").
+		SetAppToken("app").
+		SetTableID("tbl").
+		SetRecordID("rec").
+		SetRecordURL(recordURL).
+		SetSourcePath(sourcePath).
+		SaveX(ctx)
+
+	roundDir := filepath.Join(baseDir, filepath.Dir(filepath.FromSlash(sourcePath)))
+	if err := os.MkdirAll(filepath.Join(roundDir, "highlights", "Highlight-01"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeCachedLocalImage(t, ctx, svcCtx, filepath.Join(roundDir, "settlement.jpg"), []byte("settlement-image"), "img_settlement")
+	if err := os.WriteFile(filepath.Join(roundDir, "round.json"), []byte(`{"settlement":{"status":"CONFIRMED"}}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	previewRel := filepath.ToSlash(filepath.Join(filepath.Dir(sourcePath), "highlights", "Highlight-01"))
+	writeCachedLocalImage(t, ctx, svcCtx, filepath.Join(baseDir, filepath.FromSlash(previewRel), "preview.gif"), []byte("preview-gif"), "img_preview")
+	desc := "红方抓住窗口完成推进"
+	modelPayload := `{"review":{"publish_caption":"这波节奏拉满。"}}`
+	client.HighlightClip.Create().
+		SetMatchRound(round).
+		SetHighlightIndex(1).
+		SetRole("主视角").
+		SetAlgorithmVersion("danmu-zscore-dify-v1").
+		SetStatus(highlightclip.StatusAVAILABLE).
+		SetStartSeconds(10).
+		SetEndSeconds(30).
+		SetPeakSeconds(18).
+		SetSourcePath(sourcePath).
+		SetOutputDir(previewRel).
+		SetTitle("关键推进").
+		SetDescription(desc).
+		SetModelPayload(modelPayload).
+		SetScore(9.5).
+		SaveX(ctx)
+
+	payload, err := CreateCardPayload(ctx, svcCtx, "match-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	payloadAgain, err := CreateCardPayload(ctx, svcCtx, "match-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(payload, payloadAgain) {
+		t.Fatalf("CreateCardPayload should be byte-stable across repeated calls\nfirst:  %s\nsecond: %s", payload, payloadAgain)
+	}
+	raw := string(payload)
+	for _, want := range []string{
+		`"tag":"collapsible_panel"`,
+		`video_outlined`,
+		`https://example.test/bitable/record`,
+		`主视角`,
+		`"element_id":"match_report"`,
+		"这是一段战报。",
+		`"element_id":"featured_highlights"`,
+		"Round 1 关键推进",
+		"红方抓住窗口完成推进",
+		"这波节奏拉满。",
+		`"img_key":"img_settlement"`,
+		`"img_key":"img_preview"`,
+	} {
+		if !strings.Contains(raw, want) {
+			t.Fatalf("payload missing %q: %s", want, raw)
+		}
+	}
+}
+
+func writeCachedLocalImage(t *testing.T, ctx context.Context, svcCtx *svc.ServiceContext, path string, data []byte, imageKey string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	sum := sha256.Sum256(data)
+	cacheKey := fmt.Sprintf("rm-monitor:image-key:file-sha256:%s", hex.EncodeToString(sum[:]))
+	if err := svcCtx.RedisClient.SetexCtx(ctx, cacheKey, imageKey, 3600); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestCardEntityDataRendersMultipleRoundPanels(t *testing.T) {
 	content := &utils.MatchCardContent{Data: utils.MatchCardData{
 		RedTeam:    "红队",
@@ -209,6 +354,9 @@ func TestCardEntityDataRendersHighlightImages(t *testing.T) {
 	}
 	if !strings.Contains(raw, `"tag":"img_combination"`) {
 		t.Fatalf("rendered card missing img_combination: %s", raw)
+	}
+	if !strings.Contains(raw, `"element_id":"match_report"`) || !strings.Contains(raw, `"element_id":"featured_highlights"`) {
+		t.Fatalf("report and highlight should render as separate markdown blocks: %s", raw)
 	}
 	if !strings.Contains(raw, `"combination_mode":"double"`) || !strings.Contains(raw, `"img_key":"img_1"`) || !strings.Contains(raw, `"img_key":"img_2"`) {
 		t.Fatalf("rendered card missing highlight image data: %s", raw)

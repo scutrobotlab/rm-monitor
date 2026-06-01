@@ -15,7 +15,6 @@ import (
 	"scutbot.cn/web/rm-monitor/ent/match"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
 	common "scutbot.cn/web/rm-monitor/pkg/config"
-	"scutbot.cn/web/rm-monitor/pkg/db"
 	"scutbot.cn/web/rm-monitor/pkg/difyworkflow"
 	"scutbot.cn/web/rm-monitor/pkg/highlight"
 	"scutbot.cn/web/rm-monitor/pkg/jobcontract"
@@ -75,9 +74,6 @@ func WriteMatchReadme(ctx context.Context, client *ent.Client, redisClient *redi
 			return errors.Wrap(err, "save match report")
 		}
 		m.Report = &report
-		if postgresDSN != "" {
-			_ = db.Notify(ctx, postgresDSN, db.MatchChangedChannel, m.ID)
-		}
 	}
 	unlock, err := lockDir(ctx, fullDir)
 	if err != nil {
@@ -537,6 +533,7 @@ type reportRoundPayload struct {
 	STTTruncated    bool              `json:"stt_truncated,omitempty"`
 	Danmu           *danmuSummary     `json:"danmu,omitempty"`
 	Online          *onlineSummary    `json:"online,omitempty"`
+	Analysis        *roundAnalysis    `json:"analysis,omitempty"`
 	OCRSettlement   json.RawMessage   `json:"ocr_settlement,omitempty"`
 	Highlights      []json.RawMessage `json:"highlights,omitempty"`
 }
@@ -558,6 +555,14 @@ type onlineSummary struct {
 	Min     *float64 `json:"min,omitempty"`
 	Max     *float64 `json:"max,omitempty"`
 	Last    *float64 `json:"last,omitempty"`
+}
+
+type roundAnalysis struct {
+	Status           string  `json:"status,omitempty"`
+	StartSeconds     float64 `json:"start_seconds"`
+	EndSeconds       float64 `json:"end_seconds"`
+	DurationSeconds  float64 `json:"duration_seconds,omitempty"`
+	SettlementStatus string  `json:"settlement_status,omitempty"`
 }
 
 type reportPeakInfo struct {
@@ -653,6 +658,7 @@ func buildReportPayload(m *ent.Match, red, blue *ent.Team, matchDir string) (rep
 			STTTruncated:    sttTruncated,
 			Danmu:           danmu,
 			Online:          readOnlineSummary(roundDir),
+			Analysis:        readRoundAnalysis(roundDir),
 			OCRSettlement:   readRoundSettlementOCR(roundDir),
 			Highlights:      readHighlightJSONs(roundDir),
 		}
@@ -663,6 +669,39 @@ func buildReportPayload(m *ent.Match, red, blue *ent.Team, matchDir string) (rep
 
 func readRoundJSON(roundDir string) json.RawMessage {
 	return readOptionalJSON(filepath.Join(roundDir, "round.json"))
+}
+
+func readRoundAnalysis(roundDir string) *roundAnalysis {
+	raw := readRoundJSON(roundDir)
+	if len(raw) == 0 {
+		return nil
+	}
+	var doc struct {
+		Analysis struct {
+			Status string `json:"status"`
+		} `json:"analysis"`
+		Boundary struct {
+			StartSeconds    float64 `json:"start_seconds"`
+			EndSeconds      float64 `json:"end_seconds"`
+			DurationSeconds float64 `json:"duration_seconds"`
+		} `json:"boundary"`
+		Settlement struct {
+			Status string `json:"status"`
+		} `json:"settlement"`
+	}
+	if err := json.Unmarshal(raw, &doc); err != nil {
+		return nil
+	}
+	if doc.Boundary.EndSeconds <= doc.Boundary.StartSeconds {
+		return nil
+	}
+	return &roundAnalysis{
+		Status:           doc.Analysis.Status,
+		StartSeconds:     doc.Boundary.StartSeconds,
+		EndSeconds:       doc.Boundary.EndSeconds,
+		DurationSeconds:  doc.Boundary.DurationSeconds,
+		SettlementStatus: doc.Settlement.Status,
+	}
 }
 
 func readRoundSettlementOCR(roundDir string) json.RawMessage {

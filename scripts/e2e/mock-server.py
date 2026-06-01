@@ -26,9 +26,9 @@ def schedule():
                                         "id": "e2e-match-1",
                                         "orderNumber": 1,
                                         "status": STATE["status"],
-                                        "matchType": "BO1",
+                                        "matchType": "BO3",
                                         "slug": "e2e-match-1",
-                                        "planGameCount": 1,
+                                        "planGameCount": 3,
                                         "result": STATE["result"],
                                         "winnerPlaceholdName": "",
                                         "loserPlaceholdName": "",
@@ -77,13 +77,22 @@ def live_info():
                 "zoneLiveString": [
                     {"res": "1080p", "src": "http://e2e-media:8080/main.m3u8"}
                 ],
-                "fpvData": [],
+                "fpvData": [
+                    {
+                        "role": "\u7ea2\u65b9\u82f1\u96c4\u7b2c\u4e00\u89c6\u89d2",
+                        "sources": [
+                            {"res": "1080p", "src": "http://e2e-media:8080/main.m3u8"}
+                        ],
+                    }
+                ],
             }
         ]
     }
 
 
 class Handler(BaseHTTPRequestHandler):
+    protocol_version = "HTTP/1.1"
+
     def do_GET(self):
         parsed = urlparse(self.path)
         if parsed.path == "/healthz":

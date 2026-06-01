@@ -32,6 +32,12 @@ type NotifyLogic struct {
 	logx.Logger
 }
 
+type CardPayload struct {
+	Content *utils.MatchCardContent
+	Bytes   []byte
+	Map     map[string]any
+}
+
 func NewNotifyLogic(ctx context.Context, svcCtx *svc.ServiceContext) *NotifyLogic {
 	return &NotifyLogic{ctx: ctx, svcCtx: svcCtx, Logger: logx.WithContext(ctx)}
 }
@@ -105,6 +111,71 @@ func (l *NotifyLogic) matchesForWindow(since time.Time, limit, offset int) ([]*e
 		return nil, errors.Wrap(err, "query lark scan matches")
 	}
 	return matches, nil
+}
+
+func CreateCardPayload(ctx context.Context, svcCtx *svc.ServiceContext, matchID string) ([]byte, error) {
+	payload, err := BuildCardPayload(ctx, svcCtx, matchID)
+	if err != nil {
+		return nil, err
+	}
+	return payload.Bytes, nil
+}
+
+func BuildCardPayload(ctx context.Context, svcCtx *svc.ServiceContext, matchID string) (*CardPayload, error) {
+	m, err := queryMatchForCard(ctx, svcCtx, matchID)
+	if err != nil {
+		return nil, err
+	}
+	return buildCardPayloadForMatch(ctx, svcCtx, m)
+}
+
+func ApplyMatchUpdate(ctx context.Context, svcCtx *svc.ServiceContext, matchID string) (bool, error) {
+	chatIDs, err := utils.JoinedChatIDs(ctx, svcCtx)
+	if err != nil {
+		return false, err
+	}
+	m, err := queryMatchForCard(ctx, svcCtx, matchID)
+	if err != nil {
+		return false, err
+	}
+	return NewNotifyLogic(ctx, svcCtx).syncMatchCard(m, chatIDs)
+}
+
+func buildCardPayloadForMatch(ctx context.Context, svcCtx *svc.ServiceContext, m *ent.Match) (*CardPayload, error) {
+	content, err := NewNotifyLogic(ctx, svcCtx).cardContent(m)
+	if err != nil {
+		return nil, err
+	}
+	raw, payloadMap, err := utils.CardEntityData(content)
+	if err != nil {
+		return nil, err
+	}
+	return &CardPayload{
+		Content: content,
+		Bytes:   []byte(raw),
+		Map:     payloadMap,
+	}, nil
+}
+
+func queryMatchForCard(ctx context.Context, svcCtx *svc.ServiceContext, matchID string) (*ent.Match, error) {
+	m, err := svcCtx.DB.Match.Query().
+		Where(match.ID(matchID)).
+		WithRedTeam().
+		WithBlueTeam().
+		WithLarkMessages().
+		WithRounds(func(q *ent.MatchRoundQuery) {
+			q.Order(matchround.ByRoundNo()).
+				WithLarkBitableRecords().
+				WithHighlightClips(func(q *ent.HighlightClipQuery) {
+					q.Where(highlightclip.StatusEQ(highlightclip.StatusAVAILABLE)).
+						Order(highlightclip.ByHighlightIndex())
+				})
+		}).
+		Only(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "query match for lark card")
+	}
+	return m, nil
 }
 
 func (l *NotifyLogic) syncMatchCard(m *ent.Match, chatIDs []string) (bool, error) {
@@ -271,11 +342,12 @@ func (l *NotifyLogic) patchMatchCards(m *ent.Match) error {
 	if m == nil {
 		return nil
 	}
-	content, err := l.cardContent(m)
+	payload, err := buildCardPayloadForMatch(l.ctx, l.svcCtx, m)
 	if err != nil {
 		return err
 	}
-	contentMap := utils.ToMap(content)
+	content := payload.Content
+	contentMap := payload.Map
 	dataUpdatedAt := cardDataUpdatedAt(m)
 	sequence := dataUpdatedAt.Unix()
 	attempted := 0

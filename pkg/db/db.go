@@ -71,6 +71,7 @@ func dropLegacyTaskTables(ctx context.Context, db *stdsql.DB) error {
 		"ocr_tasks",
 		"record_tasks",
 		"round_analyses",
+		"round_analysis",
 		"stt_tasks",
 		"transcode_tasks",
 		"upload_tasks",

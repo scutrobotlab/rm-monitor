@@ -1,6 +1,8 @@
 package argowf
 
 import (
+	"crypto/sha1"
+	"encoding/hex"
 	"encoding/json"
 	"strings"
 
@@ -41,10 +43,29 @@ func safeName(s string) string {
 	}
 	out := strings.Trim(b.String(), "-")
 	if out == "" {
-		return "unknown"
+		return hashedNamePart(s)
 	}
 	if len(out) > 45 {
 		return strings.Trim(out[:45], "-")
+	}
+	return out
+}
+
+func hashedNamePart(s string) string {
+	sum := sha1.Sum([]byte(strings.TrimSpace(s)))
+	return "x" + hex.EncodeToString(sum[:])[:10]
+}
+
+func trimDNSLabel(s string, max int) string {
+	if max <= 0 {
+		return "x"
+	}
+	if len(s) <= max {
+		return strings.Trim(s, "-")
+	}
+	out := strings.Trim(s[:max], "-")
+	if out == "" {
+		return "x"
 	}
 	return out
 }

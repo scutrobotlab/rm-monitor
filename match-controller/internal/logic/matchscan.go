@@ -23,7 +23,6 @@ import (
 	"scutbot.cn/web/rm-monitor/pkg/argowf"
 	"scutbot.cn/web/rm-monitor/pkg/bitableupload"
 	common "scutbot.cn/web/rm-monitor/pkg/config"
-	"scutbot.cn/web/rm-monitor/pkg/db"
 	"scutbot.cn/web/rm-monitor/pkg/jobcontract"
 	"scutbot.cn/web/rm-monitor/pkg/logx"
 	"scutbot.cn/web/rm-monitor/pkg/pathfmt"
@@ -370,7 +369,7 @@ func (l *MatchScanLogic) ensureStartedRound(m scannedMatch, roundNo int) error {
 	if r != nil {
 		return nil
 	}
-	created, err := l.svcCtx.DB.MatchRound.Create().
+	_, err = l.svcCtx.DB.MatchRound.Create().
 		SetMatchID(m.ID).
 		SetRoundNo(roundNo).
 		SetStatus(matchround.StatusSTARTED).
@@ -381,7 +380,7 @@ func (l *MatchScanLogic) ensureStartedRound(m scannedMatch, roundNo int) error {
 		}
 		return errors.Wrap(err, "create match round")
 	}
-	return db.Notify(l.ctx, l.svcCtx.Config.PostgresConf.DSN, db.MatchRoundChangedChannel, strconv.Itoa(created.ID))
+	return nil
 }
 
 func (l *MatchScanLogic) ensureEndedRound(matchID string, roundNo int, winner matchround.Winner) error {
@@ -396,7 +395,7 @@ func (l *MatchScanLogic) ensureEndedRound(matchID string, roundNo int, winner ma
 	}
 	now := time.Now()
 	if r == nil {
-		created, err := l.svcCtx.DB.MatchRound.Create().
+		_, err := l.svcCtx.DB.MatchRound.Create().
 			SetMatchID(matchID).
 			SetRoundNo(roundNo).
 			SetStatus(matchround.StatusENDED).
@@ -409,7 +408,7 @@ func (l *MatchScanLogic) ensureEndedRound(matchID string, roundNo int, winner ma
 			}
 			return errors.Wrap(err, "create ended round")
 		}
-		return db.Notify(l.ctx, l.svcCtx.Config.PostgresConf.DSN, db.MatchRoundChangedChannel, strconv.Itoa(created.ID))
+		return nil
 	}
 	if r.Status == matchround.StatusENDED && r.Winner != nil && *r.Winner == winner {
 		return nil
@@ -421,7 +420,7 @@ func (l *MatchScanLogic) ensureEndedRound(matchID string, roundNo int, winner ma
 		Exec(l.ctx); err != nil {
 		return errors.Wrap(err, "end round")
 	}
-	return db.Notify(l.ctx, l.svcCtx.Config.PostgresConf.DSN, db.MatchRoundChangedChannel, strconv.Itoa(r.ID))
+	return nil
 }
 
 func (l *MatchScanLogic) ensureMatchWorkflow(m scannedMatch) error {
@@ -442,12 +441,18 @@ func (l *MatchScanLogic) ensureMatchWorkflow(m scannedMatch) error {
 	}
 	_, err = l.svcCtx.ArgoClient.EnsureWorkflowFromTemplate(l.ctx, argowf.WorkflowTemplateRef{
 		Namespace:    conf.Namespace,
-		Name:         argowf.MatchWorkflowName(m.ID),
+		Name:         argowf.MatchWorkflowName(m.Event, m.Zone, m.Order, m.ID),
 		TemplateName: conf.MatchWorkflowTemplate,
 		Labels: map[string]string{
 			"app.kubernetes.io/name": "rm-monitor",
 			"rm-monitor/match-id":    m.ID,
 			"rm-monitor/workflow":    "match",
+		},
+		Annotations: map[string]string{
+			"rm-monitor/event":      m.Event,
+			"rm-monitor/zone":       m.Zone,
+			"rm-monitor/order":      strconv.Itoa(m.Order),
+			"rm-monitor/match-type": m.MatchType,
 		},
 		Arguments: map[string]string{
 			"match_id":        m.ID,
@@ -502,8 +507,27 @@ func (l *MatchScanLogic) roleSpecsForMatch(m scannedMatch) ([]roleSpec, string, 
 
 func (l *MatchScanLogic) roundWorkflowArguments(m scannedMatch, r *ent.MatchRound, roundDir string, specs []roleSpec, chatRoomID string) (map[string]string, error) {
 	recordConf := l.svcCtx.Config.RecordConf.WithDefaults()
-	recordContexts := make([]jobcontract.RecordContext, 0, len(specs))
+	analyzeConf := l.svcCtx.Config.AnalyzeConf.WithDefaults()
+	highlightConf := l.svcCtx.Config.HighlightConf.WithDefaults()
+	mainRole := preferredMainRole(recordConf, analyzeConf, highlightConf)
+	hasMainRole := false
+	hasDefaultMainRole := false
+	for _, spec := range specs {
+		role := strings.TrimSpace(spec.Role)
+		hasMainRole = hasMainRole || role == strings.TrimSpace(mainRole)
+		hasDefaultMainRole = hasDefaultMainRole || role == "主视角"
+	}
+	if !hasMainRole && hasDefaultMainRole {
+		mainRole = "主视角"
+	}
+	fpvRecordContexts := make([]jobcontract.RecordContext, 0, len(specs))
+	fpvTranscodeContexts := make([]jobcontract.TranscodeContext, 0, len(specs))
+	fpvLarkRecordContexts := make([]jobcontract.LarkRecordContext, 0, len(specs))
 	outputByRole := make(map[string]string, len(specs))
+	var mainRecordContext jobcontract.RecordContext
+	var mainSourcePath string
+	uploadConf := l.svcCtx.Config.UploadConf.WithDefaults()
+	larkRecordEnabled := strings.TrimSpace(uploadConf.BitableAppToken) != ""
 	for _, spec := range specs {
 		role := spec.Role
 		output, err := l.outputPath(recordConf, m, r.RoundNo, role)
@@ -511,7 +535,7 @@ func (l *MatchScanLogic) roundWorkflowArguments(m scannedMatch, r *ent.MatchRoun
 			return nil, err
 		}
 		outputByRole[role] = output
-		recordContexts = append(recordContexts, jobcontract.RecordContext{
+		recordCtx := jobcontract.RecordContext{
 			Schema:       "rm-monitor/record-context/v1",
 			MatchID:      m.ID,
 			MatchRoundID: r.ID,
@@ -521,26 +545,40 @@ func (l *MatchScanLogic) roundWorkflowArguments(m scannedMatch, r *ent.MatchRoun
 			OutputPath:   output,
 			BaseDir:      recordConf.BaseDir,
 			KeepAudio:    spec.KeepAudio,
-		})
+		}
+		if strings.TrimSpace(role) == strings.TrimSpace(mainRole) {
+			mainRecordContext = recordCtx
+			mainSourcePath = output
+			continue
+		}
+		fpvRecordContexts = append(fpvRecordContexts, recordCtx)
+		fpvTranscodeContexts = append(fpvTranscodeContexts, transcodeContextForRole(m, r, recordConf, output, roundDir, role))
+		if larkRecordEnabled {
+			fpvLarkRecordContexts = append(fpvLarkRecordContexts, larkRecordContextForRole(m, r, recordConf, uploadConf, output, role))
+		}
 	}
-	mainRole := strings.TrimSpace(recordConf.STTRole)
-	if mainRole == "" {
-		mainRole = "主视角"
-	}
-	mainSourcePath := outputByRole[mainRole]
 	if mainSourcePath == "" {
 		mainSourcePath = outputByRole["主视角"]
 	}
 	args := map[string]string{
-		"record_contexts":       mustJSON(recordContexts),
-		"danmu_enabled":         strconv.FormatBool(l.svcCtx.Config.DanmuConf.Enabled && strings.TrimSpace(chatRoomID) != ""),
-		"main_source_available": "false",
-		"analyze_context":       "{}",
-		"stt_context":           "{}",
-		"lark_record_enabled":   "false",
-		"lark_record_context":   "{}",
-		"transcode_context":     "{}",
-		"highlight_context":     "{}",
+		"main_record_context":      "{}",
+		"fpv_record_available":     strconv.FormatBool(len(fpvRecordContexts) > 0),
+		"fpv_record_contexts":      mustJSON(fpvRecordContexts),
+		"danmu_enabled":            strconv.FormatBool(l.svcCtx.Config.DanmuConf.Enabled && strings.TrimSpace(chatRoomID) != ""),
+		"main_source_available":    "false",
+		"analyze_enabled":          "false",
+		"analyze_context":          "{}",
+		"stt_enabled":              "false",
+		"stt_context":              "{}",
+		"main_lark_record_enabled": strconv.FormatBool(larkRecordEnabled),
+		"main_lark_record_context": "{}",
+		"fpv_lark_record_enabled":  strconv.FormatBool(len(fpvLarkRecordContexts) > 0),
+		"fpv_lark_record_contexts": mustJSON(fpvLarkRecordContexts),
+		"main_transcode_context":   "{}",
+		"fpv_transcode_available":  strconv.FormatBool(len(fpvTranscodeContexts) > 0),
+		"fpv_transcode_contexts":   mustJSON(fpvTranscodeContexts),
+		"highlight_enabled":        "false",
+		"highlight_context":        "{}",
 		"danmu_context": mustJSON(jobcontract.DanmuContext{
 			Schema:       "rm-monitor/danmu-context/v1",
 			MatchRoundID: r.ID,
@@ -551,101 +589,108 @@ func (l *MatchScanLogic) roundWorkflowArguments(m scannedMatch, r *ent.MatchRoun
 	}
 	if mainSourcePath != "" {
 		args["main_source_available"] = "true"
+		args["main_record_context"] = mustJSON(mainRecordContext)
 		sourceAbs := filepath.Join(recordConf.BaseDir, filepath.FromSlash(mainSourcePath))
-		analyzeConf := l.svcCtx.Config.AnalyzeConf.WithDefaults()
 		ocrServerConf := l.svcCtx.Config.OCRServerConf.WithDefaults()
-		args["analyze_context"] = mustJSON(jobcontract.AnalyzeContext{
-			Schema:            "rm-monitor/analyze-context/v1",
-			MatchRoundID:      r.ID,
-			SourcePath:        sourceAbs,
-			RoundDir:          roundDir,
-			Role:              analyzeConf.Role,
-			OCRServerURL:      ocrServerConf.BaseURL,
-			OCRTimeoutSeconds: ocrServerConf.TimeoutSeconds,
-			Scan: jobcontract.AnalyzeScanContext{
-				FPS:                           analyzeConf.Scan.FPS,
-				Width:                         analyzeConf.Scan.Width,
-				Height:                        analyzeConf.Scan.Height,
-				MaxStartScanSeconds:           analyzeConf.Scan.MaxStartScanSeconds,
-				MaxSettlementScanSeconds:      analyzeConf.Scan.MaxSettlementScanSeconds,
-				SettlementChunkSeconds:        analyzeConf.Scan.SettlementChunkSeconds,
-				MinSettlementSecond:           analyzeConf.Scan.MinSettlementSecond,
-				MinRoundSeconds:               analyzeConf.Scan.MinRoundSeconds,
-				SettlementTailSeconds:         analyzeConf.Scan.SettlementTailSeconds,
-				SettlementRefineWindowSeconds: analyzeConf.Scan.SettlementRefineWindowSeconds,
-				SettlementRefineFPS:           analyzeConf.Scan.SettlementRefineFPS,
-			},
-		})
-		args["stt_context"] = mustJSON(jobcontract.STTContext{
-			Schema:            "rm-monitor/stt-context/v1",
-			MatchRoundID:      r.ID,
-			MatchID:           m.ID,
-			RoundNo:           r.RoundNo,
-			Role:              mainRole,
-			SourcePath:        sourceAbs,
-			RoundDir:          roundDir,
-			STTPath:           filepath.Join(roundDir, "stt.jsonl"),
-			SubtitleName:      mainRole + ".srt",
-			WhisperServerURLs: resolveWhisperServerURLs(l.svcCtx.Config.WhisperServerUrls),
-		})
-		uploadConf := l.svcCtx.Config.UploadConf.WithDefaults()
-		if strings.TrimSpace(uploadConf.BitableAppToken) != "" {
-			args["lark_record_enabled"] = "true"
-			args["lark_record_context"] = mustJSON(jobcontract.LarkRecordContext{
-				Schema:              "rm-monitor/lark-record-context/v1",
-				MatchID:             m.ID,
-				MatchRoundID:        r.ID,
-				RoundNo:             r.RoundNo,
-				Role:                mainRole,
-				SourcePath:          mainSourcePath,
-				BaseDir:             recordConf.BaseDir,
-				BitableAppToken:     uploadConf.BitableAppToken,
-				BitableTableName:    bitableupload.TableName(m.Event, m.Zone),
-				AttachmentFieldName: bitableupload.FieldAttachment,
-				RecordFields: map[string]any{
-					bitableupload.FieldRole:     mainRole,
-					bitableupload.FieldMatch:    m.Order,
-					bitableupload.FieldRound:    r.RoundNo,
-					bitableupload.FieldType:     m.MatchType,
-					bitableupload.FieldRedTeam:  bitableupload.TeamName(&ent.Team{Name: m.RedTeam.Name, SchoolName: m.RedTeam.SchoolName}),
-					bitableupload.FieldBlueTeam: bitableupload.TeamName(&ent.Team{Name: m.BlueTeam.Name, SchoolName: m.BlueTeam.SchoolName}),
+		if analyzeConf.Enabled {
+			args["analyze_enabled"] = "true"
+			args["analyze_context"] = mustJSON(jobcontract.AnalyzeContext{
+				Schema:            "rm-monitor/analyze-context/v1",
+				MatchRoundID:      r.ID,
+				SourcePath:        sourceAbs,
+				RoundDir:          roundDir,
+				Role:              analyzeConf.Role,
+				OCRServerURL:      ocrServerConf.BaseURL,
+				OCRTimeoutSeconds: ocrServerConf.TimeoutSeconds,
+				Scan: jobcontract.AnalyzeScanContext{
+					FPS:                           analyzeConf.Scan.FPS,
+					Width:                         analyzeConf.Scan.Width,
+					Height:                        analyzeConf.Scan.Height,
+					MaxStartScanSeconds:           analyzeConf.Scan.MaxStartScanSeconds,
+					MaxSettlementScanSeconds:      analyzeConf.Scan.MaxSettlementScanSeconds,
+					SettlementChunkSeconds:        analyzeConf.Scan.SettlementChunkSeconds,
+					MinSettlementSecond:           analyzeConf.Scan.MinSettlementSecond,
+					MinRoundSeconds:               analyzeConf.Scan.MinRoundSeconds,
+					SettlementTailSeconds:         analyzeConf.Scan.SettlementTailSeconds,
+					SettlementRefineWindowSeconds: analyzeConf.Scan.SettlementRefineWindowSeconds,
+					SettlementRefineFPS:           analyzeConf.Scan.SettlementRefineFPS,
 				},
 			})
 		}
-		archivePath := strings.TrimSuffix(mainSourcePath, filepath.Ext(mainSourcePath)) + ".mp4"
-		args["transcode_context"] = mustJSON(jobcontract.TranscodeContext{
-			Schema:              "rm-monitor/transcode-context/v1",
-			MatchID:             m.ID,
-			MatchRoundID:        r.ID,
-			RoundNo:             r.RoundNo,
-			SourcePath:          sourceAbs,
-			ArchivePath:         filepath.Join(recordConf.BaseDir, filepath.FromSlash(archivePath)),
-			BaseDir:             recordConf.BaseDir,
-			SourceRetentionDays: 7,
-			RoundDir:            roundDir,
-			Role:                mainRole,
-		})
-		highlightConf := l.svcCtx.Config.HighlightConf.WithDefaults()
-		args["highlight_context"] = mustJSON(map[string]any{
-			"schema":         "rm-monitor/highlight-context/v1",
-			"match_id":       m.ID,
-			"match_round_id": r.ID,
-			"round_no":       r.RoundNo,
-			"source_path":    mainSourcePath,
-			"round_dir":      roundDir,
-			"role":           highlightConf.Role,
-			"event":          m.Event,
-			"zone":           m.Zone,
-			"order":          m.Order,
-			"match_type":     m.MatchType,
-			"red_school":     m.RedTeam.SchoolName,
-			"red_name":       m.RedTeam.Name,
-			"blue_school":    m.BlueTeam.SchoolName,
-			"blue_name":      m.BlueTeam.Name,
-			"priority":       priority.ForSchools(l.svcCtx.Config.Priority, m.RedTeam.SchoolName, m.BlueTeam.SchoolName),
-		})
+		if strings.TrimSpace(recordConf.STTRole) != "" {
+			args["stt_enabled"] = "true"
+			args["stt_context"] = mustJSON(jobcontract.STTContext{
+				Schema:            "rm-monitor/stt-context/v1",
+				MatchRoundID:      r.ID,
+				MatchID:           m.ID,
+				RoundNo:           r.RoundNo,
+				Role:              mainRole,
+				SourcePath:        sourceAbs,
+				RoundDir:          roundDir,
+				STTPath:           filepath.Join(roundDir, "stt.jsonl"),
+				SubtitleName:      mainRole + ".srt",
+				WhisperServerURLs: resolveWhisperServerURLs(l.svcCtx.Config.WhisperServerUrls),
+			})
+		}
+		if larkRecordEnabled {
+			args["main_lark_record_context"] = mustJSON(larkRecordContextForRole(m, r, recordConf, uploadConf, mainSourcePath, mainRole))
+		}
+		args["main_transcode_context"] = mustJSON(transcodeContextForRole(m, r, recordConf, mainSourcePath, roundDir, mainRole))
+		if highlightConf.Enabled {
+			args["highlight_enabled"] = "true"
+			args["highlight_context"] = mustJSON(map[string]any{
+				"schema":         "rm-monitor/highlight-context/v1",
+				"match_id":       m.ID,
+				"match_round_id": r.ID,
+				"round_no":       r.RoundNo,
+				"source_path":    mainSourcePath,
+				"round_dir":      roundDir,
+				"role":           highlightConf.Role,
+				"event":          m.Event,
+				"zone":           m.Zone,
+				"order":          m.Order,
+				"match_type":     m.MatchType,
+				"red_school":     m.RedTeam.SchoolName,
+				"red_name":       m.RedTeam.Name,
+				"blue_school":    m.BlueTeam.SchoolName,
+				"blue_name":      m.BlueTeam.Name,
+				"priority":       priority.ForSchools(l.svcCtx.Config.Priority, m.RedTeam.SchoolName, m.BlueTeam.SchoolName),
+			})
+		}
 	}
 	return args, nil
+}
+
+func preferredMainRole(recordConf common.RecordConf, analyzeConf common.AnalyzeConf, highlightConf common.HighlightConf) string {
+	for _, role := range []string{recordConf.STTRole, analyzeConf.Role, highlightConf.Role, "主视角"} {
+		if v := strings.TrimSpace(role); v != "" {
+			return v
+		}
+	}
+	return "主视角"
+}
+
+func larkRecordContextForRole(m scannedMatch, r *ent.MatchRound, recordConf common.RecordConf, uploadConf common.UploadConf, sourcePath, role string) jobcontract.LarkRecordContext {
+	return jobcontract.LarkRecordContext{
+		Schema:              "rm-monitor/lark-record-context/v1",
+		MatchID:             m.ID,
+		MatchRoundID:        r.ID,
+		RoundNo:             r.RoundNo,
+		Role:                role,
+		SourcePath:          sourcePath,
+		BaseDir:             recordConf.BaseDir,
+		BitableAppToken:     uploadConf.BitableAppToken,
+		BitableTableName:    bitableupload.TableName(m.Event, m.Zone),
+		AttachmentFieldName: bitableupload.FieldAttachment,
+		RecordFields: map[string]any{
+			bitableupload.FieldRole:     role,
+			bitableupload.FieldMatch:    m.Order,
+			bitableupload.FieldRound:    r.RoundNo,
+			bitableupload.FieldType:     m.MatchType,
+			bitableupload.FieldRedTeam:  bitableupload.TeamName(&ent.Team{Name: m.RedTeam.Name, SchoolName: m.RedTeam.SchoolName}),
+			bitableupload.FieldBlueTeam: bitableupload.TeamName(&ent.Team{Name: m.BlueTeam.Name, SchoolName: m.BlueTeam.SchoolName}),
+		},
+	}
 }
 
 func (l *MatchScanLogic) outputPath(conf common.RecordConf, m scannedMatch, roundNo int, role string) (string, error) {
@@ -660,6 +705,22 @@ func (l *MatchScanLogic) outputPath(conf common.RecordConf, m scannedMatch, roun
 		RoundNo:    roundNo,
 		Role:       role,
 	})
+}
+
+func transcodeContextForRole(m scannedMatch, r *ent.MatchRound, conf common.RecordConf, sourcePath, roundDir, role string) jobcontract.TranscodeContext {
+	archivePath := strings.TrimSuffix(sourcePath, filepath.Ext(sourcePath)) + ".mp4"
+	return jobcontract.TranscodeContext{
+		Schema:              "rm-monitor/transcode-context/v1",
+		MatchID:             m.ID,
+		MatchRoundID:        r.ID,
+		RoundNo:             r.RoundNo,
+		SourcePath:          filepath.Join(conf.BaseDir, filepath.FromSlash(sourcePath)),
+		ArchivePath:         filepath.Join(conf.BaseDir, filepath.FromSlash(archivePath)),
+		BaseDir:             conf.BaseDir,
+		SourceRetentionDays: 7,
+		RoundDir:            roundDir,
+		Role:                role,
+	}
 }
 
 func filterBlacklistedRoles(urls map[string]string, blacklist []string) map[string]string {
@@ -884,7 +945,7 @@ func (l *MatchScanLogic) convergeMatchLatestStatus(cur scannedMatch) error {
 	if err := update.Exec(l.ctx); err != nil {
 		return errors.Wrap(err, "set converged match status")
 	}
-	return db.Notify(l.ctx, l.svcCtx.Config.PostgresConf.DSN, db.MatchChangedChannel, cur.ID)
+	return nil
 }
 
 func authoritativeWinners(rounds []*ent.MatchRound, redWins, blueWins int) []matchround.Winner {

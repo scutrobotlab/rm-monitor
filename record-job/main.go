@@ -87,6 +87,7 @@ func run(ctx context.Context, c config.Config, jobCtx jobcontract.RecordContext,
 	runCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	var stopRequested atomic.Bool
+	stopDelay := time.Duration(c.RecordConf.WithDefaults().StopDelaySeconds) * time.Second
 	go func() {
 		<-signalCtx.Done()
 		cancel()
@@ -106,6 +107,15 @@ func run(ctx context.Context, c config.Config, jobCtx jobcontract.RecordContext,
 				}
 				if r.Status == matchround.StatusENDED {
 					stopRequested.Store(true)
+					if stopDelay > 0 {
+						timer := time.NewTimer(stopDelay)
+						select {
+						case <-runCtx.Done():
+							timer.Stop()
+							return
+						case <-timer.C:
+						}
+					}
 					cancel()
 					return
 				}

@@ -45,3 +45,21 @@ func TestWorkflowPhase(t *testing.T) {
 		t.Fatalf("phase = %q", WorkflowPhase(wf))
 	}
 }
+
+func TestMatchWorkflowNameIncludesMatchContext(t *testing.T) {
+	got := MatchWorkflowName("E2E Event", "E2E Zone", 12, "e2e-match-1")
+	want := "match-12-e2e-match-1"
+	if got != want {
+		t.Fatalf("workflow name = %q, want %q", got, want)
+	}
+	if len(MatchWorkflowName("very very very long event name", "very very very long zone name", 999, "very-long-match-id")) > 63 {
+		t.Fatal("workflow name exceeds DNS label length")
+	}
+}
+
+func TestMatchWorkflowNameHashesNonDNSParts(t *testing.T) {
+	got := MatchWorkflowName("RMUC 2026超级对抗赛", "南部赛区", 32, "abc123")
+	if got != "match-32-abc123" {
+		t.Fatalf("workflow name = %q", got)
+	}
+}

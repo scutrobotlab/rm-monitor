@@ -72,14 +72,10 @@ jobs:
             dockerfile: danmu-job/Dockerfile
           - app: analyze-job
             dockerfile: analyze-job/Dockerfile
-          - app: ocr-server
-            dockerfile: analyze-job/ocr-daemon/Dockerfile
           - app: highlight-job
             dockerfile: highlight-job/Dockerfile
           - app: highlight-artifact-job
             dockerfile: highlight-artifact-job/Dockerfile
-          - app: highlight-publish-bilibili-job
-            dockerfile: highlight-publish-bilibili-job/Dockerfile
           - app: manifest-job
             dockerfile: manifest-job/Dockerfile
           - app: migrate-job

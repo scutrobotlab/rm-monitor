@@ -94,7 +94,7 @@ AnalyzeConf:
 
 {{- define "rm-monitor.ocrServerConf" -}}
 OCRServerConf:
-  BaseURL: {{ if .Values.ocrServer.enabled }}{{ printf "http://ocr-server.%s.svc.cluster.local:%v" (include "rm-monitor.namespace" .) .Values.ocrServer.port }}{{ else }}""{{ end }}
+  BaseURL: {{ .Values.ocrServer.baseURL | quote }}
   TimeoutSeconds: {{ .Values.ocrServer.timeoutSeconds | default 30 }}
 {{- end -}}
 
@@ -126,32 +126,9 @@ HighlightConf:
 {{ toYaml .Values.highlight.publish | indent 4 }}
 {{- end -}}
 
-{{- define "rm-monitor.publishConf" -}}
-PublishConf:
-  Bilibili:
-    Enabled: {{ .Values.publish.bilibili.enabled }}
-    CookieSecretName: {{ .Values.publish.bilibili.cookieSecretName | quote }}
-    CookieSecretKey: {{ .Values.publish.bilibili.cookieSecretKey | quote }}
-    CookiePath: "/etc/biliup/{{ .Values.publish.bilibili.cookieSecretKey }}"
-    TID: {{ .Values.publish.bilibili.tid }}
-    Copyright: {{ .Values.publish.bilibili.copyright }}
-    Source: {{ .Values.publish.bilibili.source | quote }}
-    TitleTemplate: {{ .Values.publish.bilibili.titleTemplate | quote }}
-    DescTemplate: |
-{{ .Values.publish.bilibili.descTemplate | indent 6 }}
-    DynamicTemplate: {{ .Values.publish.bilibili.dynamicTemplate | quote }}
-    Tags:
-{{ toYaml .Values.publish.bilibili.tags | indent 6 }}
-    NoReprint: {{ .Values.publish.bilibili.noReprint }}
-    OpenElec: {{ .Values.publish.bilibili.openElec }}
-    MaxConcurrentJobs: {{ .Values.publish.bilibili.maxConcurrentJobs }}
-    Cover:
-      Enabled: {{ .Values.publish.bilibili.cover.enabled }}
-{{- end -}}
-
 {{- define "rm-monitor.difyConf" -}}
 DifyConf:
-  BaseURL: {{ .Values.dify.baseURL }}
+  BaseURL: {{ .Values.dify.baseURL | quote }}
   TimeoutSeconds: {{ .Values.dify.timeoutSeconds }}
 {{- end -}}
 

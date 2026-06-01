@@ -42,9 +42,6 @@ jobs:
       - name: Highlight artifact job tests
         run: cargo test --manifest-path highlight-artifact-job/Cargo.toml --locked
 
-      - name: Bilibili publish job tests
-        run: cargo test --manifest-path highlight-publish-bilibili-job/Cargo.toml --locked
-
       - name: Helm validation
         run: |
           helm lint charts/rm-monitor

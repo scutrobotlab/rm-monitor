@@ -35,6 +35,7 @@ type WorkflowTemplateRef struct {
 	TemplateName string
 	Arguments    map[string]string
 	Labels       map[string]string
+	Annotations  map[string]string
 }
 
 func NewForConfig(config *rest.Config) (*Client, error) {
@@ -113,14 +114,19 @@ func (c *Client) EnsureWorkflowFromTemplate(ctx context.Context, ref WorkflowTem
 	for k, v := range ref.Labels {
 		labels[k] = v
 	}
+	annotations := map[string]any{}
+	for k, v := range ref.Annotations {
+		annotations[k] = v
+	}
 	wf := &unstructured.Unstructured{
 		Object: map[string]any{
 			"apiVersion": "argoproj.io/v1alpha1",
 			"kind":       "Workflow",
 			"metadata": map[string]any{
-				"name":      ref.Name,
-				"namespace": ref.Namespace,
-				"labels":    labels,
+				"name":        ref.Name,
+				"namespace":   ref.Namespace,
+				"labels":      labels,
+				"annotations": annotations,
 			},
 			"spec": map[string]any{
 				"workflowTemplateRef": map[string]any{"name": ref.TemplateName},
@@ -182,6 +188,12 @@ func WorkflowPhase(wf *unstructured.Unstructured) string {
 	return phase
 }
 
-func MatchWorkflowName(matchID string) string {
-	return fmt.Sprintf("rm-match-%s", safeName(matchID))
+func MatchWorkflowName(_ string, _ string, order int, matchID string) string {
+	idPart := safeName(matchID)
+	prefix := fmt.Sprintf("match-%d", order)
+	maxPrefix := 63 - len(idPart) - 1
+	if maxPrefix < len("match") {
+		return trimDNSLabel(fmt.Sprintf("match-%s", idPart), 63)
+	}
+	return trimDNSLabel(prefix, maxPrefix) + "-" + idPart
 }

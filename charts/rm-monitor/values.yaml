@@ -72,25 +72,8 @@ danmu:
   videoOffsetSeconds: -3
 
 ocrServer:
-  enabled: false
-  replicas: 1
+  baseURL: ""
   timeoutSeconds: 30
-  device: cpu
-  lang: ch
-  version: PP-OCRv5
-  enableMKLDNN: true
-  cpuThreads: 4
-  maxBatch: 32
-  port: 8000
-  modelCachePVCName: ""
-  nodeSelector: {}
-  resources:
-    requests:
-      cpu: "1"
-      memory: 2Gi
-    limits:
-      cpu: "4"
-      memory: 6Gi
 
 analyze:
   enabled: false
@@ -125,32 +108,6 @@ highlight:
   previewFPS: 8
   previewWidth: 360
   publish: {}
-
-publish:
-  bilibili:
-    enabled: false
-    cookieSecretName: biliup-cookie
-    cookieSecretKey: cookies.json
-    tid: 232
-    copyright: 2
-    source: "RoboMaster机甲大师"
-    titleTemplate: "{{.LLMTitle}} {{.Event}}-{{.Zone}} 高光时刻"
-    descTemplate: |
-      {{.Description}}
-
-      {{.Event}} {{.Zone}}
-      {{.MatchName}} Round {{.RoundNo}}
-    dynamicTemplate: "{{.Title}}"
-    tags:
-      - RoboMaster
-      - 机甲大师
-      - 机器人
-      - 赛事高光
-    noReprint: false
-    openElec: true
-    maxConcurrentJobs: 1
-    cover:
-      enabled: true
 
 transcode:
   sourceRetentionDays: 7

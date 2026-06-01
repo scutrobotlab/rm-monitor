@@ -37,7 +37,7 @@ need the service endpoint and timeout:
 
 ```yaml
 OCRServerConf:
-  BaseURL: http://ppocr-server.rm-monitor.svc.cluster.local:8000
+  BaseURL: http://host.docker.internal:48089
   TimeoutSeconds: 30
 ```
 
@@ -59,15 +59,13 @@ AnalyzeConf:
 ```
 
 Deployment-only OCR server details such as image, replica count, CPU/GPU mode,
-resources, and model cache PVC must stay in Helm values, not in app config.
-
-Helm delivery uses the `ocrServer` values block and creates an internal
-`ocr-server` Service when enabled. The analyzer should consume it as:
+resources, and model cache PVC belong to the external OCR deployment, not this
+chart. Helm only passes the OCR endpoint into jobs:
 
 ```yaml
-OCRServerConf:
-  BaseURL: http://ocr-server.rm-monitor.svc.cluster.local:8000
-  TimeoutSeconds: 30
+ocrServer:
+  baseURL: http://host.docker.internal:48089
+  timeoutSeconds: 30
 ```
 
 Local sample evaluation:

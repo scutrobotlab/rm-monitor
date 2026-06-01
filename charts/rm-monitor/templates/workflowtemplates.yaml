@@ -69,66 +69,92 @@ spec:
               parameters:
                 - name: round-no
                   value: "{{ $round }}"
-          - name: round-{{ $round }}-record
-            when: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.round_active}}`}} == true"
-            dependencies: [round-{{ $round }}-gate]
+          - name: round-{{ $round }}-record-main
+            when: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.main_source_available}}`}} == true"
+            depends: "round-{{ $round }}-gate.Succeeded"
+            template: record
+            arguments:
+              parameters:
+                - name: context
+                  value: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.main_record_context}}`}}"
+          - name: round-{{ $round }}-record-fpv
+            when: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.round_active}}`}} == true && {{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.fpv_record_available}}`}} == true"
+            depends: "round-{{ $round }}-gate.Succeeded"
             template: record
             arguments:
               parameters:
                 - name: context
                   value: "{{`{{item}}`}}"
-            withParam: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.record_contexts}}`}}"
+            withParam: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.fpv_record_contexts}}`}}"
           - name: round-{{ $round }}-danmu
             when: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.round_active}}`}} == true && {{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.danmu_enabled}}`}} == true"
-            dependencies: [round-{{ $round }}-gate]
+            depends: "round-{{ $round }}-gate.Succeeded"
             template: danmu
             arguments:
               parameters:
                 - name: context
                   value: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.danmu_context}}`}}"
           - name: round-{{ $round }}-analyze
-            when: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.main_source_available}}`}} == true"
-            dependencies: [round-{{ $round }}-record]
+            when: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.analyze_enabled}}`}} == true"
+            depends: "round-{{ $round }}-record-main.Succeeded"
             template: analyze
             arguments:
               parameters:
                 - name: context
                   value: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.analyze_context}}`}}"
           - name: round-{{ $round }}-stt
-            when: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.main_source_available}}`}} == true"
-            dependencies: [round-{{ $round }}-record, round-{{ $round }}-analyze]
+            when: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.stt_enabled}}`}} == true"
+            depends: "round-{{ $round }}-record-main.Succeeded"
             template: stt
             arguments:
               parameters:
                 - name: context
                   value: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.stt_context}}`}}"
-          - name: round-{{ $round }}-lark-record
-            when: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.lark_record_enabled}}`}} == true"
-            dependencies: [round-{{ $round }}-record]
+          - name: round-{{ $round }}-lark-record-main
+            when: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.main_lark_record_enabled}}`}} == true && {{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.main_source_available}}`}} == true"
+            depends: "round-{{ $round }}-record-main.Succeeded"
             template: lark-record
             arguments:
               parameters:
                 - name: context
-                  value: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.lark_record_context}}`}}"
-          - name: round-{{ $round }}-transcode
-            when: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.main_source_available}}`}} == true"
-            dependencies: [round-{{ $round }}-record, round-{{ $round }}-analyze]
+                  value: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.main_lark_record_context}}`}}"
+          - name: round-{{ $round }}-lark-record-fpv
+            when: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.fpv_lark_record_enabled}}`}} == true"
+            depends: "round-{{ $round }}-record-fpv.Succeeded"
+            template: lark-record
+            arguments:
+              parameters:
+                - name: context
+                  value: "{{`{{item}}`}}"
+            withParam: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.fpv_lark_record_contexts}}`}}"
+          - name: round-{{ $round }}-transcode-main
+            when: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.analyze_enabled}}`}} == true"
+            depends: "round-{{ $round }}-record-main.Succeeded && round-{{ $round }}-analyze.Succeeded"
             template: transcode
             arguments:
               parameters:
                 - name: context
-                  value: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.transcode_context}}`}}"
+                  value: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.main_transcode_context}}`}}"
+          - name: round-{{ $round }}-transcode-fpv
+            when: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.fpv_transcode_available}}`}} == true && {{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.analyze_enabled}}`}} == true"
+            depends: "round-{{ $round }}-record-fpv.Succeeded && round-{{ $round }}-analyze.Succeeded"
+            template: transcode
+            arguments:
+              parameters:
+                - name: context
+                  value: "{{`{{item}}`}}"
+            withParam: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.fpv_transcode_contexts}}`}}"
           - name: round-{{ $round }}-highlight
-            when: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.main_source_available}}`}} == true && {{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.danmu_enabled}}`}} == true"
-            dependencies: [round-{{ $round }}-analyze, round-{{ $round }}-stt, round-{{ $round }}-danmu]
+            when: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.highlight_enabled}}`}} == true && {{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.danmu_enabled}}`}} == true && {{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.analyze_enabled}}`}} == true && {{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.stt_enabled}}`}} == true"
+            depends: "round-{{ $round }}-analyze.Succeeded && round-{{ $round }}-stt.Succeeded && round-{{ $round }}-danmu.Succeeded"
             template: highlight
             arguments:
               parameters:
                 - name: context
                   value: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.highlight_context}}`}}"
           - name: round-{{ $round }}-highlight-artifact
-            when: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.main_source_available}}`}} == true && {{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.danmu_enabled}}`}} == true"
-            dependencies: [round-{{ $round }}-highlight]
+            when: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.highlight_enabled}}`}} == true && {{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.danmu_enabled}}`}} == true && {{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.analyze_enabled}}`}} == true && {{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.stt_enabled}}`}} == true"
+            depends: "round-{{ $round }}-highlight.Succeeded"
             template: highlight-artifact
             arguments:
               parameters:
@@ -136,7 +162,7 @@ spec:
                   value: "{{`{{item}}`}}"
             withParam: "{{`{{tasks.round-`}}{{ $round }}{{`-highlight.outputs.parameters.highlight_contexts}}`}}"
           - name: round-{{ $round }}-ready
-            depends: "round-{{ $round }}-gate.Succeeded && (round-{{ $round }}-analyze.Succeeded || round-{{ $round }}-analyze.Skipped || round-{{ $round }}-analyze.Omitted) && (round-{{ $round }}-stt.Succeeded || round-{{ $round }}-stt.Skipped || round-{{ $round }}-stt.Omitted) && (round-{{ $round }}-lark-record.Succeeded || round-{{ $round }}-lark-record.Skipped || round-{{ $round }}-lark-record.Omitted) && (round-{{ $round }}-highlight-artifact.Succeeded || round-{{ $round }}-highlight-artifact.Skipped || round-{{ $round }}-highlight-artifact.Omitted)"
+            depends: "round-{{ $round }}-gate.Succeeded && (round-{{ $round }}-record-main.Succeeded || round-{{ $round }}-record-main.Skipped || round-{{ $round }}-record-main.Omitted) && (round-{{ $round }}-record-fpv.Succeeded || round-{{ $round }}-record-fpv.Skipped || round-{{ $round }}-record-fpv.Omitted) && (round-{{ $round }}-analyze.Succeeded || round-{{ $round }}-analyze.Skipped || round-{{ $round }}-analyze.Omitted) && (round-{{ $round }}-stt.Succeeded || round-{{ $round }}-stt.Skipped || round-{{ $round }}-stt.Omitted) && (round-{{ $round }}-lark-record-main.Succeeded || round-{{ $round }}-lark-record-main.Skipped || round-{{ $round }}-lark-record-main.Omitted) && (round-{{ $round }}-lark-record-fpv.Succeeded || round-{{ $round }}-lark-record-fpv.Skipped || round-{{ $round }}-lark-record-fpv.Omitted) && (round-{{ $round }}-highlight-artifact.Succeeded || round-{{ $round }}-highlight-artifact.Skipped || round-{{ $round }}-highlight-artifact.Omitted)"
             template: noop
 {{- end }}
           - name: manifest
@@ -154,6 +180,7 @@ spec:
       container:
         image: {{ include "rm-monitor.image" (dict "root" . "component" "match-controller") }}
         imagePullPolicy: {{ include "rm-monitor.jobImagePullPolicy" . }}
+        command: ["/usr/local/bin/app"]
         args:
           - "-f"
           - "{{ include "rm-monitor.configPath" . }}"
@@ -181,24 +208,42 @@ spec:
             valueFrom: {path: /tmp/argo/round_skip_reason}
           - name: round_dir
             valueFrom: {path: /tmp/argo/round_dir}
-          - name: record_contexts
-            valueFrom: {path: /tmp/argo/record_contexts}
+          - name: main_record_context
+            valueFrom: {path: /tmp/argo/main_record_context}
+          - name: fpv_record_available
+            valueFrom: {path: /tmp/argo/fpv_record_available}
+          - name: fpv_record_contexts
+            valueFrom: {path: /tmp/argo/fpv_record_contexts}
           - name: danmu_enabled
             valueFrom: {path: /tmp/argo/danmu_enabled}
           - name: danmu_context
             valueFrom: {path: /tmp/argo/danmu_context}
           - name: main_source_available
             valueFrom: {path: /tmp/argo/main_source_available}
+          - name: analyze_enabled
+            valueFrom: {path: /tmp/argo/analyze_enabled}
           - name: analyze_context
             valueFrom: {path: /tmp/argo/analyze_context}
+          - name: stt_enabled
+            valueFrom: {path: /tmp/argo/stt_enabled}
           - name: stt_context
             valueFrom: {path: /tmp/argo/stt_context}
-          - name: lark_record_enabled
-            valueFrom: {path: /tmp/argo/lark_record_enabled}
-          - name: lark_record_context
-            valueFrom: {path: /tmp/argo/lark_record_context}
-          - name: transcode_context
-            valueFrom: {path: /tmp/argo/transcode_context}
+          - name: main_lark_record_enabled
+            valueFrom: {path: /tmp/argo/main_lark_record_enabled}
+          - name: main_lark_record_context
+            valueFrom: {path: /tmp/argo/main_lark_record_context}
+          - name: fpv_lark_record_enabled
+            valueFrom: {path: /tmp/argo/fpv_lark_record_enabled}
+          - name: fpv_lark_record_contexts
+            valueFrom: {path: /tmp/argo/fpv_lark_record_contexts}
+          - name: main_transcode_context
+            valueFrom: {path: /tmp/argo/main_transcode_context}
+          - name: fpv_transcode_available
+            valueFrom: {path: /tmp/argo/fpv_transcode_available}
+          - name: fpv_transcode_contexts
+            valueFrom: {path: /tmp/argo/fpv_transcode_contexts}
+          - name: highlight_enabled
+            valueFrom: {path: /tmp/argo/highlight_enabled}
           - name: highlight_context
             valueFrom: {path: /tmp/argo/highlight_context}
     - name: record
@@ -208,6 +253,7 @@ spec:
       container:
         image: {{ include "rm-monitor.image" (dict "root" . "component" "record-job") }}
         imagePullPolicy: {{ include "rm-monitor.jobImagePullPolicy" . }}
+        command: ["/usr/local/bin/app"]
         args: ["-f", "{{ include "rm-monitor.configPath" . }}"]
         env:
           - name: RM_MONITOR_JOB_CONTEXT
@@ -236,6 +282,7 @@ spec:
       container:
         image: {{ include "rm-monitor.image" (dict "root" . "component" "danmu-job") }}
         imagePullPolicy: {{ include "rm-monitor.jobImagePullPolicy" . }}
+        command: ["bun", "/app/dist/main.js"]
         args: ["-f", "{{ include "rm-monitor.configPath" . }}"]
         env:
           - name: RM_MONITOR_JOB_CONTEXT
@@ -262,6 +309,7 @@ spec:
       container:
         image: {{ include "rm-monitor.image" (dict "root" . "component" "analyze-job") }}
         imagePullPolicy: {{ include "rm-monitor.jobImagePullPolicy" . }}
+        command: ["python", "/app/main.py"]
         env:
           - name: RM_MONITOR_JOB_CONTEXT
             value: "{{`{{inputs.parameters.context}}`}}"
@@ -287,6 +335,7 @@ spec:
       container:
         image: {{ include "rm-monitor.image" (dict "root" . "component" "stt-job") }}
         imagePullPolicy: {{ include "rm-monitor.jobImagePullPolicy" . }}
+        command: ["/usr/local/bin/app"]
         args: ["-f", "{{ include "rm-monitor.configPath" . }}"]
         env:
           - name: RM_MONITOR_JOB_CONTEXT
@@ -311,6 +360,7 @@ spec:
       container:
         image: {{ include "rm-monitor.image" (dict "root" . "component" "lark-record-job") }}
         imagePullPolicy: {{ include "rm-monitor.jobImagePullPolicy" . }}
+        command: ["/usr/local/bin/app"]
         args: ["-f", "{{ include "rm-monitor.configPath" . }}"]
         env:
           - name: RM_MONITOR_JOB_CONTEXT
@@ -330,16 +380,17 @@ spec:
             valueFrom: {path: /tmp/argo/bitable_record_url}
     - name: transcode
       synchronization:
-        semaphore:
-          configMapKeyRef:
-            name: rm-monitor-argo-semaphores
-            key: transcode
+        semaphores:
+          - configMapKeyRef:
+              name: rm-monitor-argo-semaphores
+              key: transcode
       inputs:
         parameters:
           - name: context
       container:
         image: {{ include "rm-monitor.image" (dict "root" . "component" "transcode-job") }}
         imagePullPolicy: {{ include "rm-monitor.jobImagePullPolicy" . }}
+        command: ["/usr/local/bin/app"]
         args: ["-f", "{{ include "rm-monitor.configPath" . }}"]
         env:
           - name: RM_MONITOR_JOB_CONTEXT
@@ -366,6 +417,7 @@ spec:
       container:
         image: {{ include "rm-monitor.image" (dict "root" . "component" "highlight-job") }}
         imagePullPolicy: {{ include "rm-monitor.jobImagePullPolicy" . }}
+        command: ["/usr/local/bin/app"]
         args: ["-f", "{{ include "rm-monitor.configPath" . }}"]
         env:
           - name: RM_MONITOR_JOB_CONTEXT
@@ -390,6 +442,7 @@ spec:
       container:
         image: {{ include "rm-monitor.image" (dict "root" . "component" "highlight-artifact-job") }}
         imagePullPolicy: {{ include "rm-monitor.jobImagePullPolicy" . }}
+        command: ["/usr/local/bin/highlight-artifact-job"]
         args: ["-f", "{{ include "rm-monitor.configPath" . }}"]
         env:
           - name: RM_MONITOR_JOB_CONTEXT
@@ -415,6 +468,7 @@ spec:
       container:
         image: {{ include "rm-monitor.image" (dict "root" . "component" "manifest-job") }}
         imagePullPolicy: {{ include "rm-monitor.jobImagePullPolicy" . }}
+        command: ["/usr/local/bin/app"]
         args: ["-f", "{{ include "rm-monitor.configPath" . }}", "-match", "{{`{{workflow.parameters.match_id}}`}}"]
         volumeMounts:
           - name: shared-records
