@@ -409,6 +409,29 @@ func HasSttTasksWith(preds ...predicate.STTTask) predicate.MatchRound {
 	})
 }
 
+// HasAnalyzeTasks applies the HasEdge predicate on the "analyze_tasks" edge.
+func HasAnalyzeTasks() predicate.MatchRound {
+	return predicate.MatchRound(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, AnalyzeTasksTable, AnalyzeTasksColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasAnalyzeTasksWith applies the HasEdge predicate on the "analyze_tasks" edge with a given conditions (other predicates).
+func HasAnalyzeTasksWith(preds ...predicate.AnalyzeTask) predicate.MatchRound {
+	return predicate.MatchRound(func(s *sql.Selector) {
+		step := newAnalyzeTasksStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // HasHighlightClips applies the HasEdge predicate on the "highlight_clips" edge.
 func HasHighlightClips() predicate.MatchRound {
 	return predicate.MatchRound(func(s *sql.Selector) {
@@ -447,29 +470,6 @@ func HasHighlightStates() predicate.MatchRound {
 func HasHighlightStatesWith(preds ...predicate.HighlightRoundState) predicate.MatchRound {
 	return predicate.MatchRound(func(s *sql.Selector) {
 		step := newHighlightStatesStep()
-		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
-			for _, p := range preds {
-				p(s)
-			}
-		})
-	})
-}
-
-// HasOcrTasks applies the HasEdge predicate on the "ocr_tasks" edge.
-func HasOcrTasks() predicate.MatchRound {
-	return predicate.MatchRound(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, OcrTasksTable, OcrTasksColumn),
-		)
-		sqlgraph.HasNeighbors(s, step)
-	})
-}
-
-// HasOcrTasksWith applies the HasEdge predicate on the "ocr_tasks" edge with a given conditions (other predicates).
-func HasOcrTasksWith(preds ...predicate.OCRTask) predicate.MatchRound {
-	return predicate.MatchRound(func(s *sql.Selector) {
-		step := newOcrTasksStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

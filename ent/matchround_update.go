@@ -11,11 +11,11 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"scutbot.cn/web/rm-monitor/ent/analyzetask"
 	"scutbot.cn/web/rm-monitor/ent/highlightclip"
 	"scutbot.cn/web/rm-monitor/ent/highlightroundstate"
 	"scutbot.cn/web/rm-monitor/ent/match"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
-	"scutbot.cn/web/rm-monitor/ent/ocrtask"
 	"scutbot.cn/web/rm-monitor/ent/predicate"
 	"scutbot.cn/web/rm-monitor/ent/recordtask"
 	"scutbot.cn/web/rm-monitor/ent/stttask"
@@ -170,6 +170,21 @@ func (_u *MatchRoundUpdate) AddSttTasks(v ...*STTTask) *MatchRoundUpdate {
 	return _u.AddSttTaskIDs(ids...)
 }
 
+// AddAnalyzeTaskIDs adds the "analyze_tasks" edge to the AnalyzeTask entity by IDs.
+func (_u *MatchRoundUpdate) AddAnalyzeTaskIDs(ids ...int) *MatchRoundUpdate {
+	_u.mutation.AddAnalyzeTaskIDs(ids...)
+	return _u
+}
+
+// AddAnalyzeTasks adds the "analyze_tasks" edges to the AnalyzeTask entity.
+func (_u *MatchRoundUpdate) AddAnalyzeTasks(v ...*AnalyzeTask) *MatchRoundUpdate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddAnalyzeTaskIDs(ids...)
+}
+
 // AddHighlightClipIDs adds the "highlight_clips" edge to the HighlightClip entity by IDs.
 func (_u *MatchRoundUpdate) AddHighlightClipIDs(ids ...int) *MatchRoundUpdate {
 	_u.mutation.AddHighlightClipIDs(ids...)
@@ -198,21 +213,6 @@ func (_u *MatchRoundUpdate) AddHighlightStates(v ...*HighlightRoundState) *Match
 		ids[i] = v[i].ID
 	}
 	return _u.AddHighlightStateIDs(ids...)
-}
-
-// AddOcrTaskIDs adds the "ocr_tasks" edge to the OCRTask entity by IDs.
-func (_u *MatchRoundUpdate) AddOcrTaskIDs(ids ...int) *MatchRoundUpdate {
-	_u.mutation.AddOcrTaskIDs(ids...)
-	return _u
-}
-
-// AddOcrTasks adds the "ocr_tasks" edges to the OCRTask entity.
-func (_u *MatchRoundUpdate) AddOcrTasks(v ...*OCRTask) *MatchRoundUpdate {
-	ids := make([]int, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.AddOcrTaskIDs(ids...)
 }
 
 // Mutation returns the MatchRoundMutation object of the builder.
@@ -268,6 +268,27 @@ func (_u *MatchRoundUpdate) RemoveSttTasks(v ...*STTTask) *MatchRoundUpdate {
 	return _u.RemoveSttTaskIDs(ids...)
 }
 
+// ClearAnalyzeTasks clears all "analyze_tasks" edges to the AnalyzeTask entity.
+func (_u *MatchRoundUpdate) ClearAnalyzeTasks() *MatchRoundUpdate {
+	_u.mutation.ClearAnalyzeTasks()
+	return _u
+}
+
+// RemoveAnalyzeTaskIDs removes the "analyze_tasks" edge to AnalyzeTask entities by IDs.
+func (_u *MatchRoundUpdate) RemoveAnalyzeTaskIDs(ids ...int) *MatchRoundUpdate {
+	_u.mutation.RemoveAnalyzeTaskIDs(ids...)
+	return _u
+}
+
+// RemoveAnalyzeTasks removes "analyze_tasks" edges to AnalyzeTask entities.
+func (_u *MatchRoundUpdate) RemoveAnalyzeTasks(v ...*AnalyzeTask) *MatchRoundUpdate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveAnalyzeTaskIDs(ids...)
+}
+
 // ClearHighlightClips clears all "highlight_clips" edges to the HighlightClip entity.
 func (_u *MatchRoundUpdate) ClearHighlightClips() *MatchRoundUpdate {
 	_u.mutation.ClearHighlightClips()
@@ -308,27 +329,6 @@ func (_u *MatchRoundUpdate) RemoveHighlightStates(v ...*HighlightRoundState) *Ma
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveHighlightStateIDs(ids...)
-}
-
-// ClearOcrTasks clears all "ocr_tasks" edges to the OCRTask entity.
-func (_u *MatchRoundUpdate) ClearOcrTasks() *MatchRoundUpdate {
-	_u.mutation.ClearOcrTasks()
-	return _u
-}
-
-// RemoveOcrTaskIDs removes the "ocr_tasks" edge to OCRTask entities by IDs.
-func (_u *MatchRoundUpdate) RemoveOcrTaskIDs(ids ...int) *MatchRoundUpdate {
-	_u.mutation.RemoveOcrTaskIDs(ids...)
-	return _u
-}
-
-// RemoveOcrTasks removes "ocr_tasks" edges to OCRTask entities.
-func (_u *MatchRoundUpdate) RemoveOcrTasks(v ...*OCRTask) *MatchRoundUpdate {
-	ids := make([]int, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.RemoveOcrTaskIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -543,6 +543,51 @@ func (_u *MatchRoundUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if _u.mutation.AnalyzeTasksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   matchround.AnalyzeTasksTable,
+			Columns: []string{matchround.AnalyzeTasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(analyzetask.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedAnalyzeTasksIDs(); len(nodes) > 0 && !_u.mutation.AnalyzeTasksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   matchround.AnalyzeTasksTable,
+			Columns: []string{matchround.AnalyzeTasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(analyzetask.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.AnalyzeTasksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   matchround.AnalyzeTasksTable,
+			Columns: []string{matchround.AnalyzeTasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(analyzetask.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if _u.mutation.HighlightClipsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
@@ -626,51 +671,6 @@ func (_u *MatchRoundUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(highlightroundstate.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if _u.mutation.OcrTasksCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   matchround.OcrTasksTable,
-			Columns: []string{matchround.OcrTasksColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(ocrtask.FieldID, field.TypeInt),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.RemovedOcrTasksIDs(); len(nodes) > 0 && !_u.mutation.OcrTasksCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   matchround.OcrTasksTable,
-			Columns: []string{matchround.OcrTasksColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(ocrtask.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.OcrTasksIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   matchround.OcrTasksTable,
-			Columns: []string{matchround.OcrTasksColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(ocrtask.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -834,6 +834,21 @@ func (_u *MatchRoundUpdateOne) AddSttTasks(v ...*STTTask) *MatchRoundUpdateOne {
 	return _u.AddSttTaskIDs(ids...)
 }
 
+// AddAnalyzeTaskIDs adds the "analyze_tasks" edge to the AnalyzeTask entity by IDs.
+func (_u *MatchRoundUpdateOne) AddAnalyzeTaskIDs(ids ...int) *MatchRoundUpdateOne {
+	_u.mutation.AddAnalyzeTaskIDs(ids...)
+	return _u
+}
+
+// AddAnalyzeTasks adds the "analyze_tasks" edges to the AnalyzeTask entity.
+func (_u *MatchRoundUpdateOne) AddAnalyzeTasks(v ...*AnalyzeTask) *MatchRoundUpdateOne {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddAnalyzeTaskIDs(ids...)
+}
+
 // AddHighlightClipIDs adds the "highlight_clips" edge to the HighlightClip entity by IDs.
 func (_u *MatchRoundUpdateOne) AddHighlightClipIDs(ids ...int) *MatchRoundUpdateOne {
 	_u.mutation.AddHighlightClipIDs(ids...)
@@ -862,21 +877,6 @@ func (_u *MatchRoundUpdateOne) AddHighlightStates(v ...*HighlightRoundState) *Ma
 		ids[i] = v[i].ID
 	}
 	return _u.AddHighlightStateIDs(ids...)
-}
-
-// AddOcrTaskIDs adds the "ocr_tasks" edge to the OCRTask entity by IDs.
-func (_u *MatchRoundUpdateOne) AddOcrTaskIDs(ids ...int) *MatchRoundUpdateOne {
-	_u.mutation.AddOcrTaskIDs(ids...)
-	return _u
-}
-
-// AddOcrTasks adds the "ocr_tasks" edges to the OCRTask entity.
-func (_u *MatchRoundUpdateOne) AddOcrTasks(v ...*OCRTask) *MatchRoundUpdateOne {
-	ids := make([]int, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.AddOcrTaskIDs(ids...)
 }
 
 // Mutation returns the MatchRoundMutation object of the builder.
@@ -932,6 +932,27 @@ func (_u *MatchRoundUpdateOne) RemoveSttTasks(v ...*STTTask) *MatchRoundUpdateOn
 	return _u.RemoveSttTaskIDs(ids...)
 }
 
+// ClearAnalyzeTasks clears all "analyze_tasks" edges to the AnalyzeTask entity.
+func (_u *MatchRoundUpdateOne) ClearAnalyzeTasks() *MatchRoundUpdateOne {
+	_u.mutation.ClearAnalyzeTasks()
+	return _u
+}
+
+// RemoveAnalyzeTaskIDs removes the "analyze_tasks" edge to AnalyzeTask entities by IDs.
+func (_u *MatchRoundUpdateOne) RemoveAnalyzeTaskIDs(ids ...int) *MatchRoundUpdateOne {
+	_u.mutation.RemoveAnalyzeTaskIDs(ids...)
+	return _u
+}
+
+// RemoveAnalyzeTasks removes "analyze_tasks" edges to AnalyzeTask entities.
+func (_u *MatchRoundUpdateOne) RemoveAnalyzeTasks(v ...*AnalyzeTask) *MatchRoundUpdateOne {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveAnalyzeTaskIDs(ids...)
+}
+
 // ClearHighlightClips clears all "highlight_clips" edges to the HighlightClip entity.
 func (_u *MatchRoundUpdateOne) ClearHighlightClips() *MatchRoundUpdateOne {
 	_u.mutation.ClearHighlightClips()
@@ -972,27 +993,6 @@ func (_u *MatchRoundUpdateOne) RemoveHighlightStates(v ...*HighlightRoundState) 
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveHighlightStateIDs(ids...)
-}
-
-// ClearOcrTasks clears all "ocr_tasks" edges to the OCRTask entity.
-func (_u *MatchRoundUpdateOne) ClearOcrTasks() *MatchRoundUpdateOne {
-	_u.mutation.ClearOcrTasks()
-	return _u
-}
-
-// RemoveOcrTaskIDs removes the "ocr_tasks" edge to OCRTask entities by IDs.
-func (_u *MatchRoundUpdateOne) RemoveOcrTaskIDs(ids ...int) *MatchRoundUpdateOne {
-	_u.mutation.RemoveOcrTaskIDs(ids...)
-	return _u
-}
-
-// RemoveOcrTasks removes "ocr_tasks" edges to OCRTask entities.
-func (_u *MatchRoundUpdateOne) RemoveOcrTasks(v ...*OCRTask) *MatchRoundUpdateOne {
-	ids := make([]int, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.RemoveOcrTaskIDs(ids...)
 }
 
 // Where appends a list predicates to the MatchRoundUpdate builder.
@@ -1237,6 +1237,51 @@ func (_u *MatchRoundUpdateOne) sqlSave(ctx context.Context) (_node *MatchRound, 
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if _u.mutation.AnalyzeTasksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   matchround.AnalyzeTasksTable,
+			Columns: []string{matchround.AnalyzeTasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(analyzetask.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedAnalyzeTasksIDs(); len(nodes) > 0 && !_u.mutation.AnalyzeTasksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   matchround.AnalyzeTasksTable,
+			Columns: []string{matchround.AnalyzeTasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(analyzetask.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.AnalyzeTasksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   matchround.AnalyzeTasksTable,
+			Columns: []string{matchround.AnalyzeTasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(analyzetask.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if _u.mutation.HighlightClipsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
@@ -1320,51 +1365,6 @@ func (_u *MatchRoundUpdateOne) sqlSave(ctx context.Context) (_node *MatchRound, 
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(highlightroundstate.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if _u.mutation.OcrTasksCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   matchround.OcrTasksTable,
-			Columns: []string{matchround.OcrTasksColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(ocrtask.FieldID, field.TypeInt),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.RemovedOcrTasksIDs(); len(nodes) > 0 && !_u.mutation.OcrTasksCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   matchround.OcrTasksTable,
-			Columns: []string{matchround.OcrTasksColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(ocrtask.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.OcrTasksIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   matchround.OcrTasksTable,
-			Columns: []string{matchround.OcrTasksColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(ocrtask.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

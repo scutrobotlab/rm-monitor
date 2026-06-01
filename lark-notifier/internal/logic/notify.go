@@ -16,6 +16,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/samber/lo"
 	"scutbot.cn/web/rm-monitor/ent"
+	"scutbot.cn/web/rm-monitor/ent/analyzetask"
 	"scutbot.cn/web/rm-monitor/ent/highlightclip"
 	"scutbot.cn/web/rm-monitor/ent/match"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
@@ -353,6 +354,7 @@ func (l *NotifyLogic) matchForPatch(matchID string) (*ent.Match, error) {
 				WithRecordTasks(func(q *ent.RecordTaskQuery) {
 					q.WithUploadTask()
 				}).
+				WithAnalyzeTasks().
 				WithHighlightClips(func(q *ent.HighlightClipQuery) {
 					q.Where(highlightclip.StatusEQ(highlightclip.StatusSUCCEEDED)).
 						Order(highlightclip.ByHighlightIndex())
@@ -435,6 +437,11 @@ func cardDataUpdatedAt(m *ent.Match) time.Time {
 		for _, clip := range r.Edges.HighlightClips {
 			if clip.UpdatedAt.After(updatedAt) {
 				updatedAt = clip.UpdatedAt
+			}
+		}
+		for _, task := range r.Edges.AnalyzeTasks {
+			if task.UpdatedAt.After(updatedAt) {
+				updatedAt = task.UpdatedAt
 			}
 		}
 	}
@@ -612,13 +619,36 @@ func (l *NotifyLogic) roundCards(m *ent.Match) []utils.MatchRoundCard {
 			}
 		}
 		cards = append(cards, utils.MatchRoundCard{
-			PanelID:   fmt.Sprintf("elem_round_%d", r.RoundNo),
-			ContentID: fmt.Sprintf("elem_round_%d_content", r.RoundNo),
-			Title:     roundScoreTitle(redWins, blueWins),
-			Content:   roundRecordLinks(r),
+			PanelID:            fmt.Sprintf("elem_round_%d", r.RoundNo),
+			ContentID:          fmt.Sprintf("elem_round_%d_content", r.RoundNo),
+			Title:              roundScoreTitle(redWins, blueWins),
+			Content:            roundRecordLinks(r),
+			SettlementImageKey: l.roundSettlementImageKey(r),
 		})
 	}
 	return cards
+}
+
+func (l *NotifyLogic) roundSettlementImageKey(r *ent.MatchRound) string {
+	if r == nil {
+		return ""
+	}
+	for _, task := range r.Edges.AnalyzeTasks {
+		if task.Status != analyzetask.StatusSUCCEEDED ||
+			task.SettlementStatus == nil ||
+			*task.SettlementStatus != analyzetask.SettlementStatusCONFIRMED ||
+			task.SettlementImagePath == nil ||
+			strings.TrimSpace(*task.SettlementImagePath) == "" {
+			continue
+		}
+		imageKey, err := utils.GetLocalImageKey(l.ctx, l.svcCtx, *task.SettlementImagePath)
+		if err != nil {
+			l.Error(errors.Wrapf(err, "upload settlement image round=%d path=%s", r.ID, *task.SettlementImagePath))
+			return ""
+		}
+		return imageKey
+	}
+	return ""
 }
 
 func roundScoreTitle(redWins, blueWins int) string {

@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"scutbot.cn/web/rm-monitor/ent/analyzetask"
 	"scutbot.cn/web/rm-monitor/ent/highlightclip"
 	"scutbot.cn/web/rm-monitor/ent/highlightpublishtask"
 	"scutbot.cn/web/rm-monitor/ent/highlightroundstate"
@@ -19,7 +20,6 @@ import (
 	"scutbot.cn/web/rm-monitor/ent/match"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
 	"scutbot.cn/web/rm-monitor/ent/mediaartifact"
-	"scutbot.cn/web/rm-monitor/ent/ocrtask"
 	"scutbot.cn/web/rm-monitor/ent/recordtask"
 	"scutbot.cn/web/rm-monitor/ent/stttask"
 	"scutbot.cn/web/rm-monitor/ent/team"
@@ -85,6 +85,7 @@ var (
 func checkColumn(t, c string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
+			analyzetask.Table:          analyzetask.ValidColumn,
 			highlightclip.Table:        highlightclip.ValidColumn,
 			highlightpublishtask.Table: highlightpublishtask.ValidColumn,
 			highlightroundstate.Table:  highlightroundstate.ValidColumn,
@@ -92,7 +93,6 @@ func checkColumn(t, c string) error {
 			match.Table:                match.ValidColumn,
 			matchround.Table:           matchround.ValidColumn,
 			mediaartifact.Table:        mediaartifact.ValidColumn,
-			ocrtask.Table:              ocrtask.ValidColumn,
 			recordtask.Table:           recordtask.ValidColumn,
 			stttask.Table:              stttask.ValidColumn,
 			team.Table:                 team.ValidColumn,

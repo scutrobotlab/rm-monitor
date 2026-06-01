@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/xml"
 	"flag"
 	"fmt"
 	"io"
@@ -12,6 +13,7 @@ import (
 	"os/exec"
 	pathpkg "path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -89,11 +91,20 @@ func run(ctx context.Context, jobCtx jobcontract.TranscodeContext, jobDir string
 	}
 	_ = os.Remove(tmpArchiveMountedPath)
 
-	cmd := exec.CommandContext(ctx,
-		"ffmpeg",
+	ffmpegArgs := []string{
 		"-hide_banner",
 		"-loglevel", "info",
+	}
+	if jobCtx.TrimStartSeconds != nil && *jobCtx.TrimStartSeconds > 0 {
+		ffmpegArgs = append(ffmpegArgs, "-ss", fmt.Sprintf("%.3f", *jobCtx.TrimStartSeconds))
+	}
+	ffmpegArgs = append(ffmpegArgs,
 		"-i", sourceMountedPath,
+	)
+	if jobCtx.TrimStartSeconds != nil && jobCtx.TrimEndSeconds != nil && *jobCtx.TrimEndSeconds > *jobCtx.TrimStartSeconds {
+		ffmpegArgs = append(ffmpegArgs, "-t", fmt.Sprintf("%.3f", *jobCtx.TrimEndSeconds-*jobCtx.TrimStartSeconds))
+	}
+	ffmpegArgs = append(ffmpegArgs,
 		"-map", "0:v:0",
 		"-an",
 		"-sn",
@@ -107,6 +118,7 @@ func run(ctx context.Context, jobCtx jobcontract.TranscodeContext, jobDir string
 		"-f", "mp4",
 		"-y", tmpArchiveMountedPath,
 	)
+	cmd := exec.CommandContext(ctx, "ffmpeg", ffmpegArgs...)
 	var stderr bytes.Buffer
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = io.MultiWriter(os.Stderr, &stderr)
@@ -142,6 +154,9 @@ func run(ctx context.Context, jobCtx jobcontract.TranscodeContext, jobDir string
 		err := errors.Errorf("published archive size mismatch: local=%d published=%d", stat.Size(), published.Size())
 		return err
 	}
+	if err := cropRoundDanmu(jobCtx); err != nil {
+		return err
+	}
 
 	return jobcontract.WriteResult(jobDir, jobcontract.TranscodeResult{
 		Schema:           "rm-monitor/transcode-result/v1",
@@ -155,6 +170,79 @@ func run(ctx context.Context, jobCtx jobcontract.TranscodeContext, jobDir string
 		Checksum:         sum,
 		CompletedAt:      time.Now(),
 	})
+}
+
+type bilibiliXML struct {
+	XMLName xml.Name `xml:"i"`
+	Danmaku []danmuD `xml:"d"`
+}
+
+type danmuD struct {
+	XMLName xml.Name   `xml:"d"`
+	P       string     `xml:"p,attr"`
+	Attrs   []xml.Attr `xml:",any,attr"`
+	Text    string     `xml:",chardata"`
+}
+
+func cropRoundDanmu(jobCtx jobcontract.TranscodeContext) error {
+	roundDir := strings.TrimSpace(jobCtx.RoundDir)
+	if roundDir == "" {
+		return nil
+	}
+	role := strings.TrimSpace(jobCtx.Role)
+	if role == "" {
+		role = "主视角"
+	}
+	rawPath := filepath.Join(roundDir, role+".raw.danmuku.xml")
+	finalPath := filepath.Join(roundDir, role+".danmuku.xml")
+	raw, err := os.ReadFile(rawPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return errors.Wrap(err, "read raw danmu xml")
+	}
+	var doc bilibiliXML
+	if err := xml.Unmarshal(raw, &doc); err != nil {
+		return errors.Wrap(err, "parse raw danmu xml")
+	}
+	start := 0.0
+	end := 0.0
+	hasWindow := jobCtx.TrimStartSeconds != nil && jobCtx.TrimEndSeconds != nil && *jobCtx.TrimEndSeconds > *jobCtx.TrimStartSeconds
+	if hasWindow {
+		start = *jobCtx.TrimStartSeconds
+		end = *jobCtx.TrimEndSeconds
+	}
+	filtered := make([]danmuD, 0, len(doc.Danmaku))
+	for _, item := range doc.Danmaku {
+		p := strings.Split(item.P, ",")
+		if len(p) == 0 {
+			continue
+		}
+		t, err := strconv.ParseFloat(strings.TrimSpace(p[0]), 64)
+		if err != nil {
+			continue
+		}
+		if hasWindow {
+			if t < start || t > end {
+				continue
+			}
+			t -= start
+		}
+		p[0] = fmt.Sprintf("%.3f", t)
+		item.P = strings.Join(p, ",")
+		filtered = append(filtered, item)
+	}
+	doc.Danmaku = filtered
+	out, err := xml.MarshalIndent(doc, "", "  ")
+	if err != nil {
+		return errors.Wrap(err, "marshal final danmu xml")
+	}
+	tmp := finalPath + ".tmp"
+	if err := os.WriteFile(tmp, append([]byte(xml.Header), out...), 0o644); err != nil {
+		return errors.Wrap(err, "write final danmu xml")
+	}
+	return errors.Wrap(os.Rename(tmp, finalPath), "publish final danmu xml")
 }
 
 func transcodeJobDir(jobCtx jobcontract.TranscodeContext) (string, error) {

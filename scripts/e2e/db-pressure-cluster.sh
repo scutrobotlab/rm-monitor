@@ -11,12 +11,25 @@ BUILD_IMAGES="${E2E_BUILD_IMAGES:-1}"
 KEEP="${E2E_KEEP:-0}"
 KUBECTL="${KUBECTL:-kubectl}"
 HELM="${HELM:-helm}"
+DOCKER="${DOCKER:-docker}"
 
 if ! command -v "$KUBECTL" >/dev/null 2>&1 && command -v kubectl.exe >/dev/null 2>&1; then
   KUBECTL="kubectl.exe"
 fi
 if ! command -v "$HELM" >/dev/null 2>&1 && command -v helm.exe >/dev/null 2>&1; then
   HELM="helm.exe"
+fi
+if ! command -v "$DOCKER" >/dev/null 2>&1 && command -v docker.exe >/dev/null 2>&1; then
+  DOCKER="docker.exe"
+elif ! command -v "$DOCKER" >/dev/null 2>&1 && [[ -x "/mnt/c/Program Files/Docker/Docker/resources/bin/docker.exe" ]]; then
+  DOCKER="/mnt/c/Program Files/Docker/Docker/resources/bin/docker.exe"
+fi
+if command -v "$DOCKER" >/dev/null 2>&1 && ! "$DOCKER" version >/dev/null 2>&1; then
+  if command -v docker.exe >/dev/null 2>&1 && docker.exe version >/dev/null 2>&1; then
+    DOCKER="docker.exe"
+  elif [[ -x "/mnt/c/Program Files/Docker/Docker/resources/bin/docker.exe" ]] && "/mnt/c/Program Files/Docker/Docker/resources/bin/docker.exe" version >/dev/null 2>&1; then
+    DOCKER="/mnt/c/Program Files/Docker/Docker/resources/bin/docker.exe"
+  fi
 fi
 
 apps=(migrate-job monitor record-dispatcher record-job)
@@ -41,6 +54,7 @@ cleanup() {
   fi
   "$KUBECTL" delete namespace "$NS" --ignore-not-found=true >/dev/null 2>&1 || true
   "$KUBECTL" delete pv pressure-records pressure-records-shared --ignore-not-found=true >/dev/null 2>&1 || true
+  "$KUBECTL" delete priorityclass record-critical background --ignore-not-found=true >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
 
@@ -67,7 +81,7 @@ if [[ "$BUILD_IMAGES" == "1" ]]; then
   for app in "${apps[@]}"; do
     image="ghcr.io/scutrobotlab/rm-monitor/${app}:dev"
     log "building $image"
-    docker build -f "$ROOT/${app}/Dockerfile" -t "$image" "$ROOT" >/dev/null
+    "$DOCKER" build -f "$(host_path "$ROOT/${app}/Dockerfile")" -t "$image" "$(host_path "$ROOT")" >/dev/null
   done
 fi
 
@@ -76,6 +90,7 @@ log "preparing namespace and storage"
 "$KUBECTL" wait --for=delete namespace/"$NS" --timeout=60s >/dev/null 2>&1 || true
 "$KUBECTL" create namespace "$NS" >/dev/null
 "$KUBECTL" delete pv pressure-records pressure-records-shared --ignore-not-found=true >/dev/null 2>&1 || true
+"$KUBECTL" delete priorityclass record-critical background --ignore-not-found=true >/dev/null 2>&1 || true
 cat <<'YAML' | "$KUBECTL" apply -f - >/dev/null
 apiVersion: v1
 kind: PersistentVolume
@@ -315,11 +330,11 @@ wait_sql_ge() {
 }
 
 stat_tables() {
-  psql -P pager=off -c "select relname, n_tup_ins, n_tup_upd, n_tup_del, n_dead_tup from pg_stat_user_tables where relname in ('matches','teams','match_rounds','record_tasks','media_artifacts','upload_tasks','transcode_tasks','ocr_tasks','highlight_clips','highlight_publish_tasks') order by relname;"
+  psql -P pager=off -c "select relname, n_tup_ins, n_tup_upd, n_tup_del, n_dead_tup from pg_stat_user_tables where relname in ('matches','teams','match_rounds','record_tasks','media_artifacts','upload_tasks','transcode_tasks','highlight_clips','highlight_publish_tasks') order by relname;"
 }
 
 stat_indexes() {
-  psql -P pager=off -c "select relname, indexrelname, idx_scan from pg_stat_user_indexes where relname in ('matches','match_rounds','record_tasks','media_artifacts','upload_tasks','transcode_tasks','ocr_tasks','highlight_clips','highlight_publish_tasks') and indexrelname ~ '(updated_at|kind_status)' order by relname, indexrelname;"
+  psql -P pager=off -c "select relname, indexrelname, idx_scan from pg_stat_user_indexes where relname in ('matches','match_rounds','record_tasks','media_artifacts','upload_tasks','transcode_tasks','highlight_clips','highlight_publish_tasks') and indexrelname ~ '(updated_at|kind_status)' order by relname, indexrelname;"
 }
 
 log "seeding pressure data profile=$PROFILE"
@@ -334,7 +349,6 @@ drop index if exists matchround_status_updated_at;
 drop index if exists recordtask_status_updated_at;
 drop index if exists uploadtask_status_updated_at;
 drop index if exists transcodetask_status_updated_at;
-drop index if exists ocrtask_status_updated_at;
 drop index if exists highlightclip_status_updated_at;
 drop index if exists highlightpublishtask_status_updated_at;
 drop index if exists mediaartifact_kind_status_created_at;
@@ -364,7 +378,7 @@ migration_start=$(date +%s)
 migration_elapsed=$(( $(date +%s) - migration_start ))
 log "migrate job index recreation elapsed=${migration_elapsed}s"
 
-missing_indexes="$(psql_value "select count(*) from (values ('match_updated_at'),('match_latest_status_updated_at'),('matchround_updated_at'),('matchround_status_updated_at'),('recordtask_status_updated_at'),('uploadtask_status_updated_at'),('transcodetask_status_updated_at'),('ocrtask_status_updated_at'),('highlightclip_status_updated_at'),('highlightpublishtask_status_updated_at'),('mediaartifact_kind_status_created_at'),('mediaartifact_kind_status_deletable_at')) expected(name) where not exists (select 1 from pg_indexes where schemaname='public' and indexname=expected.name);")"
+missing_indexes="$(psql_value "select count(*) from (values ('match_updated_at'),('match_latest_status_updated_at'),('matchround_updated_at'),('matchround_status_updated_at'),('recordtask_status_updated_at'),('uploadtask_status_updated_at'),('transcodetask_status_updated_at'),('highlightclip_status_updated_at'),('highlightpublishtask_status_updated_at'),('mediaartifact_kind_status_created_at'),('mediaartifact_kind_status_deletable_at')) expected(name) where not exists (select 1 from pg_indexes where schemaname='public' and indexname=expected.name);")"
 if [[ "$missing_indexes" != "0" ]]; then
   log "missing recreated indexes: $missing_indexes"
   exit 1

@@ -114,7 +114,7 @@
             {
                 "tag": "collapsible_panel",
                 "element_id": {{json $round.PanelID}},
-                "expanded": false,
+                "expanded": true,
                 "direction": "vertical",
                 "horizontal_align": "center",
                 "vertical_align": "center",
@@ -148,7 +148,16 @@
                         "text_align": "left",
                         "text_size": "normal_v2",
                         "margin": "0px 0px 0px 0px"
+                    }{{- if $round.SettlementImageKey }},
+                    {
+                        "tag": "img",
+                        "img_key": {{json $round.SettlementImageKey}},
+                        "preview": true,
+                        "transparent": false,
+                        "scale_type": "fit_horizontal",
+                        "margin": "6px 0px 0px 0px"
                     }
+                    {{- end }}
                 ],
                 "padding": "8px 8px 8px 8px",
                 "margin": "4px 0px 4px 0px"

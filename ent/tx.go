@@ -12,6 +12,8 @@ import (
 // Tx is a transactional client that is created by calling Client.Tx().
 type Tx struct {
 	config
+	// AnalyzeTask is the client for interacting with the AnalyzeTask builders.
+	AnalyzeTask *AnalyzeTaskClient
 	// HighlightClip is the client for interacting with the HighlightClip builders.
 	HighlightClip *HighlightClipClient
 	// HighlightPublishTask is the client for interacting with the HighlightPublishTask builders.
@@ -26,8 +28,6 @@ type Tx struct {
 	MatchRound *MatchRoundClient
 	// MediaArtifact is the client for interacting with the MediaArtifact builders.
 	MediaArtifact *MediaArtifactClient
-	// OCRTask is the client for interacting with the OCRTask builders.
-	OCRTask *OCRTaskClient
 	// RecordTask is the client for interacting with the RecordTask builders.
 	RecordTask *RecordTaskClient
 	// STTTask is the client for interacting with the STTTask builders.
@@ -169,6 +169,7 @@ func (tx *Tx) Client() *Client {
 }
 
 func (tx *Tx) init() {
+	tx.AnalyzeTask = NewAnalyzeTaskClient(tx.config)
 	tx.HighlightClip = NewHighlightClipClient(tx.config)
 	tx.HighlightPublishTask = NewHighlightPublishTaskClient(tx.config)
 	tx.HighlightRoundState = NewHighlightRoundStateClient(tx.config)
@@ -176,7 +177,6 @@ func (tx *Tx) init() {
 	tx.Match = NewMatchClient(tx.config)
 	tx.MatchRound = NewMatchRoundClient(tx.config)
 	tx.MediaArtifact = NewMediaArtifactClient(tx.config)
-	tx.OCRTask = NewOCRTaskClient(tx.config)
 	tx.RecordTask = NewRecordTaskClient(tx.config)
 	tx.STTTask = NewSTTTaskClient(tx.config)
 	tx.Team = NewTeamClient(tx.config)
@@ -191,7 +191,7 @@ func (tx *Tx) init() {
 // of them in order to commit or rollback the transaction.
 //
 // If a closed transaction is embedded in one of the generated entities, and the entity
-// applies a query, for example: HighlightClip.QueryXXX(), the query will be executed
+// applies a query, for example: AnalyzeTask.QueryXXX(), the query will be executed
 // through the driver which created this transaction.
 //
 // Note that txDriver is not goroutine safe.

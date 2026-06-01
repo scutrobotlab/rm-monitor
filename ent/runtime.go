@@ -5,6 +5,7 @@ package ent
 import (
 	"time"
 
+	"scutbot.cn/web/rm-monitor/ent/analyzetask"
 	"scutbot.cn/web/rm-monitor/ent/highlightclip"
 	"scutbot.cn/web/rm-monitor/ent/highlightpublishtask"
 	"scutbot.cn/web/rm-monitor/ent/highlightroundstate"
@@ -12,7 +13,6 @@ import (
 	"scutbot.cn/web/rm-monitor/ent/match"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
 	"scutbot.cn/web/rm-monitor/ent/mediaartifact"
-	"scutbot.cn/web/rm-monitor/ent/ocrtask"
 	"scutbot.cn/web/rm-monitor/ent/recordtask"
 	"scutbot.cn/web/rm-monitor/ent/schema"
 	"scutbot.cn/web/rm-monitor/ent/stttask"
@@ -25,6 +25,26 @@ import (
 // (default values, validators, hooks and policies) and stitches it
 // to their package variables.
 func init() {
+	analyzetaskFields := schema.AnalyzeTask{}.Fields()
+	_ = analyzetaskFields
+	// analyzetaskDescPriority is the schema descriptor for priority field.
+	analyzetaskDescPriority := analyzetaskFields[2].Descriptor()
+	// analyzetask.DefaultPriority holds the default value on creation for the priority field.
+	analyzetask.DefaultPriority = analyzetaskDescPriority.Default.(int)
+	// analyzetaskDescAttempts is the schema descriptor for attempts field.
+	analyzetaskDescAttempts := analyzetaskFields[4].Descriptor()
+	// analyzetask.DefaultAttempts holds the default value on creation for the attempts field.
+	analyzetask.DefaultAttempts = analyzetaskDescAttempts.Default.(int)
+	// analyzetaskDescCreatedAt is the schema descriptor for created_at field.
+	analyzetaskDescCreatedAt := analyzetaskFields[13].Descriptor()
+	// analyzetask.DefaultCreatedAt holds the default value on creation for the created_at field.
+	analyzetask.DefaultCreatedAt = analyzetaskDescCreatedAt.Default.(func() time.Time)
+	// analyzetaskDescUpdatedAt is the schema descriptor for updated_at field.
+	analyzetaskDescUpdatedAt := analyzetaskFields[14].Descriptor()
+	// analyzetask.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	analyzetask.DefaultUpdatedAt = analyzetaskDescUpdatedAt.Default.(func() time.Time)
+	// analyzetask.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	analyzetask.UpdateDefaultUpdatedAt = analyzetaskDescUpdatedAt.UpdateDefault.(func() time.Time)
 	highlightclipFields := schema.HighlightClip{}.Fields()
 	_ = highlightclipFields
 	// highlightclipDescPriority is the schema descriptor for priority field.
@@ -153,26 +173,6 @@ func init() {
 	mediaartifact.DefaultUpdatedAt = mediaartifactDescUpdatedAt.Default.(func() time.Time)
 	// mediaartifact.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	mediaartifact.UpdateDefaultUpdatedAt = mediaartifactDescUpdatedAt.UpdateDefault.(func() time.Time)
-	ocrtaskFields := schema.OCRTask{}.Fields()
-	_ = ocrtaskFields
-	// ocrtaskDescPriority is the schema descriptor for priority field.
-	ocrtaskDescPriority := ocrtaskFields[2].Descriptor()
-	// ocrtask.DefaultPriority holds the default value on creation for the priority field.
-	ocrtask.DefaultPriority = ocrtaskDescPriority.Default.(int)
-	// ocrtaskDescAttempts is the schema descriptor for attempts field.
-	ocrtaskDescAttempts := ocrtaskFields[4].Descriptor()
-	// ocrtask.DefaultAttempts holds the default value on creation for the attempts field.
-	ocrtask.DefaultAttempts = ocrtaskDescAttempts.Default.(int)
-	// ocrtaskDescCreatedAt is the schema descriptor for created_at field.
-	ocrtaskDescCreatedAt := ocrtaskFields[10].Descriptor()
-	// ocrtask.DefaultCreatedAt holds the default value on creation for the created_at field.
-	ocrtask.DefaultCreatedAt = ocrtaskDescCreatedAt.Default.(func() time.Time)
-	// ocrtaskDescUpdatedAt is the schema descriptor for updated_at field.
-	ocrtaskDescUpdatedAt := ocrtaskFields[11].Descriptor()
-	// ocrtask.DefaultUpdatedAt holds the default value on creation for the updated_at field.
-	ocrtask.DefaultUpdatedAt = ocrtaskDescUpdatedAt.Default.(func() time.Time)
-	// ocrtask.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
-	ocrtask.UpdateDefaultUpdatedAt = ocrtaskDescUpdatedAt.UpdateDefault.(func() time.Time)
 	recordtaskFields := schema.RecordTask{}.Fields()
 	_ = recordtaskFields
 	// recordtaskDescAttempts is the schema descriptor for attempts field.

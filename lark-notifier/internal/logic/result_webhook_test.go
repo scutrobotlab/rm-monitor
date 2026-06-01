@@ -121,7 +121,7 @@ func TestCardEntityDataRendersCardJSON(t *testing.T) {
 			if m["direction"] != "vertical" || m["horizontal_align"] != "center" || m["vertical_align"] != "center" {
 				t.Fatalf("unexpected panel alignment: %#v", m)
 			}
-			if m["expanded"] != false || m["background_color"] != "grey-200" {
+			if m["expanded"] != true || m["background_color"] != "grey-200" {
 				t.Fatalf("unexpected panel display settings: %#v", m)
 			}
 			header := m["header"].(map[string]any)

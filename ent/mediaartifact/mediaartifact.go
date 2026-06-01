@@ -43,14 +43,14 @@ const (
 	EdgeUploadTask = "upload_task"
 	// EdgeSttTasks holds the string denoting the stt_tasks edge name in mutations.
 	EdgeSttTasks = "stt_tasks"
+	// EdgeAnalyzeTasks holds the string denoting the analyze_tasks edge name in mutations.
+	EdgeAnalyzeTasks = "analyze_tasks"
 	// EdgeSourceTranscodeTask holds the string denoting the source_transcode_task edge name in mutations.
 	EdgeSourceTranscodeTask = "source_transcode_task"
 	// EdgeArchiveTranscodeTask holds the string denoting the archive_transcode_task edge name in mutations.
 	EdgeArchiveTranscodeTask = "archive_transcode_task"
 	// EdgeHighlightClips holds the string denoting the highlight_clips edge name in mutations.
 	EdgeHighlightClips = "highlight_clips"
-	// EdgeOcrTasks holds the string denoting the ocr_tasks edge name in mutations.
-	EdgeOcrTasks = "ocr_tasks"
 	// Table holds the table name of the mediaartifact in the database.
 	Table = "media_artifacts"
 	// RecordTaskTable is the table that holds the record_task relation/edge.
@@ -74,6 +74,13 @@ const (
 	SttTasksInverseTable = "stt_tasks"
 	// SttTasksColumn is the table column denoting the stt_tasks relation/edge.
 	SttTasksColumn = "media_artifact_stt_tasks"
+	// AnalyzeTasksTable is the table that holds the analyze_tasks relation/edge.
+	AnalyzeTasksTable = "analyze_tasks"
+	// AnalyzeTasksInverseTable is the table name for the AnalyzeTask entity.
+	// It exists in this package in order to avoid circular dependency with the "analyzetask" package.
+	AnalyzeTasksInverseTable = "analyze_tasks"
+	// AnalyzeTasksColumn is the table column denoting the analyze_tasks relation/edge.
+	AnalyzeTasksColumn = "media_artifact_analyze_tasks"
 	// SourceTranscodeTaskTable is the table that holds the source_transcode_task relation/edge.
 	SourceTranscodeTaskTable = "transcode_tasks"
 	// SourceTranscodeTaskInverseTable is the table name for the TranscodeTask entity.
@@ -95,13 +102,6 @@ const (
 	HighlightClipsInverseTable = "highlight_clips"
 	// HighlightClipsColumn is the table column denoting the highlight_clips relation/edge.
 	HighlightClipsColumn = "media_artifact_highlight_clips"
-	// OcrTasksTable is the table that holds the ocr_tasks relation/edge.
-	OcrTasksTable = "ocr_tasks"
-	// OcrTasksInverseTable is the table name for the OCRTask entity.
-	// It exists in this package in order to avoid circular dependency with the "ocrtask" package.
-	OcrTasksInverseTable = "ocr_tasks"
-	// OcrTasksColumn is the table column denoting the ocr_tasks relation/edge.
-	OcrTasksColumn = "media_artifact_ocr_tasks"
 )
 
 // Columns holds all SQL columns for mediaartifact fields.
@@ -336,6 +336,20 @@ func BySttTasks(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	}
 }
 
+// ByAnalyzeTasksCount orders the results by analyze_tasks count.
+func ByAnalyzeTasksCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newAnalyzeTasksStep(), opts...)
+	}
+}
+
+// ByAnalyzeTasks orders the results by analyze_tasks terms.
+func ByAnalyzeTasks(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newAnalyzeTasksStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
 // BySourceTranscodeTaskField orders the results by source_transcode_task field.
 func BySourceTranscodeTaskField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -363,20 +377,6 @@ func ByHighlightClips(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newHighlightClipsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
-
-// ByOcrTasksCount orders the results by ocr_tasks count.
-func ByOcrTasksCount(opts ...sql.OrderTermOption) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newOcrTasksStep(), opts...)
-	}
-}
-
-// ByOcrTasks orders the results by ocr_tasks terms.
-func ByOcrTasks(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newOcrTasksStep(), append([]sql.OrderTerm{term}, terms...)...)
-	}
-}
 func newRecordTaskStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -398,6 +398,13 @@ func newSttTasksStep() *sqlgraph.Step {
 		sqlgraph.Edge(sqlgraph.O2M, false, SttTasksTable, SttTasksColumn),
 	)
 }
+func newAnalyzeTasksStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(AnalyzeTasksInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, AnalyzeTasksTable, AnalyzeTasksColumn),
+	)
+}
 func newSourceTranscodeTaskStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -417,12 +424,5 @@ func newHighlightClipsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(HighlightClipsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, HighlightClipsTable, HighlightClipsColumn),
-	)
-}
-func newOcrTasksStep() *sqlgraph.Step {
-	return sqlgraph.NewStep(
-		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(OcrTasksInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, false, OcrTasksTable, OcrTasksColumn),
 	)
 }

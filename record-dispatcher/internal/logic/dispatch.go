@@ -16,6 +16,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"github.com/pkg/errors"
 	"scutbot.cn/web/rm-monitor/ent"
+	"scutbot.cn/web/rm-monitor/ent/analyzetask"
 	"scutbot.cn/web/rm-monitor/ent/highlightclip"
 	"scutbot.cn/web/rm-monitor/ent/highlightroundstate"
 	"scutbot.cn/web/rm-monitor/ent/match"
@@ -87,6 +88,21 @@ func (l *DispatchLogic) Tick(source string) (TickStats, error) {
 	if _, err := l.dispatchCompletedSTTJobs(); err != nil {
 		return stats, err
 	}
+	if _, err := l.createAnalyzeTasks(); err != nil {
+		return stats, err
+	}
+	if err := l.reconcileAnalyzeResults(); err != nil {
+		return stats, err
+	}
+	if err := l.recoverAnalyzeDispatching(); err != nil {
+		return stats, err
+	}
+	if err := l.recoverLostAnalyzeJobs(); err != nil {
+		return stats, err
+	}
+	if _, err := l.dispatchPendingAnalyzeJobs(); err != nil {
+		return stats, err
+	}
 	if err := l.reconcileSTTResults(); err != nil {
 		return stats, err
 	}
@@ -120,6 +136,9 @@ func (l *DispatchLogic) cancelEndedRounds() (int, error) {
 	stoppedSidecarRounds := make(map[int]struct{})
 	for _, task := range tasks {
 		if task.Edges.MatchRound != nil && task.Edges.MatchRound.Status == matchround.StatusENDED {
+			if !roundStopDelayElapsed(task.Edges.MatchRound, l.svcCtx.Config.RecordConf.WithDefaults().StopDelaySeconds) {
+				continue
+			}
 			roundID := task.Edges.MatchRound.ID
 			name := jobName("record", task.ID)
 			if task.K8sJobName != nil && *task.K8sJobName != "" {
@@ -146,6 +165,16 @@ func (l *DispatchLogic) cancelEndedRounds() (int, error) {
 		}
 	}
 	return cancelled, nil
+}
+
+func roundStopDelayElapsed(r *ent.MatchRound, delaySeconds int) bool {
+	if delaySeconds <= 0 {
+		delaySeconds = 60
+	}
+	if r.EndedAt == nil {
+		return false
+	}
+	return time.Since(*r.EndedAt) >= time.Duration(delaySeconds)*time.Second
 }
 
 func (l *DispatchLogic) recoverDispatchingTasks() (int, error) {
@@ -326,6 +355,13 @@ func (l *DispatchLogic) sttContext(conf common.RecordConf, task *ent.STTTask) (j
 	}
 	sourcePath := storagepath.Resolve(conf.BaseDir, artifact.Path)
 	roundDir := filepath.Dir(sourcePath)
+	var trimStart, trimEnd *float64
+	if analyzeTask, err := l.roundAnalyzeTask(r.ID); err != nil {
+		return jobcontract.STTContext{}, err
+	} else if analyzeTask != nil && analyzeTask.Status == analyzetask.StatusSUCCEEDED && analyzeTask.EffectiveStartSeconds != nil && analyzeTask.EffectiveEndSeconds != nil && *analyzeTask.EffectiveEndSeconds > *analyzeTask.EffectiveStartSeconds {
+		trimStart = analyzeTask.EffectiveStartSeconds
+		trimEnd = analyzeTask.EffectiveEndSeconds
+	}
 	whisperServerURLs := resolveWhisperServerURLs(l.svcCtx.Config.WhisperServerUrls)
 	if len(whisperServerURLs) == 0 {
 		return jobcontract.STTContext{}, errors.New("WhisperServerUrls is empty")
@@ -342,6 +378,8 @@ func (l *DispatchLogic) sttContext(conf common.RecordConf, task *ent.STTTask) (j
 		RoundDir:          roundDir,
 		STTPath:           filepath.Join(roundDir, "stt.jsonl"),
 		SubtitleName:      fmt.Sprintf("%s.srt", conf.STTRole),
+		TrimStartSeconds:  trimStart,
+		TrimEndSeconds:    trimEnd,
 		WhisperServerURLs: whisperServerURLs,
 		Prompt: stttext.BuildPrompt(stttext.PromptData{
 			Event:      m.Event,
@@ -357,6 +395,24 @@ func (l *DispatchLogic) sttContext(conf common.RecordConf, task *ent.STTTask) (j
 			BlueName:   blue.Name,
 		}),
 	}, nil
+}
+
+func (l *DispatchLogic) roundAnalyzeTask(roundID int) (*ent.AnalyzeTask, error) {
+	analyzeConf := l.svcCtx.Config.AnalyzeConf.WithDefaults()
+	jobConf := l.svcCtx.Config.AnalyzeJobConf.WithDefaults()
+	if !analyzeConf.Enabled || strings.TrimSpace(jobConf.Image) == "" {
+		return nil, nil
+	}
+	task, err := l.svcCtx.DB.AnalyzeTask.Query().
+		Where(analyzetask.HasMatchRoundWith(matchround.ID(roundID)), analyzetask.RoleEQ(analyzeConf.Role)).
+		Only(l.ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, nil
+		}
+		return nil, errors.Wrap(err, "query analyze task")
+	}
+	return task, nil
 }
 
 func resolveWhisperServerURLs(urlLists ...[]string) []string {
@@ -579,26 +635,24 @@ func (l *DispatchLogic) dispatchCompletedSTTJobs() (int, error) {
 		if task == nil || task.Edges.MatchRound == nil {
 			continue
 		}
+		if ready, err := l.roundAnalyzeReady(task.Edges.MatchRound.ID); err != nil {
+			return created, err
+		} else if !ready {
+			continue
+		}
 		roundDir := filepath.Dir(storagepath.Resolve(conf.BaseDir, artifact.Path))
-		status := stttask.StatusPENDING
 		sttPath := filepath.Join(roundDir, "stt.jsonl")
 		subtitlePath := filepath.Join(roundDir, fmt.Sprintf("%s.srt", conf.STTRole))
-		if fileExists(sttPath) {
-			status = stttask.StatusSUCCEEDED
-		}
 		builder := l.svcCtx.DB.STTTask.Create().
 			SetMatchRoundID(task.Edges.MatchRound.ID).
 			SetSourceArtifactID(artifact.ID).
 			SetRole(conf.STTRole).
 			SetPriority(task.Priority).
-			SetStatus(status).
+			SetStatus(stttask.StatusPENDING).
 			SetSttPath(sttPath).
 			SetSubtitlePath(subtitlePath)
 		if task.CompletedAt != nil {
 			builder.SetCreatedAt(*task.CompletedAt)
-		}
-		if status == stttask.StatusSUCCEEDED {
-			builder.SetCompletedAt(time.Now())
 		}
 		err := builder.
 			OnConflictColumns(stttask.MatchRoundColumn, stttask.FieldRole).
@@ -610,6 +664,342 @@ func (l *DispatchLogic) dispatchCompletedSTTJobs() (int, error) {
 		created++
 	}
 	return created, nil
+}
+
+func (l *DispatchLogic) createAnalyzeTasks() (int, error) {
+	analyzeConf := l.svcCtx.Config.AnalyzeConf.WithDefaults()
+	jobConf := l.svcCtx.Config.AnalyzeJobConf.WithDefaults()
+	if !analyzeConf.Enabled || strings.TrimSpace(jobConf.Image) == "" {
+		return 0, nil
+	}
+	artifacts, err := l.svcCtx.DB.MediaArtifact.Query().
+		Where(
+			mediaartifact.KindEQ(mediaartifact.KindSource),
+			mediaartifact.StatusEQ(mediaartifact.StatusAVAILABLE),
+			mediaartifact.HasRecordTaskWith(
+				recordtask.StatusEQ(recordtask.StatusSUCCEEDED),
+				recordtask.RoleEQ(analyzeConf.Role),
+				recordtask.HasMatchRoundWith(matchround.StatusEQ(matchround.StatusENDED)),
+			),
+			mediaartifact.Not(mediaartifact.HasAnalyzeTasksWith(analyzetask.RoleEQ(analyzeConf.Role))),
+		).
+		WithRecordTask(func(q *ent.RecordTaskQuery) { q.WithMatchRound() }).
+		Order(mediaartifact.ByRecordTaskField(recordtask.FieldPriority, sql.OrderDesc()), mediaartifact.ByCreatedAt(sql.OrderDesc())).
+		Limit(100).
+		All(l.ctx)
+	if err != nil {
+		return 0, errors.Wrap(err, "query source artifacts for analyze")
+	}
+	created := 0
+	for _, artifact := range artifacts {
+		task := artifact.Edges.RecordTask
+		if task == nil || task.Edges.MatchRound == nil {
+			continue
+		}
+		builder := l.svcCtx.DB.AnalyzeTask.Create().
+			SetMatchRoundID(task.Edges.MatchRound.ID).
+			SetSourceArtifactID(artifact.ID).
+			SetRole(analyzeConf.Role).
+			SetPriority(task.Priority).
+			SetStatus(analyzetask.StatusPENDING)
+		if task.CompletedAt != nil {
+			builder.SetCreatedAt(*task.CompletedAt)
+		}
+		err := builder.
+			OnConflictColumns(analyzetask.MatchRoundColumn, analyzetask.FieldRole).
+			DoNothing().
+			Exec(l.ctx)
+		if err != nil && !ent.IsConstraintError(err) {
+			return created, errors.Wrap(err, "create analyze task")
+		}
+		created++
+	}
+	return created, nil
+}
+
+func (l *DispatchLogic) reconcileAnalyzeResults() error {
+	if l.svcCtx.K8s == nil {
+		return nil
+	}
+	tasks, err := l.svcCtx.DB.AnalyzeTask.Query().
+		Where(analyzetask.StatusEQ(analyzetask.StatusRUNNING)).
+		WithSourceArtifact().
+		WithMatchRound().
+		Limit(100).
+		All(l.ctx)
+	if err != nil {
+		return errors.Wrap(err, "query running analyze tasks")
+	}
+	namespace := l.svcCtx.Config.AnalyzeJobConf.WithDefaults().Namespace
+	for _, task := range tasks {
+		name := jobName("analyze", task.ID)
+		if task.K8sJobName != nil && *task.K8sJobName != "" {
+			name = *task.K8sJobName
+		}
+		status, err := l.svcCtx.K8s.JobStatus(l.ctx, namespace, name)
+		if err != nil {
+			return err
+		}
+		if status.State == kubejob.JobStateRunning || status.State == kubejob.JobStateMissing {
+			continue
+		}
+		resultPath, errorPath, err := l.analyzeResultPaths(task)
+		if err != nil {
+			if err := l.failAnalyzeTask(task.ID, err.Error()); err != nil {
+				return err
+			}
+			continue
+		}
+		var result jobcontract.AnalyzeResult
+		if ok, err := jobcontract.ReadJSON(resultPath, &result); err != nil {
+			return err
+		} else if ok {
+			if err := l.applyAnalyzeResult(task.ID, result); err != nil {
+				return err
+			}
+			continue
+		}
+		var jobErr jobcontract.ErrorResult
+		if ok, err := jobcontract.ReadJSON(errorPath, &jobErr); err != nil {
+			return err
+		} else if ok {
+			if err := l.failAnalyzeTask(task.ID, jobErr.ErrorMessage); err != nil {
+				return err
+			}
+			continue
+		}
+		if err := l.failAnalyzeTask(task.ID, fmt.Sprintf("analyze job %s finished as %s but did not write result.json or error.json", name, status.State)); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (l *DispatchLogic) recoverAnalyzeDispatching() error {
+	if l.svcCtx.K8s == nil {
+		return nil
+	}
+	tasks, err := l.svcCtx.DB.AnalyzeTask.Query().
+		Where(analyzetask.StatusEQ(analyzetask.StatusDISPATCHING), analyzetask.UpdatedAtLTE(time.Now().Add(-dispatchingStaleAfter))).
+		Limit(100).
+		All(l.ctx)
+	if err != nil {
+		return errors.Wrap(err, "query stale dispatching analyze tasks")
+	}
+	namespace := l.svcCtx.Config.AnalyzeJobConf.WithDefaults().Namespace
+	for _, task := range tasks {
+		name := jobName("analyze", task.ID)
+		if task.K8sJobName != nil && *task.K8sJobName != "" {
+			name = *task.K8sJobName
+		}
+		exists, err := l.svcCtx.K8s.JobExists(l.ctx, namespace, name)
+		if err != nil {
+			return err
+		}
+		if exists {
+			if err := l.svcCtx.DB.AnalyzeTask.UpdateOneID(task.ID).SetStatus(analyzetask.StatusRUNNING).SetStartedAt(time.Now()).Exec(l.ctx); err != nil {
+				return errors.Wrap(err, "recover running analyze task")
+			}
+			continue
+		}
+		if err := l.svcCtx.DB.AnalyzeTask.UpdateOneID(task.ID).SetStatus(analyzetask.StatusPENDING).ClearK8sJobName().Exec(l.ctx); err != nil {
+			return errors.Wrap(err, "requeue stale analyze task")
+		}
+	}
+	return nil
+}
+
+func (l *DispatchLogic) recoverLostAnalyzeJobs() error {
+	if l.svcCtx.K8s == nil {
+		return nil
+	}
+	tasks, err := l.svcCtx.DB.AnalyzeTask.Query().
+		Where(analyzetask.StatusEQ(analyzetask.StatusRUNNING), analyzetask.UpdatedAtLTE(time.Now().Add(-dispatchingStaleAfter))).
+		Limit(100).
+		All(l.ctx)
+	if err != nil {
+		return errors.Wrap(err, "query stale running analyze tasks")
+	}
+	namespace := l.svcCtx.Config.AnalyzeJobConf.WithDefaults().Namespace
+	for _, task := range tasks {
+		name := jobName("analyze", task.ID)
+		if task.K8sJobName != nil && *task.K8sJobName != "" {
+			name = *task.K8sJobName
+		}
+		exists, err := l.svcCtx.K8s.JobExists(l.ctx, namespace, name)
+		if err != nil {
+			return err
+		}
+		if exists {
+			continue
+		}
+		if err := l.svcCtx.DB.AnalyzeTask.UpdateOneID(task.ID).SetStatus(analyzetask.StatusPENDING).ClearK8sJobName().Exec(l.ctx); err != nil {
+			return errors.Wrap(err, "requeue lost analyze task")
+		}
+	}
+	return nil
+}
+
+func (l *DispatchLogic) dispatchPendingAnalyzeJobs() (int, error) {
+	analyzeConf := l.svcCtx.Config.AnalyzeConf.WithDefaults()
+	jobConf := l.svcCtx.Config.AnalyzeJobConf.WithDefaults()
+	if l.svcCtx.K8s == nil || !analyzeConf.Enabled || strings.TrimSpace(jobConf.Image) == "" {
+		return 0, nil
+	}
+	active, err := l.svcCtx.DB.AnalyzeTask.Query().
+		Where(analyzetask.StatusIn(analyzetask.StatusDISPATCHING, analyzetask.StatusRUNNING)).
+		Count(l.ctx)
+	if err != nil {
+		return 0, errors.Wrap(err, "count running analyze tasks")
+	}
+	available := analyzeConf.MaxConcurrentJobs - active
+	if available <= 0 {
+		return 0, nil
+	}
+	tasks, err := l.svcCtx.DB.AnalyzeTask.Query().
+		Where(analyzetask.StatusEQ(analyzetask.StatusPENDING)).
+		WithSourceArtifact().
+		WithMatchRound().
+		Order(analyzetask.ByPriority(sql.OrderDesc()), analyzetask.ByCreatedAt(sql.OrderDesc())).
+		Limit(available).
+		All(l.ctx)
+	if err != nil {
+		return 0, errors.Wrap(err, "query pending analyze tasks")
+	}
+	dispatched := 0
+	for _, task := range tasks {
+		name := jobName("analyze", task.ID)
+		jobCtx, err := l.analyzeContext(task)
+		if err != nil {
+			if err := l.failAnalyzeTask(task.ID, err.Error()); err != nil {
+				return dispatched, err
+			}
+			continue
+		}
+		rawCtx, err := json.Marshal(jobCtx)
+		if err != nil {
+			return dispatched, errors.Wrap(err, "encode analyze job context")
+		}
+		claimed, err := l.svcCtx.DB.AnalyzeTask.Update().
+			Where(analyzetask.ID(task.ID), analyzetask.StatusEQ(analyzetask.StatusPENDING)).
+			SetStatus(analyzetask.StatusDISPATCHING).
+			AddAttempts(1).
+			SetK8sJobName(name).
+			Save(l.ctx)
+		if err != nil {
+			return dispatched, errors.Wrap(err, "mark analyze dispatching")
+		}
+		if claimed == 0 {
+			continue
+		}
+		job := kubejob.Build(l.svcCtx.Config.AnalyzeJobConf, kubejob.JobSpec{
+			Name:              name,
+			App:               "analyze-job",
+			Image:             jobConf.Image,
+			Env:               map[string]string{jobcontract.EnvName: string(rawCtx)},
+			CPU:               "500m",
+			Memory:            "1Gi",
+			CPULimit:          "2",
+			MemLimit:          "2Gi",
+			PriorityClassName: kubejob.PriorityClassBackground,
+		})
+		if err := l.svcCtx.K8s.CreateJob(l.ctx, jobConf.Namespace, job); err != nil {
+			_ = l.svcCtx.DB.AnalyzeTask.UpdateOneID(task.ID).SetStatus(analyzetask.StatusFAILED).SetErrorMessage(err.Error()).SetCompletedAt(time.Now()).Exec(l.ctx)
+			return dispatched, err
+		}
+		if err := l.svcCtx.DB.AnalyzeTask.UpdateOneID(task.ID).SetStatus(analyzetask.StatusRUNNING).SetStartedAt(time.Now()).Exec(l.ctx); err != nil {
+			return dispatched, errors.Wrap(err, "mark analyze running")
+		}
+		dispatched++
+		l.Infof("dispatched analyze job task=%d round=%d artifact=%d job=%s source=%s", task.ID, jobCtx.MatchRoundID, jobCtx.SourceArtifactID, name, jobCtx.SourcePath)
+	}
+	return dispatched, nil
+}
+
+func (l *DispatchLogic) analyzeContext(task *ent.AnalyzeTask) (jobcontract.AnalyzeContext, error) {
+	conf := l.svcCtx.Config.RecordConf.WithDefaults()
+	analyzeConf := l.svcCtx.Config.AnalyzeConf.WithDefaults()
+	ocrConf := l.svcCtx.Config.OCRServerConf.WithDefaults()
+	artifact := task.Edges.SourceArtifact
+	r := task.Edges.MatchRound
+	if artifact == nil || r == nil {
+		return jobcontract.AnalyzeContext{}, errors.New("analyze task missing source artifact or round")
+	}
+	sourcePath := storagepath.Resolve(conf.BaseDir, artifact.Path)
+	scan := analyzeConf.Scan.WithDefaults()
+	return jobcontract.AnalyzeContext{
+		Schema:            "rm-monitor/analyze-context/v1",
+		AnalyzeTaskID:     task.ID,
+		MatchRoundID:      r.ID,
+		SourceArtifactID:  artifact.ID,
+		SourcePath:        sourcePath,
+		RoundDir:          filepath.Dir(sourcePath),
+		Role:              analyzeConf.Role,
+		OCRServerURL:      strings.TrimRight(ocrConf.BaseURL, "/"),
+		OCRTimeoutSeconds: ocrConf.TimeoutSeconds,
+		Scan: jobcontract.AnalyzeScanContext{
+			FPS:                           scan.FPS,
+			Width:                         scan.Width,
+			Height:                        scan.Height,
+			MaxStartScanSeconds:           scan.MaxStartScanSeconds,
+			MaxSettlementScanSeconds:      scan.MaxSettlementScanSeconds,
+			SettlementChunkSeconds:        scan.SettlementChunkSeconds,
+			MinSettlementSecond:           scan.MinSettlementSecond,
+			MinRoundSeconds:               scan.MinRoundSeconds,
+			SettlementTailSeconds:         scan.SettlementTailSeconds,
+			SettlementRefineWindowSeconds: scan.SettlementRefineWindowSeconds,
+			SettlementRefineFPS:           scan.SettlementRefineFPS,
+		},
+	}, nil
+}
+
+func (l *DispatchLogic) analyzeResultPaths(task *ent.AnalyzeTask) (string, string, error) {
+	jobCtx, err := l.analyzeContext(task)
+	if err != nil {
+		return "", "", err
+	}
+	dir := filepath.Join(jobCtx.RoundDir, jobcontract.DirName, fmt.Sprintf("analyze-%d", jobCtx.AnalyzeTaskID))
+	return filepath.Join(dir, jobcontract.ResultFile), filepath.Join(dir, jobcontract.ErrorFile), nil
+}
+
+func (l *DispatchLogic) applyAnalyzeResult(taskID int, result jobcontract.AnalyzeResult) error {
+	completedAt := result.CompletedAt
+	if completedAt.IsZero() {
+		completedAt = time.Now()
+	}
+	status := analyzetask.SettlementStatusINVALID
+	if result.SettlementStatus == string(analyzetask.SettlementStatusCONFIRMED) {
+		status = analyzetask.SettlementStatusCONFIRMED
+	}
+	if err := l.svcCtx.DB.AnalyzeTask.UpdateOneID(taskID).
+		SetStatus(analyzetask.StatusSUCCEEDED).
+		SetRoundJSONPath(result.RoundJSONPath).
+		SetSettlementImagePath(result.SettlementImagePath).
+		SetSettlementStatus(status).
+		SetEffectiveStartSeconds(result.EffectiveStartSeconds).
+		SetEffectiveEndSeconds(result.EffectiveEndSeconds).
+		SetCompletedAt(completedAt).
+		ClearErrorMessage().
+		Exec(l.ctx); err != nil {
+		return errors.Wrap(err, "mark analyze succeeded")
+	}
+	if result.MatchRoundID != 0 {
+		_ = db.Notify(l.ctx, l.svcCtx.Config.PostgresConf.DSN, db.MatchRoundChangedChannel, strconv.Itoa(result.MatchRoundID))
+	}
+	return nil
+}
+
+func (l *DispatchLogic) failAnalyzeTask(taskID int, msg string) error {
+	msg = jobcontract.Tail(msg, 4096)
+	if err := l.svcCtx.DB.AnalyzeTask.UpdateOneID(taskID).
+		SetStatus(analyzetask.StatusFAILED).
+		SetSettlementStatus(analyzetask.SettlementStatusINVALID).
+		SetErrorMessage(msg).
+		SetCompletedAt(time.Now()).
+		Exec(l.ctx); err != nil {
+		return errors.Wrap(err, "mark analyze failed")
+	}
+	return nil
 }
 
 func (l *DispatchLogic) reconcileSTTResults() error {
@@ -773,6 +1163,17 @@ func (l *DispatchLogic) dispatchPendingSTTJobs() (int, error) {
 	}
 	dispatched := 0
 	for _, task := range tasks {
+		if task.Edges.MatchRound == nil {
+			if err := l.failSTTTask(task.ID, "stt task missing match round"); err != nil {
+				return dispatched, err
+			}
+			continue
+		}
+		if ready, err := l.roundAnalyzeReady(task.Edges.MatchRound.ID); err != nil {
+			return dispatched, err
+		} else if !ready {
+			continue
+		}
 		name := jobName("stt", task.ID)
 		jobCtx, err := l.sttContext(conf, task)
 		if err != nil {
@@ -998,7 +1399,14 @@ func (l *DispatchLogic) dispatchCompletedManifestJobs() (int, error) {
 		if !completedMatch(m) {
 			continue
 		}
-		ready, err := l.matchSTTReady(m)
+		ready, err := l.matchAnalyzeReady(m)
+		if err != nil {
+			return created, err
+		}
+		if !ready {
+			continue
+		}
+		ready, err = l.matchSTTReady(m)
 		if err != nil {
 			return created, err
 		}
@@ -1049,6 +1457,40 @@ func (l *DispatchLogic) dispatchCompletedManifestJobs() (int, error) {
 		created++
 	}
 	return created, nil
+}
+
+func (l *DispatchLogic) matchAnalyzeReady(m *ent.Match) (bool, error) {
+	analyzeConf := l.svcCtx.Config.AnalyzeConf.WithDefaults()
+	jobConf := l.svcCtx.Config.AnalyzeJobConf.WithDefaults()
+	if !analyzeConf.Enabled || strings.TrimSpace(jobConf.Image) == "" {
+		return true, nil
+	}
+	for _, r := range m.Edges.Rounds {
+		ready, err := l.roundAnalyzeReady(r.ID)
+		if err != nil {
+			return false, err
+		}
+		if !ready {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
+func (l *DispatchLogic) roundAnalyzeReady(roundID int) (bool, error) {
+	task, err := l.roundAnalyzeTask(roundID)
+	if err != nil {
+		return false, err
+	}
+	if task == nil {
+		return !l.svcCtx.Config.AnalyzeConf.WithDefaults().Enabled, nil
+	}
+	switch task.Status {
+	case analyzetask.StatusSUCCEEDED, analyzetask.StatusFAILED:
+		return true, nil
+	default:
+		return false, nil
+	}
 }
 
 func (l *DispatchLogic) matchSTTReady(m *ent.Match) (bool, error) {

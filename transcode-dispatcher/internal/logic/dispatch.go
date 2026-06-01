@@ -13,7 +13,10 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"github.com/pkg/errors"
 	"scutbot.cn/web/rm-monitor/ent"
+	"scutbot.cn/web/rm-monitor/ent/analyzetask"
+	"scutbot.cn/web/rm-monitor/ent/matchround"
 	"scutbot.cn/web/rm-monitor/ent/mediaartifact"
+	"scutbot.cn/web/rm-monitor/ent/predicate"
 	"scutbot.cn/web/rm-monitor/ent/recordtask"
 	"scutbot.cn/web/rm-monitor/ent/transcodetask"
 	"scutbot.cn/web/rm-monitor/pkg/db"
@@ -52,12 +55,20 @@ func (l *DispatchLogic) Tick() error {
 }
 
 func (l *DispatchLogic) createTranscodeTasks() error {
+	preds := []predicate.MediaArtifact{
+		mediaartifact.KindEQ(mediaartifact.KindSource),
+		mediaartifact.StatusEQ(mediaartifact.StatusAVAILABLE),
+		mediaartifact.Not(mediaartifact.HasSourceTranscodeTask()),
+	}
+	analyzeConf := l.svcCtx.Config.AnalyzeConf.WithDefaults()
+	if analyzeConf.Enabled {
+		preds = append(preds, mediaartifact.HasAnalyzeTasksWith(
+			analyzetask.RoleEQ(analyzeConf.Role),
+			analyzetask.StatusIn(analyzetask.StatusSUCCEEDED, analyzetask.StatusFAILED),
+		))
+	}
 	artifacts, err := l.svcCtx.DB.MediaArtifact.Query().
-		Where(
-			mediaartifact.KindEQ(mediaartifact.KindSource),
-			mediaartifact.StatusEQ(mediaartifact.StatusAVAILABLE),
-			mediaartifact.Not(mediaartifact.HasSourceTranscodeTask()),
-		).
+		Where(preds...).
 		WithRecordTask().
 		Order(mediaartifact.ByRecordTaskField(recordtask.FieldPriority, sql.OrderDesc()), mediaartifact.ByCreatedAt()).
 		Limit(100).
@@ -230,7 +241,7 @@ func (l *DispatchLogic) dispatchPending() error {
 	tasks, err := l.svcCtx.DB.TranscodeTask.Query().
 		Where(transcodetask.StatusEQ(transcodetask.StatusPENDING)).
 		WithSourceArtifact(func(q *ent.MediaArtifactQuery) {
-			q.WithRecordTask()
+			q.WithRecordTask(func(q *ent.RecordTaskQuery) { q.WithMatchRound() })
 		}).
 		Order(transcodetask.ByPriority(sql.OrderDesc()), transcodetask.ByCreatedAt()).
 		Limit(limit).
@@ -240,6 +251,11 @@ func (l *DispatchLogic) dispatchPending() error {
 	}
 	jobConf := l.svcCtx.Config.K8sJobConf.WithDefaults()
 	for _, task := range tasks {
+		if ready, err := l.sourceAnalyzeReady(task.Edges.SourceArtifact); err != nil {
+			return err
+		} else if !ready {
+			continue
+		}
 		jobName := jobName("transcode", task.ID)
 		jobCtx, err := l.transcodeContext(task)
 		if err != nil {
@@ -291,6 +307,29 @@ func (l *DispatchLogic) dispatchPending() error {
 	return nil
 }
 
+func (l *DispatchLogic) sourceAnalyzeReady(source *ent.MediaArtifact) (bool, error) {
+	analyzeConf := l.svcCtx.Config.AnalyzeConf.WithDefaults()
+	if !analyzeConf.Enabled {
+		return true, nil
+	}
+	if source == nil || source.Edges.RecordTask == nil || source.Edges.RecordTask.Edges.MatchRound == nil {
+		return false, nil
+	}
+	task, err := l.svcCtx.DB.AnalyzeTask.Query().
+		Where(
+			analyzetask.HasMatchRoundWith(matchround.ID(source.Edges.RecordTask.Edges.MatchRound.ID)),
+			analyzetask.RoleEQ(analyzeConf.Role),
+		).
+		Only(l.ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return false, nil
+		}
+		return false, errors.Wrap(err, "query analyze task")
+	}
+	return task.Status == analyzetask.StatusSUCCEEDED || task.Status == analyzetask.StatusFAILED, nil
+}
+
 func (l *DispatchLogic) transcodeContext(task *ent.TranscodeTask) (jobcontract.TranscodeContext, error) {
 	source := task.Edges.SourceArtifact
 	if source == nil || source.Edges.RecordTask == nil {
@@ -302,7 +341,7 @@ func (l *DispatchLogic) transcodeContext(task *ent.TranscodeTask) (jobcontract.T
 		return jobcontract.TranscodeContext{}, err
 	}
 	archiveRel := strings.TrimSuffix(sourceRel, pathpkg.Ext(sourceRel)) + ".mp4"
-	return jobcontract.TranscodeContext{
+	ctx := jobcontract.TranscodeContext{
 		Schema:              "rm-monitor/transcode-context/v1",
 		TaskID:              task.ID,
 		SourceArtifactID:    source.ID,
@@ -311,7 +350,29 @@ func (l *DispatchLogic) transcodeContext(task *ent.TranscodeTask) (jobcontract.T
 		ArchivePath:         archiveRel,
 		BaseDir:             conf.BaseDir,
 		SourceRetentionDays: conf.SourceRetentionDays,
-	}, nil
+		Role:                source.Edges.RecordTask.Role,
+		RoundDir:            filepath.Join(conf.BaseDir, filepath.FromSlash(pathpkg.Dir(sourceRel))),
+	}
+	if source.Edges.RecordTask.Edges.MatchRound != nil {
+		analyzeConf := l.svcCtx.Config.AnalyzeConf.WithDefaults()
+		if analyzeConf.Enabled {
+			analyzeTask, err := l.svcCtx.DB.AnalyzeTask.Query().
+				Where(
+					analyzetask.HasMatchRoundWith(matchround.ID(source.Edges.RecordTask.Edges.MatchRound.ID)),
+					analyzetask.RoleEQ(analyzeConf.Role),
+				).
+				Only(l.ctx)
+			if err != nil {
+				if !ent.IsNotFound(err) {
+					return jobcontract.TranscodeContext{}, errors.Wrap(err, "query analyze task")
+				}
+			} else if analyzeTask.Status == analyzetask.StatusSUCCEEDED && analyzeTask.EffectiveStartSeconds != nil && analyzeTask.EffectiveEndSeconds != nil && *analyzeTask.EffectiveEndSeconds > *analyzeTask.EffectiveStartSeconds {
+				ctx.TrimStartSeconds = analyzeTask.EffectiveStartSeconds
+				ctx.TrimEndSeconds = analyzeTask.EffectiveEndSeconds
+			}
+		}
+	}
+	return ctx, nil
 }
 
 func (l *DispatchLogic) transcodeResultPaths(task *ent.TranscodeTask) (string, string, error) {

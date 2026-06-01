@@ -9,30 +9,36 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
+	"scutbot.cn/web/rm-monitor/ent/analyzetask"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
 	"scutbot.cn/web/rm-monitor/ent/mediaartifact"
-	"scutbot.cn/web/rm-monitor/ent/ocrtask"
 )
 
-// OCRTask is the model entity for the OCRTask schema.
-type OCRTask struct {
+// AnalyzeTask is the model entity for the AnalyzeTask schema.
+type AnalyzeTask struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID int `json:"id,omitempty"`
 	// Role holds the value of the "role" field.
 	Role string `json:"role,omitempty"`
 	// Status holds the value of the "status" field.
-	Status ocrtask.Status `json:"status,omitempty"`
+	Status analyzetask.Status `json:"status,omitempty"`
 	// Priority holds the value of the "priority" field.
 	Priority int `json:"priority,omitempty"`
 	// K8sJobName holds the value of the "k8s_job_name" field.
 	K8sJobName *string `json:"k8s_job_name,omitempty"`
 	// Attempts holds the value of the "attempts" field.
 	Attempts int `json:"attempts,omitempty"`
-	// SettlementPath holds the value of the "settlement_path" field.
-	SettlementPath *string `json:"settlement_path,omitempty"`
-	// SettlementJSON holds the value of the "settlement_json" field.
-	SettlementJSON *string `json:"settlement_json,omitempty"`
+	// RoundJSONPath holds the value of the "round_json_path" field.
+	RoundJSONPath *string `json:"round_json_path,omitempty"`
+	// SettlementImagePath holds the value of the "settlement_image_path" field.
+	SettlementImagePath *string `json:"settlement_image_path,omitempty"`
+	// SettlementStatus holds the value of the "settlement_status" field.
+	SettlementStatus *analyzetask.SettlementStatus `json:"settlement_status,omitempty"`
+	// EffectiveStartSeconds holds the value of the "effective_start_seconds" field.
+	EffectiveStartSeconds *float64 `json:"effective_start_seconds,omitempty"`
+	// EffectiveEndSeconds holds the value of the "effective_end_seconds" field.
+	EffectiveEndSeconds *float64 `json:"effective_end_seconds,omitempty"`
 	// ErrorMessage holds the value of the "error_message" field.
 	ErrorMessage *string `json:"error_message,omitempty"`
 	// StartedAt holds the value of the "started_at" field.
@@ -44,15 +50,15 @@ type OCRTask struct {
 	// UpdatedAt holds the value of the "updated_at" field.
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
-	// The values are being populated by the OCRTaskQuery when eager-loading is set.
-	Edges                    OCRTaskEdges `json:"edges"`
-	match_round_ocr_tasks    *int
-	media_artifact_ocr_tasks *int
-	selectValues             sql.SelectValues
+	// The values are being populated by the AnalyzeTaskQuery when eager-loading is set.
+	Edges                        AnalyzeTaskEdges `json:"edges"`
+	match_round_analyze_tasks    *int
+	media_artifact_analyze_tasks *int
+	selectValues                 sql.SelectValues
 }
 
-// OCRTaskEdges holds the relations/edges for other nodes in the graph.
-type OCRTaskEdges struct {
+// AnalyzeTaskEdges holds the relations/edges for other nodes in the graph.
+type AnalyzeTaskEdges struct {
 	// MatchRound holds the value of the match_round edge.
 	MatchRound *MatchRound `json:"match_round,omitempty"`
 	// SourceArtifact holds the value of the source_artifact edge.
@@ -64,7 +70,7 @@ type OCRTaskEdges struct {
 
 // MatchRoundOrErr returns the MatchRound value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e OCRTaskEdges) MatchRoundOrErr() (*MatchRound, error) {
+func (e AnalyzeTaskEdges) MatchRoundOrErr() (*MatchRound, error) {
 	if e.MatchRound != nil {
 		return e.MatchRound, nil
 	} else if e.loadedTypes[0] {
@@ -75,7 +81,7 @@ func (e OCRTaskEdges) MatchRoundOrErr() (*MatchRound, error) {
 
 // SourceArtifactOrErr returns the SourceArtifact value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e OCRTaskEdges) SourceArtifactOrErr() (*MediaArtifact, error) {
+func (e AnalyzeTaskEdges) SourceArtifactOrErr() (*MediaArtifact, error) {
 	if e.SourceArtifact != nil {
 		return e.SourceArtifact, nil
 	} else if e.loadedTypes[1] {
@@ -85,19 +91,21 @@ func (e OCRTaskEdges) SourceArtifactOrErr() (*MediaArtifact, error) {
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
-func (*OCRTask) scanValues(columns []string) ([]any, error) {
+func (*AnalyzeTask) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case ocrtask.FieldID, ocrtask.FieldPriority, ocrtask.FieldAttempts:
+		case analyzetask.FieldEffectiveStartSeconds, analyzetask.FieldEffectiveEndSeconds:
+			values[i] = new(sql.NullFloat64)
+		case analyzetask.FieldID, analyzetask.FieldPriority, analyzetask.FieldAttempts:
 			values[i] = new(sql.NullInt64)
-		case ocrtask.FieldRole, ocrtask.FieldStatus, ocrtask.FieldK8sJobName, ocrtask.FieldSettlementPath, ocrtask.FieldSettlementJSON, ocrtask.FieldErrorMessage:
+		case analyzetask.FieldRole, analyzetask.FieldStatus, analyzetask.FieldK8sJobName, analyzetask.FieldRoundJSONPath, analyzetask.FieldSettlementImagePath, analyzetask.FieldSettlementStatus, analyzetask.FieldErrorMessage:
 			values[i] = new(sql.NullString)
-		case ocrtask.FieldStartedAt, ocrtask.FieldCompletedAt, ocrtask.FieldCreatedAt, ocrtask.FieldUpdatedAt:
+		case analyzetask.FieldStartedAt, analyzetask.FieldCompletedAt, analyzetask.FieldCreatedAt, analyzetask.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
-		case ocrtask.ForeignKeys[0]: // match_round_ocr_tasks
+		case analyzetask.ForeignKeys[0]: // match_round_analyze_tasks
 			values[i] = new(sql.NullInt64)
-		case ocrtask.ForeignKeys[1]: // media_artifact_ocr_tasks
+		case analyzetask.ForeignKeys[1]: // media_artifact_analyze_tasks
 			values[i] = new(sql.NullInt64)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -107,110 +115,131 @@ func (*OCRTask) scanValues(columns []string) ([]any, error) {
 }
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
-// to the OCRTask fields.
-func (_m *OCRTask) assignValues(columns []string, values []any) error {
+// to the AnalyzeTask fields.
+func (_m *AnalyzeTask) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
 	for i := range columns {
 		switch columns[i] {
-		case ocrtask.FieldID:
+		case analyzetask.FieldID:
 			value, ok := values[i].(*sql.NullInt64)
 			if !ok {
 				return fmt.Errorf("unexpected type %T for field id", value)
 			}
 			_m.ID = int(value.Int64)
-		case ocrtask.FieldRole:
+		case analyzetask.FieldRole:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field role", values[i])
 			} else if value.Valid {
 				_m.Role = value.String
 			}
-		case ocrtask.FieldStatus:
+		case analyzetask.FieldStatus:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field status", values[i])
 			} else if value.Valid {
-				_m.Status = ocrtask.Status(value.String)
+				_m.Status = analyzetask.Status(value.String)
 			}
-		case ocrtask.FieldPriority:
+		case analyzetask.FieldPriority:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for field priority", values[i])
 			} else if value.Valid {
 				_m.Priority = int(value.Int64)
 			}
-		case ocrtask.FieldK8sJobName:
+		case analyzetask.FieldK8sJobName:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field k8s_job_name", values[i])
 			} else if value.Valid {
 				_m.K8sJobName = new(string)
 				*_m.K8sJobName = value.String
 			}
-		case ocrtask.FieldAttempts:
+		case analyzetask.FieldAttempts:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for field attempts", values[i])
 			} else if value.Valid {
 				_m.Attempts = int(value.Int64)
 			}
-		case ocrtask.FieldSettlementPath:
+		case analyzetask.FieldRoundJSONPath:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field settlement_path", values[i])
+				return fmt.Errorf("unexpected type %T for field round_json_path", values[i])
 			} else if value.Valid {
-				_m.SettlementPath = new(string)
-				*_m.SettlementPath = value.String
+				_m.RoundJSONPath = new(string)
+				*_m.RoundJSONPath = value.String
 			}
-		case ocrtask.FieldSettlementJSON:
+		case analyzetask.FieldSettlementImagePath:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field settlement_json", values[i])
+				return fmt.Errorf("unexpected type %T for field settlement_image_path", values[i])
 			} else if value.Valid {
-				_m.SettlementJSON = new(string)
-				*_m.SettlementJSON = value.String
+				_m.SettlementImagePath = new(string)
+				*_m.SettlementImagePath = value.String
 			}
-		case ocrtask.FieldErrorMessage:
+		case analyzetask.FieldSettlementStatus:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field settlement_status", values[i])
+			} else if value.Valid {
+				_m.SettlementStatus = new(analyzetask.SettlementStatus)
+				*_m.SettlementStatus = analyzetask.SettlementStatus(value.String)
+			}
+		case analyzetask.FieldEffectiveStartSeconds:
+			if value, ok := values[i].(*sql.NullFloat64); !ok {
+				return fmt.Errorf("unexpected type %T for field effective_start_seconds", values[i])
+			} else if value.Valid {
+				_m.EffectiveStartSeconds = new(float64)
+				*_m.EffectiveStartSeconds = value.Float64
+			}
+		case analyzetask.FieldEffectiveEndSeconds:
+			if value, ok := values[i].(*sql.NullFloat64); !ok {
+				return fmt.Errorf("unexpected type %T for field effective_end_seconds", values[i])
+			} else if value.Valid {
+				_m.EffectiveEndSeconds = new(float64)
+				*_m.EffectiveEndSeconds = value.Float64
+			}
+		case analyzetask.FieldErrorMessage:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field error_message", values[i])
 			} else if value.Valid {
 				_m.ErrorMessage = new(string)
 				*_m.ErrorMessage = value.String
 			}
-		case ocrtask.FieldStartedAt:
+		case analyzetask.FieldStartedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field started_at", values[i])
 			} else if value.Valid {
 				_m.StartedAt = new(time.Time)
 				*_m.StartedAt = value.Time
 			}
-		case ocrtask.FieldCompletedAt:
+		case analyzetask.FieldCompletedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field completed_at", values[i])
 			} else if value.Valid {
 				_m.CompletedAt = new(time.Time)
 				*_m.CompletedAt = value.Time
 			}
-		case ocrtask.FieldCreatedAt:
+		case analyzetask.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
 			} else if value.Valid {
 				_m.CreatedAt = value.Time
 			}
-		case ocrtask.FieldUpdatedAt:
+		case analyzetask.FieldUpdatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
 			} else if value.Valid {
 				_m.UpdatedAt = value.Time
 			}
-		case ocrtask.ForeignKeys[0]:
+		case analyzetask.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for edge-field match_round_ocr_tasks", value)
+				return fmt.Errorf("unexpected type %T for edge-field match_round_analyze_tasks", value)
 			} else if value.Valid {
-				_m.match_round_ocr_tasks = new(int)
-				*_m.match_round_ocr_tasks = int(value.Int64)
+				_m.match_round_analyze_tasks = new(int)
+				*_m.match_round_analyze_tasks = int(value.Int64)
 			}
-		case ocrtask.ForeignKeys[1]:
+		case analyzetask.ForeignKeys[1]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for edge-field media_artifact_ocr_tasks", value)
+				return fmt.Errorf("unexpected type %T for edge-field media_artifact_analyze_tasks", value)
 			} else if value.Valid {
-				_m.media_artifact_ocr_tasks = new(int)
-				*_m.media_artifact_ocr_tasks = int(value.Int64)
+				_m.media_artifact_analyze_tasks = new(int)
+				*_m.media_artifact_analyze_tasks = int(value.Int64)
 			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
@@ -219,44 +248,44 @@ func (_m *OCRTask) assignValues(columns []string, values []any) error {
 	return nil
 }
 
-// Value returns the ent.Value that was dynamically selected and assigned to the OCRTask.
+// Value returns the ent.Value that was dynamically selected and assigned to the AnalyzeTask.
 // This includes values selected through modifiers, order, etc.
-func (_m *OCRTask) Value(name string) (ent.Value, error) {
+func (_m *AnalyzeTask) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
 }
 
-// QueryMatchRound queries the "match_round" edge of the OCRTask entity.
-func (_m *OCRTask) QueryMatchRound() *MatchRoundQuery {
-	return NewOCRTaskClient(_m.config).QueryMatchRound(_m)
+// QueryMatchRound queries the "match_round" edge of the AnalyzeTask entity.
+func (_m *AnalyzeTask) QueryMatchRound() *MatchRoundQuery {
+	return NewAnalyzeTaskClient(_m.config).QueryMatchRound(_m)
 }
 
-// QuerySourceArtifact queries the "source_artifact" edge of the OCRTask entity.
-func (_m *OCRTask) QuerySourceArtifact() *MediaArtifactQuery {
-	return NewOCRTaskClient(_m.config).QuerySourceArtifact(_m)
+// QuerySourceArtifact queries the "source_artifact" edge of the AnalyzeTask entity.
+func (_m *AnalyzeTask) QuerySourceArtifact() *MediaArtifactQuery {
+	return NewAnalyzeTaskClient(_m.config).QuerySourceArtifact(_m)
 }
 
-// Update returns a builder for updating this OCRTask.
-// Note that you need to call OCRTask.Unwrap() before calling this method if this OCRTask
+// Update returns a builder for updating this AnalyzeTask.
+// Note that you need to call AnalyzeTask.Unwrap() before calling this method if this AnalyzeTask
 // was returned from a transaction, and the transaction was committed or rolled back.
-func (_m *OCRTask) Update() *OCRTaskUpdateOne {
-	return NewOCRTaskClient(_m.config).UpdateOne(_m)
+func (_m *AnalyzeTask) Update() *AnalyzeTaskUpdateOne {
+	return NewAnalyzeTaskClient(_m.config).UpdateOne(_m)
 }
 
-// Unwrap unwraps the OCRTask entity that was returned from a transaction after it was closed,
+// Unwrap unwraps the AnalyzeTask entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
-func (_m *OCRTask) Unwrap() *OCRTask {
+func (_m *AnalyzeTask) Unwrap() *AnalyzeTask {
 	_tx, ok := _m.config.driver.(*txDriver)
 	if !ok {
-		panic("ent: OCRTask is not a transactional entity")
+		panic("ent: AnalyzeTask is not a transactional entity")
 	}
 	_m.config.driver = _tx.drv
 	return _m
 }
 
 // String implements the fmt.Stringer.
-func (_m *OCRTask) String() string {
+func (_m *AnalyzeTask) String() string {
 	var builder strings.Builder
-	builder.WriteString("OCRTask(")
+	builder.WriteString("AnalyzeTask(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
 	builder.WriteString("role=")
 	builder.WriteString(_m.Role)
@@ -275,14 +304,29 @@ func (_m *OCRTask) String() string {
 	builder.WriteString("attempts=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Attempts))
 	builder.WriteString(", ")
-	if v := _m.SettlementPath; v != nil {
-		builder.WriteString("settlement_path=")
+	if v := _m.RoundJSONPath; v != nil {
+		builder.WriteString("round_json_path=")
 		builder.WriteString(*v)
 	}
 	builder.WriteString(", ")
-	if v := _m.SettlementJSON; v != nil {
-		builder.WriteString("settlement_json=")
+	if v := _m.SettlementImagePath; v != nil {
+		builder.WriteString("settlement_image_path=")
 		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	if v := _m.SettlementStatus; v != nil {
+		builder.WriteString("settlement_status=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	if v := _m.EffectiveStartSeconds; v != nil {
+		builder.WriteString("effective_start_seconds=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	if v := _m.EffectiveEndSeconds; v != nil {
+		builder.WriteString("effective_end_seconds=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
 	}
 	builder.WriteString(", ")
 	if v := _m.ErrorMessage; v != nil {
@@ -309,5 +353,5 @@ func (_m *OCRTask) String() string {
 	return builder.String()
 }
 
-// OCRTasks is a parsable slice of OCRTask.
-type OCRTasks []*OCRTask
+// AnalyzeTasks is a parsable slice of AnalyzeTask.
+type AnalyzeTasks []*AnalyzeTask

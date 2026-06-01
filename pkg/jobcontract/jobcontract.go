@@ -27,14 +27,18 @@ type ErrorResult struct {
 }
 
 type TranscodeContext struct {
-	Schema              string `json:"schema"`
-	TaskID              int    `json:"task_id"`
-	SourceArtifactID    int    `json:"source_artifact_id"`
-	RecordTaskID        int    `json:"record_task_id"`
-	SourcePath          string `json:"source_path"`
-	ArchivePath         string `json:"archive_path"`
-	BaseDir             string `json:"base_dir"`
-	SourceRetentionDays int    `json:"source_retention_days"`
+	Schema              string   `json:"schema"`
+	TaskID              int      `json:"task_id"`
+	SourceArtifactID    int      `json:"source_artifact_id"`
+	RecordTaskID        int      `json:"record_task_id"`
+	SourcePath          string   `json:"source_path"`
+	ArchivePath         string   `json:"archive_path"`
+	BaseDir             string   `json:"base_dir"`
+	SourceRetentionDays int      `json:"source_retention_days"`
+	RoundDir            string   `json:"round_dir,omitempty"`
+	Role                string   `json:"role,omitempty"`
+	TrimStartSeconds    *float64 `json:"trim_start_seconds,omitempty"`
+	TrimEndSeconds      *float64 `json:"trim_end_seconds,omitempty"`
 }
 
 type TranscodeResult struct {
@@ -107,6 +111,8 @@ type STTContext struct {
 	SubtitleName      string   `json:"subtitle_name"`
 	Prompt            string   `json:"prompt"`
 	WhisperServerURLs []string `json:"whisper_server_urls"`
+	TrimStartSeconds  *float64 `json:"trim_start_seconds,omitempty"`
+	TrimEndSeconds    *float64 `json:"trim_end_seconds,omitempty"`
 }
 
 type STTResult struct {
@@ -134,29 +140,44 @@ type DanmuResult struct {
 	CompletedAt  time.Time `json:"completed_at"`
 }
 
-type OCRContext struct {
-	Schema              string  `json:"schema"`
-	TaskID              int     `json:"task_id"`
-	MatchRoundID        int     `json:"match_round_id"`
-	SourceArtifactID    int     `json:"source_artifact_id"`
-	MatchID             string  `json:"match_id"`
-	RoundNo             int     `json:"round_no"`
-	Role                string  `json:"role"`
-	SourcePath          string  `json:"source_path"`
-	RoundDir            string  `json:"round_dir"`
-	BaseDir             string  `json:"base_dir"`
-	FrameInterval       int     `json:"frame_interval,omitempty"`
-	SimilarityThreshold float64 `json:"similarity_threshold,omitempty"`
+type AnalyzeScanContext struct {
+	FPS                           float64 `json:"fps"`
+	Width                         int     `json:"width"`
+	Height                        int     `json:"height"`
+	MaxStartScanSeconds           int     `json:"max_start_scan_seconds"`
+	MaxSettlementScanSeconds      int     `json:"max_settlement_scan_seconds"`
+	SettlementChunkSeconds        int     `json:"settlement_chunk_seconds"`
+	MinSettlementSecond           int     `json:"min_settlement_second"`
+	MinRoundSeconds               int     `json:"min_round_seconds"`
+	SettlementTailSeconds         int     `json:"settlement_tail_seconds"`
+	SettlementRefineWindowSeconds int     `json:"settlement_refine_window_seconds"`
+	SettlementRefineFPS           float64 `json:"settlement_refine_fps"`
 }
 
-type OCRResult struct {
-	Schema           string    `json:"schema"`
-	TaskID           int       `json:"task_id"`
-	MatchRoundID     int       `json:"match_round_id"`
-	SourceArtifactID int       `json:"source_artifact_id"`
-	SettlementPath   string    `json:"settlement_path,omitempty"`
-	SettlementJSON   string    `json:"settlement_json,omitempty"`
-	CompletedAt      time.Time `json:"completed_at"`
+type AnalyzeContext struct {
+	Schema            string             `json:"schema"`
+	AnalyzeTaskID     int                `json:"analyze_task_id"`
+	MatchRoundID      int                `json:"match_round_id"`
+	SourceArtifactID  int                `json:"source_artifact_id"`
+	SourcePath        string             `json:"source_path"`
+	RoundDir          string             `json:"round_dir"`
+	Role              string             `json:"role"`
+	OCRServerURL      string             `json:"ocr_server_url,omitempty"`
+	OCRTimeoutSeconds int                `json:"ocr_timeout_seconds,omitempty"`
+	Scan              AnalyzeScanContext `json:"scan"`
+}
+
+type AnalyzeResult struct {
+	Schema                string    `json:"schema"`
+	AnalyzeTaskID         int       `json:"analyze_task_id"`
+	MatchRoundID          int       `json:"match_round_id"`
+	SourceArtifactID      int       `json:"source_artifact_id"`
+	RoundJSONPath         string    `json:"round_json_path"`
+	SettlementImagePath   string    `json:"settlement_image_path,omitempty"`
+	SettlementStatus      string    `json:"settlement_status"`
+	EffectiveStartSeconds float64   `json:"effective_start_seconds"`
+	EffectiveEndSeconds   float64   `json:"effective_end_seconds"`
+	CompletedAt           time.Time `json:"completed_at"`
 }
 
 func ContextFromEnv(v any) error {

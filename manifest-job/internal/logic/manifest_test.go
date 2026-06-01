@@ -224,7 +224,7 @@ func TestBuildReportPayloadIncludesEvidence(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(roundDir, "stats", "online-count.json"), []byte(`{"points":[{"t":0,"online_count":12},{"t":10,"online_count":20}]}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(roundDir, "settlement.json"), []byte(`{"fields":{"red_score":"1"}}`), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(roundDir, "round.json"), []byte(`{"settlement":{"status":"CONFIRMED","ocr":{"fields":{"red_score":"1"}}}}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	highlightDir := filepath.Join(roundDir, "highlights", "Highlight-1")

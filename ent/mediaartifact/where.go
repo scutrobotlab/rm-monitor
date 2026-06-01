@@ -609,6 +609,29 @@ func HasSttTasksWith(preds ...predicate.STTTask) predicate.MediaArtifact {
 	})
 }
 
+// HasAnalyzeTasks applies the HasEdge predicate on the "analyze_tasks" edge.
+func HasAnalyzeTasks() predicate.MediaArtifact {
+	return predicate.MediaArtifact(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, AnalyzeTasksTable, AnalyzeTasksColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasAnalyzeTasksWith applies the HasEdge predicate on the "analyze_tasks" edge with a given conditions (other predicates).
+func HasAnalyzeTasksWith(preds ...predicate.AnalyzeTask) predicate.MediaArtifact {
+	return predicate.MediaArtifact(func(s *sql.Selector) {
+		step := newAnalyzeTasksStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // HasSourceTranscodeTask applies the HasEdge predicate on the "source_transcode_task" edge.
 func HasSourceTranscodeTask() predicate.MediaArtifact {
 	return predicate.MediaArtifact(func(s *sql.Selector) {
@@ -670,29 +693,6 @@ func HasHighlightClips() predicate.MediaArtifact {
 func HasHighlightClipsWith(preds ...predicate.HighlightClip) predicate.MediaArtifact {
 	return predicate.MediaArtifact(func(s *sql.Selector) {
 		step := newHighlightClipsStep()
-		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
-			for _, p := range preds {
-				p(s)
-			}
-		})
-	})
-}
-
-// HasOcrTasks applies the HasEdge predicate on the "ocr_tasks" edge.
-func HasOcrTasks() predicate.MediaArtifact {
-	return predicate.MediaArtifact(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, OcrTasksTable, OcrTasksColumn),
-		)
-		sqlgraph.HasNeighbors(s, step)
-	})
-}
-
-// HasOcrTasksWith applies the HasEdge predicate on the "ocr_tasks" edge with a given conditions (other predicates).
-func HasOcrTasksWith(preds ...predicate.OCRTask) predicate.MediaArtifact {
-	return predicate.MediaArtifact(func(s *sql.Selector) {
-		step := newOcrTasksStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

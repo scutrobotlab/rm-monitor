@@ -11,6 +11,7 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
+	"scutbot.cn/web/rm-monitor/ent/analyzetask"
 	"scutbot.cn/web/rm-monitor/ent/highlightclip"
 	"scutbot.cn/web/rm-monitor/ent/highlightpublishtask"
 	"scutbot.cn/web/rm-monitor/ent/highlightroundstate"
@@ -18,7 +19,6 @@ import (
 	"scutbot.cn/web/rm-monitor/ent/match"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
 	"scutbot.cn/web/rm-monitor/ent/mediaartifact"
-	"scutbot.cn/web/rm-monitor/ent/ocrtask"
 	"scutbot.cn/web/rm-monitor/ent/predicate"
 	"scutbot.cn/web/rm-monitor/ent/recordtask"
 	"scutbot.cn/web/rm-monitor/ent/stttask"
@@ -36,6 +36,7 @@ const (
 	OpUpdateOne = ent.OpUpdateOne
 
 	// Node types.
+	TypeAnalyzeTask          = "AnalyzeTask"
 	TypeHighlightClip        = "HighlightClip"
 	TypeHighlightPublishTask = "HighlightPublishTask"
 	TypeHighlightRoundState  = "HighlightRoundState"
@@ -43,13 +44,1531 @@ const (
 	TypeMatch                = "Match"
 	TypeMatchRound           = "MatchRound"
 	TypeMediaArtifact        = "MediaArtifact"
-	TypeOCRTask              = "OCRTask"
 	TypeRecordTask           = "RecordTask"
 	TypeSTTTask              = "STTTask"
 	TypeTeam                 = "Team"
 	TypeTranscodeTask        = "TranscodeTask"
 	TypeUploadTask           = "UploadTask"
 )
+
+// AnalyzeTaskMutation represents an operation that mutates the AnalyzeTask nodes in the graph.
+type AnalyzeTaskMutation struct {
+	config
+	op                         Op
+	typ                        string
+	id                         *int
+	role                       *string
+	status                     *analyzetask.Status
+	priority                   *int
+	addpriority                *int
+	k8s_job_name               *string
+	attempts                   *int
+	addattempts                *int
+	round_json_path            *string
+	settlement_image_path      *string
+	settlement_status          *analyzetask.SettlementStatus
+	effective_start_seconds    *float64
+	addeffective_start_seconds *float64
+	effective_end_seconds      *float64
+	addeffective_end_seconds   *float64
+	error_message              *string
+	started_at                 *time.Time
+	completed_at               *time.Time
+	created_at                 *time.Time
+	updated_at                 *time.Time
+	clearedFields              map[string]struct{}
+	match_round                *int
+	clearedmatch_round         bool
+	source_artifact            *int
+	clearedsource_artifact     bool
+	done                       bool
+	oldValue                   func(context.Context) (*AnalyzeTask, error)
+	predicates                 []predicate.AnalyzeTask
+}
+
+var _ ent.Mutation = (*AnalyzeTaskMutation)(nil)
+
+// analyzetaskOption allows management of the mutation configuration using functional options.
+type analyzetaskOption func(*AnalyzeTaskMutation)
+
+// newAnalyzeTaskMutation creates new mutation for the AnalyzeTask entity.
+func newAnalyzeTaskMutation(c config, op Op, opts ...analyzetaskOption) *AnalyzeTaskMutation {
+	m := &AnalyzeTaskMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeAnalyzeTask,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withAnalyzeTaskID sets the ID field of the mutation.
+func withAnalyzeTaskID(id int) analyzetaskOption {
+	return func(m *AnalyzeTaskMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *AnalyzeTask
+		)
+		m.oldValue = func(ctx context.Context) (*AnalyzeTask, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().AnalyzeTask.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withAnalyzeTask sets the old AnalyzeTask of the mutation.
+func withAnalyzeTask(node *AnalyzeTask) analyzetaskOption {
+	return func(m *AnalyzeTaskMutation) {
+		m.oldValue = func(context.Context) (*AnalyzeTask, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m AnalyzeTaskMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m AnalyzeTaskMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *AnalyzeTaskMutation) ID() (id int, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *AnalyzeTaskMutation) IDs(ctx context.Context) ([]int, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []int{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().AnalyzeTask.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetRole sets the "role" field.
+func (m *AnalyzeTaskMutation) SetRole(s string) {
+	m.role = &s
+}
+
+// Role returns the value of the "role" field in the mutation.
+func (m *AnalyzeTaskMutation) Role() (r string, exists bool) {
+	v := m.role
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRole returns the old "role" field's value of the AnalyzeTask entity.
+// If the AnalyzeTask object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AnalyzeTaskMutation) OldRole(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRole is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRole requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRole: %w", err)
+	}
+	return oldValue.Role, nil
+}
+
+// ResetRole resets all changes to the "role" field.
+func (m *AnalyzeTaskMutation) ResetRole() {
+	m.role = nil
+}
+
+// SetStatus sets the "status" field.
+func (m *AnalyzeTaskMutation) SetStatus(a analyzetask.Status) {
+	m.status = &a
+}
+
+// Status returns the value of the "status" field in the mutation.
+func (m *AnalyzeTaskMutation) Status() (r analyzetask.Status, exists bool) {
+	v := m.status
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStatus returns the old "status" field's value of the AnalyzeTask entity.
+// If the AnalyzeTask object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AnalyzeTaskMutation) OldStatus(ctx context.Context) (v analyzetask.Status, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStatus requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStatus: %w", err)
+	}
+	return oldValue.Status, nil
+}
+
+// ResetStatus resets all changes to the "status" field.
+func (m *AnalyzeTaskMutation) ResetStatus() {
+	m.status = nil
+}
+
+// SetPriority sets the "priority" field.
+func (m *AnalyzeTaskMutation) SetPriority(i int) {
+	m.priority = &i
+	m.addpriority = nil
+}
+
+// Priority returns the value of the "priority" field in the mutation.
+func (m *AnalyzeTaskMutation) Priority() (r int, exists bool) {
+	v := m.priority
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPriority returns the old "priority" field's value of the AnalyzeTask entity.
+// If the AnalyzeTask object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AnalyzeTaskMutation) OldPriority(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPriority is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPriority requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPriority: %w", err)
+	}
+	return oldValue.Priority, nil
+}
+
+// AddPriority adds i to the "priority" field.
+func (m *AnalyzeTaskMutation) AddPriority(i int) {
+	if m.addpriority != nil {
+		*m.addpriority += i
+	} else {
+		m.addpriority = &i
+	}
+}
+
+// AddedPriority returns the value that was added to the "priority" field in this mutation.
+func (m *AnalyzeTaskMutation) AddedPriority() (r int, exists bool) {
+	v := m.addpriority
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetPriority resets all changes to the "priority" field.
+func (m *AnalyzeTaskMutation) ResetPriority() {
+	m.priority = nil
+	m.addpriority = nil
+}
+
+// SetK8sJobName sets the "k8s_job_name" field.
+func (m *AnalyzeTaskMutation) SetK8sJobName(s string) {
+	m.k8s_job_name = &s
+}
+
+// K8sJobName returns the value of the "k8s_job_name" field in the mutation.
+func (m *AnalyzeTaskMutation) K8sJobName() (r string, exists bool) {
+	v := m.k8s_job_name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldK8sJobName returns the old "k8s_job_name" field's value of the AnalyzeTask entity.
+// If the AnalyzeTask object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AnalyzeTaskMutation) OldK8sJobName(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldK8sJobName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldK8sJobName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldK8sJobName: %w", err)
+	}
+	return oldValue.K8sJobName, nil
+}
+
+// ClearK8sJobName clears the value of the "k8s_job_name" field.
+func (m *AnalyzeTaskMutation) ClearK8sJobName() {
+	m.k8s_job_name = nil
+	m.clearedFields[analyzetask.FieldK8sJobName] = struct{}{}
+}
+
+// K8sJobNameCleared returns if the "k8s_job_name" field was cleared in this mutation.
+func (m *AnalyzeTaskMutation) K8sJobNameCleared() bool {
+	_, ok := m.clearedFields[analyzetask.FieldK8sJobName]
+	return ok
+}
+
+// ResetK8sJobName resets all changes to the "k8s_job_name" field.
+func (m *AnalyzeTaskMutation) ResetK8sJobName() {
+	m.k8s_job_name = nil
+	delete(m.clearedFields, analyzetask.FieldK8sJobName)
+}
+
+// SetAttempts sets the "attempts" field.
+func (m *AnalyzeTaskMutation) SetAttempts(i int) {
+	m.attempts = &i
+	m.addattempts = nil
+}
+
+// Attempts returns the value of the "attempts" field in the mutation.
+func (m *AnalyzeTaskMutation) Attempts() (r int, exists bool) {
+	v := m.attempts
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAttempts returns the old "attempts" field's value of the AnalyzeTask entity.
+// If the AnalyzeTask object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AnalyzeTaskMutation) OldAttempts(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAttempts is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAttempts requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAttempts: %w", err)
+	}
+	return oldValue.Attempts, nil
+}
+
+// AddAttempts adds i to the "attempts" field.
+func (m *AnalyzeTaskMutation) AddAttempts(i int) {
+	if m.addattempts != nil {
+		*m.addattempts += i
+	} else {
+		m.addattempts = &i
+	}
+}
+
+// AddedAttempts returns the value that was added to the "attempts" field in this mutation.
+func (m *AnalyzeTaskMutation) AddedAttempts() (r int, exists bool) {
+	v := m.addattempts
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetAttempts resets all changes to the "attempts" field.
+func (m *AnalyzeTaskMutation) ResetAttempts() {
+	m.attempts = nil
+	m.addattempts = nil
+}
+
+// SetRoundJSONPath sets the "round_json_path" field.
+func (m *AnalyzeTaskMutation) SetRoundJSONPath(s string) {
+	m.round_json_path = &s
+}
+
+// RoundJSONPath returns the value of the "round_json_path" field in the mutation.
+func (m *AnalyzeTaskMutation) RoundJSONPath() (r string, exists bool) {
+	v := m.round_json_path
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRoundJSONPath returns the old "round_json_path" field's value of the AnalyzeTask entity.
+// If the AnalyzeTask object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AnalyzeTaskMutation) OldRoundJSONPath(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRoundJSONPath is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRoundJSONPath requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRoundJSONPath: %w", err)
+	}
+	return oldValue.RoundJSONPath, nil
+}
+
+// ClearRoundJSONPath clears the value of the "round_json_path" field.
+func (m *AnalyzeTaskMutation) ClearRoundJSONPath() {
+	m.round_json_path = nil
+	m.clearedFields[analyzetask.FieldRoundJSONPath] = struct{}{}
+}
+
+// RoundJSONPathCleared returns if the "round_json_path" field was cleared in this mutation.
+func (m *AnalyzeTaskMutation) RoundJSONPathCleared() bool {
+	_, ok := m.clearedFields[analyzetask.FieldRoundJSONPath]
+	return ok
+}
+
+// ResetRoundJSONPath resets all changes to the "round_json_path" field.
+func (m *AnalyzeTaskMutation) ResetRoundJSONPath() {
+	m.round_json_path = nil
+	delete(m.clearedFields, analyzetask.FieldRoundJSONPath)
+}
+
+// SetSettlementImagePath sets the "settlement_image_path" field.
+func (m *AnalyzeTaskMutation) SetSettlementImagePath(s string) {
+	m.settlement_image_path = &s
+}
+
+// SettlementImagePath returns the value of the "settlement_image_path" field in the mutation.
+func (m *AnalyzeTaskMutation) SettlementImagePath() (r string, exists bool) {
+	v := m.settlement_image_path
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSettlementImagePath returns the old "settlement_image_path" field's value of the AnalyzeTask entity.
+// If the AnalyzeTask object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AnalyzeTaskMutation) OldSettlementImagePath(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSettlementImagePath is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSettlementImagePath requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSettlementImagePath: %w", err)
+	}
+	return oldValue.SettlementImagePath, nil
+}
+
+// ClearSettlementImagePath clears the value of the "settlement_image_path" field.
+func (m *AnalyzeTaskMutation) ClearSettlementImagePath() {
+	m.settlement_image_path = nil
+	m.clearedFields[analyzetask.FieldSettlementImagePath] = struct{}{}
+}
+
+// SettlementImagePathCleared returns if the "settlement_image_path" field was cleared in this mutation.
+func (m *AnalyzeTaskMutation) SettlementImagePathCleared() bool {
+	_, ok := m.clearedFields[analyzetask.FieldSettlementImagePath]
+	return ok
+}
+
+// ResetSettlementImagePath resets all changes to the "settlement_image_path" field.
+func (m *AnalyzeTaskMutation) ResetSettlementImagePath() {
+	m.settlement_image_path = nil
+	delete(m.clearedFields, analyzetask.FieldSettlementImagePath)
+}
+
+// SetSettlementStatus sets the "settlement_status" field.
+func (m *AnalyzeTaskMutation) SetSettlementStatus(as analyzetask.SettlementStatus) {
+	m.settlement_status = &as
+}
+
+// SettlementStatus returns the value of the "settlement_status" field in the mutation.
+func (m *AnalyzeTaskMutation) SettlementStatus() (r analyzetask.SettlementStatus, exists bool) {
+	v := m.settlement_status
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSettlementStatus returns the old "settlement_status" field's value of the AnalyzeTask entity.
+// If the AnalyzeTask object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AnalyzeTaskMutation) OldSettlementStatus(ctx context.Context) (v *analyzetask.SettlementStatus, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSettlementStatus is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSettlementStatus requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSettlementStatus: %w", err)
+	}
+	return oldValue.SettlementStatus, nil
+}
+
+// ClearSettlementStatus clears the value of the "settlement_status" field.
+func (m *AnalyzeTaskMutation) ClearSettlementStatus() {
+	m.settlement_status = nil
+	m.clearedFields[analyzetask.FieldSettlementStatus] = struct{}{}
+}
+
+// SettlementStatusCleared returns if the "settlement_status" field was cleared in this mutation.
+func (m *AnalyzeTaskMutation) SettlementStatusCleared() bool {
+	_, ok := m.clearedFields[analyzetask.FieldSettlementStatus]
+	return ok
+}
+
+// ResetSettlementStatus resets all changes to the "settlement_status" field.
+func (m *AnalyzeTaskMutation) ResetSettlementStatus() {
+	m.settlement_status = nil
+	delete(m.clearedFields, analyzetask.FieldSettlementStatus)
+}
+
+// SetEffectiveStartSeconds sets the "effective_start_seconds" field.
+func (m *AnalyzeTaskMutation) SetEffectiveStartSeconds(f float64) {
+	m.effective_start_seconds = &f
+	m.addeffective_start_seconds = nil
+}
+
+// EffectiveStartSeconds returns the value of the "effective_start_seconds" field in the mutation.
+func (m *AnalyzeTaskMutation) EffectiveStartSeconds() (r float64, exists bool) {
+	v := m.effective_start_seconds
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEffectiveStartSeconds returns the old "effective_start_seconds" field's value of the AnalyzeTask entity.
+// If the AnalyzeTask object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AnalyzeTaskMutation) OldEffectiveStartSeconds(ctx context.Context) (v *float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEffectiveStartSeconds is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEffectiveStartSeconds requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEffectiveStartSeconds: %w", err)
+	}
+	return oldValue.EffectiveStartSeconds, nil
+}
+
+// AddEffectiveStartSeconds adds f to the "effective_start_seconds" field.
+func (m *AnalyzeTaskMutation) AddEffectiveStartSeconds(f float64) {
+	if m.addeffective_start_seconds != nil {
+		*m.addeffective_start_seconds += f
+	} else {
+		m.addeffective_start_seconds = &f
+	}
+}
+
+// AddedEffectiveStartSeconds returns the value that was added to the "effective_start_seconds" field in this mutation.
+func (m *AnalyzeTaskMutation) AddedEffectiveStartSeconds() (r float64, exists bool) {
+	v := m.addeffective_start_seconds
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearEffectiveStartSeconds clears the value of the "effective_start_seconds" field.
+func (m *AnalyzeTaskMutation) ClearEffectiveStartSeconds() {
+	m.effective_start_seconds = nil
+	m.addeffective_start_seconds = nil
+	m.clearedFields[analyzetask.FieldEffectiveStartSeconds] = struct{}{}
+}
+
+// EffectiveStartSecondsCleared returns if the "effective_start_seconds" field was cleared in this mutation.
+func (m *AnalyzeTaskMutation) EffectiveStartSecondsCleared() bool {
+	_, ok := m.clearedFields[analyzetask.FieldEffectiveStartSeconds]
+	return ok
+}
+
+// ResetEffectiveStartSeconds resets all changes to the "effective_start_seconds" field.
+func (m *AnalyzeTaskMutation) ResetEffectiveStartSeconds() {
+	m.effective_start_seconds = nil
+	m.addeffective_start_seconds = nil
+	delete(m.clearedFields, analyzetask.FieldEffectiveStartSeconds)
+}
+
+// SetEffectiveEndSeconds sets the "effective_end_seconds" field.
+func (m *AnalyzeTaskMutation) SetEffectiveEndSeconds(f float64) {
+	m.effective_end_seconds = &f
+	m.addeffective_end_seconds = nil
+}
+
+// EffectiveEndSeconds returns the value of the "effective_end_seconds" field in the mutation.
+func (m *AnalyzeTaskMutation) EffectiveEndSeconds() (r float64, exists bool) {
+	v := m.effective_end_seconds
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEffectiveEndSeconds returns the old "effective_end_seconds" field's value of the AnalyzeTask entity.
+// If the AnalyzeTask object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AnalyzeTaskMutation) OldEffectiveEndSeconds(ctx context.Context) (v *float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEffectiveEndSeconds is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEffectiveEndSeconds requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEffectiveEndSeconds: %w", err)
+	}
+	return oldValue.EffectiveEndSeconds, nil
+}
+
+// AddEffectiveEndSeconds adds f to the "effective_end_seconds" field.
+func (m *AnalyzeTaskMutation) AddEffectiveEndSeconds(f float64) {
+	if m.addeffective_end_seconds != nil {
+		*m.addeffective_end_seconds += f
+	} else {
+		m.addeffective_end_seconds = &f
+	}
+}
+
+// AddedEffectiveEndSeconds returns the value that was added to the "effective_end_seconds" field in this mutation.
+func (m *AnalyzeTaskMutation) AddedEffectiveEndSeconds() (r float64, exists bool) {
+	v := m.addeffective_end_seconds
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearEffectiveEndSeconds clears the value of the "effective_end_seconds" field.
+func (m *AnalyzeTaskMutation) ClearEffectiveEndSeconds() {
+	m.effective_end_seconds = nil
+	m.addeffective_end_seconds = nil
+	m.clearedFields[analyzetask.FieldEffectiveEndSeconds] = struct{}{}
+}
+
+// EffectiveEndSecondsCleared returns if the "effective_end_seconds" field was cleared in this mutation.
+func (m *AnalyzeTaskMutation) EffectiveEndSecondsCleared() bool {
+	_, ok := m.clearedFields[analyzetask.FieldEffectiveEndSeconds]
+	return ok
+}
+
+// ResetEffectiveEndSeconds resets all changes to the "effective_end_seconds" field.
+func (m *AnalyzeTaskMutation) ResetEffectiveEndSeconds() {
+	m.effective_end_seconds = nil
+	m.addeffective_end_seconds = nil
+	delete(m.clearedFields, analyzetask.FieldEffectiveEndSeconds)
+}
+
+// SetErrorMessage sets the "error_message" field.
+func (m *AnalyzeTaskMutation) SetErrorMessage(s string) {
+	m.error_message = &s
+}
+
+// ErrorMessage returns the value of the "error_message" field in the mutation.
+func (m *AnalyzeTaskMutation) ErrorMessage() (r string, exists bool) {
+	v := m.error_message
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldErrorMessage returns the old "error_message" field's value of the AnalyzeTask entity.
+// If the AnalyzeTask object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AnalyzeTaskMutation) OldErrorMessage(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldErrorMessage is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldErrorMessage requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldErrorMessage: %w", err)
+	}
+	return oldValue.ErrorMessage, nil
+}
+
+// ClearErrorMessage clears the value of the "error_message" field.
+func (m *AnalyzeTaskMutation) ClearErrorMessage() {
+	m.error_message = nil
+	m.clearedFields[analyzetask.FieldErrorMessage] = struct{}{}
+}
+
+// ErrorMessageCleared returns if the "error_message" field was cleared in this mutation.
+func (m *AnalyzeTaskMutation) ErrorMessageCleared() bool {
+	_, ok := m.clearedFields[analyzetask.FieldErrorMessage]
+	return ok
+}
+
+// ResetErrorMessage resets all changes to the "error_message" field.
+func (m *AnalyzeTaskMutation) ResetErrorMessage() {
+	m.error_message = nil
+	delete(m.clearedFields, analyzetask.FieldErrorMessage)
+}
+
+// SetStartedAt sets the "started_at" field.
+func (m *AnalyzeTaskMutation) SetStartedAt(t time.Time) {
+	m.started_at = &t
+}
+
+// StartedAt returns the value of the "started_at" field in the mutation.
+func (m *AnalyzeTaskMutation) StartedAt() (r time.Time, exists bool) {
+	v := m.started_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStartedAt returns the old "started_at" field's value of the AnalyzeTask entity.
+// If the AnalyzeTask object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AnalyzeTaskMutation) OldStartedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStartedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStartedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStartedAt: %w", err)
+	}
+	return oldValue.StartedAt, nil
+}
+
+// ClearStartedAt clears the value of the "started_at" field.
+func (m *AnalyzeTaskMutation) ClearStartedAt() {
+	m.started_at = nil
+	m.clearedFields[analyzetask.FieldStartedAt] = struct{}{}
+}
+
+// StartedAtCleared returns if the "started_at" field was cleared in this mutation.
+func (m *AnalyzeTaskMutation) StartedAtCleared() bool {
+	_, ok := m.clearedFields[analyzetask.FieldStartedAt]
+	return ok
+}
+
+// ResetStartedAt resets all changes to the "started_at" field.
+func (m *AnalyzeTaskMutation) ResetStartedAt() {
+	m.started_at = nil
+	delete(m.clearedFields, analyzetask.FieldStartedAt)
+}
+
+// SetCompletedAt sets the "completed_at" field.
+func (m *AnalyzeTaskMutation) SetCompletedAt(t time.Time) {
+	m.completed_at = &t
+}
+
+// CompletedAt returns the value of the "completed_at" field in the mutation.
+func (m *AnalyzeTaskMutation) CompletedAt() (r time.Time, exists bool) {
+	v := m.completed_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCompletedAt returns the old "completed_at" field's value of the AnalyzeTask entity.
+// If the AnalyzeTask object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AnalyzeTaskMutation) OldCompletedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCompletedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCompletedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCompletedAt: %w", err)
+	}
+	return oldValue.CompletedAt, nil
+}
+
+// ClearCompletedAt clears the value of the "completed_at" field.
+func (m *AnalyzeTaskMutation) ClearCompletedAt() {
+	m.completed_at = nil
+	m.clearedFields[analyzetask.FieldCompletedAt] = struct{}{}
+}
+
+// CompletedAtCleared returns if the "completed_at" field was cleared in this mutation.
+func (m *AnalyzeTaskMutation) CompletedAtCleared() bool {
+	_, ok := m.clearedFields[analyzetask.FieldCompletedAt]
+	return ok
+}
+
+// ResetCompletedAt resets all changes to the "completed_at" field.
+func (m *AnalyzeTaskMutation) ResetCompletedAt() {
+	m.completed_at = nil
+	delete(m.clearedFields, analyzetask.FieldCompletedAt)
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *AnalyzeTaskMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *AnalyzeTaskMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the AnalyzeTask entity.
+// If the AnalyzeTask object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AnalyzeTaskMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *AnalyzeTaskMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *AnalyzeTaskMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *AnalyzeTaskMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the AnalyzeTask entity.
+// If the AnalyzeTask object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AnalyzeTaskMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *AnalyzeTaskMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetMatchRoundID sets the "match_round" edge to the MatchRound entity by id.
+func (m *AnalyzeTaskMutation) SetMatchRoundID(id int) {
+	m.match_round = &id
+}
+
+// ClearMatchRound clears the "match_round" edge to the MatchRound entity.
+func (m *AnalyzeTaskMutation) ClearMatchRound() {
+	m.clearedmatch_round = true
+}
+
+// MatchRoundCleared reports if the "match_round" edge to the MatchRound entity was cleared.
+func (m *AnalyzeTaskMutation) MatchRoundCleared() bool {
+	return m.clearedmatch_round
+}
+
+// MatchRoundID returns the "match_round" edge ID in the mutation.
+func (m *AnalyzeTaskMutation) MatchRoundID() (id int, exists bool) {
+	if m.match_round != nil {
+		return *m.match_round, true
+	}
+	return
+}
+
+// MatchRoundIDs returns the "match_round" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// MatchRoundID instead. It exists only for internal usage by the builders.
+func (m *AnalyzeTaskMutation) MatchRoundIDs() (ids []int) {
+	if id := m.match_round; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetMatchRound resets all changes to the "match_round" edge.
+func (m *AnalyzeTaskMutation) ResetMatchRound() {
+	m.match_round = nil
+	m.clearedmatch_round = false
+}
+
+// SetSourceArtifactID sets the "source_artifact" edge to the MediaArtifact entity by id.
+func (m *AnalyzeTaskMutation) SetSourceArtifactID(id int) {
+	m.source_artifact = &id
+}
+
+// ClearSourceArtifact clears the "source_artifact" edge to the MediaArtifact entity.
+func (m *AnalyzeTaskMutation) ClearSourceArtifact() {
+	m.clearedsource_artifact = true
+}
+
+// SourceArtifactCleared reports if the "source_artifact" edge to the MediaArtifact entity was cleared.
+func (m *AnalyzeTaskMutation) SourceArtifactCleared() bool {
+	return m.clearedsource_artifact
+}
+
+// SourceArtifactID returns the "source_artifact" edge ID in the mutation.
+func (m *AnalyzeTaskMutation) SourceArtifactID() (id int, exists bool) {
+	if m.source_artifact != nil {
+		return *m.source_artifact, true
+	}
+	return
+}
+
+// SourceArtifactIDs returns the "source_artifact" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// SourceArtifactID instead. It exists only for internal usage by the builders.
+func (m *AnalyzeTaskMutation) SourceArtifactIDs() (ids []int) {
+	if id := m.source_artifact; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetSourceArtifact resets all changes to the "source_artifact" edge.
+func (m *AnalyzeTaskMutation) ResetSourceArtifact() {
+	m.source_artifact = nil
+	m.clearedsource_artifact = false
+}
+
+// Where appends a list predicates to the AnalyzeTaskMutation builder.
+func (m *AnalyzeTaskMutation) Where(ps ...predicate.AnalyzeTask) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the AnalyzeTaskMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *AnalyzeTaskMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.AnalyzeTask, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *AnalyzeTaskMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *AnalyzeTaskMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (AnalyzeTask).
+func (m *AnalyzeTaskMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *AnalyzeTaskMutation) Fields() []string {
+	fields := make([]string, 0, 15)
+	if m.role != nil {
+		fields = append(fields, analyzetask.FieldRole)
+	}
+	if m.status != nil {
+		fields = append(fields, analyzetask.FieldStatus)
+	}
+	if m.priority != nil {
+		fields = append(fields, analyzetask.FieldPriority)
+	}
+	if m.k8s_job_name != nil {
+		fields = append(fields, analyzetask.FieldK8sJobName)
+	}
+	if m.attempts != nil {
+		fields = append(fields, analyzetask.FieldAttempts)
+	}
+	if m.round_json_path != nil {
+		fields = append(fields, analyzetask.FieldRoundJSONPath)
+	}
+	if m.settlement_image_path != nil {
+		fields = append(fields, analyzetask.FieldSettlementImagePath)
+	}
+	if m.settlement_status != nil {
+		fields = append(fields, analyzetask.FieldSettlementStatus)
+	}
+	if m.effective_start_seconds != nil {
+		fields = append(fields, analyzetask.FieldEffectiveStartSeconds)
+	}
+	if m.effective_end_seconds != nil {
+		fields = append(fields, analyzetask.FieldEffectiveEndSeconds)
+	}
+	if m.error_message != nil {
+		fields = append(fields, analyzetask.FieldErrorMessage)
+	}
+	if m.started_at != nil {
+		fields = append(fields, analyzetask.FieldStartedAt)
+	}
+	if m.completed_at != nil {
+		fields = append(fields, analyzetask.FieldCompletedAt)
+	}
+	if m.created_at != nil {
+		fields = append(fields, analyzetask.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, analyzetask.FieldUpdatedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *AnalyzeTaskMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case analyzetask.FieldRole:
+		return m.Role()
+	case analyzetask.FieldStatus:
+		return m.Status()
+	case analyzetask.FieldPriority:
+		return m.Priority()
+	case analyzetask.FieldK8sJobName:
+		return m.K8sJobName()
+	case analyzetask.FieldAttempts:
+		return m.Attempts()
+	case analyzetask.FieldRoundJSONPath:
+		return m.RoundJSONPath()
+	case analyzetask.FieldSettlementImagePath:
+		return m.SettlementImagePath()
+	case analyzetask.FieldSettlementStatus:
+		return m.SettlementStatus()
+	case analyzetask.FieldEffectiveStartSeconds:
+		return m.EffectiveStartSeconds()
+	case analyzetask.FieldEffectiveEndSeconds:
+		return m.EffectiveEndSeconds()
+	case analyzetask.FieldErrorMessage:
+		return m.ErrorMessage()
+	case analyzetask.FieldStartedAt:
+		return m.StartedAt()
+	case analyzetask.FieldCompletedAt:
+		return m.CompletedAt()
+	case analyzetask.FieldCreatedAt:
+		return m.CreatedAt()
+	case analyzetask.FieldUpdatedAt:
+		return m.UpdatedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *AnalyzeTaskMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case analyzetask.FieldRole:
+		return m.OldRole(ctx)
+	case analyzetask.FieldStatus:
+		return m.OldStatus(ctx)
+	case analyzetask.FieldPriority:
+		return m.OldPriority(ctx)
+	case analyzetask.FieldK8sJobName:
+		return m.OldK8sJobName(ctx)
+	case analyzetask.FieldAttempts:
+		return m.OldAttempts(ctx)
+	case analyzetask.FieldRoundJSONPath:
+		return m.OldRoundJSONPath(ctx)
+	case analyzetask.FieldSettlementImagePath:
+		return m.OldSettlementImagePath(ctx)
+	case analyzetask.FieldSettlementStatus:
+		return m.OldSettlementStatus(ctx)
+	case analyzetask.FieldEffectiveStartSeconds:
+		return m.OldEffectiveStartSeconds(ctx)
+	case analyzetask.FieldEffectiveEndSeconds:
+		return m.OldEffectiveEndSeconds(ctx)
+	case analyzetask.FieldErrorMessage:
+		return m.OldErrorMessage(ctx)
+	case analyzetask.FieldStartedAt:
+		return m.OldStartedAt(ctx)
+	case analyzetask.FieldCompletedAt:
+		return m.OldCompletedAt(ctx)
+	case analyzetask.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case analyzetask.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown AnalyzeTask field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *AnalyzeTaskMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case analyzetask.FieldRole:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRole(v)
+		return nil
+	case analyzetask.FieldStatus:
+		v, ok := value.(analyzetask.Status)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStatus(v)
+		return nil
+	case analyzetask.FieldPriority:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPriority(v)
+		return nil
+	case analyzetask.FieldK8sJobName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetK8sJobName(v)
+		return nil
+	case analyzetask.FieldAttempts:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAttempts(v)
+		return nil
+	case analyzetask.FieldRoundJSONPath:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRoundJSONPath(v)
+		return nil
+	case analyzetask.FieldSettlementImagePath:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSettlementImagePath(v)
+		return nil
+	case analyzetask.FieldSettlementStatus:
+		v, ok := value.(analyzetask.SettlementStatus)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSettlementStatus(v)
+		return nil
+	case analyzetask.FieldEffectiveStartSeconds:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEffectiveStartSeconds(v)
+		return nil
+	case analyzetask.FieldEffectiveEndSeconds:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEffectiveEndSeconds(v)
+		return nil
+	case analyzetask.FieldErrorMessage:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetErrorMessage(v)
+		return nil
+	case analyzetask.FieldStartedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStartedAt(v)
+		return nil
+	case analyzetask.FieldCompletedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCompletedAt(v)
+		return nil
+	case analyzetask.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case analyzetask.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown AnalyzeTask field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *AnalyzeTaskMutation) AddedFields() []string {
+	var fields []string
+	if m.addpriority != nil {
+		fields = append(fields, analyzetask.FieldPriority)
+	}
+	if m.addattempts != nil {
+		fields = append(fields, analyzetask.FieldAttempts)
+	}
+	if m.addeffective_start_seconds != nil {
+		fields = append(fields, analyzetask.FieldEffectiveStartSeconds)
+	}
+	if m.addeffective_end_seconds != nil {
+		fields = append(fields, analyzetask.FieldEffectiveEndSeconds)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *AnalyzeTaskMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case analyzetask.FieldPriority:
+		return m.AddedPriority()
+	case analyzetask.FieldAttempts:
+		return m.AddedAttempts()
+	case analyzetask.FieldEffectiveStartSeconds:
+		return m.AddedEffectiveStartSeconds()
+	case analyzetask.FieldEffectiveEndSeconds:
+		return m.AddedEffectiveEndSeconds()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *AnalyzeTaskMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case analyzetask.FieldPriority:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddPriority(v)
+		return nil
+	case analyzetask.FieldAttempts:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddAttempts(v)
+		return nil
+	case analyzetask.FieldEffectiveStartSeconds:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddEffectiveStartSeconds(v)
+		return nil
+	case analyzetask.FieldEffectiveEndSeconds:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddEffectiveEndSeconds(v)
+		return nil
+	}
+	return fmt.Errorf("unknown AnalyzeTask numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *AnalyzeTaskMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(analyzetask.FieldK8sJobName) {
+		fields = append(fields, analyzetask.FieldK8sJobName)
+	}
+	if m.FieldCleared(analyzetask.FieldRoundJSONPath) {
+		fields = append(fields, analyzetask.FieldRoundJSONPath)
+	}
+	if m.FieldCleared(analyzetask.FieldSettlementImagePath) {
+		fields = append(fields, analyzetask.FieldSettlementImagePath)
+	}
+	if m.FieldCleared(analyzetask.FieldSettlementStatus) {
+		fields = append(fields, analyzetask.FieldSettlementStatus)
+	}
+	if m.FieldCleared(analyzetask.FieldEffectiveStartSeconds) {
+		fields = append(fields, analyzetask.FieldEffectiveStartSeconds)
+	}
+	if m.FieldCleared(analyzetask.FieldEffectiveEndSeconds) {
+		fields = append(fields, analyzetask.FieldEffectiveEndSeconds)
+	}
+	if m.FieldCleared(analyzetask.FieldErrorMessage) {
+		fields = append(fields, analyzetask.FieldErrorMessage)
+	}
+	if m.FieldCleared(analyzetask.FieldStartedAt) {
+		fields = append(fields, analyzetask.FieldStartedAt)
+	}
+	if m.FieldCleared(analyzetask.FieldCompletedAt) {
+		fields = append(fields, analyzetask.FieldCompletedAt)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *AnalyzeTaskMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *AnalyzeTaskMutation) ClearField(name string) error {
+	switch name {
+	case analyzetask.FieldK8sJobName:
+		m.ClearK8sJobName()
+		return nil
+	case analyzetask.FieldRoundJSONPath:
+		m.ClearRoundJSONPath()
+		return nil
+	case analyzetask.FieldSettlementImagePath:
+		m.ClearSettlementImagePath()
+		return nil
+	case analyzetask.FieldSettlementStatus:
+		m.ClearSettlementStatus()
+		return nil
+	case analyzetask.FieldEffectiveStartSeconds:
+		m.ClearEffectiveStartSeconds()
+		return nil
+	case analyzetask.FieldEffectiveEndSeconds:
+		m.ClearEffectiveEndSeconds()
+		return nil
+	case analyzetask.FieldErrorMessage:
+		m.ClearErrorMessage()
+		return nil
+	case analyzetask.FieldStartedAt:
+		m.ClearStartedAt()
+		return nil
+	case analyzetask.FieldCompletedAt:
+		m.ClearCompletedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown AnalyzeTask nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *AnalyzeTaskMutation) ResetField(name string) error {
+	switch name {
+	case analyzetask.FieldRole:
+		m.ResetRole()
+		return nil
+	case analyzetask.FieldStatus:
+		m.ResetStatus()
+		return nil
+	case analyzetask.FieldPriority:
+		m.ResetPriority()
+		return nil
+	case analyzetask.FieldK8sJobName:
+		m.ResetK8sJobName()
+		return nil
+	case analyzetask.FieldAttempts:
+		m.ResetAttempts()
+		return nil
+	case analyzetask.FieldRoundJSONPath:
+		m.ResetRoundJSONPath()
+		return nil
+	case analyzetask.FieldSettlementImagePath:
+		m.ResetSettlementImagePath()
+		return nil
+	case analyzetask.FieldSettlementStatus:
+		m.ResetSettlementStatus()
+		return nil
+	case analyzetask.FieldEffectiveStartSeconds:
+		m.ResetEffectiveStartSeconds()
+		return nil
+	case analyzetask.FieldEffectiveEndSeconds:
+		m.ResetEffectiveEndSeconds()
+		return nil
+	case analyzetask.FieldErrorMessage:
+		m.ResetErrorMessage()
+		return nil
+	case analyzetask.FieldStartedAt:
+		m.ResetStartedAt()
+		return nil
+	case analyzetask.FieldCompletedAt:
+		m.ResetCompletedAt()
+		return nil
+	case analyzetask.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case analyzetask.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown AnalyzeTask field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *AnalyzeTaskMutation) AddedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.match_round != nil {
+		edges = append(edges, analyzetask.EdgeMatchRound)
+	}
+	if m.source_artifact != nil {
+		edges = append(edges, analyzetask.EdgeSourceArtifact)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *AnalyzeTaskMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case analyzetask.EdgeMatchRound:
+		if id := m.match_round; id != nil {
+			return []ent.Value{*id}
+		}
+	case analyzetask.EdgeSourceArtifact:
+		if id := m.source_artifact; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *AnalyzeTaskMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 2)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *AnalyzeTaskMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *AnalyzeTaskMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.clearedmatch_round {
+		edges = append(edges, analyzetask.EdgeMatchRound)
+	}
+	if m.clearedsource_artifact {
+		edges = append(edges, analyzetask.EdgeSourceArtifact)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *AnalyzeTaskMutation) EdgeCleared(name string) bool {
+	switch name {
+	case analyzetask.EdgeMatchRound:
+		return m.clearedmatch_round
+	case analyzetask.EdgeSourceArtifact:
+		return m.clearedsource_artifact
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *AnalyzeTaskMutation) ClearEdge(name string) error {
+	switch name {
+	case analyzetask.EdgeMatchRound:
+		m.ClearMatchRound()
+		return nil
+	case analyzetask.EdgeSourceArtifact:
+		m.ClearSourceArtifact()
+		return nil
+	}
+	return fmt.Errorf("unknown AnalyzeTask unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *AnalyzeTaskMutation) ResetEdge(name string) error {
+	switch name {
+	case analyzetask.EdgeMatchRound:
+		m.ResetMatchRound()
+		return nil
+	case analyzetask.EdgeSourceArtifact:
+		m.ResetSourceArtifact()
+		return nil
+	}
+	return fmt.Errorf("unknown AnalyzeTask edge %s", name)
+}
 
 // HighlightClipMutation represents an operation that mutates the HighlightClip nodes in the graph.
 type HighlightClipMutation struct {
@@ -6204,15 +7723,15 @@ type MatchRoundMutation struct {
 	stt_tasks               map[int]struct{}
 	removedstt_tasks        map[int]struct{}
 	clearedstt_tasks        bool
+	analyze_tasks           map[int]struct{}
+	removedanalyze_tasks    map[int]struct{}
+	clearedanalyze_tasks    bool
 	highlight_clips         map[int]struct{}
 	removedhighlight_clips  map[int]struct{}
 	clearedhighlight_clips  bool
 	highlight_states        map[int]struct{}
 	removedhighlight_states map[int]struct{}
 	clearedhighlight_states bool
-	ocr_tasks               map[int]struct{}
-	removedocr_tasks        map[int]struct{}
-	clearedocr_tasks        bool
 	done                    bool
 	oldValue                func(context.Context) (*MatchRound, error)
 	predicates              []predicate.MatchRound
@@ -6761,6 +8280,60 @@ func (m *MatchRoundMutation) ResetSttTasks() {
 	m.removedstt_tasks = nil
 }
 
+// AddAnalyzeTaskIDs adds the "analyze_tasks" edge to the AnalyzeTask entity by ids.
+func (m *MatchRoundMutation) AddAnalyzeTaskIDs(ids ...int) {
+	if m.analyze_tasks == nil {
+		m.analyze_tasks = make(map[int]struct{})
+	}
+	for i := range ids {
+		m.analyze_tasks[ids[i]] = struct{}{}
+	}
+}
+
+// ClearAnalyzeTasks clears the "analyze_tasks" edge to the AnalyzeTask entity.
+func (m *MatchRoundMutation) ClearAnalyzeTasks() {
+	m.clearedanalyze_tasks = true
+}
+
+// AnalyzeTasksCleared reports if the "analyze_tasks" edge to the AnalyzeTask entity was cleared.
+func (m *MatchRoundMutation) AnalyzeTasksCleared() bool {
+	return m.clearedanalyze_tasks
+}
+
+// RemoveAnalyzeTaskIDs removes the "analyze_tasks" edge to the AnalyzeTask entity by IDs.
+func (m *MatchRoundMutation) RemoveAnalyzeTaskIDs(ids ...int) {
+	if m.removedanalyze_tasks == nil {
+		m.removedanalyze_tasks = make(map[int]struct{})
+	}
+	for i := range ids {
+		delete(m.analyze_tasks, ids[i])
+		m.removedanalyze_tasks[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedAnalyzeTasks returns the removed IDs of the "analyze_tasks" edge to the AnalyzeTask entity.
+func (m *MatchRoundMutation) RemovedAnalyzeTasksIDs() (ids []int) {
+	for id := range m.removedanalyze_tasks {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// AnalyzeTasksIDs returns the "analyze_tasks" edge IDs in the mutation.
+func (m *MatchRoundMutation) AnalyzeTasksIDs() (ids []int) {
+	for id := range m.analyze_tasks {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetAnalyzeTasks resets all changes to the "analyze_tasks" edge.
+func (m *MatchRoundMutation) ResetAnalyzeTasks() {
+	m.analyze_tasks = nil
+	m.clearedanalyze_tasks = false
+	m.removedanalyze_tasks = nil
+}
+
 // AddHighlightClipIDs adds the "highlight_clips" edge to the HighlightClip entity by ids.
 func (m *MatchRoundMutation) AddHighlightClipIDs(ids ...int) {
 	if m.highlight_clips == nil {
@@ -6867,60 +8440,6 @@ func (m *MatchRoundMutation) ResetHighlightStates() {
 	m.highlight_states = nil
 	m.clearedhighlight_states = false
 	m.removedhighlight_states = nil
-}
-
-// AddOcrTaskIDs adds the "ocr_tasks" edge to the OCRTask entity by ids.
-func (m *MatchRoundMutation) AddOcrTaskIDs(ids ...int) {
-	if m.ocr_tasks == nil {
-		m.ocr_tasks = make(map[int]struct{})
-	}
-	for i := range ids {
-		m.ocr_tasks[ids[i]] = struct{}{}
-	}
-}
-
-// ClearOcrTasks clears the "ocr_tasks" edge to the OCRTask entity.
-func (m *MatchRoundMutation) ClearOcrTasks() {
-	m.clearedocr_tasks = true
-}
-
-// OcrTasksCleared reports if the "ocr_tasks" edge to the OCRTask entity was cleared.
-func (m *MatchRoundMutation) OcrTasksCleared() bool {
-	return m.clearedocr_tasks
-}
-
-// RemoveOcrTaskIDs removes the "ocr_tasks" edge to the OCRTask entity by IDs.
-func (m *MatchRoundMutation) RemoveOcrTaskIDs(ids ...int) {
-	if m.removedocr_tasks == nil {
-		m.removedocr_tasks = make(map[int]struct{})
-	}
-	for i := range ids {
-		delete(m.ocr_tasks, ids[i])
-		m.removedocr_tasks[ids[i]] = struct{}{}
-	}
-}
-
-// RemovedOcrTasks returns the removed IDs of the "ocr_tasks" edge to the OCRTask entity.
-func (m *MatchRoundMutation) RemovedOcrTasksIDs() (ids []int) {
-	for id := range m.removedocr_tasks {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// OcrTasksIDs returns the "ocr_tasks" edge IDs in the mutation.
-func (m *MatchRoundMutation) OcrTasksIDs() (ids []int) {
-	for id := range m.ocr_tasks {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// ResetOcrTasks resets all changes to the "ocr_tasks" edge.
-func (m *MatchRoundMutation) ResetOcrTasks() {
-	m.ocr_tasks = nil
-	m.clearedocr_tasks = false
-	m.removedocr_tasks = nil
 }
 
 // Where appends a list predicates to the MatchRoundMutation builder.
@@ -7198,14 +8717,14 @@ func (m *MatchRoundMutation) AddedEdges() []string {
 	if m.stt_tasks != nil {
 		edges = append(edges, matchround.EdgeSttTasks)
 	}
+	if m.analyze_tasks != nil {
+		edges = append(edges, matchround.EdgeAnalyzeTasks)
+	}
 	if m.highlight_clips != nil {
 		edges = append(edges, matchround.EdgeHighlightClips)
 	}
 	if m.highlight_states != nil {
 		edges = append(edges, matchround.EdgeHighlightStates)
-	}
-	if m.ocr_tasks != nil {
-		edges = append(edges, matchround.EdgeOcrTasks)
 	}
 	return edges
 }
@@ -7230,6 +8749,12 @@ func (m *MatchRoundMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case matchround.EdgeAnalyzeTasks:
+		ids := make([]ent.Value, 0, len(m.analyze_tasks))
+		for id := range m.analyze_tasks {
+			ids = append(ids, id)
+		}
+		return ids
 	case matchround.EdgeHighlightClips:
 		ids := make([]ent.Value, 0, len(m.highlight_clips))
 		for id := range m.highlight_clips {
@@ -7239,12 +8764,6 @@ func (m *MatchRoundMutation) AddedIDs(name string) []ent.Value {
 	case matchround.EdgeHighlightStates:
 		ids := make([]ent.Value, 0, len(m.highlight_states))
 		for id := range m.highlight_states {
-			ids = append(ids, id)
-		}
-		return ids
-	case matchround.EdgeOcrTasks:
-		ids := make([]ent.Value, 0, len(m.ocr_tasks))
-		for id := range m.ocr_tasks {
 			ids = append(ids, id)
 		}
 		return ids
@@ -7261,14 +8780,14 @@ func (m *MatchRoundMutation) RemovedEdges() []string {
 	if m.removedstt_tasks != nil {
 		edges = append(edges, matchround.EdgeSttTasks)
 	}
+	if m.removedanalyze_tasks != nil {
+		edges = append(edges, matchround.EdgeAnalyzeTasks)
+	}
 	if m.removedhighlight_clips != nil {
 		edges = append(edges, matchround.EdgeHighlightClips)
 	}
 	if m.removedhighlight_states != nil {
 		edges = append(edges, matchround.EdgeHighlightStates)
-	}
-	if m.removedocr_tasks != nil {
-		edges = append(edges, matchround.EdgeOcrTasks)
 	}
 	return edges
 }
@@ -7289,6 +8808,12 @@ func (m *MatchRoundMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case matchround.EdgeAnalyzeTasks:
+		ids := make([]ent.Value, 0, len(m.removedanalyze_tasks))
+		for id := range m.removedanalyze_tasks {
+			ids = append(ids, id)
+		}
+		return ids
 	case matchround.EdgeHighlightClips:
 		ids := make([]ent.Value, 0, len(m.removedhighlight_clips))
 		for id := range m.removedhighlight_clips {
@@ -7298,12 +8823,6 @@ func (m *MatchRoundMutation) RemovedIDs(name string) []ent.Value {
 	case matchround.EdgeHighlightStates:
 		ids := make([]ent.Value, 0, len(m.removedhighlight_states))
 		for id := range m.removedhighlight_states {
-			ids = append(ids, id)
-		}
-		return ids
-	case matchround.EdgeOcrTasks:
-		ids := make([]ent.Value, 0, len(m.removedocr_tasks))
-		for id := range m.removedocr_tasks {
 			ids = append(ids, id)
 		}
 		return ids
@@ -7323,14 +8842,14 @@ func (m *MatchRoundMutation) ClearedEdges() []string {
 	if m.clearedstt_tasks {
 		edges = append(edges, matchround.EdgeSttTasks)
 	}
+	if m.clearedanalyze_tasks {
+		edges = append(edges, matchround.EdgeAnalyzeTasks)
+	}
 	if m.clearedhighlight_clips {
 		edges = append(edges, matchround.EdgeHighlightClips)
 	}
 	if m.clearedhighlight_states {
 		edges = append(edges, matchround.EdgeHighlightStates)
-	}
-	if m.clearedocr_tasks {
-		edges = append(edges, matchround.EdgeOcrTasks)
 	}
 	return edges
 }
@@ -7345,12 +8864,12 @@ func (m *MatchRoundMutation) EdgeCleared(name string) bool {
 		return m.clearedrecord_tasks
 	case matchround.EdgeSttTasks:
 		return m.clearedstt_tasks
+	case matchround.EdgeAnalyzeTasks:
+		return m.clearedanalyze_tasks
 	case matchround.EdgeHighlightClips:
 		return m.clearedhighlight_clips
 	case matchround.EdgeHighlightStates:
 		return m.clearedhighlight_states
-	case matchround.EdgeOcrTasks:
-		return m.clearedocr_tasks
 	}
 	return false
 }
@@ -7379,14 +8898,14 @@ func (m *MatchRoundMutation) ResetEdge(name string) error {
 	case matchround.EdgeSttTasks:
 		m.ResetSttTasks()
 		return nil
+	case matchround.EdgeAnalyzeTasks:
+		m.ResetAnalyzeTasks()
+		return nil
 	case matchround.EdgeHighlightClips:
 		m.ResetHighlightClips()
 		return nil
 	case matchround.EdgeHighlightStates:
 		m.ResetHighlightStates()
-		return nil
-	case matchround.EdgeOcrTasks:
-		m.ResetOcrTasks()
 		return nil
 	}
 	return fmt.Errorf("unknown MatchRound edge %s", name)
@@ -7418,6 +8937,9 @@ type MediaArtifactMutation struct {
 	stt_tasks                     map[int]struct{}
 	removedstt_tasks              map[int]struct{}
 	clearedstt_tasks              bool
+	analyze_tasks                 map[int]struct{}
+	removedanalyze_tasks          map[int]struct{}
+	clearedanalyze_tasks          bool
 	source_transcode_task         *int
 	clearedsource_transcode_task  bool
 	archive_transcode_task        *int
@@ -7425,9 +8947,6 @@ type MediaArtifactMutation struct {
 	highlight_clips               map[int]struct{}
 	removedhighlight_clips        map[int]struct{}
 	clearedhighlight_clips        bool
-	ocr_tasks                     map[int]struct{}
-	removedocr_tasks              map[int]struct{}
-	clearedocr_tasks              bool
 	done                          bool
 	oldValue                      func(context.Context) (*MediaArtifact, error)
 	predicates                    []predicate.MediaArtifact
@@ -8132,6 +9651,60 @@ func (m *MediaArtifactMutation) ResetSttTasks() {
 	m.removedstt_tasks = nil
 }
 
+// AddAnalyzeTaskIDs adds the "analyze_tasks" edge to the AnalyzeTask entity by ids.
+func (m *MediaArtifactMutation) AddAnalyzeTaskIDs(ids ...int) {
+	if m.analyze_tasks == nil {
+		m.analyze_tasks = make(map[int]struct{})
+	}
+	for i := range ids {
+		m.analyze_tasks[ids[i]] = struct{}{}
+	}
+}
+
+// ClearAnalyzeTasks clears the "analyze_tasks" edge to the AnalyzeTask entity.
+func (m *MediaArtifactMutation) ClearAnalyzeTasks() {
+	m.clearedanalyze_tasks = true
+}
+
+// AnalyzeTasksCleared reports if the "analyze_tasks" edge to the AnalyzeTask entity was cleared.
+func (m *MediaArtifactMutation) AnalyzeTasksCleared() bool {
+	return m.clearedanalyze_tasks
+}
+
+// RemoveAnalyzeTaskIDs removes the "analyze_tasks" edge to the AnalyzeTask entity by IDs.
+func (m *MediaArtifactMutation) RemoveAnalyzeTaskIDs(ids ...int) {
+	if m.removedanalyze_tasks == nil {
+		m.removedanalyze_tasks = make(map[int]struct{})
+	}
+	for i := range ids {
+		delete(m.analyze_tasks, ids[i])
+		m.removedanalyze_tasks[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedAnalyzeTasks returns the removed IDs of the "analyze_tasks" edge to the AnalyzeTask entity.
+func (m *MediaArtifactMutation) RemovedAnalyzeTasksIDs() (ids []int) {
+	for id := range m.removedanalyze_tasks {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// AnalyzeTasksIDs returns the "analyze_tasks" edge IDs in the mutation.
+func (m *MediaArtifactMutation) AnalyzeTasksIDs() (ids []int) {
+	for id := range m.analyze_tasks {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetAnalyzeTasks resets all changes to the "analyze_tasks" edge.
+func (m *MediaArtifactMutation) ResetAnalyzeTasks() {
+	m.analyze_tasks = nil
+	m.clearedanalyze_tasks = false
+	m.removedanalyze_tasks = nil
+}
+
 // SetSourceTranscodeTaskID sets the "source_transcode_task" edge to the TranscodeTask entity by id.
 func (m *MediaArtifactMutation) SetSourceTranscodeTaskID(id int) {
 	m.source_transcode_task = &id
@@ -8262,60 +9835,6 @@ func (m *MediaArtifactMutation) ResetHighlightClips() {
 	m.highlight_clips = nil
 	m.clearedhighlight_clips = false
 	m.removedhighlight_clips = nil
-}
-
-// AddOcrTaskIDs adds the "ocr_tasks" edge to the OCRTask entity by ids.
-func (m *MediaArtifactMutation) AddOcrTaskIDs(ids ...int) {
-	if m.ocr_tasks == nil {
-		m.ocr_tasks = make(map[int]struct{})
-	}
-	for i := range ids {
-		m.ocr_tasks[ids[i]] = struct{}{}
-	}
-}
-
-// ClearOcrTasks clears the "ocr_tasks" edge to the OCRTask entity.
-func (m *MediaArtifactMutation) ClearOcrTasks() {
-	m.clearedocr_tasks = true
-}
-
-// OcrTasksCleared reports if the "ocr_tasks" edge to the OCRTask entity was cleared.
-func (m *MediaArtifactMutation) OcrTasksCleared() bool {
-	return m.clearedocr_tasks
-}
-
-// RemoveOcrTaskIDs removes the "ocr_tasks" edge to the OCRTask entity by IDs.
-func (m *MediaArtifactMutation) RemoveOcrTaskIDs(ids ...int) {
-	if m.removedocr_tasks == nil {
-		m.removedocr_tasks = make(map[int]struct{})
-	}
-	for i := range ids {
-		delete(m.ocr_tasks, ids[i])
-		m.removedocr_tasks[ids[i]] = struct{}{}
-	}
-}
-
-// RemovedOcrTasks returns the removed IDs of the "ocr_tasks" edge to the OCRTask entity.
-func (m *MediaArtifactMutation) RemovedOcrTasksIDs() (ids []int) {
-	for id := range m.removedocr_tasks {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// OcrTasksIDs returns the "ocr_tasks" edge IDs in the mutation.
-func (m *MediaArtifactMutation) OcrTasksIDs() (ids []int) {
-	for id := range m.ocr_tasks {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// ResetOcrTasks resets all changes to the "ocr_tasks" edge.
-func (m *MediaArtifactMutation) ResetOcrTasks() {
-	m.ocr_tasks = nil
-	m.clearedocr_tasks = false
-	m.removedocr_tasks = nil
 }
 
 // Where appends a list predicates to the MediaArtifactMutation builder.
@@ -8673,6 +10192,9 @@ func (m *MediaArtifactMutation) AddedEdges() []string {
 	if m.stt_tasks != nil {
 		edges = append(edges, mediaartifact.EdgeSttTasks)
 	}
+	if m.analyze_tasks != nil {
+		edges = append(edges, mediaartifact.EdgeAnalyzeTasks)
+	}
 	if m.source_transcode_task != nil {
 		edges = append(edges, mediaartifact.EdgeSourceTranscodeTask)
 	}
@@ -8681,9 +10203,6 @@ func (m *MediaArtifactMutation) AddedEdges() []string {
 	}
 	if m.highlight_clips != nil {
 		edges = append(edges, mediaartifact.EdgeHighlightClips)
-	}
-	if m.ocr_tasks != nil {
-		edges = append(edges, mediaartifact.EdgeOcrTasks)
 	}
 	return edges
 }
@@ -8706,6 +10225,12 @@ func (m *MediaArtifactMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case mediaartifact.EdgeAnalyzeTasks:
+		ids := make([]ent.Value, 0, len(m.analyze_tasks))
+		for id := range m.analyze_tasks {
+			ids = append(ids, id)
+		}
+		return ids
 	case mediaartifact.EdgeSourceTranscodeTask:
 		if id := m.source_transcode_task; id != nil {
 			return []ent.Value{*id}
@@ -8720,12 +10245,6 @@ func (m *MediaArtifactMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
-	case mediaartifact.EdgeOcrTasks:
-		ids := make([]ent.Value, 0, len(m.ocr_tasks))
-		for id := range m.ocr_tasks {
-			ids = append(ids, id)
-		}
-		return ids
 	}
 	return nil
 }
@@ -8736,11 +10255,11 @@ func (m *MediaArtifactMutation) RemovedEdges() []string {
 	if m.removedstt_tasks != nil {
 		edges = append(edges, mediaartifact.EdgeSttTasks)
 	}
+	if m.removedanalyze_tasks != nil {
+		edges = append(edges, mediaartifact.EdgeAnalyzeTasks)
+	}
 	if m.removedhighlight_clips != nil {
 		edges = append(edges, mediaartifact.EdgeHighlightClips)
-	}
-	if m.removedocr_tasks != nil {
-		edges = append(edges, mediaartifact.EdgeOcrTasks)
 	}
 	return edges
 }
@@ -8755,15 +10274,15 @@ func (m *MediaArtifactMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
-	case mediaartifact.EdgeHighlightClips:
-		ids := make([]ent.Value, 0, len(m.removedhighlight_clips))
-		for id := range m.removedhighlight_clips {
+	case mediaartifact.EdgeAnalyzeTasks:
+		ids := make([]ent.Value, 0, len(m.removedanalyze_tasks))
+		for id := range m.removedanalyze_tasks {
 			ids = append(ids, id)
 		}
 		return ids
-	case mediaartifact.EdgeOcrTasks:
-		ids := make([]ent.Value, 0, len(m.removedocr_tasks))
-		for id := range m.removedocr_tasks {
+	case mediaartifact.EdgeHighlightClips:
+		ids := make([]ent.Value, 0, len(m.removedhighlight_clips))
+		for id := range m.removedhighlight_clips {
 			ids = append(ids, id)
 		}
 		return ids
@@ -8783,6 +10302,9 @@ func (m *MediaArtifactMutation) ClearedEdges() []string {
 	if m.clearedstt_tasks {
 		edges = append(edges, mediaartifact.EdgeSttTasks)
 	}
+	if m.clearedanalyze_tasks {
+		edges = append(edges, mediaartifact.EdgeAnalyzeTasks)
+	}
 	if m.clearedsource_transcode_task {
 		edges = append(edges, mediaartifact.EdgeSourceTranscodeTask)
 	}
@@ -8791,9 +10313,6 @@ func (m *MediaArtifactMutation) ClearedEdges() []string {
 	}
 	if m.clearedhighlight_clips {
 		edges = append(edges, mediaartifact.EdgeHighlightClips)
-	}
-	if m.clearedocr_tasks {
-		edges = append(edges, mediaartifact.EdgeOcrTasks)
 	}
 	return edges
 }
@@ -8808,14 +10327,14 @@ func (m *MediaArtifactMutation) EdgeCleared(name string) bool {
 		return m.clearedupload_task
 	case mediaartifact.EdgeSttTasks:
 		return m.clearedstt_tasks
+	case mediaartifact.EdgeAnalyzeTasks:
+		return m.clearedanalyze_tasks
 	case mediaartifact.EdgeSourceTranscodeTask:
 		return m.clearedsource_transcode_task
 	case mediaartifact.EdgeArchiveTranscodeTask:
 		return m.clearedarchive_transcode_task
 	case mediaartifact.EdgeHighlightClips:
 		return m.clearedhighlight_clips
-	case mediaartifact.EdgeOcrTasks:
-		return m.clearedocr_tasks
 	}
 	return false
 }
@@ -8853,6 +10372,9 @@ func (m *MediaArtifactMutation) ResetEdge(name string) error {
 	case mediaartifact.EdgeSttTasks:
 		m.ResetSttTasks()
 		return nil
+	case mediaartifact.EdgeAnalyzeTasks:
+		m.ResetAnalyzeTasks()
+		return nil
 	case mediaartifact.EdgeSourceTranscodeTask:
 		m.ResetSourceTranscodeTask()
 		return nil
@@ -8862,1243 +10384,8 @@ func (m *MediaArtifactMutation) ResetEdge(name string) error {
 	case mediaartifact.EdgeHighlightClips:
 		m.ResetHighlightClips()
 		return nil
-	case mediaartifact.EdgeOcrTasks:
-		m.ResetOcrTasks()
-		return nil
 	}
 	return fmt.Errorf("unknown MediaArtifact edge %s", name)
-}
-
-// OCRTaskMutation represents an operation that mutates the OCRTask nodes in the graph.
-type OCRTaskMutation struct {
-	config
-	op                     Op
-	typ                    string
-	id                     *int
-	role                   *string
-	status                 *ocrtask.Status
-	priority               *int
-	addpriority            *int
-	k8s_job_name           *string
-	attempts               *int
-	addattempts            *int
-	settlement_path        *string
-	settlement_json        *string
-	error_message          *string
-	started_at             *time.Time
-	completed_at           *time.Time
-	created_at             *time.Time
-	updated_at             *time.Time
-	clearedFields          map[string]struct{}
-	match_round            *int
-	clearedmatch_round     bool
-	source_artifact        *int
-	clearedsource_artifact bool
-	done                   bool
-	oldValue               func(context.Context) (*OCRTask, error)
-	predicates             []predicate.OCRTask
-}
-
-var _ ent.Mutation = (*OCRTaskMutation)(nil)
-
-// ocrtaskOption allows management of the mutation configuration using functional options.
-type ocrtaskOption func(*OCRTaskMutation)
-
-// newOCRTaskMutation creates new mutation for the OCRTask entity.
-func newOCRTaskMutation(c config, op Op, opts ...ocrtaskOption) *OCRTaskMutation {
-	m := &OCRTaskMutation{
-		config:        c,
-		op:            op,
-		typ:           TypeOCRTask,
-		clearedFields: make(map[string]struct{}),
-	}
-	for _, opt := range opts {
-		opt(m)
-	}
-	return m
-}
-
-// withOCRTaskID sets the ID field of the mutation.
-func withOCRTaskID(id int) ocrtaskOption {
-	return func(m *OCRTaskMutation) {
-		var (
-			err   error
-			once  sync.Once
-			value *OCRTask
-		)
-		m.oldValue = func(ctx context.Context) (*OCRTask, error) {
-			once.Do(func() {
-				if m.done {
-					err = errors.New("querying old values post mutation is not allowed")
-				} else {
-					value, err = m.Client().OCRTask.Get(ctx, id)
-				}
-			})
-			return value, err
-		}
-		m.id = &id
-	}
-}
-
-// withOCRTask sets the old OCRTask of the mutation.
-func withOCRTask(node *OCRTask) ocrtaskOption {
-	return func(m *OCRTaskMutation) {
-		m.oldValue = func(context.Context) (*OCRTask, error) {
-			return node, nil
-		}
-		m.id = &node.ID
-	}
-}
-
-// Client returns a new `ent.Client` from the mutation. If the mutation was
-// executed in a transaction (ent.Tx), a transactional client is returned.
-func (m OCRTaskMutation) Client() *Client {
-	client := &Client{config: m.config}
-	client.init()
-	return client
-}
-
-// Tx returns an `ent.Tx` for mutations that were executed in transactions;
-// it returns an error otherwise.
-func (m OCRTaskMutation) Tx() (*Tx, error) {
-	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, errors.New("ent: mutation is not running in a transaction")
-	}
-	tx := &Tx{config: m.config}
-	tx.init()
-	return tx, nil
-}
-
-// ID returns the ID value in the mutation. Note that the ID is only available
-// if it was provided to the builder or after it was returned from the database.
-func (m *OCRTaskMutation) ID() (id int, exists bool) {
-	if m.id == nil {
-		return
-	}
-	return *m.id, true
-}
-
-// IDs queries the database and returns the entity ids that match the mutation's predicate.
-// That means, if the mutation is applied within a transaction with an isolation level such
-// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
-// or updated by the mutation.
-func (m *OCRTaskMutation) IDs(ctx context.Context) ([]int, error) {
-	switch {
-	case m.op.Is(OpUpdateOne | OpDeleteOne):
-		id, exists := m.ID()
-		if exists {
-			return []int{id}, nil
-		}
-		fallthrough
-	case m.op.Is(OpUpdate | OpDelete):
-		return m.Client().OCRTask.Query().Where(m.predicates...).IDs(ctx)
-	default:
-		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
-	}
-}
-
-// SetRole sets the "role" field.
-func (m *OCRTaskMutation) SetRole(s string) {
-	m.role = &s
-}
-
-// Role returns the value of the "role" field in the mutation.
-func (m *OCRTaskMutation) Role() (r string, exists bool) {
-	v := m.role
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldRole returns the old "role" field's value of the OCRTask entity.
-// If the OCRTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *OCRTaskMutation) OldRole(ctx context.Context) (v string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldRole is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldRole requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldRole: %w", err)
-	}
-	return oldValue.Role, nil
-}
-
-// ResetRole resets all changes to the "role" field.
-func (m *OCRTaskMutation) ResetRole() {
-	m.role = nil
-}
-
-// SetStatus sets the "status" field.
-func (m *OCRTaskMutation) SetStatus(o ocrtask.Status) {
-	m.status = &o
-}
-
-// Status returns the value of the "status" field in the mutation.
-func (m *OCRTaskMutation) Status() (r ocrtask.Status, exists bool) {
-	v := m.status
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldStatus returns the old "status" field's value of the OCRTask entity.
-// If the OCRTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *OCRTaskMutation) OldStatus(ctx context.Context) (v ocrtask.Status, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldStatus requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldStatus: %w", err)
-	}
-	return oldValue.Status, nil
-}
-
-// ResetStatus resets all changes to the "status" field.
-func (m *OCRTaskMutation) ResetStatus() {
-	m.status = nil
-}
-
-// SetPriority sets the "priority" field.
-func (m *OCRTaskMutation) SetPriority(i int) {
-	m.priority = &i
-	m.addpriority = nil
-}
-
-// Priority returns the value of the "priority" field in the mutation.
-func (m *OCRTaskMutation) Priority() (r int, exists bool) {
-	v := m.priority
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldPriority returns the old "priority" field's value of the OCRTask entity.
-// If the OCRTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *OCRTaskMutation) OldPriority(ctx context.Context) (v int, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldPriority is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldPriority requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldPriority: %w", err)
-	}
-	return oldValue.Priority, nil
-}
-
-// AddPriority adds i to the "priority" field.
-func (m *OCRTaskMutation) AddPriority(i int) {
-	if m.addpriority != nil {
-		*m.addpriority += i
-	} else {
-		m.addpriority = &i
-	}
-}
-
-// AddedPriority returns the value that was added to the "priority" field in this mutation.
-func (m *OCRTaskMutation) AddedPriority() (r int, exists bool) {
-	v := m.addpriority
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// ResetPriority resets all changes to the "priority" field.
-func (m *OCRTaskMutation) ResetPriority() {
-	m.priority = nil
-	m.addpriority = nil
-}
-
-// SetK8sJobName sets the "k8s_job_name" field.
-func (m *OCRTaskMutation) SetK8sJobName(s string) {
-	m.k8s_job_name = &s
-}
-
-// K8sJobName returns the value of the "k8s_job_name" field in the mutation.
-func (m *OCRTaskMutation) K8sJobName() (r string, exists bool) {
-	v := m.k8s_job_name
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldK8sJobName returns the old "k8s_job_name" field's value of the OCRTask entity.
-// If the OCRTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *OCRTaskMutation) OldK8sJobName(ctx context.Context) (v *string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldK8sJobName is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldK8sJobName requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldK8sJobName: %w", err)
-	}
-	return oldValue.K8sJobName, nil
-}
-
-// ClearK8sJobName clears the value of the "k8s_job_name" field.
-func (m *OCRTaskMutation) ClearK8sJobName() {
-	m.k8s_job_name = nil
-	m.clearedFields[ocrtask.FieldK8sJobName] = struct{}{}
-}
-
-// K8sJobNameCleared returns if the "k8s_job_name" field was cleared in this mutation.
-func (m *OCRTaskMutation) K8sJobNameCleared() bool {
-	_, ok := m.clearedFields[ocrtask.FieldK8sJobName]
-	return ok
-}
-
-// ResetK8sJobName resets all changes to the "k8s_job_name" field.
-func (m *OCRTaskMutation) ResetK8sJobName() {
-	m.k8s_job_name = nil
-	delete(m.clearedFields, ocrtask.FieldK8sJobName)
-}
-
-// SetAttempts sets the "attempts" field.
-func (m *OCRTaskMutation) SetAttempts(i int) {
-	m.attempts = &i
-	m.addattempts = nil
-}
-
-// Attempts returns the value of the "attempts" field in the mutation.
-func (m *OCRTaskMutation) Attempts() (r int, exists bool) {
-	v := m.attempts
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldAttempts returns the old "attempts" field's value of the OCRTask entity.
-// If the OCRTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *OCRTaskMutation) OldAttempts(ctx context.Context) (v int, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldAttempts is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldAttempts requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldAttempts: %w", err)
-	}
-	return oldValue.Attempts, nil
-}
-
-// AddAttempts adds i to the "attempts" field.
-func (m *OCRTaskMutation) AddAttempts(i int) {
-	if m.addattempts != nil {
-		*m.addattempts += i
-	} else {
-		m.addattempts = &i
-	}
-}
-
-// AddedAttempts returns the value that was added to the "attempts" field in this mutation.
-func (m *OCRTaskMutation) AddedAttempts() (r int, exists bool) {
-	v := m.addattempts
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// ResetAttempts resets all changes to the "attempts" field.
-func (m *OCRTaskMutation) ResetAttempts() {
-	m.attempts = nil
-	m.addattempts = nil
-}
-
-// SetSettlementPath sets the "settlement_path" field.
-func (m *OCRTaskMutation) SetSettlementPath(s string) {
-	m.settlement_path = &s
-}
-
-// SettlementPath returns the value of the "settlement_path" field in the mutation.
-func (m *OCRTaskMutation) SettlementPath() (r string, exists bool) {
-	v := m.settlement_path
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldSettlementPath returns the old "settlement_path" field's value of the OCRTask entity.
-// If the OCRTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *OCRTaskMutation) OldSettlementPath(ctx context.Context) (v *string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldSettlementPath is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldSettlementPath requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldSettlementPath: %w", err)
-	}
-	return oldValue.SettlementPath, nil
-}
-
-// ClearSettlementPath clears the value of the "settlement_path" field.
-func (m *OCRTaskMutation) ClearSettlementPath() {
-	m.settlement_path = nil
-	m.clearedFields[ocrtask.FieldSettlementPath] = struct{}{}
-}
-
-// SettlementPathCleared returns if the "settlement_path" field was cleared in this mutation.
-func (m *OCRTaskMutation) SettlementPathCleared() bool {
-	_, ok := m.clearedFields[ocrtask.FieldSettlementPath]
-	return ok
-}
-
-// ResetSettlementPath resets all changes to the "settlement_path" field.
-func (m *OCRTaskMutation) ResetSettlementPath() {
-	m.settlement_path = nil
-	delete(m.clearedFields, ocrtask.FieldSettlementPath)
-}
-
-// SetSettlementJSON sets the "settlement_json" field.
-func (m *OCRTaskMutation) SetSettlementJSON(s string) {
-	m.settlement_json = &s
-}
-
-// SettlementJSON returns the value of the "settlement_json" field in the mutation.
-func (m *OCRTaskMutation) SettlementJSON() (r string, exists bool) {
-	v := m.settlement_json
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldSettlementJSON returns the old "settlement_json" field's value of the OCRTask entity.
-// If the OCRTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *OCRTaskMutation) OldSettlementJSON(ctx context.Context) (v *string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldSettlementJSON is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldSettlementJSON requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldSettlementJSON: %w", err)
-	}
-	return oldValue.SettlementJSON, nil
-}
-
-// ClearSettlementJSON clears the value of the "settlement_json" field.
-func (m *OCRTaskMutation) ClearSettlementJSON() {
-	m.settlement_json = nil
-	m.clearedFields[ocrtask.FieldSettlementJSON] = struct{}{}
-}
-
-// SettlementJSONCleared returns if the "settlement_json" field was cleared in this mutation.
-func (m *OCRTaskMutation) SettlementJSONCleared() bool {
-	_, ok := m.clearedFields[ocrtask.FieldSettlementJSON]
-	return ok
-}
-
-// ResetSettlementJSON resets all changes to the "settlement_json" field.
-func (m *OCRTaskMutation) ResetSettlementJSON() {
-	m.settlement_json = nil
-	delete(m.clearedFields, ocrtask.FieldSettlementJSON)
-}
-
-// SetErrorMessage sets the "error_message" field.
-func (m *OCRTaskMutation) SetErrorMessage(s string) {
-	m.error_message = &s
-}
-
-// ErrorMessage returns the value of the "error_message" field in the mutation.
-func (m *OCRTaskMutation) ErrorMessage() (r string, exists bool) {
-	v := m.error_message
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldErrorMessage returns the old "error_message" field's value of the OCRTask entity.
-// If the OCRTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *OCRTaskMutation) OldErrorMessage(ctx context.Context) (v *string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldErrorMessage is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldErrorMessage requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldErrorMessage: %w", err)
-	}
-	return oldValue.ErrorMessage, nil
-}
-
-// ClearErrorMessage clears the value of the "error_message" field.
-func (m *OCRTaskMutation) ClearErrorMessage() {
-	m.error_message = nil
-	m.clearedFields[ocrtask.FieldErrorMessage] = struct{}{}
-}
-
-// ErrorMessageCleared returns if the "error_message" field was cleared in this mutation.
-func (m *OCRTaskMutation) ErrorMessageCleared() bool {
-	_, ok := m.clearedFields[ocrtask.FieldErrorMessage]
-	return ok
-}
-
-// ResetErrorMessage resets all changes to the "error_message" field.
-func (m *OCRTaskMutation) ResetErrorMessage() {
-	m.error_message = nil
-	delete(m.clearedFields, ocrtask.FieldErrorMessage)
-}
-
-// SetStartedAt sets the "started_at" field.
-func (m *OCRTaskMutation) SetStartedAt(t time.Time) {
-	m.started_at = &t
-}
-
-// StartedAt returns the value of the "started_at" field in the mutation.
-func (m *OCRTaskMutation) StartedAt() (r time.Time, exists bool) {
-	v := m.started_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldStartedAt returns the old "started_at" field's value of the OCRTask entity.
-// If the OCRTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *OCRTaskMutation) OldStartedAt(ctx context.Context) (v *time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldStartedAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldStartedAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldStartedAt: %w", err)
-	}
-	return oldValue.StartedAt, nil
-}
-
-// ClearStartedAt clears the value of the "started_at" field.
-func (m *OCRTaskMutation) ClearStartedAt() {
-	m.started_at = nil
-	m.clearedFields[ocrtask.FieldStartedAt] = struct{}{}
-}
-
-// StartedAtCleared returns if the "started_at" field was cleared in this mutation.
-func (m *OCRTaskMutation) StartedAtCleared() bool {
-	_, ok := m.clearedFields[ocrtask.FieldStartedAt]
-	return ok
-}
-
-// ResetStartedAt resets all changes to the "started_at" field.
-func (m *OCRTaskMutation) ResetStartedAt() {
-	m.started_at = nil
-	delete(m.clearedFields, ocrtask.FieldStartedAt)
-}
-
-// SetCompletedAt sets the "completed_at" field.
-func (m *OCRTaskMutation) SetCompletedAt(t time.Time) {
-	m.completed_at = &t
-}
-
-// CompletedAt returns the value of the "completed_at" field in the mutation.
-func (m *OCRTaskMutation) CompletedAt() (r time.Time, exists bool) {
-	v := m.completed_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldCompletedAt returns the old "completed_at" field's value of the OCRTask entity.
-// If the OCRTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *OCRTaskMutation) OldCompletedAt(ctx context.Context) (v *time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldCompletedAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldCompletedAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldCompletedAt: %w", err)
-	}
-	return oldValue.CompletedAt, nil
-}
-
-// ClearCompletedAt clears the value of the "completed_at" field.
-func (m *OCRTaskMutation) ClearCompletedAt() {
-	m.completed_at = nil
-	m.clearedFields[ocrtask.FieldCompletedAt] = struct{}{}
-}
-
-// CompletedAtCleared returns if the "completed_at" field was cleared in this mutation.
-func (m *OCRTaskMutation) CompletedAtCleared() bool {
-	_, ok := m.clearedFields[ocrtask.FieldCompletedAt]
-	return ok
-}
-
-// ResetCompletedAt resets all changes to the "completed_at" field.
-func (m *OCRTaskMutation) ResetCompletedAt() {
-	m.completed_at = nil
-	delete(m.clearedFields, ocrtask.FieldCompletedAt)
-}
-
-// SetCreatedAt sets the "created_at" field.
-func (m *OCRTaskMutation) SetCreatedAt(t time.Time) {
-	m.created_at = &t
-}
-
-// CreatedAt returns the value of the "created_at" field in the mutation.
-func (m *OCRTaskMutation) CreatedAt() (r time.Time, exists bool) {
-	v := m.created_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldCreatedAt returns the old "created_at" field's value of the OCRTask entity.
-// If the OCRTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *OCRTaskMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
-	}
-	return oldValue.CreatedAt, nil
-}
-
-// ResetCreatedAt resets all changes to the "created_at" field.
-func (m *OCRTaskMutation) ResetCreatedAt() {
-	m.created_at = nil
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (m *OCRTaskMutation) SetUpdatedAt(t time.Time) {
-	m.updated_at = &t
-}
-
-// UpdatedAt returns the value of the "updated_at" field in the mutation.
-func (m *OCRTaskMutation) UpdatedAt() (r time.Time, exists bool) {
-	v := m.updated_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldUpdatedAt returns the old "updated_at" field's value of the OCRTask entity.
-// If the OCRTask object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *OCRTaskMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
-	}
-	return oldValue.UpdatedAt, nil
-}
-
-// ResetUpdatedAt resets all changes to the "updated_at" field.
-func (m *OCRTaskMutation) ResetUpdatedAt() {
-	m.updated_at = nil
-}
-
-// SetMatchRoundID sets the "match_round" edge to the MatchRound entity by id.
-func (m *OCRTaskMutation) SetMatchRoundID(id int) {
-	m.match_round = &id
-}
-
-// ClearMatchRound clears the "match_round" edge to the MatchRound entity.
-func (m *OCRTaskMutation) ClearMatchRound() {
-	m.clearedmatch_round = true
-}
-
-// MatchRoundCleared reports if the "match_round" edge to the MatchRound entity was cleared.
-func (m *OCRTaskMutation) MatchRoundCleared() bool {
-	return m.clearedmatch_round
-}
-
-// MatchRoundID returns the "match_round" edge ID in the mutation.
-func (m *OCRTaskMutation) MatchRoundID() (id int, exists bool) {
-	if m.match_round != nil {
-		return *m.match_round, true
-	}
-	return
-}
-
-// MatchRoundIDs returns the "match_round" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// MatchRoundID instead. It exists only for internal usage by the builders.
-func (m *OCRTaskMutation) MatchRoundIDs() (ids []int) {
-	if id := m.match_round; id != nil {
-		ids = append(ids, *id)
-	}
-	return
-}
-
-// ResetMatchRound resets all changes to the "match_round" edge.
-func (m *OCRTaskMutation) ResetMatchRound() {
-	m.match_round = nil
-	m.clearedmatch_round = false
-}
-
-// SetSourceArtifactID sets the "source_artifact" edge to the MediaArtifact entity by id.
-func (m *OCRTaskMutation) SetSourceArtifactID(id int) {
-	m.source_artifact = &id
-}
-
-// ClearSourceArtifact clears the "source_artifact" edge to the MediaArtifact entity.
-func (m *OCRTaskMutation) ClearSourceArtifact() {
-	m.clearedsource_artifact = true
-}
-
-// SourceArtifactCleared reports if the "source_artifact" edge to the MediaArtifact entity was cleared.
-func (m *OCRTaskMutation) SourceArtifactCleared() bool {
-	return m.clearedsource_artifact
-}
-
-// SourceArtifactID returns the "source_artifact" edge ID in the mutation.
-func (m *OCRTaskMutation) SourceArtifactID() (id int, exists bool) {
-	if m.source_artifact != nil {
-		return *m.source_artifact, true
-	}
-	return
-}
-
-// SourceArtifactIDs returns the "source_artifact" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// SourceArtifactID instead. It exists only for internal usage by the builders.
-func (m *OCRTaskMutation) SourceArtifactIDs() (ids []int) {
-	if id := m.source_artifact; id != nil {
-		ids = append(ids, *id)
-	}
-	return
-}
-
-// ResetSourceArtifact resets all changes to the "source_artifact" edge.
-func (m *OCRTaskMutation) ResetSourceArtifact() {
-	m.source_artifact = nil
-	m.clearedsource_artifact = false
-}
-
-// Where appends a list predicates to the OCRTaskMutation builder.
-func (m *OCRTaskMutation) Where(ps ...predicate.OCRTask) {
-	m.predicates = append(m.predicates, ps...)
-}
-
-// WhereP appends storage-level predicates to the OCRTaskMutation builder. Using this method,
-// users can use type-assertion to append predicates that do not depend on any generated package.
-func (m *OCRTaskMutation) WhereP(ps ...func(*sql.Selector)) {
-	p := make([]predicate.OCRTask, len(ps))
-	for i := range ps {
-		p[i] = ps[i]
-	}
-	m.Where(p...)
-}
-
-// Op returns the operation name.
-func (m *OCRTaskMutation) Op() Op {
-	return m.op
-}
-
-// SetOp allows setting the mutation operation.
-func (m *OCRTaskMutation) SetOp(op Op) {
-	m.op = op
-}
-
-// Type returns the node type of this mutation (OCRTask).
-func (m *OCRTaskMutation) Type() string {
-	return m.typ
-}
-
-// Fields returns all fields that were changed during this mutation. Note that in
-// order to get all numeric fields that were incremented/decremented, call
-// AddedFields().
-func (m *OCRTaskMutation) Fields() []string {
-	fields := make([]string, 0, 12)
-	if m.role != nil {
-		fields = append(fields, ocrtask.FieldRole)
-	}
-	if m.status != nil {
-		fields = append(fields, ocrtask.FieldStatus)
-	}
-	if m.priority != nil {
-		fields = append(fields, ocrtask.FieldPriority)
-	}
-	if m.k8s_job_name != nil {
-		fields = append(fields, ocrtask.FieldK8sJobName)
-	}
-	if m.attempts != nil {
-		fields = append(fields, ocrtask.FieldAttempts)
-	}
-	if m.settlement_path != nil {
-		fields = append(fields, ocrtask.FieldSettlementPath)
-	}
-	if m.settlement_json != nil {
-		fields = append(fields, ocrtask.FieldSettlementJSON)
-	}
-	if m.error_message != nil {
-		fields = append(fields, ocrtask.FieldErrorMessage)
-	}
-	if m.started_at != nil {
-		fields = append(fields, ocrtask.FieldStartedAt)
-	}
-	if m.completed_at != nil {
-		fields = append(fields, ocrtask.FieldCompletedAt)
-	}
-	if m.created_at != nil {
-		fields = append(fields, ocrtask.FieldCreatedAt)
-	}
-	if m.updated_at != nil {
-		fields = append(fields, ocrtask.FieldUpdatedAt)
-	}
-	return fields
-}
-
-// Field returns the value of a field with the given name. The second boolean
-// return value indicates that this field was not set, or was not defined in the
-// schema.
-func (m *OCRTaskMutation) Field(name string) (ent.Value, bool) {
-	switch name {
-	case ocrtask.FieldRole:
-		return m.Role()
-	case ocrtask.FieldStatus:
-		return m.Status()
-	case ocrtask.FieldPriority:
-		return m.Priority()
-	case ocrtask.FieldK8sJobName:
-		return m.K8sJobName()
-	case ocrtask.FieldAttempts:
-		return m.Attempts()
-	case ocrtask.FieldSettlementPath:
-		return m.SettlementPath()
-	case ocrtask.FieldSettlementJSON:
-		return m.SettlementJSON()
-	case ocrtask.FieldErrorMessage:
-		return m.ErrorMessage()
-	case ocrtask.FieldStartedAt:
-		return m.StartedAt()
-	case ocrtask.FieldCompletedAt:
-		return m.CompletedAt()
-	case ocrtask.FieldCreatedAt:
-		return m.CreatedAt()
-	case ocrtask.FieldUpdatedAt:
-		return m.UpdatedAt()
-	}
-	return nil, false
-}
-
-// OldField returns the old value of the field from the database. An error is
-// returned if the mutation operation is not UpdateOne, or the query to the
-// database failed.
-func (m *OCRTaskMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
-	switch name {
-	case ocrtask.FieldRole:
-		return m.OldRole(ctx)
-	case ocrtask.FieldStatus:
-		return m.OldStatus(ctx)
-	case ocrtask.FieldPriority:
-		return m.OldPriority(ctx)
-	case ocrtask.FieldK8sJobName:
-		return m.OldK8sJobName(ctx)
-	case ocrtask.FieldAttempts:
-		return m.OldAttempts(ctx)
-	case ocrtask.FieldSettlementPath:
-		return m.OldSettlementPath(ctx)
-	case ocrtask.FieldSettlementJSON:
-		return m.OldSettlementJSON(ctx)
-	case ocrtask.FieldErrorMessage:
-		return m.OldErrorMessage(ctx)
-	case ocrtask.FieldStartedAt:
-		return m.OldStartedAt(ctx)
-	case ocrtask.FieldCompletedAt:
-		return m.OldCompletedAt(ctx)
-	case ocrtask.FieldCreatedAt:
-		return m.OldCreatedAt(ctx)
-	case ocrtask.FieldUpdatedAt:
-		return m.OldUpdatedAt(ctx)
-	}
-	return nil, fmt.Errorf("unknown OCRTask field %s", name)
-}
-
-// SetField sets the value of a field with the given name. It returns an error if
-// the field is not defined in the schema, or if the type mismatched the field
-// type.
-func (m *OCRTaskMutation) SetField(name string, value ent.Value) error {
-	switch name {
-	case ocrtask.FieldRole:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetRole(v)
-		return nil
-	case ocrtask.FieldStatus:
-		v, ok := value.(ocrtask.Status)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetStatus(v)
-		return nil
-	case ocrtask.FieldPriority:
-		v, ok := value.(int)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetPriority(v)
-		return nil
-	case ocrtask.FieldK8sJobName:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetK8sJobName(v)
-		return nil
-	case ocrtask.FieldAttempts:
-		v, ok := value.(int)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetAttempts(v)
-		return nil
-	case ocrtask.FieldSettlementPath:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetSettlementPath(v)
-		return nil
-	case ocrtask.FieldSettlementJSON:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetSettlementJSON(v)
-		return nil
-	case ocrtask.FieldErrorMessage:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetErrorMessage(v)
-		return nil
-	case ocrtask.FieldStartedAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetStartedAt(v)
-		return nil
-	case ocrtask.FieldCompletedAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetCompletedAt(v)
-		return nil
-	case ocrtask.FieldCreatedAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetCreatedAt(v)
-		return nil
-	case ocrtask.FieldUpdatedAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetUpdatedAt(v)
-		return nil
-	}
-	return fmt.Errorf("unknown OCRTask field %s", name)
-}
-
-// AddedFields returns all numeric fields that were incremented/decremented during
-// this mutation.
-func (m *OCRTaskMutation) AddedFields() []string {
-	var fields []string
-	if m.addpriority != nil {
-		fields = append(fields, ocrtask.FieldPriority)
-	}
-	if m.addattempts != nil {
-		fields = append(fields, ocrtask.FieldAttempts)
-	}
-	return fields
-}
-
-// AddedField returns the numeric value that was incremented/decremented on a field
-// with the given name. The second boolean return value indicates that this field
-// was not set, or was not defined in the schema.
-func (m *OCRTaskMutation) AddedField(name string) (ent.Value, bool) {
-	switch name {
-	case ocrtask.FieldPriority:
-		return m.AddedPriority()
-	case ocrtask.FieldAttempts:
-		return m.AddedAttempts()
-	}
-	return nil, false
-}
-
-// AddField adds the value to the field with the given name. It returns an error if
-// the field is not defined in the schema, or if the type mismatched the field
-// type.
-func (m *OCRTaskMutation) AddField(name string, value ent.Value) error {
-	switch name {
-	case ocrtask.FieldPriority:
-		v, ok := value.(int)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddPriority(v)
-		return nil
-	case ocrtask.FieldAttempts:
-		v, ok := value.(int)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddAttempts(v)
-		return nil
-	}
-	return fmt.Errorf("unknown OCRTask numeric field %s", name)
-}
-
-// ClearedFields returns all nullable fields that were cleared during this
-// mutation.
-func (m *OCRTaskMutation) ClearedFields() []string {
-	var fields []string
-	if m.FieldCleared(ocrtask.FieldK8sJobName) {
-		fields = append(fields, ocrtask.FieldK8sJobName)
-	}
-	if m.FieldCleared(ocrtask.FieldSettlementPath) {
-		fields = append(fields, ocrtask.FieldSettlementPath)
-	}
-	if m.FieldCleared(ocrtask.FieldSettlementJSON) {
-		fields = append(fields, ocrtask.FieldSettlementJSON)
-	}
-	if m.FieldCleared(ocrtask.FieldErrorMessage) {
-		fields = append(fields, ocrtask.FieldErrorMessage)
-	}
-	if m.FieldCleared(ocrtask.FieldStartedAt) {
-		fields = append(fields, ocrtask.FieldStartedAt)
-	}
-	if m.FieldCleared(ocrtask.FieldCompletedAt) {
-		fields = append(fields, ocrtask.FieldCompletedAt)
-	}
-	return fields
-}
-
-// FieldCleared returns a boolean indicating if a field with the given name was
-// cleared in this mutation.
-func (m *OCRTaskMutation) FieldCleared(name string) bool {
-	_, ok := m.clearedFields[name]
-	return ok
-}
-
-// ClearField clears the value of the field with the given name. It returns an
-// error if the field is not defined in the schema.
-func (m *OCRTaskMutation) ClearField(name string) error {
-	switch name {
-	case ocrtask.FieldK8sJobName:
-		m.ClearK8sJobName()
-		return nil
-	case ocrtask.FieldSettlementPath:
-		m.ClearSettlementPath()
-		return nil
-	case ocrtask.FieldSettlementJSON:
-		m.ClearSettlementJSON()
-		return nil
-	case ocrtask.FieldErrorMessage:
-		m.ClearErrorMessage()
-		return nil
-	case ocrtask.FieldStartedAt:
-		m.ClearStartedAt()
-		return nil
-	case ocrtask.FieldCompletedAt:
-		m.ClearCompletedAt()
-		return nil
-	}
-	return fmt.Errorf("unknown OCRTask nullable field %s", name)
-}
-
-// ResetField resets all changes in the mutation for the field with the given name.
-// It returns an error if the field is not defined in the schema.
-func (m *OCRTaskMutation) ResetField(name string) error {
-	switch name {
-	case ocrtask.FieldRole:
-		m.ResetRole()
-		return nil
-	case ocrtask.FieldStatus:
-		m.ResetStatus()
-		return nil
-	case ocrtask.FieldPriority:
-		m.ResetPriority()
-		return nil
-	case ocrtask.FieldK8sJobName:
-		m.ResetK8sJobName()
-		return nil
-	case ocrtask.FieldAttempts:
-		m.ResetAttempts()
-		return nil
-	case ocrtask.FieldSettlementPath:
-		m.ResetSettlementPath()
-		return nil
-	case ocrtask.FieldSettlementJSON:
-		m.ResetSettlementJSON()
-		return nil
-	case ocrtask.FieldErrorMessage:
-		m.ResetErrorMessage()
-		return nil
-	case ocrtask.FieldStartedAt:
-		m.ResetStartedAt()
-		return nil
-	case ocrtask.FieldCompletedAt:
-		m.ResetCompletedAt()
-		return nil
-	case ocrtask.FieldCreatedAt:
-		m.ResetCreatedAt()
-		return nil
-	case ocrtask.FieldUpdatedAt:
-		m.ResetUpdatedAt()
-		return nil
-	}
-	return fmt.Errorf("unknown OCRTask field %s", name)
-}
-
-// AddedEdges returns all edge names that were set/added in this mutation.
-func (m *OCRTaskMutation) AddedEdges() []string {
-	edges := make([]string, 0, 2)
-	if m.match_round != nil {
-		edges = append(edges, ocrtask.EdgeMatchRound)
-	}
-	if m.source_artifact != nil {
-		edges = append(edges, ocrtask.EdgeSourceArtifact)
-	}
-	return edges
-}
-
-// AddedIDs returns all IDs (to other nodes) that were added for the given edge
-// name in this mutation.
-func (m *OCRTaskMutation) AddedIDs(name string) []ent.Value {
-	switch name {
-	case ocrtask.EdgeMatchRound:
-		if id := m.match_round; id != nil {
-			return []ent.Value{*id}
-		}
-	case ocrtask.EdgeSourceArtifact:
-		if id := m.source_artifact; id != nil {
-			return []ent.Value{*id}
-		}
-	}
-	return nil
-}
-
-// RemovedEdges returns all edge names that were removed in this mutation.
-func (m *OCRTaskMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 2)
-	return edges
-}
-
-// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
-// the given name in this mutation.
-func (m *OCRTaskMutation) RemovedIDs(name string) []ent.Value {
-	return nil
-}
-
-// ClearedEdges returns all edge names that were cleared in this mutation.
-func (m *OCRTaskMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 2)
-	if m.clearedmatch_round {
-		edges = append(edges, ocrtask.EdgeMatchRound)
-	}
-	if m.clearedsource_artifact {
-		edges = append(edges, ocrtask.EdgeSourceArtifact)
-	}
-	return edges
-}
-
-// EdgeCleared returns a boolean which indicates if the edge with the given name
-// was cleared in this mutation.
-func (m *OCRTaskMutation) EdgeCleared(name string) bool {
-	switch name {
-	case ocrtask.EdgeMatchRound:
-		return m.clearedmatch_round
-	case ocrtask.EdgeSourceArtifact:
-		return m.clearedsource_artifact
-	}
-	return false
-}
-
-// ClearEdge clears the value of the edge with the given name. It returns an error
-// if that edge is not defined in the schema.
-func (m *OCRTaskMutation) ClearEdge(name string) error {
-	switch name {
-	case ocrtask.EdgeMatchRound:
-		m.ClearMatchRound()
-		return nil
-	case ocrtask.EdgeSourceArtifact:
-		m.ClearSourceArtifact()
-		return nil
-	}
-	return fmt.Errorf("unknown OCRTask unique edge %s", name)
-}
-
-// ResetEdge resets all changes to the edge with the given name in this mutation.
-// It returns an error if the edge is not defined in the schema.
-func (m *OCRTaskMutation) ResetEdge(name string) error {
-	switch name {
-	case ocrtask.EdgeMatchRound:
-		m.ResetMatchRound()
-		return nil
-	case ocrtask.EdgeSourceArtifact:
-		m.ResetSourceArtifact()
-		return nil
-	}
-	return fmt.Errorf("unknown OCRTask edge %s", name)
 }
 
 // RecordTaskMutation represents an operation that mutates the RecordTask nodes in the graph.

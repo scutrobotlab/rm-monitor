@@ -74,10 +74,10 @@ jobs:
             dockerfile: cmd/recording-repair/Dockerfile
           - app: danmu-job
             dockerfile: danmu-job/Dockerfile
-          - app: ocr-dispatcher
-            dockerfile: ocr-dispatcher/Dockerfile
-          - app: ocr-job
-            dockerfile: ocr-job/Dockerfile
+          - app: analyze-job
+            dockerfile: analyze-job/Dockerfile
+          - app: ocr-server
+            dockerfile: analyze-job/ocr-daemon/Dockerfile
           - app: highlight-dispatcher
             dockerfile: highlight-dispatcher/Dockerfile
           - app: highlight-artifact-job

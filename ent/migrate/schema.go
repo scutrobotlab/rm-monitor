@@ -8,6 +8,69 @@ import (
 )
 
 var (
+	// AnalyzeTasksColumns holds the columns for the "analyze_tasks" table.
+	AnalyzeTasksColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "role", Type: field.TypeString},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"PENDING", "DISPATCHING", "RUNNING", "SUCCEEDED", "FAILED"}, Default: "PENDING"},
+		{Name: "priority", Type: field.TypeInt, Default: 0},
+		{Name: "k8s_job_name", Type: field.TypeString, Nullable: true},
+		{Name: "attempts", Type: field.TypeInt, Default: 0},
+		{Name: "round_json_path", Type: field.TypeString, Nullable: true},
+		{Name: "settlement_image_path", Type: field.TypeString, Nullable: true},
+		{Name: "settlement_status", Type: field.TypeEnum, Nullable: true, Enums: []string{"CONFIRMED", "INVALID"}},
+		{Name: "effective_start_seconds", Type: field.TypeFloat64, Nullable: true},
+		{Name: "effective_end_seconds", Type: field.TypeFloat64, Nullable: true},
+		{Name: "error_message", Type: field.TypeString, Nullable: true},
+		{Name: "started_at", Type: field.TypeTime, Nullable: true},
+		{Name: "completed_at", Type: field.TypeTime, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "match_round_analyze_tasks", Type: field.TypeInt},
+		{Name: "media_artifact_analyze_tasks", Type: field.TypeInt},
+	}
+	// AnalyzeTasksTable holds the schema information for the "analyze_tasks" table.
+	AnalyzeTasksTable = &schema.Table{
+		Name:       "analyze_tasks",
+		Columns:    AnalyzeTasksColumns,
+		PrimaryKey: []*schema.Column{AnalyzeTasksColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "analyze_tasks_match_rounds_analyze_tasks",
+				Columns:    []*schema.Column{AnalyzeTasksColumns[16]},
+				RefColumns: []*schema.Column{MatchRoundsColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+			{
+				Symbol:     "analyze_tasks_media_artifacts_analyze_tasks",
+				Columns:    []*schema.Column{AnalyzeTasksColumns[17]},
+				RefColumns: []*schema.Column{MediaArtifactsColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "analyzetask_role_match_round_analyze_tasks",
+				Unique:  true,
+				Columns: []*schema.Column{AnalyzeTasksColumns[1], AnalyzeTasksColumns[16]},
+			},
+			{
+				Name:    "analyzetask_status",
+				Unique:  false,
+				Columns: []*schema.Column{AnalyzeTasksColumns[2]},
+			},
+			{
+				Name:    "analyzetask_status_priority_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{AnalyzeTasksColumns[2], AnalyzeTasksColumns[3], AnalyzeTasksColumns[14]},
+			},
+			{
+				Name:    "analyzetask_status_updated_at",
+				Unique:  false,
+				Columns: []*schema.Column{AnalyzeTasksColumns[2], AnalyzeTasksColumns[15]},
+			},
+		},
+	}
 	// HighlightClipsColumns holds the columns for the "highlight_clips" table.
 	HighlightClipsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -354,66 +417,6 @@ var (
 			},
 		},
 	}
-	// OcrTasksColumns holds the columns for the "ocr_tasks" table.
-	OcrTasksColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeInt, Increment: true},
-		{Name: "role", Type: field.TypeString},
-		{Name: "status", Type: field.TypeEnum, Enums: []string{"PENDING", "DISPATCHING", "RUNNING", "SUCCEEDED", "FAILED"}, Default: "PENDING"},
-		{Name: "priority", Type: field.TypeInt, Default: 0},
-		{Name: "k8s_job_name", Type: field.TypeString, Nullable: true},
-		{Name: "attempts", Type: field.TypeInt, Default: 0},
-		{Name: "settlement_path", Type: field.TypeString, Nullable: true},
-		{Name: "settlement_json", Type: field.TypeString, Nullable: true},
-		{Name: "error_message", Type: field.TypeString, Nullable: true},
-		{Name: "started_at", Type: field.TypeTime, Nullable: true},
-		{Name: "completed_at", Type: field.TypeTime, Nullable: true},
-		{Name: "created_at", Type: field.TypeTime},
-		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "match_round_ocr_tasks", Type: field.TypeInt},
-		{Name: "media_artifact_ocr_tasks", Type: field.TypeInt},
-	}
-	// OcrTasksTable holds the schema information for the "ocr_tasks" table.
-	OcrTasksTable = &schema.Table{
-		Name:       "ocr_tasks",
-		Columns:    OcrTasksColumns,
-		PrimaryKey: []*schema.Column{OcrTasksColumns[0]},
-		ForeignKeys: []*schema.ForeignKey{
-			{
-				Symbol:     "ocr_tasks_match_rounds_ocr_tasks",
-				Columns:    []*schema.Column{OcrTasksColumns[13]},
-				RefColumns: []*schema.Column{MatchRoundsColumns[0]},
-				OnDelete:   schema.NoAction,
-			},
-			{
-				Symbol:     "ocr_tasks_media_artifacts_ocr_tasks",
-				Columns:    []*schema.Column{OcrTasksColumns[14]},
-				RefColumns: []*schema.Column{MediaArtifactsColumns[0]},
-				OnDelete:   schema.NoAction,
-			},
-		},
-		Indexes: []*schema.Index{
-			{
-				Name:    "ocrtask_role_match_round_ocr_tasks",
-				Unique:  true,
-				Columns: []*schema.Column{OcrTasksColumns[1], OcrTasksColumns[13]},
-			},
-			{
-				Name:    "ocrtask_status",
-				Unique:  false,
-				Columns: []*schema.Column{OcrTasksColumns[2]},
-			},
-			{
-				Name:    "ocrtask_status_priority_created_at",
-				Unique:  false,
-				Columns: []*schema.Column{OcrTasksColumns[2], OcrTasksColumns[3], OcrTasksColumns[11]},
-			},
-			{
-				Name:    "ocrtask_status_updated_at",
-				Unique:  false,
-				Columns: []*schema.Column{OcrTasksColumns[2], OcrTasksColumns[12]},
-			},
-		},
-	}
 	// RecordTasksColumns holds the columns for the "record_tasks" table.
 	RecordTasksColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -671,6 +674,7 @@ var (
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
+		AnalyzeTasksTable,
 		HighlightClipsTable,
 		HighlightPublishTasksTable,
 		HighlightRoundStatesTable,
@@ -678,7 +682,6 @@ var (
 		MatchesTable,
 		MatchRoundsTable,
 		MediaArtifactsTable,
-		OcrTasksTable,
 		RecordTasksTable,
 		SttTasksTable,
 		TeamsTable,
@@ -688,6 +691,8 @@ var (
 )
 
 func init() {
+	AnalyzeTasksTable.ForeignKeys[0].RefTable = MatchRoundsTable
+	AnalyzeTasksTable.ForeignKeys[1].RefTable = MediaArtifactsTable
 	HighlightClipsTable.ForeignKeys[0].RefTable = MatchRoundsTable
 	HighlightClipsTable.ForeignKeys[1].RefTable = MediaArtifactsTable
 	HighlightPublishTasksTable.ForeignKeys[0].RefTable = HighlightClipsTable
@@ -697,8 +702,6 @@ func init() {
 	MatchesTable.ForeignKeys[1].RefTable = TeamsTable
 	MatchRoundsTable.ForeignKeys[0].RefTable = MatchesTable
 	MediaArtifactsTable.ForeignKeys[0].RefTable = RecordTasksTable
-	OcrTasksTable.ForeignKeys[0].RefTable = MatchRoundsTable
-	OcrTasksTable.ForeignKeys[1].RefTable = MediaArtifactsTable
 	RecordTasksTable.ForeignKeys[0].RefTable = MatchRoundsTable
 	SttTasksTable.ForeignKeys[0].RefTable = MatchRoundsTable
 	SttTasksTable.ForeignKeys[1].RefTable = MediaArtifactsTable

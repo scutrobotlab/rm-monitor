@@ -142,26 +142,6 @@ from media_artifacts ma
 where ma.path like 'Pressure/%'
 on conflict do nothing;
 
-insert into ocr_tasks(role, status, priority, k8s_job_name, attempts, settlement_path, settlement_json, error_message, started_at, completed_at, created_at, updated_at, match_round_ocr_tasks, media_artifact_ocr_tasks)
-select 'role-1',
-       case when ma.id % 5 = 0 then 'RUNNING' else 'SUCCEEDED' end,
-       ma.id % 10,
-       null,
-       ma.id % 2,
-       'settlement-' || ma.id,
-       '{}',
-       null,
-       now() - interval '23 hours',
-       case when ma.id % 5 = 0 then null else now() - interval '22 hours' end,
-       now() - interval '1 day',
-       now() - interval '1 day',
-       rt.match_round_record_tasks,
-       ma.id
-from media_artifacts ma
-join record_tasks rt on rt.id = ma.record_task_media_artifacts
-where ma.path like 'Pressure/%'
-on conflict do nothing;
-
 insert into highlight_clips(highlight_index, role, algorithm_version, status, priority, k8s_job_name, attempts, start_seconds, end_seconds, peak_seconds, output_dir, title, description, tags, score, model_payload, error_message, started_at, completed_at, created_at, updated_at, match_round_highlight_clips, media_artifact_highlight_clips)
 select 1,
        'role-1',
@@ -218,6 +198,5 @@ select 'seeded' as phase, :'profile' as profile,
   (select count(*) from media_artifacts) as media_artifacts,
   (select count(*) from upload_tasks) as upload_tasks,
   (select count(*) from transcode_tasks) as transcode_tasks,
-  (select count(*) from ocr_tasks) as ocr_tasks,
   (select count(*) from highlight_clips) as highlight_clips,
   (select count(*) from highlight_publish_tasks) as highlight_publish_tasks;

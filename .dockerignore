@@ -7,10 +7,16 @@
 /bin
 /config
 /data
+/analyze-job/data
+/analyze-job/debug
+/analyze-job/__pycache__
+/analyze-job/ocr-daemon/__pycache__
+/analyze-job/ocr-daemon/models
 /danmu-job/dist
 /danmu-job/node_modules
 /highlight-artifact-job/target
 /highlight-publish-bilibili-job/target
+**/target
 /target
 /recorder/data
 *.exe

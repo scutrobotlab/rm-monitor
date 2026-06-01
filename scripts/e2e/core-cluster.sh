@@ -12,6 +12,7 @@ IMAGE_TAG="dev"
 KUBECTL="${KUBECTL:-kubectl}"
 HELM="${HELM:-helm}"
 KIND="${KIND:-kind}"
+DOCKER="${DOCKER:-docker}"
 
 if ! command -v "$KUBECTL" >/dev/null 2>&1 && command -v kubectl.exe >/dev/null 2>&1; then
   KUBECTL="kubectl.exe"
@@ -21,6 +22,18 @@ if ! command -v "$HELM" >/dev/null 2>&1 && command -v helm.exe >/dev/null 2>&1; 
 fi
 if ! command -v "$KIND" >/dev/null 2>&1 && command -v kind.exe >/dev/null 2>&1; then
   KIND="kind.exe"
+fi
+if ! command -v "$DOCKER" >/dev/null 2>&1 && command -v docker.exe >/dev/null 2>&1; then
+  DOCKER="docker.exe"
+elif ! command -v "$DOCKER" >/dev/null 2>&1 && [[ -x "/mnt/c/Program Files/Docker/Docker/resources/bin/docker.exe" ]]; then
+  DOCKER="/mnt/c/Program Files/Docker/Docker/resources/bin/docker.exe"
+fi
+if command -v "$DOCKER" >/dev/null 2>&1 && ! "$DOCKER" version >/dev/null 2>&1; then
+  if command -v docker.exe >/dev/null 2>&1 && docker.exe version >/dev/null 2>&1; then
+    DOCKER="docker.exe"
+  elif [[ -x "/mnt/c/Program Files/Docker/Docker/resources/bin/docker.exe" ]] && "/mnt/c/Program Files/Docker/Docker/resources/bin/docker.exe" version >/dev/null 2>&1; then
+    DOCKER="/mnt/c/Program Files/Docker/Docker/resources/bin/docker.exe"
+  fi
 fi
 log_tools_once=0
 
@@ -35,7 +48,18 @@ host_path() {
   fi
 }
 
-apps=(migrate-job monitor record-dispatcher record-job)
+apps=(
+  migrate-job
+  monitor
+  record-dispatcher
+  record-job
+  lark-notifier
+  analyze-job
+  stt-job
+  transcode-dispatcher
+  transcode-job
+  manifest-job
+)
 
 log() { printf '[e2e] %s\n' "$*" >&2; }
 
@@ -46,6 +70,7 @@ cleanup() {
   fi
   "$KUBECTL" delete namespace "$NS" --ignore-not-found=true >/dev/null 2>&1 || true
   "$KUBECTL" delete pv e2e-records e2e-records-shared --ignore-not-found=true >/dev/null 2>&1 || true
+  "$KUBECTL" delete priorityclass record-critical background --ignore-not-found=true >/dev/null 2>&1 || true
   if [[ "$USE_KIND" == "1" ]]; then
     "$KIND" delete cluster --name "$CLUSTER" >/dev/null 2>&1 || true
   fi
@@ -58,12 +83,12 @@ dump_debug() {
     return
   fi
   log "debug dump after failure"
-  "$KUBECTL" -n "$NS" get pods,pvc,jobs,events --sort-by=.metadata.creationTimestamp || true
-  for name in monitor record-dispatcher e2e-media; do
+  "$KUBECTL" -n "$NS" get pods,pvc,jobs,events || true
+  for name in monitor record-dispatcher transcode-dispatcher e2e-media e2e-mock; do
     "$KUBECTL" -n "$NS" describe deploy/"$name" || true
     "$KUBECTL" -n "$NS" logs deploy/"$name" --tail=120 || true
   done
-  for pod in $("$KUBECTL" -n "$NS" get pods -o name | grep -E 'record-|manifest-' || true); do
+  for pod in $("$KUBECTL" -n "$NS" get pods -o name | grep -E 'record-|analyze-|stt-|transcode-|manifest-' || true); do
     "$KUBECTL" -n "$NS" logs "$pod" --tail=120 || true
   done
 }
@@ -80,7 +105,7 @@ if [[ "$BUILD_IMAGES" == "1" ]]; then
   for app in "${apps[@]}"; do
     image="ghcr.io/scutrobotlab/rm-monitor/${app}:${IMAGE_TAG}"
     log "building $image"
-    docker build -f "$ROOT/${app}/Dockerfile" -t "$image" "$ROOT"
+    "$DOCKER" build -f "$(host_path "$ROOT/${app}/Dockerfile")" -t "$image" "$(host_path "$ROOT")"
     if [[ "$USE_KIND" == "1" ]]; then
       log "loading $image into kind"
       "$KIND" load docker-image "$image" --name "$CLUSTER"
@@ -94,6 +119,7 @@ log "preparing namespace and storage"
 "$KUBECTL" create namespace "$NS"
 
 "$KUBECTL" delete pv e2e-records e2e-records-shared --ignore-not-found=true >/dev/null 2>&1 || true
+"$KUBECTL" delete priorityclass record-critical background --ignore-not-found=true >/dev/null 2>&1 || true
 cat <<'YAML' | "$KUBECTL" apply -f -
 apiVersion: v1
 kind: PersistentVolume
@@ -241,11 +267,16 @@ spec:
               set -eu
               apk add --no-cache ffmpeg
               mkdir -p /tmp/hls
-              ffmpeg -hide_banner -loglevel error -re \
-                -f lavfi -i testsrc2=size=320x180:rate=15 \
-                -f lavfi -i anullsrc=channel_layout=mono:sample_rate=44100 \
-                -c:v libx264 -preset ultrafast -pix_fmt yuv420p -g 30 \
-                -c:a aac -f hls -hls_time 1 -hls_list_size 6 \
+              settlement_filter='[1:v]drawbox=x=0:y=0:w=150:h=135:color=red@0.70:t=fill,drawbox=x=170:y=0:w=150:h=135:color=blue@0.70:t=fill,drawbox=x=0:y=155:w=320:h=25:color=black@1.0:t=fill,drawbox=x=32:y=48:w=90:h=24:color=red@0.95:t=fill,drawbox=x=198:y=48:w=90:h=24:color=blue@0.95:t=fill,drawbox=x=58:y=92:w=110:h=8:color=red@0.95:t=fill,drawbox=x=152:y=92:w=110:h=8:color=blue@0.95:t=fill,drawbox=x=58:y=114:w=110:h=8:color=red@0.95:t=fill,drawbox=x=152:y=114:w=110:h=8:color=blue@0.95:t=fill,drawbox=x=58:y=136:w=110:h=8:color=red@0.95:t=fill,drawbox=x=152:y=136:w=110:h=8:color=blue@0.95:t=fill,drawbox=x=125:y=18:w=70:h=4:color=white@0.95:t=fill,drawbox=x=152:y=10:w=4:h=32:color=white@0.95:t=fill,drawbox=x=140:y=28:w=40:h=4:color=white@0.95:t=fill[settle];[0:v][settle]concat=n=2:v=1:a=0[v]'
+              ffmpeg -hide_banner -loglevel error \
+                -f lavfi -i testsrc2=size=320x180:rate=15:d=20 \
+                -f lavfi -i color=c=0x050505:size=320x180:rate=15:d=8 \
+                -f lavfi -i anullsrc=channel_layout=mono:sample_rate=44100:d=28 \
+                -filter_complex "$settlement_filter" \
+                -map '[v]' -map 2:a -c:v libx264 -preset ultrafast -pix_fmt yuv420p -g 30 \
+                -c:a aac -shortest -y /tmp/pattern.mp4
+              ffmpeg -hide_banner -loglevel error -re -stream_loop -1 -i /tmp/pattern.mp4 \
+                -c copy -f hls -hls_time 1 -hls_list_size 6 \
                 -hls_flags delete_segments+append_list /tmp/hls/main.m3u8 &
               python -m http.server 8080 --directory /tmp/hls
           ports:
@@ -285,23 +316,46 @@ log "installing rm-monitor chart"
   --set jobImagePullPolicy=IfNotPresent \
   --set postgres.dsn='postgres://rm_monitor:rm_monitor@postgres:5432/rm_monitor?sslmode=disable' \
   --set redis.host='redis:6379' \
+  --set lark.appId='cli_a8a914c216b8101c' \
+  --set lark.appSecret='dGwrJkBWRV2xctXlzJgKnfNfbJUZtQor' \
   --set monitor.scheduleURL='http://e2e-mock:8080/schedule.json' \
   --set record.liveInfoURL='http://e2e-mock:8080/live_game_info.json' \
   --set record.res='1080p' \
+  --set record.stopDelaySeconds=5 \
   --set storage.record.storageClassName='e2e-records' \
   --set storage.record.volumeName='e2e-records' \
   --set storage.record.size='1Gi' \
   --set storage.shared.storageClassName='e2e-records-shared' \
   --set storage.shared.volumeName='e2e-records-shared' \
   --set storage.shared.size='1Gi' \
-  --set components.larkNotifier.replicas=0 \
+  --set dify.baseURL='http://e2e-mock:8080' \
+  --set manifest.reportWorkflowAPIKey='e2e-key' \
+  --set stt.enabled=true \
+  --set stt.role='主视角' \
+  --set-json 'stt.whisperServerUrls=["http://e2e-mock:8080/inference"]' \
+  --set analyze.enabled=true \
+  --set analyze.role='主视角' \
+  --set analyze.scan.maxStartScanSeconds=120 \
+  --set analyze.scan.maxSettlementScanSeconds=120 \
+  --set analyze.scan.settlementChunkSeconds=30 \
+  --set analyze.scan.minSettlementSecond=5 \
+  --set analyze.scan.minRoundSeconds=2 \
+  --set analyze.scan.settlementTailSeconds=2 \
+  --set transcode.maxConcurrent=1 \
+  --set transcode.cpuRequest='500m' \
+  --set transcode.cpuLimit='2' \
+  --set transcode.memoryRequest='512Mi' \
+  --set transcode.memoryLimit='2Gi' \
+  --set components.larkNotifier.replicas=1 \
   --set components.uploaderDispatcher.replicas=0 \
-  --set components.transcodeDispatcher.replicas=0 \
+  --set components.transcodeDispatcher.replicas=1 \
   --set components.highlightDispatcher.replicas=0
 
 "$KUBECTL" -n "$NS" wait --for=condition=complete job/"$RELEASE-migrate" --timeout=240s
 "$KUBECTL" -n "$NS" rollout status deploy/monitor --timeout=120s
 "$KUBECTL" -n "$NS" rollout status deploy/record-dispatcher --timeout=120s
+"$KUBECTL" -n "$NS" rollout status deploy/transcode-dispatcher --timeout=120s
+"$KUBECTL" -n "$NS" rollout status deploy/lark-notifier --timeout=120s
 
 mock_set() {
   local query="$1"
@@ -343,22 +397,29 @@ log "starting mock match"
 mock_set 'status=STARTED&red=0&blue=0&result=UNKNOWN'
 wait_sql_ge "select count(*) from match_rounds where status='STARTED'" 1 "started rounds"
 wait_sql_ge "select count(*) from record_tasks where status in ('RUNNING','CANCEL_REQUESTED','SUCCEEDED')" 1 "record tasks started"
+wait_sql_ge "select count(*) from lark_messages where card_id is not null and message_id not like 'legacy:%'" 1 "lark card messages sent"
 
-sleep 8
+sleep 32
 log "ending mock match"
 mock_set 'status=DONE&red=1&blue=0&result=RED'
 wait_sql_ge "select count(*) from match_rounds where status='ENDED'" 1 "ended rounds"
 wait_sql_ge "select count(*) from record_tasks where status='SUCCEEDED'" 1 "record tasks succeeded"
 wait_sql_ge "select count(*) from media_artifacts where kind='source' and status='AVAILABLE'" 1 "source artifacts available"
+wait_sql_ge "select count(*) from analyze_tasks where status in ('SUCCEEDED','FAILED')" 1 "analyze tasks completed"
+wait_sql_ge "select count(*) from analyze_tasks where settlement_status='CONFIRMED'" 1 "settlement confirmed"
+wait_sql_ge "select count(*) from stt_tasks where status='SUCCEEDED'" 1 "stt tasks succeeded"
+wait_sql_ge "select count(*) from transcode_tasks where status='SUCCEEDED'" 1 "transcode tasks succeeded"
+wait_sql_ge "select count(*) from media_artifacts where kind='archive' and status='AVAILABLE'" 1 "archive artifacts available"
+wait_sql_ge "select count(*) from matches where report is not null and length(report) > 0" 1 "manifest report written"
 
-log "checking result file and recording output"
+log "checking result files and media outputs"
 "$KUBECTL" -n "$NS" run e2e-records-check --rm -i --restart=Never --image=busybox:1.36 --overrides='
 {
   "spec": {
     "containers": [{
       "name": "e2e-records-check",
       "image": "busybox:1.36",
-      "command": ["sh", "-lc", "find /records -name result.json -path \"*/.job/record-*/*\" -print -quit | grep . && find /records -name \"*.flv\" -size +0c -print -quit | grep ."],
+      "command": ["sh", "-lc", "set -eu; find /records -name result.json -path \"*/.job/record-*/*\" -print -quit | grep .; find /records -name result.json -path \"*/.job/analyze-*/*\" -print -quit | grep .; find /records -name result.json -path \"*/.job/stt-*/*\" -print -quit | grep .; find /records -name result.json -path \"*/.job/transcode-*/*\" -print -quit | grep .; find /records -name \"*.flv\" -size +0c -print -quit | grep .; find /records -name \"*.mp4\" -size +0c -print -quit | grep .; find /records -name round.json -print -quit | grep .; find /records -name settlement.jpg -size +0c -print -quit | grep .; find /records -name settlement-detect.jpg -size +0c -print -quit | grep .; find /records -name stt.jsonl -print -quit | grep .; find /records -name \"主视角.srt\" -print -quit | grep .; find /records -name README.md -print -quit | grep .; grep -R \"settlement.jpg\" /records | head -1 | grep ."],
       "volumeMounts": [{"name": "records", "mountPath": "/records"}]
     }],
     "volumes": [{"name": "records", "persistentVolumeClaim": {"claimName": "records-shared"}}],

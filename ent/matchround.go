@@ -47,12 +47,12 @@ type MatchRoundEdges struct {
 	RecordTasks []*RecordTask `json:"record_tasks,omitempty"`
 	// SttTasks holds the value of the stt_tasks edge.
 	SttTasks []*STTTask `json:"stt_tasks,omitempty"`
+	// AnalyzeTasks holds the value of the analyze_tasks edge.
+	AnalyzeTasks []*AnalyzeTask `json:"analyze_tasks,omitempty"`
 	// HighlightClips holds the value of the highlight_clips edge.
 	HighlightClips []*HighlightClip `json:"highlight_clips,omitempty"`
 	// HighlightStates holds the value of the highlight_states edge.
 	HighlightStates []*HighlightRoundState `json:"highlight_states,omitempty"`
-	// OcrTasks holds the value of the ocr_tasks edge.
-	OcrTasks []*OCRTask `json:"ocr_tasks,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [6]bool
@@ -87,10 +87,19 @@ func (e MatchRoundEdges) SttTasksOrErr() ([]*STTTask, error) {
 	return nil, &NotLoadedError{edge: "stt_tasks"}
 }
 
+// AnalyzeTasksOrErr returns the AnalyzeTasks value or an error if the edge
+// was not loaded in eager-loading.
+func (e MatchRoundEdges) AnalyzeTasksOrErr() ([]*AnalyzeTask, error) {
+	if e.loadedTypes[3] {
+		return e.AnalyzeTasks, nil
+	}
+	return nil, &NotLoadedError{edge: "analyze_tasks"}
+}
+
 // HighlightClipsOrErr returns the HighlightClips value or an error if the edge
 // was not loaded in eager-loading.
 func (e MatchRoundEdges) HighlightClipsOrErr() ([]*HighlightClip, error) {
-	if e.loadedTypes[3] {
+	if e.loadedTypes[4] {
 		return e.HighlightClips, nil
 	}
 	return nil, &NotLoadedError{edge: "highlight_clips"}
@@ -99,19 +108,10 @@ func (e MatchRoundEdges) HighlightClipsOrErr() ([]*HighlightClip, error) {
 // HighlightStatesOrErr returns the HighlightStates value or an error if the edge
 // was not loaded in eager-loading.
 func (e MatchRoundEdges) HighlightStatesOrErr() ([]*HighlightRoundState, error) {
-	if e.loadedTypes[4] {
+	if e.loadedTypes[5] {
 		return e.HighlightStates, nil
 	}
 	return nil, &NotLoadedError{edge: "highlight_states"}
-}
-
-// OcrTasksOrErr returns the OcrTasks value or an error if the edge
-// was not loaded in eager-loading.
-func (e MatchRoundEdges) OcrTasksOrErr() ([]*OCRTask, error) {
-	if e.loadedTypes[5] {
-		return e.OcrTasks, nil
-	}
-	return nil, &NotLoadedError{edge: "ocr_tasks"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -227,6 +227,11 @@ func (_m *MatchRound) QuerySttTasks() *STTTaskQuery {
 	return NewMatchRoundClient(_m.config).QuerySttTasks(_m)
 }
 
+// QueryAnalyzeTasks queries the "analyze_tasks" edge of the MatchRound entity.
+func (_m *MatchRound) QueryAnalyzeTasks() *AnalyzeTaskQuery {
+	return NewMatchRoundClient(_m.config).QueryAnalyzeTasks(_m)
+}
+
 // QueryHighlightClips queries the "highlight_clips" edge of the MatchRound entity.
 func (_m *MatchRound) QueryHighlightClips() *HighlightClipQuery {
 	return NewMatchRoundClient(_m.config).QueryHighlightClips(_m)
@@ -235,11 +240,6 @@ func (_m *MatchRound) QueryHighlightClips() *HighlightClipQuery {
 // QueryHighlightStates queries the "highlight_states" edge of the MatchRound entity.
 func (_m *MatchRound) QueryHighlightStates() *HighlightRoundStateQuery {
 	return NewMatchRoundClient(_m.config).QueryHighlightStates(_m)
-}
-
-// QueryOcrTasks queries the "ocr_tasks" edge of the MatchRound entity.
-func (_m *MatchRound) QueryOcrTasks() *OCRTaskQuery {
-	return NewMatchRoundClient(_m.config).QueryOcrTasks(_m)
 }
 
 // Update returns a builder for updating this MatchRound.

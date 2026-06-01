@@ -8,30 +8,30 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
-	"scutbot.cn/web/rm-monitor/ent/ocrtask"
+	"scutbot.cn/web/rm-monitor/ent/analyzetask"
 	"scutbot.cn/web/rm-monitor/ent/predicate"
 )
 
-// OCRTaskDelete is the builder for deleting a OCRTask entity.
-type OCRTaskDelete struct {
+// AnalyzeTaskDelete is the builder for deleting a AnalyzeTask entity.
+type AnalyzeTaskDelete struct {
 	config
 	hooks    []Hook
-	mutation *OCRTaskMutation
+	mutation *AnalyzeTaskMutation
 }
 
-// Where appends a list predicates to the OCRTaskDelete builder.
-func (_d *OCRTaskDelete) Where(ps ...predicate.OCRTask) *OCRTaskDelete {
+// Where appends a list predicates to the AnalyzeTaskDelete builder.
+func (_d *AnalyzeTaskDelete) Where(ps ...predicate.AnalyzeTask) *AnalyzeTaskDelete {
 	_d.mutation.Where(ps...)
 	return _d
 }
 
 // Exec executes the deletion query and returns how many vertices were deleted.
-func (_d *OCRTaskDelete) Exec(ctx context.Context) (int, error) {
+func (_d *AnalyzeTaskDelete) Exec(ctx context.Context) (int, error) {
 	return withHooks(ctx, _d.sqlExec, _d.mutation, _d.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (_d *OCRTaskDelete) ExecX(ctx context.Context) int {
+func (_d *AnalyzeTaskDelete) ExecX(ctx context.Context) int {
 	n, err := _d.Exec(ctx)
 	if err != nil {
 		panic(err)
@@ -39,8 +39,8 @@ func (_d *OCRTaskDelete) ExecX(ctx context.Context) int {
 	return n
 }
 
-func (_d *OCRTaskDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := sqlgraph.NewDeleteSpec(ocrtask.Table, sqlgraph.NewFieldSpec(ocrtask.FieldID, field.TypeInt))
+func (_d *AnalyzeTaskDelete) sqlExec(ctx context.Context) (int, error) {
+	_spec := sqlgraph.NewDeleteSpec(analyzetask.Table, sqlgraph.NewFieldSpec(analyzetask.FieldID, field.TypeInt))
 	if ps := _d.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -56,32 +56,32 @@ func (_d *OCRTaskDelete) sqlExec(ctx context.Context) (int, error) {
 	return affected, err
 }
 
-// OCRTaskDeleteOne is the builder for deleting a single OCRTask entity.
-type OCRTaskDeleteOne struct {
-	_d *OCRTaskDelete
+// AnalyzeTaskDeleteOne is the builder for deleting a single AnalyzeTask entity.
+type AnalyzeTaskDeleteOne struct {
+	_d *AnalyzeTaskDelete
 }
 
-// Where appends a list predicates to the OCRTaskDelete builder.
-func (_d *OCRTaskDeleteOne) Where(ps ...predicate.OCRTask) *OCRTaskDeleteOne {
+// Where appends a list predicates to the AnalyzeTaskDelete builder.
+func (_d *AnalyzeTaskDeleteOne) Where(ps ...predicate.AnalyzeTask) *AnalyzeTaskDeleteOne {
 	_d._d.mutation.Where(ps...)
 	return _d
 }
 
 // Exec executes the deletion query.
-func (_d *OCRTaskDeleteOne) Exec(ctx context.Context) error {
+func (_d *AnalyzeTaskDeleteOne) Exec(ctx context.Context) error {
 	n, err := _d._d.Exec(ctx)
 	switch {
 	case err != nil:
 		return err
 	case n == 0:
-		return &NotFoundError{ocrtask.Label}
+		return &NotFoundError{analyzetask.Label}
 	default:
 		return nil
 	}
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (_d *OCRTaskDeleteOne) ExecX(ctx context.Context) {
+func (_d *AnalyzeTaskDeleteOne) ExecX(ctx context.Context) {
 	if err := _d.Exec(ctx); err != nil {
 		panic(err)
 	}

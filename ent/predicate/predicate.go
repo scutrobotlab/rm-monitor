@@ -6,6 +6,9 @@ import (
 	"entgo.io/ent/dialect/sql"
 )
 
+// AnalyzeTask is the predicate function for analyzetask builders.
+type AnalyzeTask func(*sql.Selector)
+
 // HighlightClip is the predicate function for highlightclip builders.
 type HighlightClip func(*sql.Selector)
 
@@ -26,9 +29,6 @@ type MatchRound func(*sql.Selector)
 
 // MediaArtifact is the predicate function for mediaartifact builders.
 type MediaArtifact func(*sql.Selector)
-
-// OCRTask is the predicate function for ocrtask builders.
-type OCRTask func(*sql.Selector)
 
 // RecordTask is the predicate function for recordtask builders.
 type RecordTask func(*sql.Selector)

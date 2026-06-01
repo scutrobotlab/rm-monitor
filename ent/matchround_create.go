@@ -11,11 +11,11 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"scutbot.cn/web/rm-monitor/ent/analyzetask"
 	"scutbot.cn/web/rm-monitor/ent/highlightclip"
 	"scutbot.cn/web/rm-monitor/ent/highlightroundstate"
 	"scutbot.cn/web/rm-monitor/ent/match"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
-	"scutbot.cn/web/rm-monitor/ent/ocrtask"
 	"scutbot.cn/web/rm-monitor/ent/recordtask"
 	"scutbot.cn/web/rm-monitor/ent/stttask"
 )
@@ -151,6 +151,21 @@ func (_c *MatchRoundCreate) AddSttTasks(v ...*STTTask) *MatchRoundCreate {
 	return _c.AddSttTaskIDs(ids...)
 }
 
+// AddAnalyzeTaskIDs adds the "analyze_tasks" edge to the AnalyzeTask entity by IDs.
+func (_c *MatchRoundCreate) AddAnalyzeTaskIDs(ids ...int) *MatchRoundCreate {
+	_c.mutation.AddAnalyzeTaskIDs(ids...)
+	return _c
+}
+
+// AddAnalyzeTasks adds the "analyze_tasks" edges to the AnalyzeTask entity.
+func (_c *MatchRoundCreate) AddAnalyzeTasks(v ...*AnalyzeTask) *MatchRoundCreate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddAnalyzeTaskIDs(ids...)
+}
+
 // AddHighlightClipIDs adds the "highlight_clips" edge to the HighlightClip entity by IDs.
 func (_c *MatchRoundCreate) AddHighlightClipIDs(ids ...int) *MatchRoundCreate {
 	_c.mutation.AddHighlightClipIDs(ids...)
@@ -179,21 +194,6 @@ func (_c *MatchRoundCreate) AddHighlightStates(v ...*HighlightRoundState) *Match
 		ids[i] = v[i].ID
 	}
 	return _c.AddHighlightStateIDs(ids...)
-}
-
-// AddOcrTaskIDs adds the "ocr_tasks" edge to the OCRTask entity by IDs.
-func (_c *MatchRoundCreate) AddOcrTaskIDs(ids ...int) *MatchRoundCreate {
-	_c.mutation.AddOcrTaskIDs(ids...)
-	return _c
-}
-
-// AddOcrTasks adds the "ocr_tasks" edges to the OCRTask entity.
-func (_c *MatchRoundCreate) AddOcrTasks(v ...*OCRTask) *MatchRoundCreate {
-	ids := make([]int, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _c.AddOcrTaskIDs(ids...)
 }
 
 // Mutation returns the MatchRoundMutation object of the builder.
@@ -379,6 +379,22 @@ func (_c *MatchRoundCreate) createSpec() (*MatchRound, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
+	if nodes := _c.mutation.AnalyzeTasksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   matchround.AnalyzeTasksTable,
+			Columns: []string{matchround.AnalyzeTasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(analyzetask.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
 	if nodes := _c.mutation.HighlightClipsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
@@ -404,22 +420,6 @@ func (_c *MatchRoundCreate) createSpec() (*MatchRound, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(highlightroundstate.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges = append(_spec.Edges, edge)
-	}
-	if nodes := _c.mutation.OcrTasksIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   matchround.OcrTasksTable,
-			Columns: []string{matchround.OcrTasksColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(ocrtask.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

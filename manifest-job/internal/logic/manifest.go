@@ -153,7 +153,8 @@ const readmeTemplate = `# {{ .Title }}
 
 {{ range .RoundDetails }}### Round {{ .RoundNo }}
 
-{{ if .DanmuCountImage }}![Round {{ .RoundNo }} 弹幕数量]({{ .DanmuCountImage }})
+{{ if .SettlementImage }}![Round {{ .RoundNo }} 结算面板]({{ .SettlementImage }})
+{{ end }}{{ if .DanmuCountImage }}![Round {{ .RoundNo }} 弹幕数量]({{ .DanmuCountImage }})
 {{ end }}{{ if .OnlineCountImage }}![Round {{ .RoundNo }} 在线人数]({{ .OnlineCountImage }})
 {{ end }}{{ if .FeaturedHighlights }}#### 高光时刻
 
@@ -229,6 +230,7 @@ type readmeHighlightPreviewRow struct {
 
 type readmeRoundDetail struct {
 	RoundNo            int
+	SettlementImage    string
 	DanmuCountImage    string
 	OnlineCountImage   string
 	FeaturedHighlights []readmeHighlightPreviewRow
@@ -287,9 +289,11 @@ func renderReadme(m *ent.Match, red, blue *ent.Team, matchDir string) (string, e
 	for _, r := range m.Edges.Rounds {
 		chart := danmuChartRow(matchDir, r.RoundNo)
 		previews := highlightsByRound[r.RoundNo]
-		if chart.DanmuCountImage != "" || chart.OnlineCountImage != "" || len(previews) > 0 {
+		settlementImage := settlementImageRow(matchDir, r.RoundNo)
+		if settlementImage != "" || chart.DanmuCountImage != "" || chart.OnlineCountImage != "" || len(previews) > 0 {
 			data.RoundDetails = append(data.RoundDetails, readmeRoundDetail{
 				RoundNo:            r.RoundNo,
+				SettlementImage:    settlementImage,
 				DanmuCountImage:    chart.DanmuCountImage,
 				OnlineCountImage:   chart.OnlineCountImage,
 				FeaturedHighlights: previews,
@@ -317,6 +321,18 @@ func danmuChartRow(matchDir string, roundNo int) readmeDanmuChartRow {
 		row.OnlineCountImage = filepath.ToSlash(filepath.Join(fmt.Sprintf("Round-%d", roundNo), "stats", "online-count.png"))
 	}
 	return row
+}
+
+func settlementImageRow(matchDir string, roundNo int) string {
+	roundDir := filepath.Join(matchDir, fmt.Sprintf("Round-%d", roundNo))
+	analysis := readRoundAnalysis(roundDir)
+	if !roundSettlementConfirmed(analysis) {
+		return ""
+	}
+	if fileExists(filepath.Join(roundDir, "settlement.jpg")) {
+		return filepath.ToSlash(filepath.Join(fmt.Sprintf("Round-%d", roundNo), "settlement.jpg"))
+	}
+	return ""
 }
 
 type highlightManifestJSON struct {
@@ -624,12 +640,48 @@ func buildReportPayload(m *ent.Match, red, blue *ent.Team, matchDir string) (rep
 			STTTruncated:    sttTruncated,
 			Danmu:           danmu,
 			Online:          readOnlineSummary(roundDir),
-			OCRSettlement:   readOptionalJSON(filepath.Join(roundDir, "settlement.json")),
+			OCRSettlement:   readRoundSettlementOCR(roundDir),
 			Highlights:      readHighlightJSONs(roundDir),
 		}
 		payload.Rounds = append(payload.Rounds, row)
 	}
 	return payload, nil
+}
+
+func readRoundAnalysis(roundDir string) json.RawMessage {
+	return readOptionalJSON(filepath.Join(roundDir, "round.json"))
+}
+
+func readRoundSettlementOCR(roundDir string) json.RawMessage {
+	raw := readRoundAnalysis(roundDir)
+	if len(raw) == 0 {
+		return nil
+	}
+	var doc struct {
+		Settlement struct {
+			Status string          `json:"status"`
+			OCR    json.RawMessage `json:"ocr"`
+		} `json:"settlement"`
+	}
+	if err := json.Unmarshal(raw, &doc); err != nil {
+		return nil
+	}
+	if doc.Settlement.Status != "CONFIRMED" || len(doc.Settlement.OCR) == 0 || string(doc.Settlement.OCR) == "null" {
+		return nil
+	}
+	return doc.Settlement.OCR
+}
+
+func roundSettlementConfirmed(raw json.RawMessage) bool {
+	if len(raw) == 0 {
+		return false
+	}
+	var doc struct {
+		Settlement struct {
+			Status string `json:"status"`
+		} `json:"settlement"`
+	}
+	return json.Unmarshal(raw, &doc) == nil && doc.Settlement.Status == "CONFIRMED"
 }
 
 func readRoundSTT(matchDir string, roundNo int) ([]sttLine, error) {

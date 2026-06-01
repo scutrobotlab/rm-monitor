@@ -57,14 +57,14 @@ type MediaArtifactEdges struct {
 	UploadTask *UploadTask `json:"upload_task,omitempty"`
 	// SttTasks holds the value of the stt_tasks edge.
 	SttTasks []*STTTask `json:"stt_tasks,omitempty"`
+	// AnalyzeTasks holds the value of the analyze_tasks edge.
+	AnalyzeTasks []*AnalyzeTask `json:"analyze_tasks,omitempty"`
 	// SourceTranscodeTask holds the value of the source_transcode_task edge.
 	SourceTranscodeTask *TranscodeTask `json:"source_transcode_task,omitempty"`
 	// ArchiveTranscodeTask holds the value of the archive_transcode_task edge.
 	ArchiveTranscodeTask *TranscodeTask `json:"archive_transcode_task,omitempty"`
 	// HighlightClips holds the value of the highlight_clips edge.
 	HighlightClips []*HighlightClip `json:"highlight_clips,omitempty"`
-	// OcrTasks holds the value of the ocr_tasks edge.
-	OcrTasks []*OCRTask `json:"ocr_tasks,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [7]bool
@@ -101,12 +101,21 @@ func (e MediaArtifactEdges) SttTasksOrErr() ([]*STTTask, error) {
 	return nil, &NotLoadedError{edge: "stt_tasks"}
 }
 
+// AnalyzeTasksOrErr returns the AnalyzeTasks value or an error if the edge
+// was not loaded in eager-loading.
+func (e MediaArtifactEdges) AnalyzeTasksOrErr() ([]*AnalyzeTask, error) {
+	if e.loadedTypes[3] {
+		return e.AnalyzeTasks, nil
+	}
+	return nil, &NotLoadedError{edge: "analyze_tasks"}
+}
+
 // SourceTranscodeTaskOrErr returns the SourceTranscodeTask value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
 func (e MediaArtifactEdges) SourceTranscodeTaskOrErr() (*TranscodeTask, error) {
 	if e.SourceTranscodeTask != nil {
 		return e.SourceTranscodeTask, nil
-	} else if e.loadedTypes[3] {
+	} else if e.loadedTypes[4] {
 		return nil, &NotFoundError{label: transcodetask.Label}
 	}
 	return nil, &NotLoadedError{edge: "source_transcode_task"}
@@ -117,7 +126,7 @@ func (e MediaArtifactEdges) SourceTranscodeTaskOrErr() (*TranscodeTask, error) {
 func (e MediaArtifactEdges) ArchiveTranscodeTaskOrErr() (*TranscodeTask, error) {
 	if e.ArchiveTranscodeTask != nil {
 		return e.ArchiveTranscodeTask, nil
-	} else if e.loadedTypes[4] {
+	} else if e.loadedTypes[5] {
 		return nil, &NotFoundError{label: transcodetask.Label}
 	}
 	return nil, &NotLoadedError{edge: "archive_transcode_task"}
@@ -126,19 +135,10 @@ func (e MediaArtifactEdges) ArchiveTranscodeTaskOrErr() (*TranscodeTask, error) 
 // HighlightClipsOrErr returns the HighlightClips value or an error if the edge
 // was not loaded in eager-loading.
 func (e MediaArtifactEdges) HighlightClipsOrErr() ([]*HighlightClip, error) {
-	if e.loadedTypes[5] {
+	if e.loadedTypes[6] {
 		return e.HighlightClips, nil
 	}
 	return nil, &NotLoadedError{edge: "highlight_clips"}
-}
-
-// OcrTasksOrErr returns the OcrTasks value or an error if the edge
-// was not loaded in eager-loading.
-func (e MediaArtifactEdges) OcrTasksOrErr() ([]*OCRTask, error) {
-	if e.loadedTypes[6] {
-		return e.OcrTasks, nil
-	}
-	return nil, &NotLoadedError{edge: "ocr_tasks"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -280,6 +280,11 @@ func (_m *MediaArtifact) QuerySttTasks() *STTTaskQuery {
 	return NewMediaArtifactClient(_m.config).QuerySttTasks(_m)
 }
 
+// QueryAnalyzeTasks queries the "analyze_tasks" edge of the MediaArtifact entity.
+func (_m *MediaArtifact) QueryAnalyzeTasks() *AnalyzeTaskQuery {
+	return NewMediaArtifactClient(_m.config).QueryAnalyzeTasks(_m)
+}
+
 // QuerySourceTranscodeTask queries the "source_transcode_task" edge of the MediaArtifact entity.
 func (_m *MediaArtifact) QuerySourceTranscodeTask() *TranscodeTaskQuery {
 	return NewMediaArtifactClient(_m.config).QuerySourceTranscodeTask(_m)
@@ -293,11 +298,6 @@ func (_m *MediaArtifact) QueryArchiveTranscodeTask() *TranscodeTaskQuery {
 // QueryHighlightClips queries the "highlight_clips" edge of the MediaArtifact entity.
 func (_m *MediaArtifact) QueryHighlightClips() *HighlightClipQuery {
 	return NewMediaArtifactClient(_m.config).QueryHighlightClips(_m)
-}
-
-// QueryOcrTasks queries the "ocr_tasks" edge of the MediaArtifact entity.
-func (_m *MediaArtifact) QueryOcrTasks() *OCRTaskQuery {
-	return NewMediaArtifactClient(_m.config).QueryOcrTasks(_m)
 }
 
 // Update returns a builder for updating this MediaArtifact.

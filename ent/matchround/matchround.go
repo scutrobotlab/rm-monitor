@@ -35,12 +35,12 @@ const (
 	EdgeRecordTasks = "record_tasks"
 	// EdgeSttTasks holds the string denoting the stt_tasks edge name in mutations.
 	EdgeSttTasks = "stt_tasks"
+	// EdgeAnalyzeTasks holds the string denoting the analyze_tasks edge name in mutations.
+	EdgeAnalyzeTasks = "analyze_tasks"
 	// EdgeHighlightClips holds the string denoting the highlight_clips edge name in mutations.
 	EdgeHighlightClips = "highlight_clips"
 	// EdgeHighlightStates holds the string denoting the highlight_states edge name in mutations.
 	EdgeHighlightStates = "highlight_states"
-	// EdgeOcrTasks holds the string denoting the ocr_tasks edge name in mutations.
-	EdgeOcrTasks = "ocr_tasks"
 	// Table holds the table name of the matchround in the database.
 	Table = "match_rounds"
 	// MatchTable is the table that holds the match relation/edge.
@@ -64,6 +64,13 @@ const (
 	SttTasksInverseTable = "stt_tasks"
 	// SttTasksColumn is the table column denoting the stt_tasks relation/edge.
 	SttTasksColumn = "match_round_stt_tasks"
+	// AnalyzeTasksTable is the table that holds the analyze_tasks relation/edge.
+	AnalyzeTasksTable = "analyze_tasks"
+	// AnalyzeTasksInverseTable is the table name for the AnalyzeTask entity.
+	// It exists in this package in order to avoid circular dependency with the "analyzetask" package.
+	AnalyzeTasksInverseTable = "analyze_tasks"
+	// AnalyzeTasksColumn is the table column denoting the analyze_tasks relation/edge.
+	AnalyzeTasksColumn = "match_round_analyze_tasks"
 	// HighlightClipsTable is the table that holds the highlight_clips relation/edge.
 	HighlightClipsTable = "highlight_clips"
 	// HighlightClipsInverseTable is the table name for the HighlightClip entity.
@@ -78,13 +85,6 @@ const (
 	HighlightStatesInverseTable = "highlight_round_states"
 	// HighlightStatesColumn is the table column denoting the highlight_states relation/edge.
 	HighlightStatesColumn = "match_round_highlight_states"
-	// OcrTasksTable is the table that holds the ocr_tasks relation/edge.
-	OcrTasksTable = "ocr_tasks"
-	// OcrTasksInverseTable is the table name for the OCRTask entity.
-	// It exists in this package in order to avoid circular dependency with the "ocrtask" package.
-	OcrTasksInverseTable = "ocr_tasks"
-	// OcrTasksColumn is the table column denoting the ocr_tasks relation/edge.
-	OcrTasksColumn = "match_round_ocr_tasks"
 )
 
 // Columns holds all SQL columns for matchround fields.
@@ -256,6 +256,20 @@ func BySttTasks(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	}
 }
 
+// ByAnalyzeTasksCount orders the results by analyze_tasks count.
+func ByAnalyzeTasksCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newAnalyzeTasksStep(), opts...)
+	}
+}
+
+// ByAnalyzeTasks orders the results by analyze_tasks terms.
+func ByAnalyzeTasks(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newAnalyzeTasksStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
 // ByHighlightClipsCount orders the results by highlight_clips count.
 func ByHighlightClipsCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -283,20 +297,6 @@ func ByHighlightStates(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newHighlightStatesStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
-
-// ByOcrTasksCount orders the results by ocr_tasks count.
-func ByOcrTasksCount(opts ...sql.OrderTermOption) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newOcrTasksStep(), opts...)
-	}
-}
-
-// ByOcrTasks orders the results by ocr_tasks terms.
-func ByOcrTasks(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newOcrTasksStep(), append([]sql.OrderTerm{term}, terms...)...)
-	}
-}
 func newMatchStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -318,6 +318,13 @@ func newSttTasksStep() *sqlgraph.Step {
 		sqlgraph.Edge(sqlgraph.O2M, false, SttTasksTable, SttTasksColumn),
 	)
 }
+func newAnalyzeTasksStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(AnalyzeTasksInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, AnalyzeTasksTable, AnalyzeTasksColumn),
+	)
+}
 func newHighlightClipsStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -330,12 +337,5 @@ func newHighlightStatesStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(HighlightStatesInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, HighlightStatesTable, HighlightStatesColumn),
-	)
-}
-func newOcrTasksStep() *sqlgraph.Step {
-	return sqlgraph.NewStep(
-		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(OcrTasksInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, false, OcrTasksTable, OcrTasksColumn),
 	)
 }

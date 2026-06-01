@@ -9,6 +9,18 @@ import (
 	"scutbot.cn/web/rm-monitor/ent"
 )
 
+// The AnalyzeTaskFunc type is an adapter to allow the use of ordinary
+// function as AnalyzeTask mutator.
+type AnalyzeTaskFunc func(context.Context, *ent.AnalyzeTaskMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f AnalyzeTaskFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.AnalyzeTaskMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.AnalyzeTaskMutation", m)
+}
+
 // The HighlightClipFunc type is an adapter to allow the use of ordinary
 // function as HighlightClip mutator.
 type HighlightClipFunc func(context.Context, *ent.HighlightClipMutation) (ent.Value, error)
@@ -91,18 +103,6 @@ func (f MediaArtifactFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Valu
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.MediaArtifactMutation", m)
-}
-
-// The OCRTaskFunc type is an adapter to allow the use of ordinary
-// function as OCRTask mutator.
-type OCRTaskFunc func(context.Context, *ent.OCRTaskMutation) (ent.Value, error)
-
-// Mutate calls f(ctx, m).
-func (f OCRTaskFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	if mv, ok := m.(*ent.OCRTaskMutation); ok {
-		return f(ctx, mv)
-	}
-	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.OCRTaskMutation", m)
 }
 
 // The RecordTaskFunc type is an adapter to allow the use of ordinary
