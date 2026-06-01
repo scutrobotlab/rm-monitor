@@ -126,6 +126,10 @@ func isTransient(err error) bool {
 	}
 	msg := strings.ToLower(err.Error())
 	if strings.Contains(msg, "timeout") ||
+		strings.Contains(msg, "stream error") ||
+		strings.Contains(msg, "internal_error") ||
+		strings.Contains(msg, "received from peer") ||
+		strings.Contains(msg, "connection reset") ||
 		strings.Contains(msg, "signal: killed") ||
 		strings.Contains(msg, "upstream_error") ||
 		strings.Contains(msg, "bad gateway") ||
