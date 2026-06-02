@@ -35,10 +35,11 @@
     },
     "upload": {
       "type": "object",
-      "required": ["bitableAppToken", "concurrency", "partRetries", "retryBackoff", "rateLimitPerMinute"],
+      "required": ["bitableAppToken", "concurrency", "larkRecordMaxConcurrent", "partRetries", "retryBackoff", "rateLimitPerMinute"],
       "properties": {
         "bitableAppToken": { "type": "string" },
         "concurrency": { "type": "integer", "minimum": 1 },
+        "larkRecordMaxConcurrent": { "type": "integer", "minimum": 1 },
         "partRetries": { "type": "integer", "minimum": 1 },
         "retryBackoff": { "type": "integer", "minimum": 1 },
         "rateLimitPerMinute": { "type": "integer", "minimum": 1 }

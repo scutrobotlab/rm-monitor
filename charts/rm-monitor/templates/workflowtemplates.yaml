@@ -354,6 +354,11 @@ spec:
           - name: subtitle_path
             valueFrom: {path: /tmp/argo/subtitle_path}
     - name: lark-record
+      synchronization:
+        semaphores:
+          - configMapKeyRef:
+              name: rm-monitor-argo-semaphores
+              key: lark-record
       inputs:
         parameters:
           - name: context
