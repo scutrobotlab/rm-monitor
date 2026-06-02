@@ -23,6 +23,7 @@ import (
 	"scutbot.cn/web/rm-monitor/ent"
 	"scutbot.cn/web/rm-monitor/ent/larkbitablerecord"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
+	"scutbot.cn/web/rm-monitor/lark-record-job/internal/config"
 	"scutbot.cn/web/rm-monitor/pkg/app"
 	"scutbot.cn/web/rm-monitor/pkg/bitableupload"
 	common "scutbot.cn/web/rm-monitor/pkg/config"
@@ -33,7 +34,6 @@ import (
 	"scutbot.cn/web/rm-monitor/pkg/logx"
 	"scutbot.cn/web/rm-monitor/pkg/redisx"
 	"scutbot.cn/web/rm-monitor/pkg/storagepath"
-	"scutbot.cn/web/rm-monitor/lark-record-job/internal/config"
 )
 
 var (
@@ -110,10 +110,6 @@ func run(ctx context.Context, dbClient *ent.Client, redisClient *redisx.Client, 
 		return errors.Wrap(err, "stat upload source")
 	}
 
-	if err := waitUploadSlot(ctx, redisClient, uploadConf); err != nil {
-		return err
-	}
-
 	tableID := strings.TrimSpace(jobCtx.BitableTableIDHint)
 	if tableID == "" {
 		tableName := strings.TrimSpace(jobCtx.BitableTableName)
@@ -135,7 +131,13 @@ func run(ctx context.Context, dbClient *ent.Client, redisClient *redisx.Client, 
 			return err
 		}
 	}
+	if err := upsertLarkBitableRecord(ctx, dbClient, jobCtx, tableID, recordID, recordURL, "", 0); err != nil {
+		return err
+	}
 	name := filepath.Base(jobCtx.SourcePath)
+	if err := waitUploadSlot(ctx, redisClient, uploadConf); err != nil {
+		return err
+	}
 	prepareResp, err := uploadPrepareWithRetry(ctx, larkClient, name, jobCtx.BitableAppToken, int(stat.Size()), uploadConf)
 	if err != nil {
 		return err
@@ -622,8 +624,10 @@ func upsertLarkBitableRecord(ctx context.Context, client *ent.Client, jobCtx job
 		SetTableID(tableID).
 		SetRecordID(recordID).
 		SetSourcePath(jobCtx.SourcePath).
-		SetFileSize(fileSize).
-		SetAttachmentFileToken(fileToken)
+		SetFileSize(fileSize)
+	if strings.TrimSpace(fileToken) != "" {
+		create.SetAttachmentFileToken(fileToken)
+	}
 	if strings.TrimSpace(recordURL) != "" {
 		create.SetRecordURL(recordURL)
 	}
@@ -637,8 +641,10 @@ func upsertLarkBitableRecord(ctx context.Context, client *ent.Client, jobCtx job
 			SetTableID(tableID).
 			SetRecordID(recordID).
 			SetSourcePath(jobCtx.SourcePath).
-			SetFileSize(fileSize).
-			SetAttachmentFileToken(fileToken)
+			SetFileSize(fileSize)
+		if strings.TrimSpace(fileToken) != "" {
+			update.SetAttachmentFileToken(fileToken)
+		}
 		if strings.TrimSpace(recordURL) != "" {
 			update.SetRecordURL(recordURL)
 		}
