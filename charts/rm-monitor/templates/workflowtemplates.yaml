@@ -288,7 +288,7 @@ spec:
           - name: RM_MONITOR_JOB_CONTEXT
             value: "{{`{{inputs.parameters.context}}`}}"
         volumeMounts:
-          - name: records
+          - name: shared-records
             mountPath: {{ .Values.jobs.recordsMountPath }}
           - name: danmu-job-config
             mountPath: {{ include "rm-monitor.configPath" . }}
@@ -314,7 +314,7 @@ spec:
           - name: RM_MONITOR_JOB_CONTEXT
             value: "{{`{{inputs.parameters.context}}`}}"
         volumeMounts:
-          - name: records
+          - name: shared-records
             mountPath: {{ .Values.jobs.recordsMountPath }}
       outputs:
         parameters:
@@ -341,7 +341,7 @@ spec:
           - name: RM_MONITOR_JOB_CONTEXT
             value: "{{`{{inputs.parameters.context}}`}}"
         volumeMounts:
-          - name: records
+          - name: shared-records
             mountPath: {{ .Values.jobs.recordsMountPath }}
           - name: stt-job-config
             mountPath: {{ include "rm-monitor.configPath" . }}
@@ -366,7 +366,7 @@ spec:
           - name: RM_MONITOR_JOB_CONTEXT
             value: "{{`{{inputs.parameters.context}}`}}"
         volumeMounts:
-          - name: records
+          - name: shared-records
             mountPath: {{ .Values.jobs.recordsMountPath }}
           - name: lark-record-job-config
             mountPath: {{ include "rm-monitor.configPath" . }}
@@ -396,7 +396,7 @@ spec:
           - name: RM_MONITOR_JOB_CONTEXT
             value: "{{`{{inputs.parameters.context}}`}}"
         volumeMounts:
-          - name: records
+          - name: shared-records
             mountPath: {{ .Values.jobs.recordsMountPath }}
           - name: transcode-job-config
             mountPath: {{ include "rm-monitor.configPath" . }}
@@ -423,7 +423,7 @@ spec:
           - name: RM_MONITOR_JOB_CONTEXT
             value: "{{`{{inputs.parameters.context}}`}}"
         volumeMounts:
-          - name: records
+          - name: shared-records
             mountPath: {{ .Values.jobs.recordsMountPath }}
           - name: highlight-job-config
             mountPath: {{ include "rm-monitor.configPath" . }}
@@ -448,7 +448,7 @@ spec:
           - name: RM_MONITOR_JOB_CONTEXT
             value: "{{`{{inputs.parameters.context}}`}}"
         volumeMounts:
-          - name: records
+          - name: shared-records
             mountPath: {{ .Values.jobs.recordsMountPath }}
           - name: highlight-artifact-job-config
             mountPath: {{ include "rm-monitor.configPath" . }}
