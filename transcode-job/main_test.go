@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"scutbot.cn/web/rm-monitor/pkg/jobcontract"
@@ -39,6 +40,47 @@ func TestArtifactPath(t *testing.T) {
 				t.Fatalf("artifactPath() full path is empty")
 			}
 		})
+	}
+}
+
+func TestCropRoundDanmuMovesFinalToRawAndPublishesTrimmedFinal(t *testing.T) {
+	dir := t.TempDir()
+	finalPath := filepath.Join(dir, "主视角.danmuku.xml")
+	rawPath := filepath.Join(dir, "主视角.raw.danmuku.xml")
+	if err := os.WriteFile(finalPath, []byte(`<?xml version="1.0" encoding="UTF-8"?>
+<i>
+  <d p="1.000,1,25,16777215,0,0,0,0">before</d>
+  <d p="12.500,1,25,16777215,0,0,0,0">inside</d>
+  <d p="20.000,1,25,16777215,0,0,0,0">after</d>
+</i>`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	start := 10.0
+	end := 15.0
+	ctx := jobcontract.TranscodeContext{RoundDir: dir, Role: "主视角", TrimStartSeconds: &start, TrimEndSeconds: &end}
+	if err := cropRoundDanmu(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(rawPath); err != nil {
+		t.Fatalf("raw danmu not preserved: %v", err)
+	}
+	raw, err := os.ReadFile(rawPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(raw), "before") || !strings.Contains(string(raw), "after") {
+		t.Fatalf("raw danmu was not original content:\n%s", raw)
+	}
+	final, err := os.ReadFile(finalPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := string(final)
+	if strings.Contains(got, "before") || strings.Contains(got, "after") {
+		t.Fatalf("final danmu included outside entries:\n%s", got)
+	}
+	if !strings.Contains(got, `p="2.500,1,25,16777215,0,0,0,0"`) || !strings.Contains(got, "inside") {
+		t.Fatalf("final danmu did not retime inside entry:\n%s", got)
 	}
 }
 

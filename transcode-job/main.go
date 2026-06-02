@@ -208,6 +208,17 @@ func cropRoundDanmu(jobCtx jobcontract.TranscodeContext) error {
 	}
 	rawPath := filepath.Join(roundDir, role+".raw.danmuku.xml")
 	finalPath := filepath.Join(roundDir, role+".danmuku.xml")
+	if _, err := os.Stat(rawPath); err != nil {
+		if !os.IsNotExist(err) {
+			return errors.Wrap(err, "stat raw danmu xml")
+		}
+		if err := os.Rename(finalPath, rawPath); err != nil {
+			if os.IsNotExist(err) {
+				return nil
+			}
+			return errors.Wrap(err, "move final danmu xml to raw")
+		}
+	}
 	raw, err := os.ReadFile(rawPath)
 	if err != nil {
 		if os.IsNotExist(err) {

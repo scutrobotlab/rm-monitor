@@ -11,7 +11,7 @@ const historyLimit = 80;
 const leancloudConnectTimeoutMs = 10000;
 const leancloudHistoryTimeoutMs = 10000;
 const leancloudOnlineCountTimeoutMs = 5000;
-const outputFileName = "主视角.raw.danmuku.xml";
+const outputFileName = "主视角.danmuku.xml";
 const recordMetaFileName = "record-meta.json";
 
 type RoundInfo = {
