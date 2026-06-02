@@ -64,3 +64,10 @@ func TestReadDanmuEvidenceFallsBackToRawDanmuFile(t *testing.T) {
 		t.Fatalf("unexpected danmu evidence: %#v", got)
 	}
 }
+
+func TestRecordRelativePathStripsRecordBase(t *testing.T) {
+	got := recordRelativePath("/records", "/records/RMUC 2026/Round-1")
+	if got != "RMUC 2026/Round-1" {
+		t.Fatalf("recordRelativePath() = %q", got)
+	}
+}
