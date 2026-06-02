@@ -60,12 +60,12 @@ jobs:
           else:
               base = os.environ.get("GITHUB_EVENT_BEFORE", "")
               if not base or set(base) == {"0"}:
-                  base = subprocess.check_output(["git", "rev-list", "--max-parents=0", "HEAD"], text=True).strip()
+                  base = subprocess.check_output(["git", "rev-list", "--max-parents=0", "HEAD"], text=True).splitlines()[0].strip()
               elif subprocess.run(["git", "cat-file", "-e", f"{base}^{{commit}}"]).returncode != 0:
                   try:
                       base = subprocess.check_output(["git", "rev-parse", "HEAD^"], text=True).strip()
                   except subprocess.CalledProcessError:
-                      base = subprocess.check_output(["git", "rev-list", "--max-parents=0", "HEAD"], text=True).strip()
+                      base = subprocess.check_output(["git", "rev-list", "--max-parents=0", "HEAD"], text=True).splitlines()[0].strip()
 
           changed = subprocess.check_output(["git", "diff", "--name-only", base, head], text=True).splitlines()
           changed = [p.replace("\\", "/") for p in changed]
