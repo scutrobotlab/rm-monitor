@@ -1,5 +1,6 @@
 imagePullPolicy: Always
 jobImagePullPolicy: IfNotPresent
+imageTagOverride: ""
 
 serviceAccount:
   name: rm-monitor-workflow

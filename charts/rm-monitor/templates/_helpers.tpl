@@ -5,7 +5,9 @@
 {{- define "rm-monitor.image" -}}
 {{- $appVersion := .root.Chart.AppVersion | default "dev" -}}
 {{- $tag := "dev" -}}
-{{- if eq $appVersion "dev" -}}
+{{- if .root.Values.imageTagOverride -}}
+{{- $tag = .root.Values.imageTagOverride -}}
+{{- else if eq $appVersion "dev" -}}
 {{- $tag = "dev" -}}
 {{- else if hasPrefix "sha-" $appVersion -}}
 {{- $tag = $appVersion -}}
