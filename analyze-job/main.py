@@ -107,6 +107,10 @@ def score_pregame(img: np.ndarray) -> tuple[float, dict[str, float]]:
     center_top = crop(img, 0.40, 0.00, 0.60, 0.12)
     bottom_center = crop(img, 0.35, 0.72, 0.65, 0.92)
     battle_top = crop(img, 0.00, 0.00, 1.00, 0.16)
+    settlement_lower_red = crop(img, 0.18, 0.48, 0.50, 0.78)
+    settlement_lower_blue = crop(img, 0.50, 0.48, 0.82, 0.78)
+    settlement_card_left = crop(img, 0.10, 0.26, 0.38, 0.42)
+    settlement_card_right = crop(img, 0.62, 0.26, 0.90, 0.42)
 
     left_red = red_ratio(left_top)
     right_blue = blue_ratio(right_top)
@@ -114,6 +118,10 @@ def score_pregame(img: np.ndarray) -> tuple[float, dict[str, float]]:
     bottom_cyan = cyan_ratio(bottom_center)
     bottom_blue = blue_ratio(bottom_center)
     top_edges = white_edge_ratio(battle_top)
+    settlement_lower_red_ratio = red_ratio(settlement_lower_red)
+    settlement_lower_blue_ratio = blue_ratio(settlement_lower_blue)
+    settlement_card_red = red_ratio(settlement_card_left)
+    settlement_card_blue = blue_ratio(settlement_card_right)
 
     score = (
         min(left_red / 0.55, 1.0) * 0.35
@@ -124,6 +132,13 @@ def score_pregame(img: np.ndarray) -> tuple[float, dict[str, float]]:
     )
     if left_red < 0.50 or right_blue < 0.50 or bottom_blue > 0.40 or top_edges > 0.18:
         score *= 0.35
+    settlement_like = (
+        settlement_lower_red_ratio > 0.08
+        and settlement_lower_blue_ratio > 0.35
+        and (settlement_card_red + settlement_card_blue) > 0.90
+    )
+    if settlement_like:
+        score *= 0.20
     return score, {
         "left_red": left_red,
         "right_blue": right_blue,
@@ -131,6 +146,11 @@ def score_pregame(img: np.ndarray) -> tuple[float, dict[str, float]]:
         "bottom_cyan": bottom_cyan,
         "bottom_blue": bottom_blue,
         "top_edges": top_edges,
+        "settlement_lower_red": settlement_lower_red_ratio,
+        "settlement_lower_blue": settlement_lower_blue_ratio,
+        "settlement_card_red": settlement_card_red,
+        "settlement_card_blue": settlement_card_blue,
+        "settlement_like": 1.0 if settlement_like else 0.0,
     }
 
 
@@ -781,6 +801,7 @@ def analyze_round(
 
     start_seconds = pregame.start_seconds if pregame else 0.0
     settlement_seconds = settlement.start_seconds if settlement else duration
+    start_status = "CONFIRMED" if pregame else "MISSING"
     settlement_status = "CONFIRMED" if settlement else "INVALID"
     validation_errors: list[str] = []
     if not pregame:
@@ -793,6 +814,7 @@ def analyze_round(
     if start_seconds + min_round_seconds >= settlement_seconds:
         start_seconds = 0.0
         settlement_seconds = duration
+        start_status = "INVALID"
         settlement_status = "INVALID"
         validation_errors.append("start plus minimum round duration is not before settlement; reset boundary to full source")
     elif settlement_status == "CONFIRMED":
@@ -802,9 +824,13 @@ def analyze_round(
 
     output_dir.mkdir(parents=True, exist_ok=True)
     start_detect_path = None
-    if pregame and pregame.best_frame is not None:
+    if start_status == "CONFIRMED" and pregame and pregame.best_frame is not None:
         start_detect_path = output_dir / "start-detect.jpg"
         write_jpeg_frame(pregame.best_frame, start_detect_path)
+    else:
+        stale_start_detect_path = output_dir / "start-detect.jpg"
+        if stale_start_detect_path.exists():
+            stale_start_detect_path.unlink()
 
     settlement_path = None
     settlement_detect_path = None
@@ -884,7 +910,11 @@ def analyze_round(
             "refined": refined_settlement,
             "ocr": settlement_ocr if settlement_ocr else None,
         },
-        "start": {"raw": raw_start, "detect_image_path": str(start_detect_path) if start_detect_path else ""},
+        "start": {
+            "status": start_status,
+            "raw": raw_start,
+            "detect_image_path": str(start_detect_path) if start_detect_path else "",
+        },
         "start_detect_image": str(start_detect_path) if start_detect_path else "",
         "settlement_image": str(settlement_path) if settlement_path else "",
         "settlement_detect_image": str(settlement_detect_path) if settlement_detect_path else "",
