@@ -11,6 +11,80 @@ permissions:
   packages: write
 
 jobs:
+  detect:
+    name: detect changed images
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.detect.outputs.matrix }}
+      count: ${{ steps.detect.outputs.count }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Build image matrix
+        id: detect
+        shell: bash
+        env:
+          GITHUB_EVENT_BEFORE: ${{ github.event.before }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import subprocess
+
+          components = [
+              ("lark-notifier", "lark-notifier/Dockerfile", "go", ["lark-notifier/"]),
+              ("artifact-cleaner", "artifact-cleaner/Dockerfile", "go", ["artifact-cleaner/"]),
+              ("match-controller", "match-controller/Dockerfile", "go", ["match-controller/"]),
+              ("record-job", "record-job/Dockerfile", "go", ["record-job/"]),
+              ("stt-job", "stt-job/Dockerfile", "go", ["stt-job/"]),
+              ("stt-subtitle", "cmd/stt-subtitle/Dockerfile", "go", ["cmd/stt-subtitle/"]),
+              ("highlight-job", "highlight-job/Dockerfile", "go", ["highlight-job/"]),
+              ("manifest-job", "manifest-job/Dockerfile", "go", ["manifest-job/"]),
+              ("migrate-job", "migrate-job/Dockerfile", "go", ["migrate-job/"]),
+              ("health-checker", "health-checker/Dockerfile", "go", ["health-checker/"]),
+              ("lark-record-job", "lark-record-job/Dockerfile", "go", ["lark-record-job/"]),
+              ("transcode-job", "transcode-job/Dockerfile", "go", ["transcode-job/"]),
+              ("danmu-job", "danmu-job/Dockerfile", "node", ["danmu-job/"]),
+              ("analyze-job", "analyze-job/Dockerfile", "python", ["analyze-job/"]),
+              ("highlight-artifact-job", "highlight-artifact-job/Dockerfile", "rust", ["highlight-artifact-job/"]),
+          ]
+
+          event = os.environ["GITHUB_EVENT_NAME"]
+          head = os.environ["GITHUB_SHA"]
+          if event == "pull_request":
+              base_ref = os.environ["GITHUB_BASE_REF"]
+              subprocess.run(["git", "fetch", "origin", base_ref, "--depth=1"], check=True)
+              base = subprocess.check_output(["git", "merge-base", f"origin/{base_ref}", "HEAD"], text=True).strip()
+          else:
+              base = os.environ.get("GITHUB_EVENT_BEFORE", "")
+              if not base or set(base) == {"0"}:
+                  base = subprocess.check_output(["git", "rev-list", "--max-parents=0", "HEAD"], text=True).strip()
+
+          changed = subprocess.check_output(["git", "diff", "--name-only", base, head], text=True).splitlines()
+          changed = [p.replace("\\", "/") for p in changed]
+
+          go_common = any(p.startswith(("pkg/", "ent/")) or p in {"go.mod", "go.sum"} for p in changed)
+          selected = []
+          for app, dockerfile, kind, prefixes in components:
+              own_change = any(any(p.startswith(prefix) for prefix in prefixes) for p in changed)
+              common_change = kind == "go" and go_common
+              if own_change or common_change:
+                  selected.append({"app": app, "dockerfile": dockerfile})
+
+          matrix = {"include": selected}
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
+              out.write(f"matrix={json.dumps(matrix, separators=(',', ':'))}\n")
+              out.write(f"count={len(selected)}\n")
+          print("changed files:")
+          for p in changed:
+              print(f"  {p}")
+          print("selected images:")
+          for item in selected:
+              print(f"  {item['app']}")
+          PY
+
   helm:
     name: validate helm chart
     runs-on: ubuntu-latest
@@ -51,41 +125,12 @@ jobs:
 
   docker:
     name: build ${{ matrix.app }}
+    needs: detect
+    if: needs.detect.outputs.count != '0'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - app: lark-notifier
-            dockerfile: lark-notifier/Dockerfile
-          - app: artifact-cleaner
-            dockerfile: artifact-cleaner/Dockerfile
-          - app: match-controller
-            dockerfile: match-controller/Dockerfile
-          - app: record-job
-            dockerfile: record-job/Dockerfile
-          - app: stt-job
-            dockerfile: stt-job/Dockerfile
-          - app: stt-subtitle
-            dockerfile: cmd/stt-subtitle/Dockerfile
-          - app: danmu-job
-            dockerfile: danmu-job/Dockerfile
-          - app: analyze-job
-            dockerfile: analyze-job/Dockerfile
-          - app: highlight-job
-            dockerfile: highlight-job/Dockerfile
-          - app: highlight-artifact-job
-            dockerfile: highlight-artifact-job/Dockerfile
-          - app: manifest-job
-            dockerfile: manifest-job/Dockerfile
-          - app: migrate-job
-            dockerfile: migrate-job/Dockerfile
-          - app: health-checker
-            dockerfile: health-checker/Dockerfile
-          - app: lark-record-job
-            dockerfile: lark-record-job/Dockerfile
-          - app: transcode-job
-            dockerfile: transcode-job/Dockerfile
+      matrix: ${{ fromJson(needs.detect.outputs.matrix) }}
 
     steps:
       - uses: actions/checkout@v6
