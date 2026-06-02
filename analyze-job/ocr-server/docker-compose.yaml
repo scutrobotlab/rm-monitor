@@ -5,22 +5,18 @@ services:
     restart: unless-stopped
     shm_size: 8g
     ports:
-      - "48089:8080"
+      - "48089:8000"
     volumes:
       - ./server:/app
       - ./logs:/logs
+      - ./data:/paddlex/var
     environment:
-      PADDLEX_HPS_USE_HPIP: "1"
+      #PADDLEX_HPS_USE_HPIP: "1"
+      PADDLEX_HPS_DEVICE_TYPE: "gpu"
       NVIDIA_VISIBLE_DEVICES: all
       NVIDIA_DRIVER_CAPABILITIES: compute,utility
+    working_dir: /app
     entrypoint:
       - bash
-      - /app/server.sh
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities:
-                - gpu
+      - server.sh
+    gpus: all
