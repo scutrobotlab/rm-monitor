@@ -84,6 +84,48 @@ func TestCropRoundDanmuMovesFinalToRawAndPublishesTrimmedFinal(t *testing.T) {
 	}
 }
 
+func TestCropRoundSubtitleMovesFinalToRawAndPublishesTrimmedFinal(t *testing.T) {
+	dir := t.TempDir()
+	finalPath := filepath.Join(dir, "主视角.srt")
+	rawPath := filepath.Join(dir, "主视角.raw.srt")
+	sttPath := filepath.Join(dir, "stt.jsonl")
+	if err := os.WriteFile(finalPath, []byte("1\n00:00:00,000 --> 00:00:01,000\nold subtitle\n\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(sttPath, []byte(strings.Join([]string{
+		`{"start":1,"end":2,"status":"SUCCEEDED","text":"before"}`,
+		`{"start":12.5,"end":14,"status":"SUCCEEDED","text":"inside"}`,
+		`{"start":20,"end":21,"status":"SUCCEEDED","text":"after"}`,
+		"",
+	}, "\n")), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	start := 10.0
+	end := 15.0
+	ctx := jobcontract.TranscodeContext{RoundDir: dir, Role: "主视角", TrimStartSeconds: &start, TrimEndSeconds: &end}
+	if err := cropRoundSubtitle(ctx); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := os.ReadFile(rawPath)
+	if err != nil {
+		t.Fatalf("raw subtitle not preserved: %v", err)
+	}
+	if !strings.Contains(string(raw), "old subtitle") {
+		t.Fatalf("raw subtitle was not original content:\n%s", raw)
+	}
+	final, err := os.ReadFile(finalPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := string(final)
+	if strings.Contains(got, "before") || strings.Contains(got, "after") {
+		t.Fatalf("final subtitle included outside cues:\n%s", got)
+	}
+	if !strings.Contains(got, "inside") || !strings.Contains(got, "00:00:02,500 --> 00:00:04,000") {
+		t.Fatalf("final subtitle did not retime inside cue:\n%s", got)
+	}
+}
+
 func TestApplyRoundBoundaryReadsRoundJSON(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "round.json"), []byte(`{"boundary":{"start_seconds":12.5,"end_seconds":420.25}}`), 0o644); err != nil {

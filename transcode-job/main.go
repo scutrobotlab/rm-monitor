@@ -22,6 +22,7 @@ import (
 	"scutbot.cn/web/rm-monitor/pkg/app"
 	"scutbot.cn/web/rm-monitor/pkg/jobcontract"
 	"scutbot.cn/web/rm-monitor/pkg/logx"
+	"scutbot.cn/web/rm-monitor/pkg/subtitle"
 	"scutbot.cn/web/rm-monitor/transcode-job/internal/config"
 )
 
@@ -161,6 +162,9 @@ func run(ctx context.Context, jobCtx jobcontract.TranscodeContext, jobDir string
 	if err := cropRoundDanmu(jobCtx); err != nil {
 		return err
 	}
+	if err := cropRoundSubtitle(jobCtx); err != nil {
+		return err
+	}
 
 	result := jobcontract.TranscodeResult{
 		Schema:       "rm-monitor/transcode-result/v1",
@@ -267,6 +271,55 @@ func cropRoundDanmu(jobCtx jobcontract.TranscodeContext) error {
 		return errors.Wrap(err, "write final danmu xml")
 	}
 	return errors.Wrap(os.Rename(tmp, finalPath), "publish final danmu xml")
+}
+
+func cropRoundSubtitle(jobCtx jobcontract.TranscodeContext) error {
+	roundDir := strings.TrimSpace(jobCtx.RoundDir)
+	if roundDir == "" {
+		return nil
+	}
+	start, end, ok := trimWindow(jobCtx)
+	if !ok {
+		return nil
+	}
+	role := strings.TrimSpace(jobCtx.Role)
+	if role == "" {
+		role = "主视角"
+	}
+	rawPath := filepath.Join(roundDir, role+".raw.srt")
+	finalPath := filepath.Join(roundDir, role+".srt")
+	if _, err := os.Stat(rawPath); err != nil {
+		if !os.IsNotExist(err) {
+			return errors.Wrap(err, "stat raw subtitle")
+		}
+		if err := os.Rename(finalPath, rawPath); err != nil {
+			if os.IsNotExist(err) {
+				return nil
+			}
+			return errors.Wrap(err, "move final subtitle to raw")
+		}
+	}
+	sttPath := filepath.Join(roundDir, "stt.jsonl")
+	err := subtitle.WriteSRTFromJSONL(sttPath, finalPath, subtitle.Options{Start: &start, End: &end})
+	if errors.Is(err, subtitle.ErrNoCues) {
+		if removeErr := os.Remove(finalPath); removeErr != nil && !os.IsNotExist(removeErr) {
+			return errors.Wrap(removeErr, "remove empty final subtitle")
+		}
+		return nil
+	}
+	if os.IsNotExist(err) {
+		return nil
+	}
+	return errors.Wrap(err, "write cropped subtitle")
+}
+
+func trimWindow(jobCtx jobcontract.TranscodeContext) (float64, float64, bool) {
+	if jobCtx.TrimStartSeconds == nil || jobCtx.TrimEndSeconds == nil {
+		return 0, 0, false
+	}
+	start := *jobCtx.TrimStartSeconds
+	end := *jobCtx.TrimEndSeconds
+	return start, end, end > start
 }
 
 func applyRoundBoundary(jobCtx *jobcontract.TranscodeContext) error {
