@@ -115,6 +115,8 @@ highlight:
 transcode:
   sourceRetentionDays: 7
   maxConcurrent: 6
+  avoidRecordNodeWeight: 80
+  spreadMaxSkew: 1
   cpuRequest: "6000m"
   cpuLimit: "8000m"
   memoryRequest: "2Gi"

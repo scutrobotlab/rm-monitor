@@ -384,11 +384,30 @@ spec:
           - name: bitable_record_url
             valueFrom: {path: /tmp/argo/bitable_record_url}
     - name: transcode
+      metadata:
+        labels:
+          rm-monitor.scutbot.cn/job: transcode
       synchronization:
         semaphores:
           - configMapKeyRef:
               name: rm-monitor-argo-semaphores
               key: transcode
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: {{ .Values.transcode.avoidRecordNodeWeight }}
+              preference:
+                matchExpressions:
+                  - key: rm-monitor/record
+                    operator: DoesNotExist
+      podSpecPatch: |
+        topologySpreadConstraints:
+          - maxSkew: {{ .Values.transcode.spreadMaxSkew }}
+            topologyKey: kubernetes.io/hostname
+            whenUnsatisfiable: ScheduleAnyway
+            labelSelector:
+              matchLabels:
+                rm-monitor.scutbot.cn/job: transcode
       inputs:
         parameters:
           - name: context

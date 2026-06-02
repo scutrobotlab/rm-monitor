@@ -211,6 +211,8 @@
       "properties": {
         "sourceRetentionDays": { "type": "integer", "minimum": 1 },
         "maxConcurrent": { "type": "integer", "minimum": 1 },
+        "avoidRecordNodeWeight": { "type": "integer", "minimum": 1, "maximum": 100 },
+        "spreadMaxSkew": { "type": "integer", "minimum": 1 },
         "cpuRequest": { "type": "string", "minLength": 1 },
         "cpuLimit": { "type": "string", "minLength": 1 },
         "memoryRequest": { "type": "string", "minLength": 1 },
