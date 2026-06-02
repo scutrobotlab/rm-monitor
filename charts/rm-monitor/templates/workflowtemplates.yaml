@@ -162,7 +162,7 @@ spec:
                   value: "{{`{{item}}`}}"
             withParam: "{{`{{tasks.round-`}}{{ $round }}{{`-highlight.outputs.parameters.highlight_contexts}}`}}"
           - name: round-{{ $round }}-ready
-            depends: "round-{{ $round }}-gate.Succeeded && (round-{{ $round }}-record-main.Succeeded || round-{{ $round }}-record-main.Skipped || round-{{ $round }}-record-main.Omitted) && (round-{{ $round }}-record-fpv.Succeeded || round-{{ $round }}-record-fpv.Skipped || round-{{ $round }}-record-fpv.Omitted) && (round-{{ $round }}-analyze.Succeeded || round-{{ $round }}-analyze.Skipped || round-{{ $round }}-analyze.Omitted) && (round-{{ $round }}-stt.Succeeded || round-{{ $round }}-stt.Skipped || round-{{ $round }}-stt.Omitted) && (round-{{ $round }}-highlight-artifact.Succeeded || round-{{ $round }}-highlight-artifact.Skipped || round-{{ $round }}-highlight-artifact.Omitted)"
+            depends: "round-{{ $round }}-gate.Succeeded && (round-{{ $round }}-record-main.Succeeded || round-{{ $round }}-record-main.Skipped || round-{{ $round }}-record-main.Omitted) && (round-{{ $round }}-record-fpv.Succeeded || round-{{ $round }}-record-fpv.Skipped || round-{{ $round }}-record-fpv.Omitted) && (round-{{ $round }}-analyze.Succeeded || round-{{ $round }}-analyze.Skipped || round-{{ $round }}-analyze.Omitted) && (round-{{ $round }}-stt.Succeeded || round-{{ $round }}-stt.Skipped || round-{{ $round }}-stt.Omitted)"
             template: noop
 {{- end }}
           - name: manifest
@@ -392,6 +392,13 @@ spec:
         imagePullPolicy: {{ include "rm-monitor.jobImagePullPolicy" . }}
         command: ["/usr/local/bin/app"]
         args: ["-f", "{{ include "rm-monitor.configPath" . }}"]
+        resources:
+          requests:
+            cpu: {{ .Values.transcode.cpuRequest | quote }}
+            memory: {{ .Values.transcode.memoryRequest | quote }}
+          limits:
+            cpu: {{ .Values.transcode.cpuLimit | quote }}
+            memory: {{ .Values.transcode.memoryLimit | quote }}
         env:
           - name: RM_MONITOR_JOB_CONTEXT
             value: "{{`{{inputs.parameters.context}}`}}"

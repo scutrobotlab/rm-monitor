@@ -9,7 +9,8 @@ COPY . .
 RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
     go build -ldflags "-s -w" -trimpath -o /usr/local/bin/app ./lark-notifier && \
     go build -ldflags "-s -w" -trimpath -o /usr/local/bin/create-payload ./lark-notifier/cmd/create-payload && \
-    go build -ldflags "-s -w" -trimpath -o /usr/local/bin/apply-update ./lark-notifier/cmd/apply-update
+    go build -ldflags "-s -w" -trimpath -o /usr/local/bin/apply-update ./lark-notifier/cmd/apply-update && \
+    go build -ldflags "-s -w" -trimpath -o /usr/local/bin/force-patch ./lark-notifier/cmd/force-patch
 
 FROM alpine:3.20
 
@@ -20,5 +21,6 @@ RUN apk add --no-cache tzdata ca-certificates
 COPY --from=builder /usr/local/bin/app /usr/local/bin/app
 COPY --from=builder /usr/local/bin/create-payload /usr/local/bin/create-payload
 COPY --from=builder /usr/local/bin/apply-update /usr/local/bin/apply-update
+COPY --from=builder /usr/local/bin/force-patch /usr/local/bin/force-patch
 
 ENTRYPOINT ["/usr/local/bin/app"]

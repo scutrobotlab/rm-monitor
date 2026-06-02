@@ -204,6 +204,18 @@
         }
       ]
     },
+    "transcode": {
+      "type": "object",
+      "required": ["sourceRetentionDays", "maxConcurrent", "cpuRequest", "cpuLimit", "memoryRequest", "memoryLimit"],
+      "properties": {
+        "sourceRetentionDays": { "type": "integer", "minimum": 1 },
+        "maxConcurrent": { "type": "integer", "minimum": 1 },
+        "cpuRequest": { "type": "string", "minLength": 1 },
+        "cpuLimit": { "type": "string", "minLength": 1 },
+        "memoryRequest": { "type": "string", "minLength": 1 },
+        "memoryLimit": { "type": "string", "minLength": 1 }
+      }
+    },
     "jobs": {
       "type": "object",
       "required": ["ttlSecondsAfterFinished", "backoffLimit", "recordsMountPath"],
