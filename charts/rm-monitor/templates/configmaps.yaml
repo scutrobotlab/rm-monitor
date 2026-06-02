@@ -170,6 +170,10 @@ data:
   config.yml: |
     TranscodeConf:
       SourceRetentionDays: {{ .Values.transcode.sourceRetentionDays }}
+      AV1Preset: {{ .Values.transcode.av1Preset }}
+      AV1Bitrate: {{ .Values.transcode.av1Bitrate | quote }}
+      AV1GOP: {{ .Values.transcode.av1GOP }}
+      AV1PixFmt: {{ .Values.transcode.av1PixFmt | quote }}
 ---
 apiVersion: v1
 kind: ConfigMap

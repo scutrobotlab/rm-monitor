@@ -36,5 +36,7 @@ node_modules/
 danmu-job/dist/
 /highlight-publish-bilibili-job/target
 /highlight-artifact-job/target
+/record-trim-job/target
+/transcode-job/target
 /target
 __pycache__/

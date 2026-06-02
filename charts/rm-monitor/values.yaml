@@ -121,6 +121,16 @@ transcode:
   cpuLimit: "8000m"
   memoryRequest: "2Gi"
   memoryLimit: "6Gi"
+  av1Preset: 8
+  av1Bitrate: "1000k"
+  av1GOP: 125
+  av1PixFmt: "yuv420p"
+
+recordTrim:
+  cpuRequest: "500m"
+  cpuLimit: "2000m"
+  memoryRequest: "512Mi"
+  memoryLimit: "2Gi"
 
 priority: []
 

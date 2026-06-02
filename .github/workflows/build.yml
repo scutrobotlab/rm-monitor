@@ -45,10 +45,11 @@ jobs:
               ("migrate-job", "migrate-job/Dockerfile", "go", ["migrate-job/"]),
               ("health-checker", "health-checker/Dockerfile", "go", ["health-checker/"]),
               ("lark-record-job", "lark-record-job/Dockerfile", "go", ["lark-record-job/"]),
-              ("transcode-job", "transcode-job/Dockerfile", "go", ["transcode-job/"]),
+              ("transcode-job", "transcode-job/Dockerfile", "rust", ["transcode-job/"]),
               ("danmu-job", "danmu-job/Dockerfile", "node", ["danmu-job/"]),
               ("analyze-job", "analyze-job/Dockerfile", "python", ["analyze-job/"]),
               ("highlight-artifact-job", "highlight-artifact-job/Dockerfile", "rust", ["highlight-artifact-job/"]),
+              ("record-trim-job", "record-trim-job/Dockerfile", "rust", ["record-trim-job/"]),
           ]
 
           event = os.environ["GITHUB_EVENT_NAME"]
@@ -212,6 +213,7 @@ jobs:
               "danmu-job",
               "analyze-job",
               "highlight-artifact-job",
+              "record-trim-job",
           ]
 
           current_tag = "sha-" + os.environ["GITHUB_SHA"][:7]

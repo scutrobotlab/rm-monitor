@@ -9,5 +9,6 @@ build-all:
 	go build -trimpath -ldflags "-s -w" -o bin/record-job record-job/main.go
 	go build -trimpath -ldflags "-s -w" -o bin/stt-job stt-job/main.go
 	go build -trimpath -ldflags "-s -w" -o bin/stt-subtitle cmd/stt-subtitle/main.go
-	go build -trimpath -ldflags "-s -w" -o bin/transcode-job transcode-job/main.go
+	cargo build --manifest-path transcode-job/Cargo.toml --release --locked
+	cp transcode-job/target/release/transcode-job bin/transcode-job
 	go build -trimpath -ldflags "-s -w" -o bin/lark-record-job lark-record-job/main.go

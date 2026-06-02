@@ -207,12 +207,26 @@
     },
     "transcode": {
       "type": "object",
-      "required": ["sourceRetentionDays", "maxConcurrent", "cpuRequest", "cpuLimit", "memoryRequest", "memoryLimit"],
+      "required": ["sourceRetentionDays", "maxConcurrent", "cpuRequest", "cpuLimit", "memoryRequest", "memoryLimit", "av1Preset", "av1Bitrate", "av1GOP", "av1PixFmt"],
       "properties": {
         "sourceRetentionDays": { "type": "integer", "minimum": 1 },
         "maxConcurrent": { "type": "integer", "minimum": 1 },
         "avoidRecordNodeWeight": { "type": "integer", "minimum": 1, "maximum": 100 },
         "spreadMaxSkew": { "type": "integer", "minimum": 1 },
+        "cpuRequest": { "type": "string", "minLength": 1 },
+        "cpuLimit": { "type": "string", "minLength": 1 },
+        "memoryRequest": { "type": "string", "minLength": 1 },
+        "memoryLimit": { "type": "string", "minLength": 1 },
+        "av1Preset": { "type": "integer", "minimum": 1 },
+        "av1Bitrate": { "type": "string", "minLength": 1 },
+        "av1GOP": { "type": "integer", "minimum": 1 },
+        "av1PixFmt": { "type": "string", "minLength": 1 }
+      }
+    },
+    "recordTrim": {
+      "type": "object",
+      "required": ["cpuRequest", "cpuLimit", "memoryRequest", "memoryLimit"],
+      "properties": {
         "cpuRequest": { "type": "string", "minLength": 1 },
         "cpuLimit": { "type": "string", "minLength": 1 },
         "memoryRequest": { "type": "string", "minLength": 1 },

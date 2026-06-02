@@ -521,10 +521,12 @@ func (l *MatchScanLogic) roundWorkflowArguments(m scannedMatch, r *ent.MatchRoun
 		mainRole = "主视角"
 	}
 	fpvRecordContexts := make([]jobcontract.RecordContext, 0, len(specs))
+	fpvRecordTrimContexts := make([]jobcontract.RecordTrimContext, 0, len(specs))
 	fpvTranscodeContexts := make([]jobcontract.TranscodeContext, 0, len(specs))
 	fpvLarkRecordContexts := make([]jobcontract.LarkRecordContext, 0, len(specs))
 	outputByRole := make(map[string]string, len(specs))
 	var mainRecordContext jobcontract.RecordContext
+	var mainRecordTrimContext jobcontract.RecordTrimContext
 	var mainSourcePath string
 	uploadConf := l.svcCtx.Config.UploadConf.WithDefaults()
 	larkRecordEnabled := strings.TrimSpace(uploadConf.BitableAppToken) != ""
@@ -552,33 +554,38 @@ func (l *MatchScanLogic) roundWorkflowArguments(m scannedMatch, r *ent.MatchRoun
 			continue
 		}
 		fpvRecordContexts = append(fpvRecordContexts, recordCtx)
-		fpvTranscodeContexts = append(fpvTranscodeContexts, transcodeContextForRole(m, r, recordConf, output, roundDir, role))
+		mp4Path := mp4PathForSource(output)
+		fpvRecordTrimContexts = append(fpvRecordTrimContexts, recordTrimContextForRole(m, r, recordConf, output, mp4Path, roundDir, role, false))
+		fpvTranscodeContexts = append(fpvTranscodeContexts, transcodeContextForRole(m, r, recordConf, mp4Path, roundDir, role))
 		if larkRecordEnabled {
-			fpvLarkRecordContexts = append(fpvLarkRecordContexts, larkRecordContextForRole(m, r, recordConf, uploadConf, output, role))
+			fpvLarkRecordContexts = append(fpvLarkRecordContexts, larkRecordContextForRole(m, r, recordConf, uploadConf, mp4Path, role))
 		}
 	}
 	if mainSourcePath == "" {
 		mainSourcePath = outputByRole["主视角"]
 	}
 	args := map[string]string{
-		"main_record_context":      "{}",
-		"fpv_record_available":     strconv.FormatBool(len(fpvRecordContexts) > 0),
-		"fpv_record_contexts":      mustJSON(fpvRecordContexts),
-		"danmu_enabled":            strconv.FormatBool(l.svcCtx.Config.DanmuConf.Enabled && strings.TrimSpace(chatRoomID) != ""),
-		"main_source_available":    "false",
-		"analyze_enabled":          "false",
-		"analyze_context":          "{}",
-		"stt_enabled":              "false",
-		"stt_context":              "{}",
-		"main_lark_record_enabled": strconv.FormatBool(larkRecordEnabled),
-		"main_lark_record_context": "{}",
-		"fpv_lark_record_enabled":  strconv.FormatBool(len(fpvLarkRecordContexts) > 0),
-		"fpv_lark_record_contexts": mustJSON(fpvLarkRecordContexts),
-		"main_transcode_context":   "{}",
-		"fpv_transcode_available":  strconv.FormatBool(len(fpvTranscodeContexts) > 0),
-		"fpv_transcode_contexts":   mustJSON(fpvTranscodeContexts),
-		"highlight_enabled":        "false",
-		"highlight_context":        "{}",
+		"main_record_context":       "{}",
+		"fpv_record_available":      strconv.FormatBool(len(fpvRecordContexts) > 0),
+		"fpv_record_contexts":       mustJSON(fpvRecordContexts),
+		"main_record_trim_context":  "{}",
+		"fpv_record_trim_available": strconv.FormatBool(len(fpvRecordTrimContexts) > 0),
+		"fpv_record_trim_contexts":  mustJSON(fpvRecordTrimContexts),
+		"danmu_enabled":             strconv.FormatBool(l.svcCtx.Config.DanmuConf.Enabled && strings.TrimSpace(chatRoomID) != ""),
+		"main_source_available":     "false",
+		"analyze_enabled":           "false",
+		"analyze_context":           "{}",
+		"stt_enabled":               "false",
+		"stt_context":               "{}",
+		"main_lark_record_enabled":  strconv.FormatBool(larkRecordEnabled),
+		"main_lark_record_context":  "{}",
+		"fpv_lark_record_enabled":   strconv.FormatBool(len(fpvLarkRecordContexts) > 0),
+		"fpv_lark_record_contexts":  mustJSON(fpvLarkRecordContexts),
+		"main_transcode_context":    "{}",
+		"fpv_transcode_available":   strconv.FormatBool(len(fpvTranscodeContexts) > 0),
+		"fpv_transcode_contexts":    mustJSON(fpvTranscodeContexts),
+		"highlight_enabled":         "false",
+		"highlight_context":         "{}",
 		"danmu_context": mustJSON(jobcontract.DanmuContext{
 			Schema:       "rm-monitor/danmu-context/v1",
 			MatchRoundID: r.ID,
@@ -590,6 +597,9 @@ func (l *MatchScanLogic) roundWorkflowArguments(m scannedMatch, r *ent.MatchRoun
 	if mainSourcePath != "" {
 		args["main_source_available"] = "true"
 		args["main_record_context"] = mustJSON(mainRecordContext)
+		mainMP4Path := mp4PathForSource(mainSourcePath)
+		mainRecordTrimContext = recordTrimContextForRole(m, r, recordConf, mainSourcePath, mainMP4Path, roundDir, mainRole, true)
+		args["main_record_trim_context"] = mustJSON(mainRecordTrimContext)
 		sourceAbs := filepath.Join(recordConf.BaseDir, filepath.FromSlash(mainSourcePath))
 		ocrServerConf := l.svcCtx.Config.OCRServerConf.WithDefaults()
 		if analyzeConf.Enabled {
@@ -633,9 +643,9 @@ func (l *MatchScanLogic) roundWorkflowArguments(m scannedMatch, r *ent.MatchRoun
 			})
 		}
 		if larkRecordEnabled {
-			args["main_lark_record_context"] = mustJSON(larkRecordContextForRole(m, r, recordConf, uploadConf, mainSourcePath, mainRole))
+			args["main_lark_record_context"] = mustJSON(larkRecordContextForRole(m, r, recordConf, uploadConf, mainMP4Path, mainRole))
 		}
-		args["main_transcode_context"] = mustJSON(transcodeContextForRole(m, r, recordConf, mainSourcePath, roundDir, mainRole))
+		args["main_transcode_context"] = mustJSON(transcodeContextForRole(m, r, recordConf, mainMP4Path, roundDir, mainRole))
 		if highlightConf.Enabled {
 			args["highlight_enabled"] = "true"
 			args["highlight_context"] = mustJSON(map[string]any{
@@ -707,15 +717,33 @@ func (l *MatchScanLogic) outputPath(conf common.RecordConf, m scannedMatch, roun
 	})
 }
 
+func mp4PathForSource(sourcePath string) string {
+	return strings.TrimSuffix(sourcePath, filepath.Ext(sourcePath)) + ".mp4"
+}
+
+func recordTrimContextForRole(m scannedMatch, r *ent.MatchRound, conf common.RecordConf, sourcePath, outputPath, roundDir, role string, trimSidecars bool) jobcontract.RecordTrimContext {
+	return jobcontract.RecordTrimContext{
+		Schema:       "rm-monitor/record-trim-context/v1",
+		MatchID:      m.ID,
+		MatchRoundID: r.ID,
+		RoundNo:      r.RoundNo,
+		Role:         role,
+		BaseDir:      conf.BaseDir,
+		RoundDir:     roundDir,
+		SourcePath:   filepath.Join(conf.BaseDir, filepath.FromSlash(sourcePath)),
+		OutputPath:   filepath.Join(conf.BaseDir, filepath.FromSlash(outputPath)),
+		TrimSidecars: trimSidecars,
+	}
+}
+
 func transcodeContextForRole(m scannedMatch, r *ent.MatchRound, conf common.RecordConf, sourcePath, roundDir, role string) jobcontract.TranscodeContext {
-	archivePath := strings.TrimSuffix(sourcePath, filepath.Ext(sourcePath)) + ".mp4"
 	return jobcontract.TranscodeContext{
 		Schema:              "rm-monitor/transcode-context/v1",
 		MatchID:             m.ID,
 		MatchRoundID:        r.ID,
 		RoundNo:             r.RoundNo,
 		SourcePath:          filepath.Join(conf.BaseDir, filepath.FromSlash(sourcePath)),
-		ArchivePath:         filepath.Join(conf.BaseDir, filepath.FromSlash(archivePath)),
+		ArchivePath:         filepath.Join(conf.BaseDir, filepath.FromSlash(sourcePath)),
 		BaseDir:             conf.BaseDir,
 		SourceRetentionDays: 7,
 		RoundDir:            roundDir,

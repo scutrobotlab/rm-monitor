@@ -356,6 +356,10 @@ type TranscodeConf struct {
 	CPULimit            string `json:",optional"`
 	MemoryRequest       string `json:",optional"`
 	MemoryLimit         string `json:",optional"`
+	AV1Preset           int    `json:",optional"`
+	AV1Bitrate          string `json:",optional"`
+	AV1GOP              int    `json:",optional"`
+	AV1PixFmt           string `json:",optional"`
 }
 
 func (c *TranscodeConf) WithDefaults() TranscodeConf {
@@ -380,6 +384,18 @@ func (c *TranscodeConf) WithDefaults() TranscodeConf {
 	}
 	if out.MemoryLimit == "" {
 		out.MemoryLimit = "6Gi"
+	}
+	if out.AV1Preset <= 0 {
+		out.AV1Preset = 8
+	}
+	if out.AV1Bitrate == "" {
+		out.AV1Bitrate = "1000k"
+	}
+	if out.AV1GOP <= 0 {
+		out.AV1GOP = 125
+	}
+	if out.AV1PixFmt == "" {
+		out.AV1PixFmt = "yuv420p"
 	}
 	return out
 }

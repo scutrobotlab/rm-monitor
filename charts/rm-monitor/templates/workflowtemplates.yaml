@@ -110,9 +110,26 @@ spec:
               parameters:
                 - name: context
                   value: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.stt_context}}`}}"
+          - name: round-{{ $round }}-record-trim-main
+            when: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.main_source_available}}`}} == true && {{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.analyze_enabled}}`}} == true"
+            depends: "round-{{ $round }}-record-main.Succeeded && round-{{ $round }}-analyze.Succeeded && (round-{{ $round }}-stt.Succeeded || round-{{ $round }}-stt.Skipped || round-{{ $round }}-stt.Omitted) && (round-{{ $round }}-danmu.Succeeded || round-{{ $round }}-danmu.Skipped || round-{{ $round }}-danmu.Omitted)"
+            template: record-trim
+            arguments:
+              parameters:
+                - name: context
+                  value: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.main_record_trim_context}}`}}"
+          - name: round-{{ $round }}-record-trim-fpv
+            when: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.fpv_record_trim_available}}`}} == true && {{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.analyze_enabled}}`}} == true"
+            depends: "round-{{ $round }}-record-fpv.Succeeded && round-{{ $round }}-analyze.Succeeded"
+            template: record-trim
+            arguments:
+              parameters:
+                - name: context
+                  value: "{{`{{item}}`}}"
+            withParam: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.fpv_record_trim_contexts}}`}}"
           - name: round-{{ $round }}-lark-record-main
             when: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.main_lark_record_enabled}}`}} == true && {{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.main_source_available}}`}} == true"
-            depends: "round-{{ $round }}-record-main.Succeeded"
+            depends: "round-{{ $round }}-record-trim-main.Succeeded"
             template: lark-record
             arguments:
               parameters:
@@ -120,7 +137,7 @@ spec:
                   value: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.main_lark_record_context}}`}}"
           - name: round-{{ $round }}-lark-record-fpv
             when: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.fpv_lark_record_enabled}}`}} == true"
-            depends: "round-{{ $round }}-record-fpv.Succeeded"
+            depends: "round-{{ $round }}-record-trim-fpv.Succeeded"
             template: lark-record
             arguments:
               parameters:
@@ -129,7 +146,7 @@ spec:
             withParam: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.fpv_lark_record_contexts}}`}}"
           - name: round-{{ $round }}-transcode-main
             when: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.analyze_enabled}}`}} == true"
-            depends: "round-{{ $round }}-record-main.Succeeded && round-{{ $round }}-analyze.Succeeded"
+            depends: "round-{{ $round }}-record-trim-main.Succeeded && (round-{{ $round }}-lark-record-main.Succeeded || round-{{ $round }}-lark-record-main.Skipped || round-{{ $round }}-lark-record-main.Omitted)"
             template: transcode
             arguments:
               parameters:
@@ -137,7 +154,7 @@ spec:
                   value: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.main_transcode_context}}`}}"
           - name: round-{{ $round }}-transcode-fpv
             when: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.fpv_transcode_available}}`}} == true && {{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.analyze_enabled}}`}} == true"
-            depends: "round-{{ $round }}-record-fpv.Succeeded && round-{{ $round }}-analyze.Succeeded"
+            depends: "round-{{ $round }}-record-trim-fpv.Succeeded && (round-{{ $round }}-lark-record-fpv.Succeeded || round-{{ $round }}-lark-record-fpv.Skipped || round-{{ $round }}-lark-record-fpv.Omitted)"
             template: transcode
             arguments:
               parameters:
@@ -162,7 +179,7 @@ spec:
                   value: "{{`{{item}}`}}"
             withParam: "{{`{{tasks.round-`}}{{ $round }}{{`-highlight.outputs.parameters.highlight_contexts}}`}}"
           - name: round-{{ $round }}-ready
-            depends: "round-{{ $round }}-gate.Succeeded && (round-{{ $round }}-record-main.Succeeded || round-{{ $round }}-record-main.Skipped || round-{{ $round }}-record-main.Omitted) && (round-{{ $round }}-record-fpv.Succeeded || round-{{ $round }}-record-fpv.Skipped || round-{{ $round }}-record-fpv.Omitted) && (round-{{ $round }}-analyze.Succeeded || round-{{ $round }}-analyze.Skipped || round-{{ $round }}-analyze.Omitted) && (round-{{ $round }}-stt.Succeeded || round-{{ $round }}-stt.Skipped || round-{{ $round }}-stt.Omitted)"
+            depends: "round-{{ $round }}-gate.Succeeded && (round-{{ $round }}-record-main.Succeeded || round-{{ $round }}-record-main.Skipped || round-{{ $round }}-record-main.Omitted) && (round-{{ $round }}-record-fpv.Succeeded || round-{{ $round }}-record-fpv.Skipped || round-{{ $round }}-record-fpv.Omitted) && (round-{{ $round }}-analyze.Succeeded || round-{{ $round }}-analyze.Skipped || round-{{ $round }}-analyze.Omitted) && (round-{{ $round }}-stt.Succeeded || round-{{ $round }}-stt.Skipped || round-{{ $round }}-stt.Omitted) && (round-{{ $round }}-record-trim-main.Succeeded || round-{{ $round }}-record-trim-main.Skipped || round-{{ $round }}-record-trim-main.Omitted) && (round-{{ $round }}-record-trim-fpv.Succeeded || round-{{ $round }}-record-trim-fpv.Skipped || round-{{ $round }}-record-trim-fpv.Omitted) && (round-{{ $round }}-lark-record-main.Succeeded || round-{{ $round }}-lark-record-main.Skipped || round-{{ $round }}-lark-record-main.Omitted) && (round-{{ $round }}-lark-record-fpv.Succeeded || round-{{ $round }}-lark-record-fpv.Skipped || round-{{ $round }}-lark-record-fpv.Omitted) && (round-{{ $round }}-transcode-main.Succeeded || round-{{ $round }}-transcode-main.Skipped || round-{{ $round }}-transcode-main.Omitted) && (round-{{ $round }}-transcode-fpv.Succeeded || round-{{ $round }}-transcode-fpv.Skipped || round-{{ $round }}-transcode-fpv.Omitted)"
             template: noop
 {{- end }}
           - name: manifest
@@ -214,6 +231,12 @@ spec:
             valueFrom: {path: /tmp/argo/fpv_record_available}
           - name: fpv_record_contexts
             valueFrom: {path: /tmp/argo/fpv_record_contexts}
+          - name: main_record_trim_context
+            valueFrom: {path: /tmp/argo/main_record_trim_context}
+          - name: fpv_record_trim_available
+            valueFrom: {path: /tmp/argo/fpv_record_trim_available}
+          - name: fpv_record_trim_contexts
+            valueFrom: {path: /tmp/argo/fpv_record_trim_contexts}
           - name: danmu_enabled
             valueFrom: {path: /tmp/argo/danmu_enabled}
           - name: danmu_context
@@ -353,6 +376,39 @@ spec:
             valueFrom: {path: /tmp/argo/stt_path}
           - name: subtitle_path
             valueFrom: {path: /tmp/argo/subtitle_path}
+    - name: record-trim
+      inputs:
+        parameters:
+          - name: context
+      container:
+        image: {{ include "rm-monitor.image" (dict "root" . "component" "record-trim-job") }}
+        imagePullPolicy: {{ include "rm-monitor.jobImagePullPolicy" . }}
+        command: ["/usr/local/bin/record-trim-job"]
+        resources:
+          requests:
+            cpu: {{ .Values.recordTrim.cpuRequest | quote }}
+            memory: {{ .Values.recordTrim.memoryRequest | quote }}
+          limits:
+            cpu: {{ .Values.recordTrim.cpuLimit | quote }}
+            memory: {{ .Values.recordTrim.memoryLimit | quote }}
+        env:
+          - name: RM_MONITOR_JOB_CONTEXT
+            value: "{{`{{inputs.parameters.context}}`}}"
+        volumeMounts:
+          - name: shared-records
+            mountPath: {{ .Values.jobs.recordsMountPath }}
+      outputs:
+        parameters:
+          - name: output_path
+            valueFrom: {path: /tmp/argo/output_path}
+          - name: role
+            valueFrom: {path: /tmp/argo/role}
+          - name: file_size
+            valueFrom: {path: /tmp/argo/file_size}
+          - name: checksum
+            valueFrom: {path: /tmp/argo/checksum}
+          - name: duration_seconds
+            valueFrom: {path: /tmp/argo/duration_seconds}
     - name: lark-record
       synchronization:
         semaphores:
@@ -414,7 +470,7 @@ spec:
       container:
         image: {{ include "rm-monitor.image" (dict "root" . "component" "transcode-job") }}
         imagePullPolicy: {{ include "rm-monitor.jobImagePullPolicy" . }}
-        command: ["/usr/local/bin/app"]
+        command: ["/usr/local/bin/transcode-job"]
         args: ["-f", "{{ include "rm-monitor.configPath" . }}"]
         resources:
           requests:
