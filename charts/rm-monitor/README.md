@@ -45,7 +45,9 @@ PVCs bound to those names.
 Images are intentionally not values. The chart renders
 `ghcr.io/scutrobotlab/rm-monitor/<component>:<chart appVersion>` for every
 component, so deployments are pinned by chart package metadata rather than a
-second image tag field in production values.
+second image tag field in production values. CI builds and pushes every
+component image with that tag before publishing the chart, so a published chart
+never references a partially available image set.
 
 The expected production storage topology is:
 

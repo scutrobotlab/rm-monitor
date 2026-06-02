@@ -126,6 +126,7 @@ data:
 {{ include "rm-monitor.recordConf" . | indent 4 }}
 {{ include "rm-monitor.difyConf" . | indent 4 }}
 {{ include "rm-monitor.highlightConf" . | indent 4 }}
+---
 apiVersion: v1
 kind: ConfigMap
 metadata:

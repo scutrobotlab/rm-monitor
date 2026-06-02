@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   detect:
-    name: detect changed images
+    name: detect images
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.detect.outputs.matrix }}
@@ -67,11 +67,14 @@ jobs:
 
           go_common = any(p.startswith(("pkg/", "ent/")) or p in {"go.mod", "go.sum"} for p in changed)
           selected = []
-          for app, dockerfile, kind, prefixes in components:
-              own_change = any(any(p.startswith(prefix) for prefix in prefixes) for p in changed)
-              common_change = kind == "go" and go_common
-              if own_change or common_change:
-                  selected.append({"app": app, "dockerfile": dockerfile})
+          if event == "push":
+              selected = [{"app": app, "dockerfile": dockerfile} for app, dockerfile, _kind, _prefixes in components]
+          else:
+              for app, dockerfile, kind, prefixes in components:
+                  own_change = any(any(p.startswith(prefix) for prefix in prefixes) for p in changed)
+                  common_change = kind == "go" and go_common
+                  if own_change or common_change:
+                      selected.append({"app": app, "dockerfile": dockerfile})
 
           matrix = {"include": selected}
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
@@ -101,27 +104,6 @@ jobs:
 
       - name: Helm template
         run: helm template rm-monitor charts/rm-monitor --namespace rm-monitor --values charts/rm-monitor/values.yaml
-
-      - name: Login to GHCR for Helm
-        if: github.event_name == 'push'
-        shell: bash
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io --username "${{ github.actor }}" --password-stdin
-
-      - name: Package Helm chart
-        if: github.event_name == 'push'
-        shell: bash
-        run: |
-          helm package charts/rm-monitor \
-            --version "0.1.${{ github.run_number }}" \
-            --app-version "${{ github.sha }}" \
-            --destination .helm-package
-
-      - name: Push Helm chart to GHCR
-        if: github.event_name == 'push'
-        shell: bash
-        run: |
-          owner="${GITHUB_REPOSITORY_OWNER,,}"
-          helm push .helm-package/rm-monitor-*.tgz "oci://ghcr.io/${owner}/charts"
 
   docker:
     name: build ${{ matrix.app }}
@@ -168,3 +150,36 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=${{ matrix.app }}
           cache-to: type=gha,scope=${{ matrix.app }},mode=max
+
+  chart:
+    name: publish helm chart
+    needs:
+      - helm
+      - docker
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Helm
+        shell: bash
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+      - name: Login to GHCR for Helm
+        shell: bash
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io --username "${{ github.actor }}" --password-stdin
+
+      - name: Package Helm chart
+        shell: bash
+        run: |
+          helm package charts/rm-monitor \
+            --version "0.1.${{ github.run_number }}" \
+            --app-version "${{ github.sha }}" \
+            --destination .helm-package
+
+      - name: Push Helm chart to GHCR
+        shell: bash
+        run: |
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          helm push .helm-package/rm-monitor-*.tgz "oci://ghcr.io/${owner}/charts"

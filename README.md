@@ -80,7 +80,9 @@ helm upgrade --install rm-monitor oci://ghcr.io/scutrobotlab/charts/rm-monitor `
 Images are not configured in values. The chart always uses
 `ghcr.io/scutrobotlab/rm-monitor/<component>:<chart appVersion>`, so production
 deploys are pinned by the chart package metadata instead of repeated image
-fields in every values file.
+fields in every values file. CI builds and pushes every component image with
+that tag before publishing the chart, so a published chart never points at a
+partially available image set.
 
 ## Configuration
 
