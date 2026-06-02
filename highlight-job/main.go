@@ -3,11 +3,16 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"encoding/xml"
 	"flag"
 	"fmt"
+	"io"
+	"math"
 	"os"
 	"path"
 	"path/filepath"
+	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -266,10 +271,11 @@ func reviewCandidate(ctx context.Context, c config.Config, jobCtx Context, candi
 		return Review{}, nil, err
 	}
 	payload := map[string]any{
-		"schema": "rm-monitor/dify-highlight-review-input/v1",
-		"match": map[string]any{"event": jobCtx.Event, "zone": jobCtx.Zone, "order": jobCtx.Order, "match_type": jobCtx.MatchType, "red_school": jobCtx.RedSchool, "red_name": jobCtx.RedName, "blue_school": jobCtx.BlueSchool, "blue_name": jobCtx.BlueName},
-		"round": map[string]any{"round_no": jobCtx.RoundNo, "role": jobCtx.Role},
+		"schema":    "rm-monitor/dify-highlight-review-input/v1",
+		"match":     map[string]any{"event": jobCtx.Event, "zone": jobCtx.Zone, "order": jobCtx.Order, "match_type": jobCtx.MatchType, "red_school": jobCtx.RedSchool, "red_name": jobCtx.RedName, "blue_school": jobCtx.BlueSchool, "blue_name": jobCtx.BlueName},
+		"round":     map[string]any{"round_no": jobCtx.RoundNo, "role": jobCtx.Role},
 		"candidate": map[string]any{"highlight_index": candidate.Index, "start_seconds": candidate.Start, "end_seconds": candidate.End, "peak_seconds": candidate.Peak, "score": candidate.Score, "source_path": jobCtx.SourcePath, "output_dir": outputDir},
+		"evidence":  buildReviewEvidence(storagepath.Resolve(c.RecordConf.WithDefaults().BaseDir, jobCtx.RoundDir), conf.Role, candidate),
 	}
 	rawPayload, _ := json.Marshal(payload)
 	result, err := client.RunWorkflow(ctx, conf.ReviewWorkflowAPIKey, fmt.Sprintf("rm-monitor:highlight:%d:%d", jobCtx.MatchRoundID, candidate.Index), map[string]any{"payload": string(rawPayload)})
@@ -292,6 +298,202 @@ func reviewCandidate(ctx context.Context, c config.Config, jobCtx Context, candi
 	}
 	modelPayload, _ := json.Marshal(map[string]any{"workflow_run_id": result.WorkflowRunID, "task_id": result.TaskID, "review": review})
 	return review, modelPayload, nil
+}
+
+type sttEvidence struct {
+	Start float64 `json:"start"`
+	End   float64 `json:"end"`
+	Text  string  `json:"text"`
+}
+
+type danmuEvidence struct {
+	T    float64 `json:"t"`
+	Text string  `json:"text"`
+}
+
+type danmuPeakEvidence struct {
+	T     float64 `json:"t"`
+	Count int     `json:"count"`
+	Total int     `json:"total"`
+}
+
+func buildReviewEvidence(roundDir, role string, candidate highlight.Candidate) map[string]any {
+	windowStart := math.Max(0, candidate.Start-15)
+	windowEnd := candidate.End + 15
+	evidence := map[string]any{
+		"time_window": map[string]any{
+			"start_seconds": windowStart,
+			"end_seconds":   windowEnd,
+			"peak_seconds":  candidate.Peak,
+		},
+		"stt_segments":   readSTTEvidence(filepath.Join(roundDir, "stt.jsonl"), windowStart, windowEnd, 12),
+		"danmu_comments": readDanmuEvidence(roundDir, role, windowStart, windowEnd, 24),
+		"danmu_peaks":    readDanmuPeakEvidence(filepath.Join(roundDir, "stats", "danmu-count.json"), windowStart, windowEnd, 8),
+	}
+	if summary := readRoundAnalysisEvidence(filepath.Join(roundDir, "round.json")); len(summary) > 0 {
+		evidence["round_analysis"] = summary
+	}
+	return evidence
+}
+
+func readSTTEvidence(file string, start, end float64, limit int) []sttEvidence {
+	raw, err := os.ReadFile(file)
+	if err != nil {
+		return nil
+	}
+	var out []sttEvidence
+	for _, line := range strings.Split(string(raw), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		var seg struct {
+			Start  float64 `json:"start"`
+			End    float64 `json:"end"`
+			Status string  `json:"status"`
+			Text   string  `json:"text"`
+		}
+		if err := json.Unmarshal([]byte(line), &seg); err != nil || seg.Status != "SUCCEEDED" || strings.TrimSpace(seg.Text) == "" {
+			continue
+		}
+		if seg.End < start || seg.Start > end {
+			continue
+		}
+		out = append(out, sttEvidence{Start: seg.Start, End: seg.End, Text: strings.TrimSpace(seg.Text)})
+		if len(out) >= limit {
+			break
+		}
+	}
+	return out
+}
+
+func readDanmuEvidence(roundDir, role string, start, end float64, limit int) []danmuEvidence {
+	role = strings.TrimSpace(role)
+	if role == "" {
+		role = "主视角"
+	}
+	paths := []string{
+		filepath.Join(roundDir, role+".danmuku.xml"),
+		filepath.Join(roundDir, role+".raw.danmuku.xml"),
+	}
+	for _, file := range paths {
+		items := readDanmuEvidenceFile(file, start, end, limit)
+		if len(items) > 0 {
+			return items
+		}
+	}
+	return nil
+}
+
+func readDanmuEvidenceFile(file string, start, end float64, limit int) []danmuEvidence {
+	f, err := os.Open(file)
+	if err != nil {
+		return nil
+	}
+	defer f.Close()
+	decoder := xml.NewDecoder(f)
+	var out []danmuEvidence
+	for {
+		tok, err := decoder.Token()
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		if err != nil {
+			return out
+		}
+		startEl, ok := tok.(xml.StartElement)
+		if !ok || startEl.Name.Local != "d" {
+			continue
+		}
+		var pValue string
+		for _, attr := range startEl.Attr {
+			if attr.Name.Local == "p" {
+				pValue = attr.Value
+				break
+			}
+		}
+		t, ok := danmuTime(pValue)
+		if !ok || t < start || t > end {
+			continue
+		}
+		var text string
+		if err := decoder.DecodeElement(&text, &startEl); err != nil {
+			continue
+		}
+		text = strings.TrimSpace(text)
+		if text == "" {
+			continue
+		}
+		out = append(out, danmuEvidence{T: t, Text: text})
+		if len(out) >= limit {
+			break
+		}
+	}
+	return out
+}
+
+func danmuTime(pValue string) (float64, bool) {
+	first := strings.TrimSpace(strings.Split(pValue, ",")[0])
+	if first == "" {
+		return 0, false
+	}
+	t, err := strconv.ParseFloat(first, 64)
+	return t, err == nil
+}
+
+func readDanmuPeakEvidence(file string, start, end float64, limit int) []danmuPeakEvidence {
+	stats, err := highlight.LoadDanmuStats(file)
+	if err != nil {
+		return nil
+	}
+	var points []danmuPeakEvidence
+	for _, point := range stats.Points {
+		if point.T < start || point.T > end || point.Count <= 0 {
+			continue
+		}
+		points = append(points, danmuPeakEvidence{T: point.T, Count: point.Count, Total: point.Total})
+	}
+	sort.Slice(points, func(i, j int) bool {
+		if points[i].Count == points[j].Count {
+			return points[i].T < points[j].T
+		}
+		return points[i].Count > points[j].Count
+	})
+	if len(points) > limit {
+		points = points[:limit]
+	}
+	sort.Slice(points, func(i, j int) bool { return points[i].T < points[j].T })
+	return points
+}
+
+func readRoundAnalysisEvidence(file string) map[string]any {
+	raw, err := os.ReadFile(file)
+	if err != nil {
+		return nil
+	}
+	var doc struct {
+		Analysis   map[string]any `json:"analysis"`
+		Boundary   map[string]any `json:"boundary"`
+		Settlement struct {
+			Status string          `json:"status"`
+			OCR    json.RawMessage `json:"ocr"`
+		} `json:"settlement"`
+	}
+	if err := json.Unmarshal(raw, &doc); err != nil {
+		return nil
+	}
+	out := map[string]any{
+		"analysis":          doc.Analysis,
+		"boundary":          doc.Boundary,
+		"settlement_status": doc.Settlement.Status,
+	}
+	if len(doc.Settlement.OCR) > 0 && string(doc.Settlement.OCR) != "null" {
+		var ocr any
+		if err := json.Unmarshal(doc.Settlement.OCR, &ocr); err == nil {
+			out["settlement_ocr"] = ocr
+		}
+	}
+	return out
 }
 
 func writeContexts(contexts []ArtifactContext) error {
