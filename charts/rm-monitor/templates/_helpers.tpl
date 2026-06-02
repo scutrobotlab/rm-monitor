@@ -3,16 +3,12 @@
 {{- end -}}
 
 {{- define "rm-monitor.image" -}}
-{{- $appVersion := .root.Chart.AppVersion | default "dev" -}}
-{{- $tag := "dev" -}}
-{{- if .root.Values.imageTagOverride -}}
-{{- $tag = .root.Values.imageTagOverride -}}
-{{- else if eq $appVersion "dev" -}}
-{{- $tag = "dev" -}}
-{{- else if hasPrefix "sha-" $appVersion -}}
-{{- $tag = $appVersion -}}
-{{- else -}}
-{{- $tag = printf "sha-%s" ($appVersion | trunc 7) -}}
+{{- $tag := .root.Values.imageTagOverride | default .root.Chart.AppVersion -}}
+{{- if not $tag -}}
+{{- fail "imageTagOverride or appVersion is required" -}}
+{{- end -}}
+{{- if not (hasPrefix "sha-" $tag) -}}
+{{- $tag = printf "sha-%s" ($tag | trunc 7) -}}
 {{- end -}}
 {{- printf "ghcr.io/scutrobotlab/rm-monitor/%s:%s" .component $tag -}}
 {{- end -}}

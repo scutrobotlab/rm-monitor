@@ -3,4 +3,4 @@ name: rm-monitor
 description: RoboMaster match controller, Argo workflows, notifier, and media jobs.
 type: application
 version: 0.1.0
-appVersion: "dev"
+appVersion: ""

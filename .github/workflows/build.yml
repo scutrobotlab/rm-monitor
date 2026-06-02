@@ -67,14 +67,11 @@ jobs:
 
           go_common = any(p.startswith(("pkg/", "ent/")) or p in {"go.mod", "go.sum"} for p in changed)
           selected = []
-          if event == "push":
-              selected = [{"app": app, "dockerfile": dockerfile} for app, dockerfile, _kind, _prefixes in components]
-          else:
-              for app, dockerfile, kind, prefixes in components:
-                  own_change = any(any(p.startswith(prefix) for prefix in prefixes) for p in changed)
-                  common_change = kind == "go" and go_common
-                  if own_change or common_change:
-                      selected.append({"app": app, "dockerfile": dockerfile})
+          for app, dockerfile, kind, prefixes in components:
+              own_change = any(any(p.startswith(prefix) for prefix in prefixes) for p in changed)
+              common_change = kind == "go" and go_common
+              if own_change or common_change:
+                  selected.append({"app": app, "dockerfile": dockerfile})
 
           matrix = {"include": selected}
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
@@ -100,10 +97,10 @@ jobs:
           curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
       - name: Helm lint
-        run: helm lint charts/rm-monitor
+        run: helm lint charts/rm-monitor --set imageTagOverride=dev
 
       - name: Helm template
-        run: helm template rm-monitor charts/rm-monitor --namespace rm-monitor --values charts/rm-monitor/values.yaml
+        run: helm template rm-monitor charts/rm-monitor --namespace rm-monitor --values charts/rm-monitor/values.yaml --set imageTagOverride=dev
 
   docker:
     name: build ${{ matrix.app }}
