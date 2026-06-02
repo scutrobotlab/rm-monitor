@@ -3,6 +3,11 @@
   "type": "object",
   "required": ["postgres", "redis", "record", "stt", "storage", "jobs", "components"],
   "properties": {
+    "imageTagOverride": { "type": "string" },
+    "imageTags": {
+      "type": "object",
+      "additionalProperties": { "type": "string", "minLength": 1 }
+    },
     "postgres": {
       "type": "object",
       "required": ["dsn"],

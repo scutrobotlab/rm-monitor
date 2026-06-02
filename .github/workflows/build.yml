@@ -61,6 +61,11 @@ jobs:
               base = os.environ.get("GITHUB_EVENT_BEFORE", "")
               if not base or set(base) == {"0"}:
                   base = subprocess.check_output(["git", "rev-list", "--max-parents=0", "HEAD"], text=True).strip()
+              elif subprocess.run(["git", "cat-file", "-e", f"{base}^{{commit}}"]).returncode != 0:
+                  try:
+                      base = subprocess.check_output(["git", "rev-parse", "HEAD^"], text=True).strip()
+                  except subprocess.CalledProcessError:
+                      base = subprocess.check_output(["git", "rev-list", "--max-parents=0", "HEAD"], text=True).strip()
 
           changed = subprocess.check_output(["git", "diff", "--name-only", base, head], text=True).splitlines()
           changed = [p.replace("\\", "/") for p in changed]
@@ -97,10 +102,10 @@ jobs:
           curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
       - name: Helm lint
-        run: helm lint charts/rm-monitor --set imageTagOverride=dev
+        run: helm lint charts/rm-monitor --set imageTagOverride=sha-dev
 
       - name: Helm template
-        run: helm template rm-monitor charts/rm-monitor --namespace rm-monitor --values charts/rm-monitor/values.yaml --set imageTagOverride=dev
+        run: helm template rm-monitor charts/rm-monitor --namespace rm-monitor --values charts/rm-monitor/values.yaml --set imageTagOverride=sha-dev
 
   docker:
     name: build ${{ matrix.app }}
@@ -152,8 +157,9 @@ jobs:
     name: publish helm chart
     needs:
       - helm
+      - detect
       - docker
-    if: github.event_name == 'push'
+    if: always() && github.event_name == 'push' && needs.helm.result == 'success' && (needs.docker.result == 'success' || needs.docker.result == 'skipped')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -166,6 +172,85 @@ jobs:
       - name: Login to GHCR for Helm
         shell: bash
         run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io --username "${{ github.actor }}" --password-stdin
+
+      - name: Resolve component image tags
+        shell: bash
+        env:
+          MATRIX_JSON: ${{ needs.detect.outputs.matrix }}
+        run: |
+          set -euo pipefail
+          python -m pip install --user pyyaml
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          prev_dir="$(mktemp -d)"
+          prev_values=""
+          prev_chart=""
+          if helm pull "oci://ghcr.io/${owner}/charts/rm-monitor" --untar --untardir "${prev_dir}"; then
+            prev_values="${prev_dir}/rm-monitor/values.yaml"
+            prev_chart="${prev_dir}/rm-monitor/Chart.yaml"
+          fi
+          export prev_values prev_chart
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          import yaml
+
+          components = [
+              "lark-notifier",
+              "artifact-cleaner",
+              "match-controller",
+              "record-job",
+              "stt-job",
+              "stt-subtitle",
+              "highlight-job",
+              "manifest-job",
+              "migrate-job",
+              "health-checker",
+              "lark-record-job",
+              "transcode-job",
+              "danmu-job",
+              "analyze-job",
+              "highlight-artifact-job",
+          ]
+
+          current_tag = "sha-" + os.environ["GITHUB_SHA"][:7]
+          matrix = json.loads(os.environ.get("MATRIX_JSON") or '{"include":[]}')
+          selected = {item["app"] for item in matrix.get("include", [])}
+
+          prev_tags = {}
+          prev_values = Path(os.environ.get("prev_values", ""))
+          if prev_values.exists():
+              with prev_values.open(encoding="utf-8") as f:
+                  prev = yaml.safe_load(f) or {}
+              prev_tags.update(prev.get("imageTags") or {})
+
+          prev_chart = Path(os.environ.get("prev_chart", ""))
+          if prev_chart.exists():
+              with prev_chart.open(encoding="utf-8") as f:
+                  chart = yaml.safe_load(f) or {}
+              app_version = str(chart.get("appVersion") or "")
+              if app_version:
+                  default_prev_tag = app_version if app_version.startswith("sha-") else "sha-" + app_version[:7]
+                  for component in components:
+                      prev_tags.setdefault(component, default_prev_tag)
+
+          tags = {}
+          for component in components:
+              tags[component] = current_tag if component in selected else prev_tags.get(component, current_tag)
+
+          values_path = Path("charts/rm-monitor/values.yaml")
+          with values_path.open(encoding="utf-8") as f:
+              values = yaml.safe_load(f) or {}
+          values["imageTags"] = tags
+          with values_path.open("w", encoding="utf-8") as f:
+              yaml.safe_dump(values, f, allow_unicode=True, sort_keys=False)
+
+          print("chart image tags:")
+          for component in components:
+              marker = "*" if component in selected else " "
+              print(f"{marker} {component}: {tags[component]}")
+          PY
 
       - name: Package Helm chart
         shell: bash

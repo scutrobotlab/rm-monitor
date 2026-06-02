@@ -42,12 +42,12 @@ Deployers create storage first, then set the PV names under
 `storage.record.volumeName` and `storage.shared.volumeName`; the chart creates
 PVCs bound to those names.
 
-Images are intentionally not values. The chart renders
-`ghcr.io/scutrobotlab/rm-monitor/<component>:<chart appVersion>` for every
-component, so deployments are pinned by chart package metadata rather than a
-second image tag field in production values. CI builds and pushes every
-component image with that tag before publishing the chart, so a published chart
-never references a partially available image set.
+Production values intentionally do not carry image versions. The packaged chart
+carries an `imageTags` map for every component, so deployments are pinned by the
+chart package rather than a second tag field in production values. On push, CI
+builds only changed components with the current `sha-<commit>` tag and carries
+forward unchanged component tags from the previous published chart before
+publishing the next chart.
 
 The expected production storage topology is:
 

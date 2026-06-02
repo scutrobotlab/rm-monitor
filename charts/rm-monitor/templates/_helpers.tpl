@@ -3,9 +3,16 @@
 {{- end -}}
 
 {{- define "rm-monitor.image" -}}
-{{- $tag := .root.Values.imageTagOverride | default .root.Chart.AppVersion -}}
+{{- $tag := "" -}}
+{{- if .root.Values.imageTagOverride -}}
+{{- $tag = .root.Values.imageTagOverride -}}
+{{- else if and .root.Values.imageTags (hasKey .root.Values.imageTags .component) (index .root.Values.imageTags .component) -}}
+{{- $tag = index .root.Values.imageTags .component -}}
+{{- else -}}
+{{- $tag = .root.Chart.AppVersion -}}
+{{- end -}}
 {{- if not $tag -}}
-{{- fail "imageTagOverride or appVersion is required" -}}
+{{- fail (printf "image tag for component %s is required" .component) -}}
 {{- end -}}
 {{- if not (hasPrefix "sha-" $tag) -}}
 {{- $tag = printf "sha-%s" ($tag | trunc 7) -}}
