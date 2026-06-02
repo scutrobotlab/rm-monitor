@@ -33,17 +33,20 @@ jobs:
           curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
       - name: Go tests
-        run: go test ./pkg/... ./artifact-cleaner/... ./match-controller/... ./record-job/... ./stt-job/... ./transcode-job/... ./lark-record-job/... ./highlight-job/... ./manifest-job/... ./lark-notifier/... ./migrate-job/... ./health-checker/... ./cmd/stt-subtitle
+        run: go test ./pkg/... ./artifact-cleaner/... ./match-controller/... ./record-job/... ./stt-job/... ./lark-record-job/... ./highlight-job/... ./manifest-job/... ./lark-notifier/... ./migrate-job/... ./health-checker/... ./cmd/stt-subtitle
 
       - name: Danmu job tests
         working-directory: danmu-job
         run: npm ci && npm test
 
       - name: Highlight artifact job tests
-        run: cargo test --manifest-path highlight-artifact-job/Cargo.toml --locked
+        run: |
+          cargo test --manifest-path highlight-artifact-job/Cargo.toml --locked
+          cargo test --manifest-path record-trim-job/Cargo.toml --locked
+          cargo test --manifest-path transcode-job/Cargo.toml --locked
 
       - name: Helm validation
         run: |
-          helm lint charts/rm-monitor
-          helm template rm-monitor charts/rm-monitor --namespace rm-monitor --values charts/rm-monitor/values.yaml
+          helm lint charts/rm-monitor --set imageTagOverride=test
+          helm template rm-monitor charts/rm-monitor --namespace rm-monitor --values charts/rm-monitor/values.yaml --set imageTagOverride=test
 

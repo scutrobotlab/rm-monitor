@@ -31,6 +31,7 @@ import numpy as np
 PTS_RE = re.compile(r"pts_time:([-0-9.]+)")
 
 DEFAULT_ROI_PATH = Path(__file__).parent / "settlement_roi.json"
+DEFAULT_START_UI_TEMPLATE_PATH = Path(__file__).parent / "start_ui_template.json"
 
 
 def atomic_write_json(path: Path, payload: dict) -> None:
@@ -101,56 +102,117 @@ def white_edge_ratio(img: np.ndarray) -> float:
     return float(cv2.countNonZero(cv2.bitwise_or(bright, edges))) / float(gray.shape[0] * gray.shape[1])
 
 
+def edge_mask(img: np.ndarray) -> np.ndarray:
+    if img.size == 0:
+        return np.zeros(img.shape[:2], np.uint8)
+    gray = cv2.cvtColor(np.ascontiguousarray(img), cv2.COLOR_BGR2GRAY)
+    return cv2.Canny(gray, 70, 170)
+
+
+def mask_ratio(mask: np.ndarray) -> float:
+    if mask.size == 0:
+        return 0.0
+    return float(cv2.countNonZero(mask)) / float(mask.shape[0] * mask.shape[1])
+
+
+def crop_box(img: np.ndarray, box: tuple[float, float, float, float]) -> np.ndarray:
+    return crop(img, box[0], box[1], box[2], box[3])
+
+
+def color_ratio_box(img: np.ndarray, box: tuple[float, float, float, float], color: str) -> float:
+    roi = crop_box(img, box)
+    if color == "red":
+        return red_ratio(roi)
+    if color == "blue":
+        return blue_ratio(roi)
+    if color == "cyan":
+        return cyan_ratio(roi)
+    raise ValueError(f"unknown color {color}")
+
+
+def edge_density_box(img: np.ndarray, box: tuple[float, float, float, float]) -> float:
+    return mask_ratio(edge_mask(crop_box(img, box)))
+
+
+_START_UI_TEMPLATE_CACHE: dict | None = None
+
+
+def load_start_ui_template(path: Path = DEFAULT_START_UI_TEMPLATE_PATH) -> dict:
+    global _START_UI_TEMPLATE_CACHE
+    if _START_UI_TEMPLATE_CACHE is not None:
+        return _START_UI_TEMPLATE_CACHE
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    templates: dict[str, np.ndarray] = {}
+    for name, item in payload["templates"].items():
+        h, w = item["shape"]
+        packed = np.frombuffer(base64.b64decode(item["data"]), dtype=np.uint8)
+        bits = np.unpackbits(packed)[: h * w].reshape((h, w))
+        templates[name] = (bits.astype(np.uint8) * 255)
+    payload["templates"] = templates
+    payload["rois"] = {name: tuple(box) for name, box in payload["rois"].items()}
+    _START_UI_TEMPLATE_CACHE = payload
+    return payload
+
+
+def chamfer_template_score(template_edge: np.ndarray, target_edge: np.ndarray, tolerance: float = 3.0) -> float:
+    if template_edge.size == 0 or target_edge.size == 0:
+        return 0.0
+    if template_edge.shape != target_edge.shape:
+        target_edge = cv2.resize(target_edge, (template_edge.shape[1], template_edge.shape[0]), interpolation=cv2.INTER_NEAREST)
+    template = cv2.dilate(template_edge, cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2)))
+    denom = cv2.countNonZero(template)
+    if denom == 0:
+        return 0.0
+    dist = cv2.distanceTransform(cv2.bitwise_not(target_edge), cv2.DIST_L2, 3)
+    values = dist[template > 0]
+    chamfer = float(np.mean(np.exp(-values / tolerance))) if values.size else 0.0
+    direct = float(
+        cv2.countNonZero(cv2.bitwise_and(template, cv2.dilate(target_edge, cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3)))))
+    ) / float(denom)
+    return 0.70 * chamfer + 0.30 * direct
+
+
 def score_pregame(img: np.ndarray) -> tuple[float, dict[str, float]]:
-    left_top = crop(img, 0.02, 0.00, 0.39, 0.10)
-    right_top = crop(img, 0.61, 0.00, 0.98, 0.10)
-    center_top = crop(img, 0.40, 0.00, 0.60, 0.12)
-    bottom_center = crop(img, 0.35, 0.72, 0.65, 0.92)
-    battle_top = crop(img, 0.00, 0.00, 1.00, 0.16)
-    settlement_lower_red = crop(img, 0.18, 0.48, 0.50, 0.78)
-    settlement_lower_blue = crop(img, 0.50, 0.48, 0.82, 0.78)
-    settlement_card_left = crop(img, 0.10, 0.26, 0.38, 0.42)
-    settlement_card_right = crop(img, 0.62, 0.26, 0.90, 0.42)
+    template = load_start_ui_template()
+    base_width, base_height = template["base_size"]
+    score_img = img
+    if img.shape[1] != base_width or img.shape[0] != base_height:
+        score_img = cv2.resize(img, (base_width, base_height), interpolation=cv2.INTER_AREA)
 
-    left_red = red_ratio(left_top)
-    right_blue = blue_ratio(right_top)
-    center_edges = white_edge_ratio(center_top)
-    bottom_cyan = cyan_ratio(bottom_center)
-    bottom_blue = blue_ratio(bottom_center)
-    top_edges = white_edge_ratio(battle_top)
-    settlement_lower_red_ratio = red_ratio(settlement_lower_red)
-    settlement_lower_blue_ratio = blue_ratio(settlement_lower_blue)
-    settlement_card_red = red_ratio(settlement_card_left)
-    settlement_card_blue = blue_ratio(settlement_card_right)
+    rois = template["rois"]
+    parts: dict[str, float] = {}
+    for name, box in rois.items():
+        parts[name] = chamfer_template_score(template["templates"][name], edge_mask(crop_box(score_img, box)))
 
-    score = (
-        min(left_red / 0.55, 1.0) * 0.35
-        + min(right_blue / 0.55, 1.0) * 0.35
-        + max(0.0, 1.0 - center_edges / 0.22) * 0.10
-        + min(bottom_cyan / 0.05, 1.0) * 0.10
-        + max(0.0, 1.0 - top_edges / 0.18) * 0.10
-    )
-    if left_red < 0.50 or right_blue < 0.50 or bottom_blue > 0.40 or top_edges > 0.18:
+    red_gate = color_ratio_box(score_img, rois["top_red"], "red")
+    blue_gate = color_ratio_box(score_img, rois["top_blue"], "blue")
+    progress_gate = color_ratio_box(score_img, rois["progress"], "cyan")
+    top_density = edge_density_box(score_img, (0.0, 0.0, 1.0, 0.18))
+    bottom_density = edge_density_box(score_img, (0.0, 0.75, 1.0, 1.0))
+
+    bottom = 0.55 * parts["progress"] + 0.45 * parts["self_check"]
+    top = 0.40 * parts["top_red"] + 0.40 * parts["top_blue"] + 0.20 * parts["top_center"]
+    color_gate = min(red_gate / 0.12, 1.0) * min(blue_gate / 0.12, 1.0)
+    progress_color = min(progress_gate / 0.06, 1.0)
+
+    score = 0.45 * bottom + 0.35 * top + 0.12 * color_gate + 0.08 * progress_color
+    if bottom < 0.45:
         score *= 0.35
-    settlement_like = (
-        settlement_lower_red_ratio > 0.08
-        and settlement_lower_blue_ratio > 0.35
-        and (settlement_card_red + settlement_card_blue) > 0.90
-    )
-    if settlement_like:
-        score *= 0.20
+    if top_density > 0.19 or bottom_density > 0.15:
+        score *= 0.35
     return score, {
-        "left_red": left_red,
-        "right_blue": right_blue,
-        "center_edges": center_edges,
-        "bottom_cyan": bottom_cyan,
-        "bottom_blue": bottom_blue,
-        "top_edges": top_edges,
-        "settlement_lower_red": settlement_lower_red_ratio,
-        "settlement_lower_blue": settlement_lower_blue_ratio,
-        "settlement_card_red": settlement_card_red,
-        "settlement_card_blue": settlement_card_blue,
-        "settlement_like": 1.0 if settlement_like else 0.0,
+        "top_red": parts["top_red"],
+        "top_blue": parts["top_blue"],
+        "top_center": parts["top_center"],
+        "self_check": parts["self_check"],
+        "progress": parts["progress"],
+        "red_gate": red_gate,
+        "blue_gate": blue_gate,
+        "progress_gate": progress_gate,
+        "top_density": top_density,
+        "bottom_density": bottom_density,
+        "bottom": bottom,
+        "top": top,
     }
 
 
@@ -801,7 +863,6 @@ def analyze_round(
 
     start_seconds = pregame.start_seconds if pregame else 0.0
     settlement_seconds = settlement.start_seconds if settlement else duration
-    start_status = "CONFIRMED" if pregame else "MISSING"
     settlement_status = "CONFIRMED" if settlement else "INVALID"
     validation_errors: list[str] = []
     if not pregame:
@@ -814,7 +875,6 @@ def analyze_round(
     if start_seconds + min_round_seconds >= settlement_seconds:
         start_seconds = 0.0
         settlement_seconds = duration
-        start_status = "INVALID"
         settlement_status = "INVALID"
         validation_errors.append("start plus minimum round duration is not before settlement; reset boundary to full source")
     elif settlement_status == "CONFIRMED":
@@ -824,13 +884,9 @@ def analyze_round(
 
     output_dir.mkdir(parents=True, exist_ok=True)
     start_detect_path = None
-    if start_status == "CONFIRMED" and pregame and pregame.best_frame is not None:
+    if pregame and pregame.best_frame is not None:
         start_detect_path = output_dir / "start-detect.jpg"
         write_jpeg_frame(pregame.best_frame, start_detect_path)
-    else:
-        stale_start_detect_path = output_dir / "start-detect.jpg"
-        if stale_start_detect_path.exists():
-            stale_start_detect_path.unlink()
 
     settlement_path = None
     settlement_detect_path = None
@@ -910,11 +966,7 @@ def analyze_round(
             "refined": refined_settlement,
             "ocr": settlement_ocr if settlement_ocr else None,
         },
-        "start": {
-            "status": start_status,
-            "raw": raw_start,
-            "detect_image_path": str(start_detect_path) if start_detect_path else "",
-        },
+        "start": {"raw": raw_start, "detect_image_path": str(start_detect_path) if start_detect_path else ""},
         "start_detect_image": str(start_detect_path) if start_detect_path else "",
         "settlement_image": str(settlement_path) if settlement_path else "",
         "settlement_detect_image": str(settlement_detect_path) if settlement_detect_path else "",

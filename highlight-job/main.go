@@ -162,7 +162,8 @@ func run(ctx context.Context, client *ent.Client, c config.Config, jobCtx Contex
 }
 
 func createOrUpdateClip(ctx context.Context, client *ent.Client, c config.Config, jobCtx Context, conf common.HighlightConf, candidate highlight.Candidate) (*ArtifactContext, error) {
-	outputDir := path.Join(jobCtx.RoundDir, "highlights", fmt.Sprintf("Highlight-%02d", candidate.Index))
+	recordConf := c.RecordConf.WithDefaults()
+	outputDir := path.Join(recordRelativePath(recordConf.BaseDir, jobCtx.RoundDir), "highlights", fmt.Sprintf("Highlight-%02d", candidate.Index))
 	review, modelPayload, err := reviewCandidate(ctx, c, jobCtx, candidate, outputDir)
 	if err != nil {
 		return nil, err
@@ -259,6 +260,18 @@ func createOrUpdateClip(ctx context.Context, client *ent.Client, c config.Config
 		PreviewFPS:         conf.PreviewFPS,
 		PreviewWidth:       conf.PreviewWidth,
 	}, nil
+}
+
+func recordRelativePath(baseDir, p string) string {
+	clean := strings.TrimSpace(filepath.ToSlash(p))
+	base := strings.TrimRight(strings.TrimSpace(filepath.ToSlash(baseDir)), "/")
+	if base != "" && clean == base {
+		return ""
+	}
+	if base != "" && strings.HasPrefix(clean, base+"/") {
+		clean = clean[len(base)+1:]
+	}
+	return strings.TrimLeft(clean, "/")
 }
 
 func reviewCandidate(ctx context.Context, c config.Config, jobCtx Context, candidate highlight.Candidate, outputDir string) (Review, json.RawMessage, error) {

@@ -45,10 +45,11 @@ jobs:
               ("migrate-job", "migrate-job/Dockerfile", "go", ["migrate-job/"]),
               ("health-checker", "health-checker/Dockerfile", "go", ["health-checker/"]),
               ("lark-record-job", "lark-record-job/Dockerfile", "go", ["lark-record-job/"]),
-              ("transcode-job", "transcode-job/Dockerfile", "go", ["transcode-job/"]),
+              ("transcode-job", "transcode-job/Dockerfile", "rust", ["transcode-job/"]),
               ("danmu-job", "danmu-job/Dockerfile", "node", ["danmu-job/"]),
               ("analyze-job", "analyze-job/Dockerfile", "python", ["analyze-job/"]),
               ("highlight-artifact-job", "highlight-artifact-job/Dockerfile", "rust", ["highlight-artifact-job/"]),
+              ("record-trim-job", "record-trim-job/Dockerfile", "rust", ["record-trim-job/"]),
           ]
 
           event = os.environ["GITHUB_EVENT_NAME"]
@@ -60,12 +61,12 @@ jobs:
           else:
               base = os.environ.get("GITHUB_EVENT_BEFORE", "")
               if not base or set(base) == {"0"}:
-                  base = subprocess.check_output(["git", "rev-list", "--max-parents=0", "HEAD"], text=True).strip()
+                  base = subprocess.check_output(["git", "rev-list", "--max-parents=0", "HEAD"], text=True).splitlines()[0].strip()
               elif subprocess.run(["git", "cat-file", "-e", f"{base}^{{commit}}"]).returncode != 0:
                   try:
                       base = subprocess.check_output(["git", "rev-parse", "HEAD^"], text=True).strip()
                   except subprocess.CalledProcessError:
-                      base = subprocess.check_output(["git", "rev-list", "--max-parents=0", "HEAD"], text=True).strip()
+                      base = subprocess.check_output(["git", "rev-list", "--max-parents=0", "HEAD"], text=True).splitlines()[0].strip()
 
           changed = subprocess.check_output(["git", "diff", "--name-only", base, head], text=True).splitlines()
           changed = [p.replace("\\", "/") for p in changed]
@@ -212,6 +213,7 @@ jobs:
               "danmu-job",
               "analyze-job",
               "highlight-artifact-job",
+              "record-trim-job",
           ]
 
           current_tag = "sha-" + os.environ["GITHUB_SHA"][:7]

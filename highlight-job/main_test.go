@@ -52,7 +52,7 @@ func TestBuildReviewEvidenceIncludesRoundSignals(t *testing.T) {
 	}
 }
 
-func TestReadDanmuEvidenceFallsBackToRawFile(t *testing.T) {
+func TestReadDanmuEvidenceFallsBackToRawDanmuFile(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "主视角.raw.danmuku.xml"), []byte(`<?xml version="1.0" encoding="UTF-8"?><i>
 <d p="42.000,1,25,16777215,0,0,x,y">raw 弹幕可用</d>
@@ -62,5 +62,12 @@ func TestReadDanmuEvidenceFallsBackToRawFile(t *testing.T) {
 	got := readDanmuEvidence(dir, "主视角", 40, 45, 10)
 	if len(got) != 1 || got[0].Text != "raw 弹幕可用" {
 		t.Fatalf("unexpected danmu evidence: %#v", got)
+	}
+}
+
+func TestRecordRelativePathStripsRecordBase(t *testing.T) {
+	got := recordRelativePath("/records", "/records/RMUC 2026/Round-1")
+	if got != "RMUC 2026/Round-1" {
+		t.Fatalf("recordRelativePath() = %q", got)
 	}
 }

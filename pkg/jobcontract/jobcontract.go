@@ -78,6 +78,35 @@ type RecordResult struct {
 	CompletedAt  time.Time `json:"completed_at"`
 }
 
+type RecordTrimContext struct {
+	Schema       string `json:"schema"`
+	MatchID      string `json:"match_id,omitempty"`
+	MatchRoundID int    `json:"match_round_id"`
+	RoundNo      int    `json:"round_no,omitempty"`
+	Role         string `json:"role"`
+	BaseDir      string `json:"base_dir"`
+	RoundDir     string `json:"round_dir"`
+	SourcePath   string `json:"source_path"`
+	OutputPath   string `json:"output_path"`
+	TrimSidecars bool   `json:"trim_sidecars"`
+}
+
+type RecordTrimResult struct {
+	Schema          string    `json:"schema"`
+	MatchID         string    `json:"match_id,omitempty"`
+	MatchRoundID    int       `json:"match_round_id,omitempty"`
+	Role            string    `json:"role"`
+	OutputPath      string    `json:"output_path"`
+	Format          string    `json:"format"`
+	Codec           string    `json:"codec"`
+	FileSize        int64     `json:"file_size"`
+	Checksum        string    `json:"checksum"`
+	StartSeconds    float64   `json:"start_seconds"`
+	EndSeconds      float64   `json:"end_seconds"`
+	DurationSeconds float64   `json:"duration_seconds"`
+	CompletedAt     time.Time `json:"completed_at"`
+}
+
 type LarkRecordContext struct {
 	Schema              string         `json:"schema"`
 	MatchID             string         `json:"match_id"`

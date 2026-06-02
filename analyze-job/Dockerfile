@@ -18,6 +18,6 @@ COPY analyze-job/requirements.txt /app/requirements.txt
 RUN python -m pip install --upgrade pip \
     && python -m pip install -r /app/requirements.txt
 
-COPY analyze-job/main.py analyze-job/settlement_roi.json /app/
+COPY analyze-job/main.py analyze-job/settlement_roi.json analyze-job/start_ui_template.json /app/
 
 CMD ["python", "/app/main.py"]

@@ -11,6 +11,8 @@
 /danmu-job/node_modules
 /highlight-artifact-job/target
 /highlight-publish-bilibili-job/target
+/record-trim-job/target
+/transcode-job/target
 /target
 /recorder/data
 *.exe
