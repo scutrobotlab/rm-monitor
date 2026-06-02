@@ -110,7 +110,7 @@ try {
   $status = DockerContainerStatus "whisper-server"
   throw "Whisper server is not reachable at $whisperURL. Docker status: $status. Start the local whisper.cpp server, for example from your whisper-server docker compose directory. Original error: $($_.Exception.Message)"
 }
-$ocrHealthURL = ($ocrURL.TrimEnd("/") + "/health")
+$ocrHealthURL = ($ocrURL.TrimEnd("/") + "/v2/health/ready")
 Test-HTTPReachable "OCR server" $ocrHealthURL
 
 $danmuEnabled = "false"
@@ -466,7 +466,7 @@ if (-not $SkipBuild) {
 
 Run "kubectl --context $context create ns $namespace --dry-run=client -o yaml | kubectl --context $context apply -f -"
 Run "kubectl --context $context -n $namespace run e2e-preflight-whisper --rm -i --restart=Never --image=curlimages/curl:8.10.1 --command -- curl -sS --max-time 5 -o /dev/null $whisperURL"
-Run "kubectl --context $context -n $namespace run e2e-preflight-ocr --rm -i --restart=Never --image=curlimages/curl:8.10.1 --command -- curl -fsS --max-time 5 $($ocrURL.TrimEnd('/'))/health"
+Run "kubectl --context $context -n $namespace run e2e-preflight-ocr --rm -i --restart=Never --image=curlimages/curl:8.10.1 --command -- curl -fsS --max-time 5 $($ocrURL.TrimEnd('/'))/v2/health/ready"
 Run "kubectl --context $context apply -f `"$manifests\local-pv.yaml`""
 Run "kubectl --context $context apply -f `"$manifests\deps.yaml`""
 Run "kubectl --context $context -n $namespace rollout status deploy/postgres --timeout=120s"

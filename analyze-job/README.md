@@ -8,7 +8,7 @@ Responsibilities:
 - detect the settlement panel from the end of the video
 - write `round.json`
 - extract source-resolution `settlement.jpg`
-- call the PP-OCR daemon and embed settlement OCR into `round.json`
+- call the external PaddleX OCR service and embed settlement OCR into `round.json`
 - report job completion through `/tmp/job/result.json` or `/tmp/job/error.json`, plus Argo output parameters under `/tmp/argo`
 
 The job accepts the shared job contract through `RM_MONITOR_JOB_CONTEXT`:
@@ -32,8 +32,8 @@ The job accepts the shared job contract through `RM_MONITOR_JOB_CONTEXT`:
 
 ## Configuration Shape
 
-The OCR daemon is a shared infrastructure service. Application code should only
-need the service endpoint and timeout:
+The OCR service is shared infrastructure. Application code only needs the
+service base URL and timeout:
 
 ```yaml
 OCRServerConf:
@@ -58,9 +58,9 @@ AnalyzeConf:
     SettlementTailSeconds: 5
 ```
 
-Deployment-only OCR server details such as image, replica count, CPU/GPU mode,
-resources, and model cache PVC belong to the external OCR deployment, not this
-chart. Helm only passes the OCR endpoint into jobs:
+Deployment-only OCR server details such as image, GPU runtime, model cache, and
+PaddleX high-performance serving files belong to the external OCR deployment,
+not this chart. Helm only passes the OCR service base URL into jobs:
 
 ```yaml
 ocrServer:
@@ -68,13 +68,72 @@ ocrServer:
   timeoutSeconds: 30
 ```
 
+## PaddleX HPS OCR Service
+
+The analyzer consumes the official PaddleX high-performance serving API:
+
+- service root: `OCRServerConf.BaseURL`, for example `http://172.30.162.40:48089`
+- endpoint used by analyze-job: `/v2/models/ocr/infer`
+- request body: PaddleX/Triton JSON with base64 image input
+- response body: `outputs[0].data[0]` containing PaddleX OCR JSON
+
+Recommended deployment is the official PaddleX HPS SDK flow:
+
+1. Open the PaddleX serving SDK guide:
+   https://paddlepaddle.github.io/PaddleX/latest/pipeline_deploy/serving.html#21-sdk
+2. Download the **OCR** SDK package, `paddlex_hps_OCR_sdk.tar.gz`.
+3. Unpack its `server` directory into `analyze-job/ocr-server/server`.
+4. Start the service with the checked-in compose file:
+
+```powershell
+cd analyze-job\ocr-server
+docker compose up -d
+```
+
+The compose file is intentionally small and uses the official HPS GPU image:
+
+```yaml
+services:
+  ppocr:
+    image: ccr-2vdh3abv-pub.cnc.bj.baidubce.com/paddlex/hps:paddlex3.5-gpu
+    container_name: ppocr-server
+    restart: unless-stopped
+    shm_size: 8g
+    ports:
+      - "48089:8080"
+    volumes:
+      - ./server:/app
+      - ./logs:/logs
+    environment:
+      PADDLEX_HPS_USE_HPIP: "1"
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: compute,utility
+    entrypoint:
+      - bash
+      - /app/server.sh
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+```
+
+The OCR service is fixed to Chinese PP-OCRv5 GPU serving through the official
+OCR SDK package. Do not build or ship a custom rm-monitor OCR server image.
+
+Health check:
+
+```powershell
+curl http://127.0.0.1:48089/v2/health/ready
+```
+
 Local sample evaluation:
 
 ```powershell
-cd analyze-job\ocr-daemon
-docker compose up -d --build
+# after starting the official PaddleX OCR service on 127.0.0.1:48089
 
-cd ..
 python eval_samples.py --ocr-server-url http://127.0.0.1:48089
 ```
 

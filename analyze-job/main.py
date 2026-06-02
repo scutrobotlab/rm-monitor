@@ -9,9 +9,9 @@ settlement scans run independently and in parallel.
 from __future__ import annotations
 
 import argparse
+import base64
 import io
 import json
-import mimetypes
 import queue
 import re
 import subprocess
@@ -19,7 +19,6 @@ import threading
 import time
 import urllib.parse
 import urllib.request
-import uuid
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -456,34 +455,43 @@ def crop_roi(img: np.ndarray, roi: tuple[float, float, float, float]) -> np.ndar
     return crop(img, x1, y1, x2, y2)
 
 
-def build_multipart(files: list[tuple[str, bytes]]) -> tuple[bytes, str]:
-    boundary = f"----rm-monitor-{uuid.uuid4().hex}"
-    chunks: list[bytes] = []
-    for name, data in files:
-        content_type = mimetypes.guess_type(name)[0] or "application/octet-stream"
-        chunks.extend(
-            [
-                f"--{boundary}\r\n".encode(),
-                f'Content-Disposition: form-data; name="files"; filename="{name}"\r\n'.encode(),
-                f"Content-Type: {content_type}\r\n\r\n".encode(),
-                data,
-                b"\r\n",
-            ]
-        )
-    chunks.append(f"--{boundary}--\r\n".encode())
-    return b"".join(chunks), f"multipart/form-data; boundary={boundary}"
-
-
-def post_ocr(base_url: str, files: list[tuple[str, bytes]], timeout_seconds: float) -> dict:
-    url = urllib.parse.urljoin(base_url.rstrip("/") + "/", "ocr")
-    body, content_type = build_multipart(files)
+def post_ocr(base_url: str, file_name: str, image_bytes: bytes, timeout_seconds: float) -> dict:
+    url = urllib.parse.urljoin(base_url.rstrip("/") + "/", "v2/models/ocr/infer")
+    payload = {
+        "inputs": [
+            {
+                "name": "input",
+                "shape": [1, 1],
+                "datatype": "BYTES",
+                "data": [
+                    json.dumps(
+                        {
+                            "file": base64.b64encode(image_bytes).decode("ascii"),
+                            "fileType": 1,
+                            "visualize": False,
+                        },
+                        ensure_ascii=False,
+                    )
+                ],
+            }
+        ],
+        "outputs": [
+            {
+                "name": "output",
+            }
+        ]
+    }
+    body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
     req = urllib.request.Request(url, data=body, method="POST")
-    req.add_header("Content-Type", content_type)
+    req.add_header("Content-Type", "application/json")
     started = time.perf_counter()
     with urllib.request.urlopen(req, timeout=timeout_seconds) as resp:
-        payload = json.loads(resp.read().decode("utf-8"))
-    payload["client_elapsed_seconds"] = time.perf_counter() - started
-    return payload
+        response = json.loads(resp.read().decode("utf-8"))
+    return {
+        "name": file_name,
+        "payload": response,
+        "client_elapsed_seconds": time.perf_counter() - started,
+    }
 
 
 def parse_int_text(text: str) -> int | None:
@@ -498,13 +506,52 @@ def parse_ammo_text(text: str) -> dict[str, int | None]:
     return {"large": int(match.group(1)), "small": int(match.group(2))}
 
 
-def normalize_ocr_results(payload: dict) -> dict[str, dict]:
+def decode_paddlex_ocr_payload(payload: dict) -> tuple[str, list[dict]]:
+    outputs = payload.get("outputs")
+    if not isinstance(outputs, list) or not outputs:
+        raise RuntimeError("PaddleX OCR response missing outputs")
+    output = outputs[0]
+    data = output.get("data") if isinstance(output, dict) else None
+    if not isinstance(data, list) or not data:
+        raise RuntimeError("PaddleX OCR response missing output data")
+
+    result_payload = data[0]
+    if isinstance(result_payload, str):
+        result_payload = json.loads(result_payload)
+    if not isinstance(result_payload, dict):
+        raise RuntimeError("PaddleX OCR response data is not an object")
+
+    result = result_payload.get("result", result_payload)
+    if isinstance(result, dict) and isinstance(result.get("ocrResults"), list):
+        result = result["ocrResults"][0] if result["ocrResults"] else {}
+    if isinstance(result, dict) and isinstance(result.get("prunedResult"), dict):
+        result = result["prunedResult"]
+    if not isinstance(result, dict):
+        result = {}
+
+    texts = result.get("rec_texts") or result.get("texts") or []
+    scores = result.get("rec_scores") or result.get("scores") or []
+    boxes = result.get("rec_polys") or result.get("rec_boxes") or result.get("dt_polys") or result.get("boxes") or []
+    items = []
+    for idx, text in enumerate(texts):
+        items.append(
+            {
+                "text": str(text),
+                "confidence": float(scores[idx]) if idx < len(scores) and scores[idx] is not None else None,
+                "box": boxes[idx] if idx < len(boxes) else None,
+            }
+        )
+    return "".join(item["text"] for item in items), items
+
+
+def normalize_ocr_results(responses: list[dict]) -> dict[str, dict]:
     fields: dict[str, dict] = {}
-    for item in payload.get("results", []):
-        name = Path(item.get("name", "")).stem
+    for response in responses:
+        name = Path(response.get("name", "")).stem
+        text, items = decode_paddlex_ocr_payload(response.get("payload", {}))
         fields[name] = {
-            "text": item.get("text", ""),
-            "items": item.get("items", []),
+            "text": text,
+            "items": items,
         }
     return fields
 
@@ -554,16 +601,18 @@ def ocr_settlement(
         if ok:
             files.append((f"{name}.jpg", buf.tobytes()))
 
-    response = post_ocr(ocr_server_url, files, timeout_seconds)
-    fields = normalize_ocr_results(response)
+    started = time.perf_counter()
+    responses = [post_ocr(ocr_server_url, name, data, timeout_seconds) for name, data in files]
+    fields = normalize_ocr_results(responses)
+    elapsed_seconds = time.perf_counter() - started
     result = {
         "schema": "rm-monitor/settlement-ocr/v1",
         "settlement_image": str(settlement_image),
         "roi_schema": str(roi_path),
         "ocr_server_url": ocr_server_url,
         "field_count": len(files),
-        "elapsed_seconds": response.get("elapsed_seconds"),
-        "client_elapsed_seconds": response.get("client_elapsed_seconds"),
+        "elapsed_seconds": elapsed_seconds,
+        "client_elapsed_seconds": elapsed_seconds,
         "fields": fields,
         "data": build_settlement_data(fields),
     }

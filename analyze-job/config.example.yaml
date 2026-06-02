@@ -1,6 +1,6 @@
 # analyze-job target configuration shape.
 #
-# OCRServerConf is service/client configuration. The OCR daemon is external
+# OCRServerConf is service/client configuration. The PaddleX OCR service is external
 # infrastructure, like Postgres/Redis; this chart only consumes its endpoint.
 OCRServerConf:
   BaseURL: http://host.docker.internal:48089
