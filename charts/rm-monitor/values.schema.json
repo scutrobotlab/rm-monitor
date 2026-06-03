@@ -220,7 +220,8 @@
         "av1Preset": { "type": "integer", "minimum": 1 },
         "av1Bitrate": { "type": "string", "minLength": 1 },
         "av1GOP": { "type": "integer", "minimum": 1 },
-        "av1PixFmt": { "type": "string", "minLength": 1 }
+        "av1PixFmt": { "type": "string", "minLength": 1 },
+        "av1AudioBitrate": { "type": "string", "minLength": 1 }
       }
     },
     "recordTrim": {

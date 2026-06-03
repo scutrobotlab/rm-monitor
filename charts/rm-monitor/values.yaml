@@ -122,9 +122,10 @@ transcode:
   memoryRequest: "2Gi"
   memoryLimit: "6Gi"
   av1Preset: 8
-  av1Bitrate: "1000k"
-  av1GOP: 125
+  av1Bitrate: "700k"
+  av1GOP: 250
   av1PixFmt: "yuv420p"
+  av1AudioBitrate: "64k"
 
 recordTrim:
   cpuRequest: "500m"

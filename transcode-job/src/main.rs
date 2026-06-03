@@ -60,6 +60,8 @@ struct TranscodeConf {
     av1_gop: i64,
     #[serde(default, rename = "AV1PixFmt")]
     av1_pix_fmt: String,
+    #[serde(default, rename = "AV1AudioBitrate")]
+    av1_audio_bitrate: String,
 }
 
 impl Default for TranscodeConf {
@@ -71,6 +73,7 @@ impl Default for TranscodeConf {
             av1_bitrate: "1000k".to_string(),
             av1_gop: 125,
             av1_pix_fmt: "yuv420p".to_string(),
+            av1_audio_bitrate: "64k".to_string(),
         }
     }
 }
@@ -95,6 +98,9 @@ impl TranscodeConf {
         }
         if self.av1_pix_fmt.trim().is_empty() {
             self.av1_pix_fmt = defaults.av1_pix_fmt;
+        }
+        if self.av1_audio_bitrate.trim().is_empty() {
+            self.av1_audio_bitrate = defaults.av1_audio_bitrate;
         }
         self
     }
@@ -211,7 +217,8 @@ fn transcode_ffmpeg_args(source: &Path, output: &Path, conf: &TranscodeConf) -> 
         source.display().to_string(),
         "-map".into(),
         "0:v:0".into(),
-        "-an".into(),
+        "-map".into(),
+        "0:a:0?".into(),
         "-sn".into(),
         "-dn".into(),
         "-c:v".into(),
@@ -224,6 +231,10 @@ fn transcode_ffmpeg_args(source: &Path, output: &Path, conf: &TranscodeConf) -> 
         conf.av1_gop.to_string(),
         "-pix_fmt".into(),
         conf.av1_pix_fmt,
+        "-c:a".into(),
+        "aac".into(),
+        "-b:a".into(),
+        conf.av1_audio_bitrate,
         "-movflags".into(),
         "+faststart".into(),
         "-f".into(),
@@ -479,6 +490,7 @@ mod tests {
                 av1_bitrate: "700k".to_string(),
                 av1_gop: 240,
                 av1_pix_fmt: "yuv420p10le".to_string(),
+                av1_audio_bitrate: "96k".to_string(),
                 ..Default::default()
             },
         );
@@ -488,6 +500,8 @@ mod tests {
             "-b:v\0700k",
             "-g\0240",
             "-pix_fmt\0yuv420p10le",
+            "-c:a\0aac",
+            "-b:a\096k",
         ] {
             assert!(joined.contains(want), "missing {want:?} in {args:?}");
         }
