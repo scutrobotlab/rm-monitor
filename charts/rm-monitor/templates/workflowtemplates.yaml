@@ -104,7 +104,7 @@ spec:
                   value: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.analyze_context}}`}}"
           - name: round-{{ $round }}-stt
             when: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.stt_enabled}}`}} == true"
-            depends: "round-{{ $round }}-record-main.Succeeded"
+            depends: "round-{{ $round }}-record-trim-main.Succeeded"
             template: stt
             arguments:
               parameters:
@@ -112,7 +112,7 @@ spec:
                   value: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.stt_context}}`}}"
           - name: round-{{ $round }}-record-trim-main
             when: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.main_source_available}}`}} == true && {{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.analyze_enabled}}`}} == true"
-            depends: "round-{{ $round }}-record-main.Succeeded && round-{{ $round }}-analyze.Succeeded && (round-{{ $round }}-stt.Succeeded || round-{{ $round }}-stt.Skipped || round-{{ $round }}-stt.Omitted) && (round-{{ $round }}-danmu.Succeeded || round-{{ $round }}-danmu.Skipped || round-{{ $round }}-danmu.Omitted)"
+            depends: "round-{{ $round }}-record-main.Succeeded && round-{{ $round }}-analyze.Succeeded && (round-{{ $round }}-danmu.Succeeded || round-{{ $round }}-danmu.Skipped || round-{{ $round }}-danmu.Omitted)"
             template: record-trim
             arguments:
               parameters:

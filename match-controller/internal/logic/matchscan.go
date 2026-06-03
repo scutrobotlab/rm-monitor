@@ -628,6 +628,7 @@ func (l *MatchScanLogic) roundWorkflowArguments(m scannedMatch, r *ent.MatchRoun
 			})
 		}
 		if strings.TrimSpace(recordConf.STTRole) != "" {
+			sttSourcePath := filepath.Join(recordConf.BaseDir, filepath.FromSlash(mainMP4Path))
 			args["stt_enabled"] = "true"
 			args["stt_context"] = mustJSON(jobcontract.STTContext{
 				Schema:            "rm-monitor/stt-context/v1",
@@ -635,7 +636,7 @@ func (l *MatchScanLogic) roundWorkflowArguments(m scannedMatch, r *ent.MatchRoun
 				MatchID:           m.ID,
 				RoundNo:           r.RoundNo,
 				Role:              mainRole,
-				SourcePath:        sourceAbs,
+				SourcePath:        sttSourcePath,
 				RoundDir:          roundDir,
 				STTPath:           filepath.Join(roundDir, "stt.jsonl"),
 				SubtitleName:      mainRole + ".srt",

@@ -125,12 +125,6 @@ fn run() -> Result<()> {
             boundary.start_seconds,
             boundary.end_seconds,
         )?;
-        trim_srt(
-            &ctx.role,
-            Path::new(&ctx.round_dir),
-            boundary.start_seconds,
-            boundary.end_seconds,
-        )?;
     }
 
     let stat = fs::metadata(&output_path).context("stat output mp4")?;
@@ -346,98 +340,6 @@ fn retime_danmu_p(p: Option<&str>, start: f64, end: f64) -> Option<String> {
     Some(parts.join(","))
 }
 
-fn trim_srt(role: &str, round_dir: &Path, start: f64, end: f64) -> Result<()> {
-    let raw_path = round_dir.join(format!("{role}.raw.srt"));
-    let final_path = round_dir.join(format!("{role}.srt"));
-    ensure_raw_source(&raw_path, &final_path).context("prepare raw subtitle")?;
-    let raw = match fs::read_to_string(&raw_path) {
-        Ok(v) => v,
-        Err(err) if err.kind() == std::io::ErrorKind::NotFound => return Ok(()),
-        Err(err) => return Err(err).context("read raw subtitle"),
-    };
-    let cues = crop_srt_cues(&parse_srt_cues(&raw), start, end);
-    if cues.is_empty() {
-        let _ = fs::remove_file(&final_path);
-        return Ok(());
-    }
-    let mut out = String::new();
-    for (idx, cue) in cues.into_iter().enumerate() {
-        out.push_str(&(idx + 1).to_string());
-        out.push('\n');
-        out.push_str(&format_srt_time(cue.start));
-        out.push_str(" --> ");
-        out.push_str(&format_srt_time(cue.end));
-        out.push('\n');
-        out.push_str(&cue.text);
-        out.push_str("\n\n");
-    }
-    atomic_write(&final_path, out.as_bytes()).context("write final subtitle")
-}
-
-#[derive(Debug, Clone, PartialEq)]
-struct SrtCue {
-    start: f64,
-    end: f64,
-    text: String,
-}
-
-fn parse_srt_cues(raw: &str) -> Vec<SrtCue> {
-    let normalized = raw.replace("\r\n", "\n").replace('\r', "\n");
-    normalized
-        .split("\n\n")
-        .filter_map(|block| {
-            let mut lines = block.lines().filter(|line| !line.trim().is_empty());
-            let first = lines.next()?;
-            let timing = if first.contains("-->") {
-                first
-            } else {
-                lines.next()?
-            };
-            let (start, end) = parse_srt_timing(timing)?;
-            let text = lines.collect::<Vec<_>>().join("\n").trim().to_string();
-            if text.is_empty() || end <= start {
-                return None;
-            }
-            Some(SrtCue { start, end, text })
-        })
-        .collect()
-}
-
-fn crop_srt_cues(cues: &[SrtCue], start: f64, end: f64) -> Vec<SrtCue> {
-    cues.iter()
-        .filter_map(|cue| {
-            if cue.end <= start || cue.start >= end {
-                return None;
-            }
-            let retimed_start = (cue.start.max(start) - start).max(0.0);
-            let retimed_end = (cue.end.min(end) - start).max(0.0);
-            if retimed_end <= retimed_start {
-                return None;
-            }
-            Some(SrtCue {
-                start: retimed_start,
-                end: retimed_end,
-                text: cue.text.clone(),
-            })
-        })
-        .collect()
-}
-
-fn parse_srt_timing(line: &str) -> Option<(f64, f64)> {
-    let (start, end) = line.split_once("-->")?;
-    Some((parse_srt_time(start.trim())?, parse_srt_time(end.trim())?))
-}
-
-fn parse_srt_time(value: &str) -> Option<f64> {
-    let value = value.split_whitespace().next()?;
-    let (hms, millis) = value.split_once(',')?;
-    let mut parts = hms.split(':');
-    let h = parts.next()?.parse::<u64>().ok()?;
-    let m = parts.next()?.parse::<u64>().ok()?;
-    let s = parts.next()?.parse::<u64>().ok()?;
-    let ms = millis.parse::<u64>().ok()?;
-    Some((h * 3600 + m * 60 + s) as f64 + ms as f64 / 1000.0)
-}
 
 fn ensure_raw_source(raw_path: &Path, final_path: &Path) -> Result<()> {
     if raw_path.exists() {
@@ -450,14 +352,6 @@ fn ensure_raw_source(raw_path: &Path, final_path: &Path) -> Result<()> {
     }
 }
 
-fn format_srt_time(seconds: f64) -> String {
-    let millis = (seconds.max(0.0) * 1000.0).round() as u64;
-    let h = millis / 3_600_000;
-    let m = (millis % 3_600_000) / 60_000;
-    let s = (millis % 60_000) / 1000;
-    let ms = millis % 1000;
-    format!("{h:02}:{m:02}:{s:02},{ms:03}")
-}
 
 fn artifact_path(base_dir: &str, artifact_path: &str) -> Result<(String, PathBuf)> {
     let base = normalize_slash(base_dir);
@@ -658,32 +552,21 @@ mod tests {
     }
 
     #[test]
-    fn trims_danmu_and_srt_sidecars() {
+    fn trims_danmu_sidecar() {
         let dir = tempdir().unwrap();
         fs::write(
             dir.path().join("主视角.danmuku.xml"),
             r#"<?xml version="1.0"?><i><d p="1.0,1,25">early</d><d p="5.0,1,25">keep</d><d p="12.0,1,25">late</d></i>"#,
         )
         .unwrap();
-        fs::write(
-            dir.path().join("主视角.srt"),
-            "1\n00:00:01,000 --> 00:00:02,000\nearly\n\n2\n00:00:04,000 --> 00:00:06,000\nkeep\n\n3\n00:00:12,000 --> 00:00:13,000\nlate\n",
-        )
-        .unwrap();
 
         trim_danmu("主视角", dir.path(), 3.0, 10.0).unwrap();
-        trim_srt("主视角", dir.path(), 3.0, 10.0).unwrap();
 
         let danmu = fs::read_to_string(dir.path().join("主视角.danmuku.xml")).unwrap();
         assert!(danmu.contains(r#"p="2.000,1,25""#));
         assert!(danmu.contains("keep"));
         assert!(!danmu.contains("early"));
         assert!(dir.path().join("主视角.raw.danmuku.xml").exists());
-
-        let srt = fs::read_to_string(dir.path().join("主视角.srt")).unwrap();
-        assert!(srt.contains("00:00:01,000 --> 00:00:03,000"));
-        assert!(srt.contains("keep"));
-        assert!(dir.path().join("主视角.raw.srt").exists());
     }
 
     #[test]
@@ -703,22 +586,5 @@ mod tests {
         let danmu = fs::read_to_string(dir.path().join("主视角.danmuku.xml")).unwrap();
         assert!(danmu.contains("from raw"));
         assert!(!danmu.contains("from final"));
-
-        fs::write(
-            dir.path().join("主视角.srt"),
-            "1\n00:00:04,000 --> 00:00:06,000\ncopy source\n",
-        )
-        .unwrap();
-        trim_srt("主视角", dir.path(), 3.0, 10.0).unwrap();
-        let raw_srt = fs::read_to_string(dir.path().join("主视角.raw.srt")).unwrap();
-        assert!(raw_srt.contains("copy source"));
-    }
-
-    #[test]
-    fn fpv_without_sidecar_call_would_leave_sidecars_untouched() {
-        let dir = tempdir().unwrap();
-        fs::write(dir.path().join("FPV.danmuku.xml"), "<i></i>").unwrap();
-        assert!(dir.path().join("FPV.danmuku.xml").exists());
-        assert!(!dir.path().join("FPV.raw.danmuku.xml").exists());
     }
 }
