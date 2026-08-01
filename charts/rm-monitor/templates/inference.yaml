@@ -1,0 +1,200 @@
+{{- if and (eq (.Values.inference.ocr.mode | default "external") "internal") (ne .Values.inference.ocr.internal.deploy false) }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.inference.ocr.internal.service.name }}
+  namespace: {{ include "rm-monitor.namespace" . }}
+  labels:
+{{ include "rm-monitor.commonLabels" . | indent 4 }}
+{{ include "rm-monitor.selectorLabels" (dict "name" .Values.inference.ocr.internal.service.name) | indent 4 }}
+spec:
+  replicas: {{ .Values.inference.ocr.internal.replicas }}
+  selector:
+    matchLabels:
+{{ include "rm-monitor.selectorLabels" (dict "name" .Values.inference.ocr.internal.service.name) | indent 6 }}
+  template:
+    metadata:
+      labels:
+{{ include "rm-monitor.selectorLabels" (dict "name" .Values.inference.ocr.internal.service.name) | indent 8 }}
+    spec:
+      {{- with .Values.inference.ocr.internal.nodeSelector }}
+      nodeSelector:
+{{ toYaml . | indent 8 }}
+      {{- end }}
+      containers:
+        - name: ppocr
+          image: {{ .Values.inference.ocr.internal.image | default (include "rm-monitor.image" (dict "root" . "component" "ocr-hps-cpu")) }}
+          imagePullPolicy: {{ .Values.inference.ocr.internal.imagePullPolicy | default (include "rm-monitor.imagePullPolicy" .) }}
+          env:
+            - name: PADDLEX_HPS_DEVICE_TYPE
+              value: cpu
+            - name: PADDLEX_HPS_LOGGING_LEVEL
+              value: {{ .Values.inference.ocr.internal.loggingLevel | quote }}
+          ports:
+            - name: http
+              containerPort: 8000
+            - name: grpc
+              containerPort: 8001
+            - name: metrics
+              containerPort: 8002
+          resources:
+{{ toYaml .Values.inference.ocr.internal.resources | indent 12 }}
+          readinessProbe:
+            httpGet:
+              path: /v2/health/ready
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            failureThreshold: 18
+          livenessProbe:
+            httpGet:
+              path: /v2/health/live
+              port: http
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            failureThreshold: 6
+          volumeMounts:
+            - name: logs
+              mountPath: /logs
+            - name: paddlex-var
+              mountPath: /paddlex/var
+            - name: dshm
+              mountPath: /dev/shm
+      volumes:
+        - name: logs
+          emptyDir: {}
+        - name: paddlex-var
+          emptyDir: {}
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: {{ .Values.inference.ocr.internal.sharedMemorySize | quote }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.inference.ocr.internal.service.name }}
+  namespace: {{ include "rm-monitor.namespace" . }}
+  labels:
+{{ include "rm-monitor.commonLabels" . | indent 4 }}
+{{ include "rm-monitor.selectorLabels" (dict "name" .Values.inference.ocr.internal.service.name) | indent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+{{ include "rm-monitor.selectorLabels" (dict "name" .Values.inference.ocr.internal.service.name) | indent 4 }}
+  ports:
+    - name: http
+      port: {{ .Values.inference.ocr.internal.service.port }}
+      targetPort: http
+    - name: grpc
+      port: {{ .Values.inference.ocr.internal.service.grpcPort }}
+      targetPort: grpc
+    - name: metrics
+      port: {{ .Values.inference.ocr.internal.service.metricsPort }}
+      targetPort: metrics
+---
+{{- end }}
+{{- if and (eq (.Values.inference.stt.mode | default "external") "internal") (ne .Values.inference.stt.internal.deploy false) }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.inference.stt.internal.service.name }}
+  namespace: {{ include "rm-monitor.namespace" . }}
+  labels:
+{{ include "rm-monitor.commonLabels" . | indent 4 }}
+{{ include "rm-monitor.selectorLabels" (dict "name" .Values.inference.stt.internal.service.name) | indent 4 }}
+spec:
+  replicas: {{ .Values.inference.stt.internal.replicas }}
+  selector:
+    matchLabels:
+{{ include "rm-monitor.selectorLabels" (dict "name" .Values.inference.stt.internal.service.name) | indent 6 }}
+  template:
+    metadata:
+      labels:
+{{ include "rm-monitor.selectorLabels" (dict "name" .Values.inference.stt.internal.service.name) | indent 8 }}
+    spec:
+      {{- with .Values.inference.stt.internal.nodeSelector }}
+      nodeSelector:
+{{ toYaml . | indent 8 }}
+      {{- end }}
+      initContainers:
+        - name: wait-model
+          image: {{ .Values.inference.stt.internal.image | default (include "rm-monitor.image" (dict "root" . "component" "whisper-cpp-cpu")) }}
+          imagePullPolicy: {{ .Values.inference.stt.internal.imagePullPolicy | default (include "rm-monitor.imagePullPolicy" .) }}
+          command:
+            - bash
+            - -lc
+            - |
+              set -euo pipefail
+              for i in $(seq 1 180); do
+                [ -s {{ .Values.inference.stt.internal.modelPath | quote }} ] && exit 0
+                echo "waiting for {{ .Values.inference.stt.internal.modelPath }}"
+                sleep 10
+              done
+              echo "model file missing: {{ .Values.inference.stt.internal.modelPath }}" >&2
+              exit 1
+          volumeMounts:
+            - name: records
+              mountPath: {{ .Values.jobs.recordsMountPath }}
+      containers:
+        - name: whisper-server
+          image: {{ .Values.inference.stt.internal.image | default (include "rm-monitor.image" (dict "root" . "component" "whisper-cpp-cpu")) }}
+          imagePullPolicy: {{ .Values.inference.stt.internal.imagePullPolicy | default (include "rm-monitor.imagePullPolicy" .) }}
+          command:
+            - bash
+            - -lc
+            - |
+              exec /app/build/bin/whisper-server \
+                --host 0.0.0.0 \
+                --port 8080 \
+                --model {{ .Values.inference.stt.internal.modelPath | quote }} \
+                --language {{ .Values.inference.stt.internal.language | quote }} \
+                --threads {{ .Values.inference.stt.internal.threads }} \
+                --processors {{ .Values.inference.stt.internal.processors }} \
+                --no-gpu \
+                --convert \
+                --tmp-dir /tmp
+          ports:
+            - name: http
+              containerPort: 8080
+          resources:
+{{ toYaml .Values.inference.stt.internal.resources | indent 12 }}
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 12
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            failureThreshold: 6
+          volumeMounts:
+            - name: records
+              mountPath: {{ .Values.jobs.recordsMountPath }}
+      volumes:
+        - name: records
+          persistentVolumeClaim:
+            claimName: {{ .Values.storage.shared.pvcName }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.inference.stt.internal.service.name }}
+  namespace: {{ include "rm-monitor.namespace" . }}
+  labels:
+{{ include "rm-monitor.commonLabels" . | indent 4 }}
+{{ include "rm-monitor.selectorLabels" (dict "name" .Values.inference.stt.internal.service.name) | indent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+{{ include "rm-monitor.selectorLabels" (dict "name" .Values.inference.stt.internal.service.name) | indent 4 }}
+  ports:
+    - name: http
+      port: {{ .Values.inference.stt.internal.service.port }}
+      targetPort: http
+{{- end }}

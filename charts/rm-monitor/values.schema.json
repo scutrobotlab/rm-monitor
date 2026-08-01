@@ -72,14 +72,9 @@
             "required": ["enabled"]
           },
           "then": {
-            "required": ["role", "whisperServerUrls"],
+            "required": ["role"],
             "properties": {
-              "role": { "minLength": 1 },
-              "whisperServerUrls": {
-                "type": "array",
-                "minItems": 1,
-                "items": { "type": "string", "format": "uri", "minLength": 1 }
-              }
+              "role": { "minLength": 1 }
             }
           }
         }
@@ -115,6 +110,72 @@
       "properties": {
         "baseURL": { "type": "string" },
         "timeoutSeconds": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "inference": {
+      "type": "object",
+      "properties": {
+        "ocr": {
+          "type": "object",
+          "properties": {
+            "mode": { "type": "string", "enum": ["external", "internal"] },
+            "externalURL": { "type": "string" },
+            "internal": {
+              "type": "object",
+              "properties": {
+                "replicas": { "type": "integer", "minimum": 1 },
+                "deploy": { "type": "boolean" },
+                "image": { "type": "string" },
+                "imagePullPolicy": { "type": "string" },
+                "loggingLevel": { "type": "string" },
+                "sharedMemorySize": { "type": "string", "minLength": 1 },
+                "nodeSelector": { "type": "object" },
+                "service": {
+                  "type": "object",
+                  "properties": {
+                    "name": { "type": "string", "minLength": 1 },
+                    "port": { "type": "integer", "minimum": 1 },
+                    "grpcPort": { "type": "integer", "minimum": 1 },
+                    "metricsPort": { "type": "integer", "minimum": 1 }
+                  }
+                },
+                "resources": { "type": "object" }
+              }
+            }
+          }
+        },
+        "stt": {
+          "type": "object",
+          "properties": {
+            "mode": { "type": "string", "enum": ["external", "internal"] },
+            "externalURLs": {
+              "type": "array",
+              "items": { "type": "string", "format": "uri", "minLength": 1 }
+            },
+            "internal": {
+              "type": "object",
+              "properties": {
+                "replicas": { "type": "integer", "minimum": 1 },
+                "deploy": { "type": "boolean" },
+                "image": { "type": "string" },
+                "imagePullPolicy": { "type": "string" },
+                "modelPath": { "type": "string", "minLength": 1 },
+                "language": { "type": "string", "minLength": 1 },
+                "threads": { "type": "integer", "minimum": 1 },
+                "processors": { "type": "integer", "minimum": 1 },
+                "nodeSelector": { "type": "object" },
+                "service": {
+                  "type": "object",
+                  "properties": {
+                    "name": { "type": "string", "minLength": 1 },
+                    "port": { "type": "integer", "minimum": 1 }
+                  }
+                },
+                "resources": { "type": "object" }
+              }
+            }
+          }
+        }
       }
     },
     "analyze": {

@@ -99,8 +99,28 @@ AnalyzeConf:
 
 {{- define "rm-monitor.ocrServerConf" -}}
 OCRServerConf:
-  BaseURL: {{ .Values.ocrServer.baseURL | quote }}
+  BaseURL: {{ include "rm-monitor.ocrServerURL" . | quote }}
   TimeoutSeconds: {{ .Values.ocrServer.timeoutSeconds | default 30 }}
+{{- end -}}
+
+{{- define "rm-monitor.ocrServerURL" -}}
+{{- if eq (.Values.inference.ocr.mode | default "external") "internal" -}}
+{{- printf "http://%s:%v" .Values.inference.ocr.internal.service.name .Values.inference.ocr.internal.service.port -}}
+{{- else if .Values.inference.ocr.externalURL -}}
+{{- .Values.inference.ocr.externalURL -}}
+{{- else -}}
+{{- .Values.ocrServer.baseURL -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "rm-monitor.whisperServerUrls" -}}
+{{- if eq (.Values.inference.stt.mode | default "external") "internal" -}}
+- {{ printf "http://%s:%v/inference" .Values.inference.stt.internal.service.name .Values.inference.stt.internal.service.port }}
+{{- else if .Values.inference.stt.externalURLs }}
+{{ toYaml .Values.inference.stt.externalURLs }}
+{{- else }}
+{{ toYaml .Values.stt.whisperServerUrls }}
+{{- end -}}
 {{- end -}}
 
 {{- define "rm-monitor.danmuConf" -}}

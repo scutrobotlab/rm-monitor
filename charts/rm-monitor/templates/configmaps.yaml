@@ -35,7 +35,7 @@ data:
       RetryBackoff: {{ .Values.upload.retryBackoff }}
       RateLimitPerMinute: {{ .Values.upload.rateLimitPerMinute }}
     WhisperServerUrls:
-{{ toYaml .Values.stt.whisperServerUrls | nindent 6 }}
+{{ include "rm-monitor.whisperServerUrls" . | nindent 6 }}
 {{ include "rm-monitor.priority" . | indent 4 }}
 ---
 apiVersion: v1
@@ -76,7 +76,7 @@ metadata:
 data:
   config.yml: |
     WhisperServerUrls:
-{{ toYaml .Values.stt.whisperServerUrls | nindent 6 }}
+{{ include "rm-monitor.whisperServerUrls" . | nindent 6 }}
 {{ include "rm-monitor.difyConf" . | indent 4 }}
     STTQualityConf:
       UseQuality: {{ .Values.stt.useQuality }}

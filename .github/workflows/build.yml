@@ -50,6 +50,8 @@ jobs:
               ("analyze-job", "analyze-job/Dockerfile", "python", ["analyze-job/"]),
               ("highlight-artifact-job", "highlight-artifact-job/Dockerfile", "rust", ["highlight-artifact-job/"]),
               ("record-trim-job", "record-trim-job/Dockerfile", "rust", ["record-trim-job/"]),
+              ("ocr-hps-cpu", "analyze-job/ocr-server/Dockerfile", "other", ["analyze-job/ocr-server/"]),
+              ("whisper-cpp-cpu", "stt-job/whisper-cpp/Dockerfile", "other", ["stt-job/whisper-cpp/"]),
           ]
 
           event = os.environ["GITHUB_EVENT_NAME"]
@@ -214,6 +216,8 @@ jobs:
               "analyze-job",
               "highlight-artifact-job",
               "record-trim-job",
+              "ocr-hps-cpu",
+              "whisper-cpp-cpu",
           ]
 
           current_tag = "sha-" + os.environ["GITHUB_SHA"][:7]

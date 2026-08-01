@@ -78,6 +78,54 @@ ocrServer:
   baseURL: ""
   timeoutSeconds: 30
 
+inference:
+  ocr:
+    mode: external
+    externalURL: ""
+    internal:
+      deploy: true
+      replicas: 1
+      image: ""
+      imagePullPolicy: ""
+      loggingLevel: INFO
+      sharedMemorySize: 2Gi
+      nodeSelector: {}
+      service:
+        name: rm-monitor-ocr-cpu
+        port: 8000
+        grpcPort: 8001
+        metricsPort: 8002
+      resources:
+        requests:
+          cpu: "2"
+          memory: 4Gi
+        limits:
+          cpu: "6"
+          memory: 12Gi
+  stt:
+    mode: external
+    externalURLs: []
+    internal:
+      deploy: true
+      replicas: 1
+      image: ""
+      imagePullPolicy: ""
+      modelPath: /records/__models/whisper.cpp/ggml-small.bin
+      language: zh
+      threads: 6
+      processors: 1
+      nodeSelector: {}
+      service:
+        name: rm-monitor-whisper-cpp-cpu
+        port: 8080
+      resources:
+        requests:
+          cpu: "2"
+          memory: 2Gi
+        limits:
+          cpu: "8"
+          memory: 8Gi
+
 analyze:
   enabled: false
   role: "主视角"
