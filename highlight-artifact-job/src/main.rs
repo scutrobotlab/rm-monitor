@@ -165,9 +165,15 @@ async fn run(config: &Config, ctx: &HighlightContext) -> Result<()> {
 
     slice_video(&source, &video, ctx.start_seconds, ctx.end_seconds).await?;
     crop_danmu(&danmu_path, &danmu, ctx.start_seconds, ctx.end_seconds)?;
-    write_srt(&stt_path, &srt, ctx.start_seconds, ctx.end_seconds)?;
+    let has_subtitle = write_srt(&stt_path, &srt, ctx.start_seconds, ctx.end_seconds)?;
     render_ass(&danmu, &ass)?;
-    burn_video(&video, &ass, &srt, &video_artifact).await?;
+    burn_video(
+        &video,
+        &ass,
+        has_subtitle.then_some(srt.as_path()),
+        &video_artifact,
+    )
+    .await?;
     extract_cover(
         &video,
         &cover,
@@ -414,7 +420,7 @@ fn rewrite_danmu_time(p: &str, t: f64) -> String {
     parts.join(",")
 }
 
-fn write_srt(stt_path: &Path, output: &Path, start: f64, end: f64) -> Result<()> {
+fn write_srt(stt_path: &Path, output: &Path, start: f64, end: f64) -> Result<bool> {
     let raw = fs::read_to_string(stt_path)?;
     let mut rows = Vec::new();
     for line in raw.lines() {
@@ -434,7 +440,8 @@ fn write_srt(stt_path: &Path, output: &Path, start: f64, end: f64) -> Result<()>
         }
     }
     if rows.is_empty() {
-        bail!("no stt subtitle in highlight window");
+        atomic_write(output, b"")?;
+        return Ok(false);
     }
     let mut body = String::new();
     for (idx, row) in rows.iter().enumerate() {
@@ -448,7 +455,8 @@ fn write_srt(stt_path: &Path, output: &Path, start: f64, end: f64) -> Result<()>
             row.text.trim()
         ));
     }
-    atomic_write(output, body.as_bytes())
+    atomic_write(output, body.as_bytes())?;
+    Ok(true)
 }
 
 fn format_srt_time(t: f64) -> String {
@@ -497,9 +505,12 @@ fn render_ass(input: &Path, output: &Path) -> Result<()> {
     Ok(())
 }
 
-async fn burn_video(video: &Path, ass: &Path, srt: &Path, output: &Path) -> Result<()> {
+async fn burn_video(video: &Path, ass: &Path, srt: Option<&Path>, output: &Path) -> Result<()> {
     let tmp = output.with_extension("mp4.part");
-    let filter = format!("ass={},subtitles={}", filter_path(ass), filter_path(srt));
+    let filter = match srt {
+        Some(srt) => format!("ass={},subtitles={}", filter_path(ass), filter_path(srt)),
+        None => format!("ass={}", filter_path(ass)),
+    };
     let status = timeout(
         Duration::from_secs(3600),
         Command::new("ffmpeg")
@@ -794,6 +805,42 @@ mod tests {
         let end = preview_window(100.0, 140.0, 139.0, 6);
         assert_eq!(end.start, 34.0);
         assert_eq!(end.end, 40.0);
+    }
+
+    #[test]
+    fn write_srt_allows_empty_highlight_window() -> Result<()> {
+        let dir = tempfile::tempdir()?;
+        let stt = dir.path().join("stt.jsonl");
+        let srt = dir.path().join("video.srt");
+        fs::write(
+            &stt,
+            r#"{"status":"SUCCEEDED","start":1.0,"end":2.0,"text":"outside"}"#,
+        )?;
+
+        let has_subtitle = write_srt(&stt, &srt, 10.0, 20.0)?;
+
+        assert!(!has_subtitle);
+        assert_eq!(fs::read_to_string(srt)?, "");
+        Ok(())
+    }
+
+    #[test]
+    fn write_srt_reports_present_subtitle() -> Result<()> {
+        let dir = tempfile::tempdir()?;
+        let stt = dir.path().join("stt.jsonl");
+        let srt = dir.path().join("video.srt");
+        fs::write(
+            &stt,
+            r#"{"status":"SUCCEEDED","start":12.0,"end":14.5,"text":"inside"}"#,
+        )?;
+
+        let has_subtitle = write_srt(&stt, &srt, 10.0, 20.0)?;
+
+        assert!(has_subtitle);
+        let body = fs::read_to_string(srt)?;
+        assert!(body.contains("00:00:02,000 --> 00:00:04,500"));
+        assert!(body.contains("inside"));
+        Ok(())
     }
 
     #[test]

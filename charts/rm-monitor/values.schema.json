@@ -268,10 +268,14 @@
     },
     "transcode": {
       "type": "object",
-      "required": ["sourceRetentionDays", "maxConcurrent", "cpuRequest", "cpuLimit", "memoryRequest", "memoryLimit", "av1Preset", "av1Bitrate", "av1GOP", "av1PixFmt"],
+      "required": ["sourceRetentionDays", "maxConcurrent", "retryLimit", "retryBackoffDuration", "retryBackoffFactor", "retryBackoffMaxDuration", "cpuRequest", "cpuLimit", "memoryRequest", "memoryLimit", "av1Preset", "av1Bitrate", "av1GOP", "av1PixFmt"],
       "properties": {
         "sourceRetentionDays": { "type": "integer", "minimum": 1 },
         "maxConcurrent": { "type": "integer", "minimum": 1 },
+        "retryLimit": { "type": "integer", "minimum": 0 },
+        "retryBackoffDuration": { "type": "string", "minLength": 1 },
+        "retryBackoffFactor": { "type": "integer", "minimum": 1 },
+        "retryBackoffMaxDuration": { "type": "string", "minLength": 1 },
         "avoidRecordNodeWeight": { "type": "integer", "minimum": 1, "maximum": 100 },
         "spreadMaxSkew": { "type": "integer", "minimum": 1 },
         "cpuRequest": { "type": "string", "minLength": 1 },

@@ -181,9 +181,12 @@ spec:
           - name: round-{{ $round }}-ready
             depends: "round-{{ $round }}-gate.Succeeded && (round-{{ $round }}-record-main.Succeeded || round-{{ $round }}-record-main.Skipped || round-{{ $round }}-record-main.Omitted) && (round-{{ $round }}-record-fpv.Succeeded || round-{{ $round }}-record-fpv.Skipped || round-{{ $round }}-record-fpv.Omitted) && (round-{{ $round }}-analyze.Succeeded || round-{{ $round }}-analyze.Skipped || round-{{ $round }}-analyze.Omitted) && (round-{{ $round }}-stt.Succeeded || round-{{ $round }}-stt.Skipped || round-{{ $round }}-stt.Omitted) && (round-{{ $round }}-record-trim-main.Succeeded || round-{{ $round }}-record-trim-main.Skipped || round-{{ $round }}-record-trim-main.Omitted) && (round-{{ $round }}-record-trim-fpv.Succeeded || round-{{ $round }}-record-trim-fpv.Skipped || round-{{ $round }}-record-trim-fpv.Omitted) && (round-{{ $round }}-lark-record-main.Succeeded || round-{{ $round }}-lark-record-main.Skipped || round-{{ $round }}-lark-record-main.Omitted) && (round-{{ $round }}-lark-record-fpv.Succeeded || round-{{ $round }}-lark-record-fpv.Skipped || round-{{ $round }}-lark-record-fpv.Omitted) && (round-{{ $round }}-transcode-main.Succeeded || round-{{ $round }}-transcode-main.Skipped || round-{{ $round }}-transcode-main.Omitted) && (round-{{ $round }}-transcode-fpv.Succeeded || round-{{ $round }}-transcode-fpv.Skipped || round-{{ $round }}-transcode-fpv.Omitted)"
             template: noop
+          - name: round-{{ $round }}-manifest-ready
+            depends: "round-{{ $round }}-gate.Succeeded && (round-{{ $round }}-record-main.Succeeded || round-{{ $round }}-record-main.Skipped || round-{{ $round }}-record-main.Omitted) && (round-{{ $round }}-record-fpv.Succeeded || round-{{ $round }}-record-fpv.Skipped || round-{{ $round }}-record-fpv.Omitted) && (round-{{ $round }}-danmu.Succeeded || round-{{ $round }}-danmu.Skipped || round-{{ $round }}-danmu.Omitted) && (round-{{ $round }}-analyze.Succeeded || round-{{ $round }}-analyze.Skipped || round-{{ $round }}-analyze.Omitted) && (round-{{ $round }}-stt.Succeeded || round-{{ $round }}-stt.Skipped || round-{{ $round }}-stt.Omitted) && (round-{{ $round }}-record-trim-main.Succeeded || round-{{ $round }}-record-trim-main.Skipped || round-{{ $round }}-record-trim-main.Omitted) && (round-{{ $round }}-record-trim-fpv.Succeeded || round-{{ $round }}-record-trim-fpv.Skipped || round-{{ $round }}-record-trim-fpv.Omitted)"
+            template: noop
 {{- end }}
           - name: manifest
-            depends: "round-1-ready.Succeeded && round-2-ready.Succeeded && round-3-ready.Succeeded && round-4-ready.Succeeded && round-5-ready.Succeeded"
+            depends: "round-1-manifest-ready.Succeeded && round-2-manifest-ready.Succeeded && round-3-manifest-ready.Succeeded && round-4-manifest-ready.Succeeded && round-5-manifest-ready.Succeeded"
             template: manifest
     - name: noop
       container:
@@ -448,6 +451,16 @@ spec:
           - configMapKeyRef:
               name: rm-monitor-argo-semaphores
               key: transcode
+      retryStrategy:
+        limit: {{ .Values.transcode.retryLimit | quote }}
+        retryPolicy: Always
+        expression: >-
+          asInt(lastRetry.exitCode) == 255 ||
+          lastRetry.message matches 'Unknown \(exit code 255\)|pod deleted|imminent node shutdown|NodeLost'
+        backoff:
+          duration: {{ .Values.transcode.retryBackoffDuration | quote }}
+          factor: {{ .Values.transcode.retryBackoffFactor | quote }}
+          maxDuration: {{ .Values.transcode.retryBackoffMaxDuration | quote }}
       affinity:
         nodeAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:

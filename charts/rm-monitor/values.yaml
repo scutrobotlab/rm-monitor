@@ -163,6 +163,10 @@ highlight:
 transcode:
   sourceRetentionDays: 7
   maxConcurrent: 6
+  retryLimit: 2
+  retryBackoffDuration: "30s"
+  retryBackoffFactor: 2
+  retryBackoffMaxDuration: "5m"
   avoidRecordNodeWeight: 80
   spreadMaxSkew: 1
   cpuRequest: "6000m"
