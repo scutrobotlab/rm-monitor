@@ -73,12 +73,13 @@ jobs:
           changed = subprocess.check_output(["git", "diff", "--name-only", base, head], text=True).splitlines()
           changed = [p.replace("\\", "/") for p in changed]
 
-          go_common = any(p.startswith(("pkg/", "ent/")) or p in {"go.mod", "go.sum"} for p in changed)
+          go_common = any(p.startswith(("pkg/", "ent/", "contracts/")) or p in {"go.mod", "go.sum"} for p in changed)
+          all_jobs_common = any(p.startswith(("contracts/", "charts/rm-monitor/templates/workflowtemplates.yaml")) for p in changed)
           selected = []
           for app, dockerfile, kind, prefixes in components:
               own_change = any(any(p.startswith(prefix) for prefix in prefixes) for p in changed)
               common_change = kind == "go" and go_common
-              if own_change or common_change:
+              if own_change or common_change or all_jobs_common:
                   selected.append({"app": app, "dockerfile": dockerfile})
 
           matrix = {"include": selected}
@@ -93,26 +94,64 @@ jobs:
               print(f"  {item['app']}")
           PY
 
-  helm:
-    name: validate helm chart
+  test:
+    name: test and validate
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: danmu-job/package-lock.json
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Go tests
+        run: go test ./...
+
+      - name: Rust tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          for manifest in $(find . -name Cargo.toml -not -path './target/*' | sort); do
+            cargo test --locked --manifest-path "$manifest"
+          done
+
+      - name: Danmu tests
+        working-directory: danmu-job
+        run: npm ci && npm test
+
+      - name: Analyzer offline tests
+        shell: bash
+        run: |
+          python -m pip install -r analyze-job/requirements.txt
+          python analyze-job/test_paddlex_ocr.py
 
       - name: Install Helm
         shell: bash
         run: |
           curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
-      - name: Helm lint
-        run: helm lint charts/rm-monitor --set imageTagOverride=sha-dev
+      - name: Helm external inference
+        run: |
+          helm lint charts/rm-monitor --set imageTagOverride=sha-dev --set inference.ocr.mode=external --set inference.ocr.externalURL=http://ocr.example --set inference.stt.mode=external --set-json 'inference.stt.externalURLs=["http://whisper.example/inference"]'
+          helm template rm-monitor charts/rm-monitor --namespace rm-monitor --set imageTagOverride=sha-dev --set inference.ocr.mode=external --set inference.ocr.externalURL=http://ocr.example --set inference.stt.mode=external --set-json 'inference.stt.externalURLs=["http://whisper.example/inference"]' >/dev/null
 
-      - name: Helm template
-        run: helm template rm-monitor charts/rm-monitor --namespace rm-monitor --values charts/rm-monitor/values.yaml --set imageTagOverride=sha-dev
+      - name: Helm internal inference
+        run: |
+          helm lint charts/rm-monitor --set imageTagOverride=sha-dev --set inference.ocr.mode=internal --set inference.stt.mode=internal
+          helm template rm-monitor charts/rm-monitor --namespace rm-monitor --set imageTagOverride=sha-dev --set inference.ocr.mode=internal --set inference.stt.mode=internal >/dev/null
 
   docker:
     name: build ${{ matrix.app }}
-    needs: detect
+    needs: [detect, test]
     if: needs.detect.outputs.count != '0'
     runs-on: ubuntu-latest
     strategy:
@@ -159,10 +198,10 @@ jobs:
   chart:
     name: publish helm chart
     needs:
-      - helm
+      - test
       - detect
       - docker
-    if: always() && github.event_name == 'push' && needs.helm.result == 'success' && (needs.docker.result == 'success' || needs.docker.result == 'skipped')
+    if: always() && github.event_name == 'push' && needs.test.result == 'success' && (needs.docker.result == 'success' || needs.docker.result == 'skipped')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6

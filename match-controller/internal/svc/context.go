@@ -20,6 +20,7 @@ type ServiceContext struct {
 	DB          *ent.Client
 	RedisClient *redisx.Client
 	ArgoClient  *argowf.Client
+	ArgoServer  *argowf.ServerClient
 }
 
 func NewServiceContext(c config.Config) *ServiceContext {
@@ -44,5 +45,6 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		DB:          client,
 		RedisClient: redisx.MustNew(c.RedisConf.WithDefaults()),
 		ArgoClient:  argoClient,
+		ArgoServer:  argowf.NewServerClient(c.ArgoConf.WithDefaults().ServerURL, c.ArgoConf.WithDefaults().TokenPath),
 	}
 }

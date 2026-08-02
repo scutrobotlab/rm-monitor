@@ -2,6 +2,7 @@ package svc
 
 import (
 	"context"
+	"database/sql"
 	"math/rand"
 	"os"
 	"time"
@@ -24,6 +25,7 @@ type ServiceContext struct {
 	RedisClient *redisx.Client
 	RestyClient *resty.Client
 	DB          *ent.Client
+	SQLDB       *sql.DB
 	RateLimiter *larkrate.Limiter
 	UploadSlots chan struct{}
 }
@@ -31,11 +33,12 @@ type ServiceContext struct {
 func NewServiceContext(c config.Config) *ServiceContext {
 	restyClient := resty.New().SetRetryCount(3).SetRetryWaitTime(1 * time.Second).SetTimeout(10 * time.Second)
 	redisClient := redisx.MustNew(c.RedisConf.WithDefaults())
-	client, err := db.Open(context.Background(), c.PostgresConf)
+	sqlDB, err := db.OpenSQL(c.PostgresConf)
 	if err != nil {
 		logx.Error(err)
 		os.Exit(1)
 	}
+	client := db.NewClient(sqlDB)
 	uploadConcurrency := c.UploadConf.Concurrency
 	if uploadConcurrency <= 0 {
 		uploadConcurrency = 1
@@ -50,6 +53,7 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		RedisClient: redisClient,
 		RestyClient: restyClient,
 		DB:          client,
+		SQLDB:       sqlDB,
 		RateLimiter: larkrate.New(redisClient),
 		UploadSlots: make(chan struct{}, uploadConcurrency),
 	}

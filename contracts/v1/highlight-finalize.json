@@ -1,0 +1,13 @@
+{
+  "schema": "rm-monitor/highlight-artifact-context/v1",
+  "highlight_clip_id": 7,
+  "highlight_index": 1,
+  "role": "main",
+  "algorithm_version": "danmu-zscore-dify-v1",
+  "source_artifact_path": "event/zone/match/Round-1/main.mp4",
+  "round_dir": "event/zone/match/Round-1",
+  "output_dir": "event/zone/match/Round-1/highlights/1",
+  "preview_seconds": 6,
+  "preview_fps": 8,
+  "preview_width": 360
+}

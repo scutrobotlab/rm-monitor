@@ -10,6 +10,7 @@ argo:
   enabled: true
   namespace: rm-monitor
   matchWorkflowTemplate: rm-match-workflow
+  serverURL: http://argo-workflows-server.argo.svc.cluster.local:2746
 
 priorityClasses:
   recordCritical:

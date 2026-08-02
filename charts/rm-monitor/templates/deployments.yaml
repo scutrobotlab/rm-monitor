@@ -1,6 +1,6 @@
 {{- $components := dict
   "match-controller" (dict "name" "match-controller" "values" .Values.components.matchController "serviceAccount" .Values.serviceAccount.name "configMap" "match-controller-config")
-  "lark-notifier" (dict "name" "lark-notifier" "values" .Values.components.larkNotifier "serviceAccount" "" "configMap" "lark-notifier-config")
+  "lark-notifier" (dict "name" "lark-notifier" "values" .Values.components.larkNotifier "serviceAccount" .Values.serviceAccount.name "configMap" "lark-notifier-config")
 -}}
 {{- range $component, $cfg := $components }}
 apiVersion: apps/v1
@@ -33,6 +33,11 @@ spec:
           image: {{ include "rm-monitor.image" (dict "root" $ "component" $component) }}
           imagePullPolicy: {{ include "rm-monitor.imagePullPolicy" $ }}
           args: ["-f", "{{ include "rm-monitor.configPath" $ }}"]
+          env:
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
           resources:
 {{ toYaml $cfg.values.resources | indent 12 }}
           volumeMounts:

@@ -59,6 +59,7 @@ ArgoConf:
   Enabled: {{ .Values.argo.enabled }}
   Namespace: {{ .Values.argo.namespace | default (include "rm-monitor.namespace" .) }}
   MatchWorkflowTemplate: {{ .Values.argo.matchWorkflowTemplate | quote }}
+  ServerURL: {{ .Values.argo.serverURL | quote }}
 {{- end -}}
 
 {{- define "rm-monitor.recordConf" -}}
@@ -176,4 +177,25 @@ RecordsMountPath: {{ .root.Values.jobs.recordsMountPath }}
 ImagePullPolicy: {{ include "rm-monitor.jobImagePullPolicy" .root }}
 BackoffLimit: {{ .root.Values.jobs.backoffLimit }}
 TTLSecondsAfterFinished: {{ .root.Values.jobs.ttlSecondsAfterFinished }}
+{{- end -}}
+
+{{- define "rm-monitor.processingRetryStrategy" -}}
+retryStrategy:
+  limit: "2"
+  retryPolicy: "Always"
+  expression: "lastRetry.status == 'Error' || lastRetry.exitCode == '75'"
+  backoff:
+    duration: "5s"
+    factor: 2
+    maxDuration: "2m"
+{{- end -}}
+
+{{- define "rm-monitor.recordRetryStrategy" -}}
+retryStrategy:
+  limit: "2"
+  retryPolicy: "OnError"
+  backoff:
+    duration: "5s"
+    factor: 2
+    maxDuration: "2m"
 {{- end -}}

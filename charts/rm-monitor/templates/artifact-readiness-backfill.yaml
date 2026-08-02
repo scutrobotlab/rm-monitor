@@ -1,0 +1,36 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-artifact-readiness-backfill
+  namespace: {{ include "rm-monitor.namespace" . }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 2
+  ttlSecondsAfterFinished: {{ .Values.jobs.ttlSecondsAfterFinished }}
+  template:
+    spec:
+      serviceAccountName: {{ .Values.serviceAccount.name }}
+      restartPolicy: Never
+      containers:
+        - name: artifact-readiness-backfill
+          image: {{ include "rm-monitor.image" (dict "root" . "component" "lark-notifier") }}
+          imagePullPolicy: {{ include "rm-monitor.imagePullPolicy" . }}
+          args: ["-f", "{{ include "rm-monitor.configPath" . }}", "-backfill-artifacts"]
+          volumeMounts:
+            - name: config
+              mountPath: {{ include "rm-monitor.configPath" . }}
+              subPath: config.yml
+              readOnly: true
+            - name: records
+              mountPath: {{ .Values.jobs.recordsMountPath }}
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: lark-notifier-config
+        - name: records
+          persistentVolumeClaim:
+            claimName: {{ .Values.storage.shared.pvcName }}

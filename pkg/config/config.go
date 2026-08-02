@@ -22,6 +22,8 @@ type ArgoConf struct {
 	Namespace             string `json:",optional"`
 	MatchWorkflowTemplate string `json:",optional"`
 	Kubeconfig            string `json:",optional"`
+	ServerURL             string `json:",optional"`
+	TokenPath             string `json:",optional"`
 }
 
 func (c *ArgoConf) WithDefaults() ArgoConf {
@@ -31,6 +33,12 @@ func (c *ArgoConf) WithDefaults() ArgoConf {
 	}
 	if out.MatchWorkflowTemplate == "" {
 		out.MatchWorkflowTemplate = "rm-match-workflow"
+	}
+	if out.ServerURL == "" {
+		out.ServerURL = "http://argo-workflows-server.argo.svc.cluster.local:2746"
+	}
+	if out.TokenPath == "" {
+		out.TokenPath = "/var/run/secrets/kubernetes.io/serviceaccount/token"
 	}
 	return out
 }

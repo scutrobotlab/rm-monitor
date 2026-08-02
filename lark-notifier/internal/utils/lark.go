@@ -97,8 +97,10 @@ func MatchCardUUID(matchID, chatID string) string {
 	return shortUUID("rm-match-card", matchID, chatID)
 }
 
-func MatchCardUpdateUUID(matchID, cardID string, sequence int64) string {
-	return shortUUID("rm-card-update", matchID, cardID, fmt.Sprintf("%d", sequence))
+func MatchCardUpdateUUID(matchID, cardID string, sequence int64, payloadHash ...string) string {
+	parts := []string{matchID, cardID, fmt.Sprintf("%d", sequence)}
+	parts = append(parts, payloadHash...)
+	return shortUUID("rm-card-update", parts...)
 }
 
 func shortUUID(prefix string, parts ...string) string {

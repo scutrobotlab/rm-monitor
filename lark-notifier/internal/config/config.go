@@ -7,9 +7,7 @@ type Config struct {
 		AppId     string
 		AppSecret string
 	}
-	RecordConf struct {
-		BaseDir string
-	}
+	RecordConf common.RecordConf `json:",optional"`
 	UploadConf struct {
 		Concurrency  int
 		PartRetries  int

@@ -882,6 +882,9 @@ type HighlightClipMutation struct {
 	score                        *float64
 	addscore                     *float64
 	model_payload                *string
+	preview_path                 *string
+	preview_checksum             *string
+	artifact_ready_at            *time.Time
 	completed_at                 *time.Time
 	created_at                   *time.Time
 	updated_at                   *time.Time
@@ -1722,6 +1725,153 @@ func (m *HighlightClipMutation) ResetModelPayload() {
 	delete(m.clearedFields, highlightclip.FieldModelPayload)
 }
 
+// SetPreviewPath sets the "preview_path" field.
+func (m *HighlightClipMutation) SetPreviewPath(s string) {
+	m.preview_path = &s
+}
+
+// PreviewPath returns the value of the "preview_path" field in the mutation.
+func (m *HighlightClipMutation) PreviewPath() (r string, exists bool) {
+	v := m.preview_path
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPreviewPath returns the old "preview_path" field's value of the HighlightClip entity.
+// If the HighlightClip object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *HighlightClipMutation) OldPreviewPath(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPreviewPath is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPreviewPath requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPreviewPath: %w", err)
+	}
+	return oldValue.PreviewPath, nil
+}
+
+// ClearPreviewPath clears the value of the "preview_path" field.
+func (m *HighlightClipMutation) ClearPreviewPath() {
+	m.preview_path = nil
+	m.clearedFields[highlightclip.FieldPreviewPath] = struct{}{}
+}
+
+// PreviewPathCleared returns if the "preview_path" field was cleared in this mutation.
+func (m *HighlightClipMutation) PreviewPathCleared() bool {
+	_, ok := m.clearedFields[highlightclip.FieldPreviewPath]
+	return ok
+}
+
+// ResetPreviewPath resets all changes to the "preview_path" field.
+func (m *HighlightClipMutation) ResetPreviewPath() {
+	m.preview_path = nil
+	delete(m.clearedFields, highlightclip.FieldPreviewPath)
+}
+
+// SetPreviewChecksum sets the "preview_checksum" field.
+func (m *HighlightClipMutation) SetPreviewChecksum(s string) {
+	m.preview_checksum = &s
+}
+
+// PreviewChecksum returns the value of the "preview_checksum" field in the mutation.
+func (m *HighlightClipMutation) PreviewChecksum() (r string, exists bool) {
+	v := m.preview_checksum
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPreviewChecksum returns the old "preview_checksum" field's value of the HighlightClip entity.
+// If the HighlightClip object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *HighlightClipMutation) OldPreviewChecksum(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPreviewChecksum is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPreviewChecksum requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPreviewChecksum: %w", err)
+	}
+	return oldValue.PreviewChecksum, nil
+}
+
+// ClearPreviewChecksum clears the value of the "preview_checksum" field.
+func (m *HighlightClipMutation) ClearPreviewChecksum() {
+	m.preview_checksum = nil
+	m.clearedFields[highlightclip.FieldPreviewChecksum] = struct{}{}
+}
+
+// PreviewChecksumCleared returns if the "preview_checksum" field was cleared in this mutation.
+func (m *HighlightClipMutation) PreviewChecksumCleared() bool {
+	_, ok := m.clearedFields[highlightclip.FieldPreviewChecksum]
+	return ok
+}
+
+// ResetPreviewChecksum resets all changes to the "preview_checksum" field.
+func (m *HighlightClipMutation) ResetPreviewChecksum() {
+	m.preview_checksum = nil
+	delete(m.clearedFields, highlightclip.FieldPreviewChecksum)
+}
+
+// SetArtifactReadyAt sets the "artifact_ready_at" field.
+func (m *HighlightClipMutation) SetArtifactReadyAt(t time.Time) {
+	m.artifact_ready_at = &t
+}
+
+// ArtifactReadyAt returns the value of the "artifact_ready_at" field in the mutation.
+func (m *HighlightClipMutation) ArtifactReadyAt() (r time.Time, exists bool) {
+	v := m.artifact_ready_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldArtifactReadyAt returns the old "artifact_ready_at" field's value of the HighlightClip entity.
+// If the HighlightClip object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *HighlightClipMutation) OldArtifactReadyAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldArtifactReadyAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldArtifactReadyAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldArtifactReadyAt: %w", err)
+	}
+	return oldValue.ArtifactReadyAt, nil
+}
+
+// ClearArtifactReadyAt clears the value of the "artifact_ready_at" field.
+func (m *HighlightClipMutation) ClearArtifactReadyAt() {
+	m.artifact_ready_at = nil
+	m.clearedFields[highlightclip.FieldArtifactReadyAt] = struct{}{}
+}
+
+// ArtifactReadyAtCleared returns if the "artifact_ready_at" field was cleared in this mutation.
+func (m *HighlightClipMutation) ArtifactReadyAtCleared() bool {
+	_, ok := m.clearedFields[highlightclip.FieldArtifactReadyAt]
+	return ok
+}
+
+// ResetArtifactReadyAt resets all changes to the "artifact_ready_at" field.
+func (m *HighlightClipMutation) ResetArtifactReadyAt() {
+	m.artifact_ready_at = nil
+	delete(m.clearedFields, highlightclip.FieldArtifactReadyAt)
+}
+
 // SetCompletedAt sets the "completed_at" field.
 func (m *HighlightClipMutation) SetCompletedAt(t time.Time) {
 	m.completed_at = &t
@@ -1970,7 +2120,7 @@ func (m *HighlightClipMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *HighlightClipMutation) Fields() []string {
-	fields := make([]string, 0, 18)
+	fields := make([]string, 0, 21)
 	if m.highlight_index != nil {
 		fields = append(fields, highlightclip.FieldHighlightIndex)
 	}
@@ -2015,6 +2165,15 @@ func (m *HighlightClipMutation) Fields() []string {
 	}
 	if m.model_payload != nil {
 		fields = append(fields, highlightclip.FieldModelPayload)
+	}
+	if m.preview_path != nil {
+		fields = append(fields, highlightclip.FieldPreviewPath)
+	}
+	if m.preview_checksum != nil {
+		fields = append(fields, highlightclip.FieldPreviewChecksum)
+	}
+	if m.artifact_ready_at != nil {
+		fields = append(fields, highlightclip.FieldArtifactReadyAt)
 	}
 	if m.completed_at != nil {
 		fields = append(fields, highlightclip.FieldCompletedAt)
@@ -2063,6 +2222,12 @@ func (m *HighlightClipMutation) Field(name string) (ent.Value, bool) {
 		return m.Score()
 	case highlightclip.FieldModelPayload:
 		return m.ModelPayload()
+	case highlightclip.FieldPreviewPath:
+		return m.PreviewPath()
+	case highlightclip.FieldPreviewChecksum:
+		return m.PreviewChecksum()
+	case highlightclip.FieldArtifactReadyAt:
+		return m.ArtifactReadyAt()
 	case highlightclip.FieldCompletedAt:
 		return m.CompletedAt()
 	case highlightclip.FieldCreatedAt:
@@ -2108,6 +2273,12 @@ func (m *HighlightClipMutation) OldField(ctx context.Context, name string) (ent.
 		return m.OldScore(ctx)
 	case highlightclip.FieldModelPayload:
 		return m.OldModelPayload(ctx)
+	case highlightclip.FieldPreviewPath:
+		return m.OldPreviewPath(ctx)
+	case highlightclip.FieldPreviewChecksum:
+		return m.OldPreviewChecksum(ctx)
+	case highlightclip.FieldArtifactReadyAt:
+		return m.OldArtifactReadyAt(ctx)
 	case highlightclip.FieldCompletedAt:
 		return m.OldCompletedAt(ctx)
 	case highlightclip.FieldCreatedAt:
@@ -2227,6 +2398,27 @@ func (m *HighlightClipMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetModelPayload(v)
+		return nil
+	case highlightclip.FieldPreviewPath:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPreviewPath(v)
+		return nil
+	case highlightclip.FieldPreviewChecksum:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPreviewChecksum(v)
+		return nil
+	case highlightclip.FieldArtifactReadyAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetArtifactReadyAt(v)
 		return nil
 	case highlightclip.FieldCompletedAt:
 		v, ok := value.(time.Time)
@@ -2366,6 +2558,15 @@ func (m *HighlightClipMutation) ClearedFields() []string {
 	if m.FieldCleared(highlightclip.FieldModelPayload) {
 		fields = append(fields, highlightclip.FieldModelPayload)
 	}
+	if m.FieldCleared(highlightclip.FieldPreviewPath) {
+		fields = append(fields, highlightclip.FieldPreviewPath)
+	}
+	if m.FieldCleared(highlightclip.FieldPreviewChecksum) {
+		fields = append(fields, highlightclip.FieldPreviewChecksum)
+	}
+	if m.FieldCleared(highlightclip.FieldArtifactReadyAt) {
+		fields = append(fields, highlightclip.FieldArtifactReadyAt)
+	}
 	if m.FieldCleared(highlightclip.FieldCompletedAt) {
 		fields = append(fields, highlightclip.FieldCompletedAt)
 	}
@@ -2394,6 +2595,15 @@ func (m *HighlightClipMutation) ClearField(name string) error {
 		return nil
 	case highlightclip.FieldModelPayload:
 		m.ClearModelPayload()
+		return nil
+	case highlightclip.FieldPreviewPath:
+		m.ClearPreviewPath()
+		return nil
+	case highlightclip.FieldPreviewChecksum:
+		m.ClearPreviewChecksum()
+		return nil
+	case highlightclip.FieldArtifactReadyAt:
+		m.ClearArtifactReadyAt()
 		return nil
 	case highlightclip.FieldCompletedAt:
 		m.ClearCompletedAt()
@@ -2450,6 +2660,15 @@ func (m *HighlightClipMutation) ResetField(name string) error {
 		return nil
 	case highlightclip.FieldModelPayload:
 		m.ResetModelPayload()
+		return nil
+	case highlightclip.FieldPreviewPath:
+		m.ResetPreviewPath()
+		return nil
+	case highlightclip.FieldPreviewChecksum:
+		m.ResetPreviewChecksum()
+		return nil
+	case highlightclip.FieldArtifactReadyAt:
+		m.ResetArtifactReadyAt()
 		return nil
 	case highlightclip.FieldCompletedAt:
 		m.ResetCompletedAt()
@@ -3598,21 +3817,25 @@ func (m *LarkBitableRecordMutation) ResetEdge(name string) error {
 // LarkMessageMutation represents an operation that mutates the LarkMessage nodes in the graph.
 type LarkMessageMutation struct {
 	config
-	op            Op
-	typ           string
-	id            *int
-	message_id    *string
-	chat_id       *string
-	card_id       *string
-	card_payload  *map[string]interface{}
-	created_at    *time.Time
-	updated_at    *time.Time
-	clearedFields map[string]struct{}
-	match         *string
-	clearedmatch  bool
-	done          bool
-	oldValue      func(context.Context) (*LarkMessage, error)
-	predicates    []predicate.LarkMessage
+	op                       Op
+	typ                      string
+	id                       *int
+	message_id               *string
+	chat_id                  *string
+	card_id                  *string
+	card_payload             *map[string]interface{}
+	card_sequence            *int64
+	addcard_sequence         *int64
+	last_delivery_error      *string
+	last_delivery_attempt_at *time.Time
+	created_at               *time.Time
+	updated_at               *time.Time
+	clearedFields            map[string]struct{}
+	match                    *string
+	clearedmatch             bool
+	done                     bool
+	oldValue                 func(context.Context) (*LarkMessage, error)
+	predicates               []predicate.LarkMessage
 }
 
 var _ ent.Mutation = (*LarkMessageMutation)(nil)
@@ -3896,6 +4119,160 @@ func (m *LarkMessageMutation) ResetCardPayload() {
 	delete(m.clearedFields, larkmessage.FieldCardPayload)
 }
 
+// SetCardSequence sets the "card_sequence" field.
+func (m *LarkMessageMutation) SetCardSequence(i int64) {
+	m.card_sequence = &i
+	m.addcard_sequence = nil
+}
+
+// CardSequence returns the value of the "card_sequence" field in the mutation.
+func (m *LarkMessageMutation) CardSequence() (r int64, exists bool) {
+	v := m.card_sequence
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCardSequence returns the old "card_sequence" field's value of the LarkMessage entity.
+// If the LarkMessage object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LarkMessageMutation) OldCardSequence(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCardSequence is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCardSequence requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCardSequence: %w", err)
+	}
+	return oldValue.CardSequence, nil
+}
+
+// AddCardSequence adds i to the "card_sequence" field.
+func (m *LarkMessageMutation) AddCardSequence(i int64) {
+	if m.addcard_sequence != nil {
+		*m.addcard_sequence += i
+	} else {
+		m.addcard_sequence = &i
+	}
+}
+
+// AddedCardSequence returns the value that was added to the "card_sequence" field in this mutation.
+func (m *LarkMessageMutation) AddedCardSequence() (r int64, exists bool) {
+	v := m.addcard_sequence
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetCardSequence resets all changes to the "card_sequence" field.
+func (m *LarkMessageMutation) ResetCardSequence() {
+	m.card_sequence = nil
+	m.addcard_sequence = nil
+}
+
+// SetLastDeliveryError sets the "last_delivery_error" field.
+func (m *LarkMessageMutation) SetLastDeliveryError(s string) {
+	m.last_delivery_error = &s
+}
+
+// LastDeliveryError returns the value of the "last_delivery_error" field in the mutation.
+func (m *LarkMessageMutation) LastDeliveryError() (r string, exists bool) {
+	v := m.last_delivery_error
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLastDeliveryError returns the old "last_delivery_error" field's value of the LarkMessage entity.
+// If the LarkMessage object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LarkMessageMutation) OldLastDeliveryError(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLastDeliveryError is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLastDeliveryError requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLastDeliveryError: %w", err)
+	}
+	return oldValue.LastDeliveryError, nil
+}
+
+// ClearLastDeliveryError clears the value of the "last_delivery_error" field.
+func (m *LarkMessageMutation) ClearLastDeliveryError() {
+	m.last_delivery_error = nil
+	m.clearedFields[larkmessage.FieldLastDeliveryError] = struct{}{}
+}
+
+// LastDeliveryErrorCleared returns if the "last_delivery_error" field was cleared in this mutation.
+func (m *LarkMessageMutation) LastDeliveryErrorCleared() bool {
+	_, ok := m.clearedFields[larkmessage.FieldLastDeliveryError]
+	return ok
+}
+
+// ResetLastDeliveryError resets all changes to the "last_delivery_error" field.
+func (m *LarkMessageMutation) ResetLastDeliveryError() {
+	m.last_delivery_error = nil
+	delete(m.clearedFields, larkmessage.FieldLastDeliveryError)
+}
+
+// SetLastDeliveryAttemptAt sets the "last_delivery_attempt_at" field.
+func (m *LarkMessageMutation) SetLastDeliveryAttemptAt(t time.Time) {
+	m.last_delivery_attempt_at = &t
+}
+
+// LastDeliveryAttemptAt returns the value of the "last_delivery_attempt_at" field in the mutation.
+func (m *LarkMessageMutation) LastDeliveryAttemptAt() (r time.Time, exists bool) {
+	v := m.last_delivery_attempt_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLastDeliveryAttemptAt returns the old "last_delivery_attempt_at" field's value of the LarkMessage entity.
+// If the LarkMessage object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LarkMessageMutation) OldLastDeliveryAttemptAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLastDeliveryAttemptAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLastDeliveryAttemptAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLastDeliveryAttemptAt: %w", err)
+	}
+	return oldValue.LastDeliveryAttemptAt, nil
+}
+
+// ClearLastDeliveryAttemptAt clears the value of the "last_delivery_attempt_at" field.
+func (m *LarkMessageMutation) ClearLastDeliveryAttemptAt() {
+	m.last_delivery_attempt_at = nil
+	m.clearedFields[larkmessage.FieldLastDeliveryAttemptAt] = struct{}{}
+}
+
+// LastDeliveryAttemptAtCleared returns if the "last_delivery_attempt_at" field was cleared in this mutation.
+func (m *LarkMessageMutation) LastDeliveryAttemptAtCleared() bool {
+	_, ok := m.clearedFields[larkmessage.FieldLastDeliveryAttemptAt]
+	return ok
+}
+
+// ResetLastDeliveryAttemptAt resets all changes to the "last_delivery_attempt_at" field.
+func (m *LarkMessageMutation) ResetLastDeliveryAttemptAt() {
+	m.last_delivery_attempt_at = nil
+	delete(m.clearedFields, larkmessage.FieldLastDeliveryAttemptAt)
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (m *LarkMessageMutation) SetCreatedAt(t time.Time) {
 	m.created_at = &t
@@ -4041,7 +4418,7 @@ func (m *LarkMessageMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *LarkMessageMutation) Fields() []string {
-	fields := make([]string, 0, 6)
+	fields := make([]string, 0, 9)
 	if m.message_id != nil {
 		fields = append(fields, larkmessage.FieldMessageID)
 	}
@@ -4053,6 +4430,15 @@ func (m *LarkMessageMutation) Fields() []string {
 	}
 	if m.card_payload != nil {
 		fields = append(fields, larkmessage.FieldCardPayload)
+	}
+	if m.card_sequence != nil {
+		fields = append(fields, larkmessage.FieldCardSequence)
+	}
+	if m.last_delivery_error != nil {
+		fields = append(fields, larkmessage.FieldLastDeliveryError)
+	}
+	if m.last_delivery_attempt_at != nil {
+		fields = append(fields, larkmessage.FieldLastDeliveryAttemptAt)
 	}
 	if m.created_at != nil {
 		fields = append(fields, larkmessage.FieldCreatedAt)
@@ -4076,6 +4462,12 @@ func (m *LarkMessageMutation) Field(name string) (ent.Value, bool) {
 		return m.CardID()
 	case larkmessage.FieldCardPayload:
 		return m.CardPayload()
+	case larkmessage.FieldCardSequence:
+		return m.CardSequence()
+	case larkmessage.FieldLastDeliveryError:
+		return m.LastDeliveryError()
+	case larkmessage.FieldLastDeliveryAttemptAt:
+		return m.LastDeliveryAttemptAt()
 	case larkmessage.FieldCreatedAt:
 		return m.CreatedAt()
 	case larkmessage.FieldUpdatedAt:
@@ -4097,6 +4489,12 @@ func (m *LarkMessageMutation) OldField(ctx context.Context, name string) (ent.Va
 		return m.OldCardID(ctx)
 	case larkmessage.FieldCardPayload:
 		return m.OldCardPayload(ctx)
+	case larkmessage.FieldCardSequence:
+		return m.OldCardSequence(ctx)
+	case larkmessage.FieldLastDeliveryError:
+		return m.OldLastDeliveryError(ctx)
+	case larkmessage.FieldLastDeliveryAttemptAt:
+		return m.OldLastDeliveryAttemptAt(ctx)
 	case larkmessage.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	case larkmessage.FieldUpdatedAt:
@@ -4138,6 +4536,27 @@ func (m *LarkMessageMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetCardPayload(v)
 		return nil
+	case larkmessage.FieldCardSequence:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCardSequence(v)
+		return nil
+	case larkmessage.FieldLastDeliveryError:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLastDeliveryError(v)
+		return nil
+	case larkmessage.FieldLastDeliveryAttemptAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLastDeliveryAttemptAt(v)
+		return nil
 	case larkmessage.FieldCreatedAt:
 		v, ok := value.(time.Time)
 		if !ok {
@@ -4159,13 +4578,21 @@ func (m *LarkMessageMutation) SetField(name string, value ent.Value) error {
 // AddedFields returns all numeric fields that were incremented/decremented during
 // this mutation.
 func (m *LarkMessageMutation) AddedFields() []string {
-	return nil
+	var fields []string
+	if m.addcard_sequence != nil {
+		fields = append(fields, larkmessage.FieldCardSequence)
+	}
+	return fields
 }
 
 // AddedField returns the numeric value that was incremented/decremented on a field
 // with the given name. The second boolean return value indicates that this field
 // was not set, or was not defined in the schema.
 func (m *LarkMessageMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case larkmessage.FieldCardSequence:
+		return m.AddedCardSequence()
+	}
 	return nil, false
 }
 
@@ -4174,6 +4601,13 @@ func (m *LarkMessageMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *LarkMessageMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case larkmessage.FieldCardSequence:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddCardSequence(v)
+		return nil
 	}
 	return fmt.Errorf("unknown LarkMessage numeric field %s", name)
 }
@@ -4190,6 +4624,12 @@ func (m *LarkMessageMutation) ClearedFields() []string {
 	}
 	if m.FieldCleared(larkmessage.FieldCardPayload) {
 		fields = append(fields, larkmessage.FieldCardPayload)
+	}
+	if m.FieldCleared(larkmessage.FieldLastDeliveryError) {
+		fields = append(fields, larkmessage.FieldLastDeliveryError)
+	}
+	if m.FieldCleared(larkmessage.FieldLastDeliveryAttemptAt) {
+		fields = append(fields, larkmessage.FieldLastDeliveryAttemptAt)
 	}
 	return fields
 }
@@ -4214,6 +4654,12 @@ func (m *LarkMessageMutation) ClearField(name string) error {
 	case larkmessage.FieldCardPayload:
 		m.ClearCardPayload()
 		return nil
+	case larkmessage.FieldLastDeliveryError:
+		m.ClearLastDeliveryError()
+		return nil
+	case larkmessage.FieldLastDeliveryAttemptAt:
+		m.ClearLastDeliveryAttemptAt()
+		return nil
 	}
 	return fmt.Errorf("unknown LarkMessage nullable field %s", name)
 }
@@ -4233,6 +4679,15 @@ func (m *LarkMessageMutation) ResetField(name string) error {
 		return nil
 	case larkmessage.FieldCardPayload:
 		m.ResetCardPayload()
+		return nil
+	case larkmessage.FieldCardSequence:
+		m.ResetCardSequence()
+		return nil
+	case larkmessage.FieldLastDeliveryError:
+		m.ResetLastDeliveryError()
+		return nil
+	case larkmessage.FieldLastDeliveryAttemptAt:
+		m.ResetLastDeliveryAttemptAt()
 		return nil
 	case larkmessage.FieldCreatedAt:
 		m.ResetCreatedAt()
@@ -6059,6 +6514,10 @@ type MatchRoundMutation struct {
 	workflow_name               *string
 	workflow_uid                *string
 	workflow_phase              *string
+	settlement_status           *string
+	settlement_image_path       *string
+	settlement_image_checksum   *string
+	settlement_ready_at         *time.Time
 	started_at                  *time.Time
 	ended_at                    *time.Time
 	created_at                  *time.Time
@@ -6463,6 +6922,189 @@ func (m *MatchRoundMutation) ResetWorkflowPhase() {
 	delete(m.clearedFields, matchround.FieldWorkflowPhase)
 }
 
+// SetSettlementStatus sets the "settlement_status" field.
+func (m *MatchRoundMutation) SetSettlementStatus(s string) {
+	m.settlement_status = &s
+}
+
+// SettlementStatus returns the value of the "settlement_status" field in the mutation.
+func (m *MatchRoundMutation) SettlementStatus() (r string, exists bool) {
+	v := m.settlement_status
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSettlementStatus returns the old "settlement_status" field's value of the MatchRound entity.
+// If the MatchRound object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MatchRoundMutation) OldSettlementStatus(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSettlementStatus is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSettlementStatus requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSettlementStatus: %w", err)
+	}
+	return oldValue.SettlementStatus, nil
+}
+
+// ResetSettlementStatus resets all changes to the "settlement_status" field.
+func (m *MatchRoundMutation) ResetSettlementStatus() {
+	m.settlement_status = nil
+}
+
+// SetSettlementImagePath sets the "settlement_image_path" field.
+func (m *MatchRoundMutation) SetSettlementImagePath(s string) {
+	m.settlement_image_path = &s
+}
+
+// SettlementImagePath returns the value of the "settlement_image_path" field in the mutation.
+func (m *MatchRoundMutation) SettlementImagePath() (r string, exists bool) {
+	v := m.settlement_image_path
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSettlementImagePath returns the old "settlement_image_path" field's value of the MatchRound entity.
+// If the MatchRound object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MatchRoundMutation) OldSettlementImagePath(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSettlementImagePath is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSettlementImagePath requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSettlementImagePath: %w", err)
+	}
+	return oldValue.SettlementImagePath, nil
+}
+
+// ClearSettlementImagePath clears the value of the "settlement_image_path" field.
+func (m *MatchRoundMutation) ClearSettlementImagePath() {
+	m.settlement_image_path = nil
+	m.clearedFields[matchround.FieldSettlementImagePath] = struct{}{}
+}
+
+// SettlementImagePathCleared returns if the "settlement_image_path" field was cleared in this mutation.
+func (m *MatchRoundMutation) SettlementImagePathCleared() bool {
+	_, ok := m.clearedFields[matchround.FieldSettlementImagePath]
+	return ok
+}
+
+// ResetSettlementImagePath resets all changes to the "settlement_image_path" field.
+func (m *MatchRoundMutation) ResetSettlementImagePath() {
+	m.settlement_image_path = nil
+	delete(m.clearedFields, matchround.FieldSettlementImagePath)
+}
+
+// SetSettlementImageChecksum sets the "settlement_image_checksum" field.
+func (m *MatchRoundMutation) SetSettlementImageChecksum(s string) {
+	m.settlement_image_checksum = &s
+}
+
+// SettlementImageChecksum returns the value of the "settlement_image_checksum" field in the mutation.
+func (m *MatchRoundMutation) SettlementImageChecksum() (r string, exists bool) {
+	v := m.settlement_image_checksum
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSettlementImageChecksum returns the old "settlement_image_checksum" field's value of the MatchRound entity.
+// If the MatchRound object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MatchRoundMutation) OldSettlementImageChecksum(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSettlementImageChecksum is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSettlementImageChecksum requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSettlementImageChecksum: %w", err)
+	}
+	return oldValue.SettlementImageChecksum, nil
+}
+
+// ClearSettlementImageChecksum clears the value of the "settlement_image_checksum" field.
+func (m *MatchRoundMutation) ClearSettlementImageChecksum() {
+	m.settlement_image_checksum = nil
+	m.clearedFields[matchround.FieldSettlementImageChecksum] = struct{}{}
+}
+
+// SettlementImageChecksumCleared returns if the "settlement_image_checksum" field was cleared in this mutation.
+func (m *MatchRoundMutation) SettlementImageChecksumCleared() bool {
+	_, ok := m.clearedFields[matchround.FieldSettlementImageChecksum]
+	return ok
+}
+
+// ResetSettlementImageChecksum resets all changes to the "settlement_image_checksum" field.
+func (m *MatchRoundMutation) ResetSettlementImageChecksum() {
+	m.settlement_image_checksum = nil
+	delete(m.clearedFields, matchround.FieldSettlementImageChecksum)
+}
+
+// SetSettlementReadyAt sets the "settlement_ready_at" field.
+func (m *MatchRoundMutation) SetSettlementReadyAt(t time.Time) {
+	m.settlement_ready_at = &t
+}
+
+// SettlementReadyAt returns the value of the "settlement_ready_at" field in the mutation.
+func (m *MatchRoundMutation) SettlementReadyAt() (r time.Time, exists bool) {
+	v := m.settlement_ready_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSettlementReadyAt returns the old "settlement_ready_at" field's value of the MatchRound entity.
+// If the MatchRound object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MatchRoundMutation) OldSettlementReadyAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSettlementReadyAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSettlementReadyAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSettlementReadyAt: %w", err)
+	}
+	return oldValue.SettlementReadyAt, nil
+}
+
+// ClearSettlementReadyAt clears the value of the "settlement_ready_at" field.
+func (m *MatchRoundMutation) ClearSettlementReadyAt() {
+	m.settlement_ready_at = nil
+	m.clearedFields[matchround.FieldSettlementReadyAt] = struct{}{}
+}
+
+// SettlementReadyAtCleared returns if the "settlement_ready_at" field was cleared in this mutation.
+func (m *MatchRoundMutation) SettlementReadyAtCleared() bool {
+	_, ok := m.clearedFields[matchround.FieldSettlementReadyAt]
+	return ok
+}
+
+// ResetSettlementReadyAt resets all changes to the "settlement_ready_at" field.
+func (m *MatchRoundMutation) ResetSettlementReadyAt() {
+	m.settlement_ready_at = nil
+	delete(m.clearedFields, matchround.FieldSettlementReadyAt)
+}
+
 // SetStartedAt sets the "started_at" field.
 func (m *MatchRoundMutation) SetStartedAt(t time.Time) {
 	m.started_at = &t
@@ -6801,7 +7443,7 @@ func (m *MatchRoundMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *MatchRoundMutation) Fields() []string {
-	fields := make([]string, 0, 10)
+	fields := make([]string, 0, 14)
 	if m.round_no != nil {
 		fields = append(fields, matchround.FieldRoundNo)
 	}
@@ -6819,6 +7461,18 @@ func (m *MatchRoundMutation) Fields() []string {
 	}
 	if m.workflow_phase != nil {
 		fields = append(fields, matchround.FieldWorkflowPhase)
+	}
+	if m.settlement_status != nil {
+		fields = append(fields, matchround.FieldSettlementStatus)
+	}
+	if m.settlement_image_path != nil {
+		fields = append(fields, matchround.FieldSettlementImagePath)
+	}
+	if m.settlement_image_checksum != nil {
+		fields = append(fields, matchround.FieldSettlementImageChecksum)
+	}
+	if m.settlement_ready_at != nil {
+		fields = append(fields, matchround.FieldSettlementReadyAt)
 	}
 	if m.started_at != nil {
 		fields = append(fields, matchround.FieldStartedAt)
@@ -6852,6 +7506,14 @@ func (m *MatchRoundMutation) Field(name string) (ent.Value, bool) {
 		return m.WorkflowUID()
 	case matchround.FieldWorkflowPhase:
 		return m.WorkflowPhase()
+	case matchround.FieldSettlementStatus:
+		return m.SettlementStatus()
+	case matchround.FieldSettlementImagePath:
+		return m.SettlementImagePath()
+	case matchround.FieldSettlementImageChecksum:
+		return m.SettlementImageChecksum()
+	case matchround.FieldSettlementReadyAt:
+		return m.SettlementReadyAt()
 	case matchround.FieldStartedAt:
 		return m.StartedAt()
 	case matchround.FieldEndedAt:
@@ -6881,6 +7543,14 @@ func (m *MatchRoundMutation) OldField(ctx context.Context, name string) (ent.Val
 		return m.OldWorkflowUID(ctx)
 	case matchround.FieldWorkflowPhase:
 		return m.OldWorkflowPhase(ctx)
+	case matchround.FieldSettlementStatus:
+		return m.OldSettlementStatus(ctx)
+	case matchround.FieldSettlementImagePath:
+		return m.OldSettlementImagePath(ctx)
+	case matchround.FieldSettlementImageChecksum:
+		return m.OldSettlementImageChecksum(ctx)
+	case matchround.FieldSettlementReadyAt:
+		return m.OldSettlementReadyAt(ctx)
 	case matchround.FieldStartedAt:
 		return m.OldStartedAt(ctx)
 	case matchround.FieldEndedAt:
@@ -6939,6 +7609,34 @@ func (m *MatchRoundMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetWorkflowPhase(v)
+		return nil
+	case matchround.FieldSettlementStatus:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSettlementStatus(v)
+		return nil
+	case matchround.FieldSettlementImagePath:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSettlementImagePath(v)
+		return nil
+	case matchround.FieldSettlementImageChecksum:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSettlementImageChecksum(v)
+		return nil
+	case matchround.FieldSettlementReadyAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSettlementReadyAt(v)
 		return nil
 	case matchround.FieldStartedAt:
 		v, ok := value.(time.Time)
@@ -7025,6 +7723,15 @@ func (m *MatchRoundMutation) ClearedFields() []string {
 	if m.FieldCleared(matchround.FieldWorkflowPhase) {
 		fields = append(fields, matchround.FieldWorkflowPhase)
 	}
+	if m.FieldCleared(matchround.FieldSettlementImagePath) {
+		fields = append(fields, matchround.FieldSettlementImagePath)
+	}
+	if m.FieldCleared(matchround.FieldSettlementImageChecksum) {
+		fields = append(fields, matchround.FieldSettlementImageChecksum)
+	}
+	if m.FieldCleared(matchround.FieldSettlementReadyAt) {
+		fields = append(fields, matchround.FieldSettlementReadyAt)
+	}
 	if m.FieldCleared(matchround.FieldEndedAt) {
 		fields = append(fields, matchround.FieldEndedAt)
 	}
@@ -7054,6 +7761,15 @@ func (m *MatchRoundMutation) ClearField(name string) error {
 	case matchround.FieldWorkflowPhase:
 		m.ClearWorkflowPhase()
 		return nil
+	case matchround.FieldSettlementImagePath:
+		m.ClearSettlementImagePath()
+		return nil
+	case matchround.FieldSettlementImageChecksum:
+		m.ClearSettlementImageChecksum()
+		return nil
+	case matchround.FieldSettlementReadyAt:
+		m.ClearSettlementReadyAt()
+		return nil
 	case matchround.FieldEndedAt:
 		m.ClearEndedAt()
 		return nil
@@ -7082,6 +7798,18 @@ func (m *MatchRoundMutation) ResetField(name string) error {
 		return nil
 	case matchround.FieldWorkflowPhase:
 		m.ResetWorkflowPhase()
+		return nil
+	case matchround.FieldSettlementStatus:
+		m.ResetSettlementStatus()
+		return nil
+	case matchround.FieldSettlementImagePath:
+		m.ResetSettlementImagePath()
+		return nil
+	case matchround.FieldSettlementImageChecksum:
+		m.ResetSettlementImageChecksum()
+		return nil
+	case matchround.FieldSettlementReadyAt:
+		m.ResetSettlementReadyAt()
 		return nil
 	case matchround.FieldStartedAt:
 		m.ResetStartedAt()

@@ -9,6 +9,7 @@ import (
 	"scutbot.cn/web/rm-monitor/manifest-job/internal/logic"
 	"scutbot.cn/web/rm-monitor/pkg/app"
 	"scutbot.cn/web/rm-monitor/pkg/db"
+	"scutbot.cn/web/rm-monitor/pkg/jobcontract"
 	"scutbot.cn/web/rm-monitor/pkg/logx"
 	"scutbot.cn/web/rm-monitor/pkg/redisx"
 )
@@ -26,20 +27,20 @@ func main() {
 	flag.Parse()
 	if *matchID == "" {
 		logx.Error("match id is required")
-		os.Exit(1)
+		os.Exit(jobcontract.ExitContract)
 	}
 	var c config.Config
 	app.MustLoadConfig(*configFile, &c)
 	client, err := db.Open(context.Background(), c.PostgresConf)
 	if err != nil {
 		logx.Error(err)
-		os.Exit(1)
+		os.Exit(jobcontract.ExitTemporary)
 	}
 	defer client.Close()
 	redisClient := redisx.MustNew(c.RedisConf.WithDefaults())
 	defer redisClient.Close()
 	if err := logic.WriteMatchReadme(context.Background(), client, redisClient, c.RecordConf, c.DifyConf, c.ManifestConf, c.PostgresConf.DSN, *matchID); err != nil {
 		logx.Error(err)
-		os.Exit(1)
+		os.Exit(jobcontract.ExitCode(err))
 	}
 }

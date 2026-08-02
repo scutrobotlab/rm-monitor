@@ -61,6 +61,48 @@ func (_c *LarkMessageCreate) SetCardPayload(v map[string]interface{}) *LarkMessa
 	return _c
 }
 
+// SetCardSequence sets the "card_sequence" field.
+func (_c *LarkMessageCreate) SetCardSequence(v int64) *LarkMessageCreate {
+	_c.mutation.SetCardSequence(v)
+	return _c
+}
+
+// SetNillableCardSequence sets the "card_sequence" field if the given value is not nil.
+func (_c *LarkMessageCreate) SetNillableCardSequence(v *int64) *LarkMessageCreate {
+	if v != nil {
+		_c.SetCardSequence(*v)
+	}
+	return _c
+}
+
+// SetLastDeliveryError sets the "last_delivery_error" field.
+func (_c *LarkMessageCreate) SetLastDeliveryError(v string) *LarkMessageCreate {
+	_c.mutation.SetLastDeliveryError(v)
+	return _c
+}
+
+// SetNillableLastDeliveryError sets the "last_delivery_error" field if the given value is not nil.
+func (_c *LarkMessageCreate) SetNillableLastDeliveryError(v *string) *LarkMessageCreate {
+	if v != nil {
+		_c.SetLastDeliveryError(*v)
+	}
+	return _c
+}
+
+// SetLastDeliveryAttemptAt sets the "last_delivery_attempt_at" field.
+func (_c *LarkMessageCreate) SetLastDeliveryAttemptAt(v time.Time) *LarkMessageCreate {
+	_c.mutation.SetLastDeliveryAttemptAt(v)
+	return _c
+}
+
+// SetNillableLastDeliveryAttemptAt sets the "last_delivery_attempt_at" field if the given value is not nil.
+func (_c *LarkMessageCreate) SetNillableLastDeliveryAttemptAt(v *time.Time) *LarkMessageCreate {
+	if v != nil {
+		_c.SetLastDeliveryAttemptAt(*v)
+	}
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *LarkMessageCreate) SetCreatedAt(v time.Time) *LarkMessageCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -135,6 +177,10 @@ func (_c *LarkMessageCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (_c *LarkMessageCreate) defaults() {
+	if _, ok := _c.mutation.CardSequence(); !ok {
+		v := larkmessage.DefaultCardSequence
+		_c.mutation.SetCardSequence(v)
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		v := larkmessage.DefaultCreatedAt()
 		_c.mutation.SetCreatedAt(v)
@@ -149,6 +195,9 @@ func (_c *LarkMessageCreate) defaults() {
 func (_c *LarkMessageCreate) check() error {
 	if _, ok := _c.mutation.MessageID(); !ok {
 		return &ValidationError{Name: "message_id", err: errors.New(`ent: missing required field "LarkMessage.message_id"`)}
+	}
+	if _, ok := _c.mutation.CardSequence(); !ok {
+		return &ValidationError{Name: "card_sequence", err: errors.New(`ent: missing required field "LarkMessage.card_sequence"`)}
 	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "LarkMessage.created_at"`)}
@@ -200,6 +249,18 @@ func (_c *LarkMessageCreate) createSpec() (*LarkMessage, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.CardPayload(); ok {
 		_spec.SetField(larkmessage.FieldCardPayload, field.TypeJSON, value)
 		_node.CardPayload = value
+	}
+	if value, ok := _c.mutation.CardSequence(); ok {
+		_spec.SetField(larkmessage.FieldCardSequence, field.TypeInt64, value)
+		_node.CardSequence = value
+	}
+	if value, ok := _c.mutation.LastDeliveryError(); ok {
+		_spec.SetField(larkmessage.FieldLastDeliveryError, field.TypeString, value)
+		_node.LastDeliveryError = &value
+	}
+	if value, ok := _c.mutation.LastDeliveryAttemptAt(); ok {
+		_spec.SetField(larkmessage.FieldLastDeliveryAttemptAt, field.TypeTime, value)
+		_node.LastDeliveryAttemptAt = &value
 	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(larkmessage.FieldCreatedAt, field.TypeTime, value)

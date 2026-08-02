@@ -18,6 +18,7 @@ import (
 	"scutbot.cn/web/rm-monitor/pkg/difyworkflow"
 	"scutbot.cn/web/rm-monitor/pkg/highlight"
 	"scutbot.cn/web/rm-monitor/pkg/jobcontract"
+	"scutbot.cn/web/rm-monitor/pkg/logx"
 	"scutbot.cn/web/rm-monitor/pkg/pathfmt"
 	"scutbot.cn/web/rm-monitor/pkg/redisx"
 )
@@ -62,25 +63,37 @@ func WriteMatchReadme(ctx context.Context, client *ent.Client, redisClient *redi
 	if err := os.MkdirAll(fullDir, 0o755); err != nil {
 		return err
 	}
-	if matchComplete(m) && (m.Report == nil || strings.TrimSpace(*m.Report) == "") {
-		report, reportJSON, err := generateMatchReport(ctx, difyConf, manifestConf, m, red, blue, fullDir)
-		if err != nil {
-			return errors.Wrapf(err, "generate match report %s", m.ID)
+	lease, err := redisx.AcquireLease(ctx, redisClient, "rm-monitor:manifest:"+matchID, 5*time.Minute, 30*time.Second)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if releaseErr := lease.Release(context.Background()); releaseErr != nil {
+			logx.Errorf("release manifest lease match=%s: %v", matchID, releaseErr)
 		}
-		if err := writeReportJSON(fullDir, reportJSON); err != nil {
+	}()
+	if matchComplete(m) && (m.Report == nil || strings.TrimSpace(*m.Report) == "") {
+		report, reportJSON, recovered, err := recoverReportFiles(fullDir)
+		if err != nil {
 			return err
+		}
+		if !recovered {
+			report, reportJSON, err = generateMatchReport(ctx, difyConf, manifestConf, m, red, blue, fullDir)
+			if err != nil {
+				return errors.Wrapf(err, "generate match report %s", m.ID)
+			}
+			if err := writeReportJSON(fullDir, reportJSON); err != nil {
+				return err
+			}
+			if err := atomicWriteText(filepath.Join(fullDir, "report.md"), report); err != nil {
+				return err
+			}
 		}
 		if err := client.Match.UpdateOneID(m.ID).SetReport(report).Exec(ctx); err != nil {
 			return errors.Wrap(err, "save match report")
 		}
 		m.Report = &report
 	}
-	unlock, err := lockDir(ctx, fullDir)
-	if err != nil {
-		return err
-	}
-	defer unlock()
-
 	tmp := filepath.Join(fullDir, ".README.md.tmp")
 	dst := filepath.Join(fullDir, "README.md")
 	readme, err := renderReadme(m, red, blue, fullDir)
@@ -119,26 +132,6 @@ func matchComplete(m *ent.Match) bool {
 		}
 	}
 	return true
-}
-
-func lockDir(ctx context.Context, dir string) (func(), error) {
-	lockPath := filepath.Join(dir, ".README.md.lock")
-	for {
-		f, err := os.OpenFile(lockPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o644)
-		if err == nil {
-			_, _ = f.WriteString(fmt.Sprintf("pid=%d time=%s\n", os.Getpid(), time.Now().Format(time.RFC3339)))
-			_ = f.Close()
-			return func() { _ = os.Remove(lockPath) }, nil
-		}
-		if !os.IsExist(err) {
-			return nil, err
-		}
-		select {
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		case <-time.After(200 * time.Millisecond):
-		}
-	}
 }
 
 const readmeTemplate = `# {{ .Title }}
@@ -613,6 +606,39 @@ func writeReportJSON(matchDir string, raw json.RawMessage) error {
 		return err
 	}
 	return errors.Wrap(os.Rename(tmp, dst), "rename report.json")
+}
+
+func recoverReportFiles(matchDir string) (string, json.RawMessage, bool, error) {
+	markdown, err := os.ReadFile(filepath.Join(matchDir, "report.md"))
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "", nil, false, nil
+		}
+		return "", nil, false, err
+	}
+	report := strings.TrimSpace(string(markdown))
+	if report == "" {
+		return "", nil, false, nil
+	}
+	raw, err := os.ReadFile(filepath.Join(matchDir, "report.json"))
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "", nil, false, nil
+		}
+		return "", nil, false, err
+	}
+	if !json.Valid(raw) {
+		return "", nil, false, errors.New("existing report.json is invalid")
+	}
+	return report, json.RawMessage(raw), true, nil
+}
+
+func atomicWriteText(path, content string) error {
+	tmp := path + ".tmp"
+	if err := os.WriteFile(tmp, []byte(strings.TrimSpace(content)+"\n"), 0o644); err != nil {
+		return err
+	}
+	return errors.Wrap(os.Rename(tmp, path), "publish text artifact")
 }
 
 func buildReportPayload(m *ent.Match, red, blue *ent.Team, matchDir string) (reportPayload, error) {

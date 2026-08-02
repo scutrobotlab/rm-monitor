@@ -8,7 +8,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -88,6 +87,19 @@ func (c *Client) ListWorkflows(ctx context.Context, namespace string, opts metav
 	return wfs, nil
 }
 
+func (c *Client) UpdateWorkflowAnnotations(ctx context.Context, wf *unstructured.Unstructured, annotations map[string]string) error {
+	current := wf.GetAnnotations()
+	if current == nil {
+		current = make(map[string]string)
+	}
+	for key, value := range annotations {
+		current[key] = value
+	}
+	wf.SetAnnotations(current)
+	_, err := c.dynamic.Resource(workflowGVR).Namespace(wf.GetNamespace()).Update(ctx, wf, metav1.UpdateOptions{})
+	return errors.Wrapf(err, "update workflow %s/%s annotations", wf.GetNamespace(), wf.GetName())
+}
+
 func (c *Client) EnsureWorkflowFromTemplate(ctx context.Context, ref WorkflowTemplateRef) (*unstructured.Unstructured, error) {
 	if ref.Namespace == "" {
 		return nil, errors.New("workflow namespace is required")
@@ -142,45 +154,6 @@ func (c *Client) EnsureWorkflowFromTemplate(ctx context.Context, ref WorkflowTem
 		return nil, errors.Wrapf(err, "create workflow %s/%s", ref.Namespace, ref.Name)
 	}
 	return created, nil
-}
-
-func (c *Client) ResumeWorkflowNode(ctx context.Context, namespace, workflowName, nodeFieldSelector string) error {
-	if nodeFieldSelector == "" {
-		return errors.New("node field selector is required")
-	}
-	payload := map[string]any{
-		"apiVersion": "argoproj.io/v1alpha1",
-		"kind":       "Workflow",
-		"metadata": map[string]any{
-			"name":      workflowName,
-			"namespace": namespace,
-		},
-		"resume": map[string]any{
-			"nodeFieldSelector": nodeFieldSelector,
-		},
-	}
-	_, err := c.dynamic.Resource(workflowGVR).Namespace(namespace).Patch(ctx, workflowName, types.MergePatchType, mustJSON(payload), metav1.PatchOptions{}, "resume")
-	if err != nil {
-		return errors.Wrapf(err, "resume workflow %s/%s node %s", namespace, workflowName, nodeFieldSelector)
-	}
-	return nil
-}
-
-func (c *Client) TerminateWorkflow(ctx context.Context, namespace, workflowName string) error {
-	payload := map[string]any{
-		"apiVersion": "argoproj.io/v1alpha1",
-		"kind":       "Workflow",
-		"metadata": map[string]any{
-			"name":      workflowName,
-			"namespace": namespace,
-		},
-		"terminate": map[string]any{},
-	}
-	_, err := c.dynamic.Resource(workflowGVR).Namespace(namespace).Patch(ctx, workflowName, types.MergePatchType, mustJSON(payload), metav1.PatchOptions{}, "terminate")
-	if err != nil {
-		return errors.Wrapf(err, "terminate workflow %s/%s", namespace, workflowName)
-	}
-	return nil
 }
 
 func WorkflowPhase(wf *unstructured.Unstructured) string {

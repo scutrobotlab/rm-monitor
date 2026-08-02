@@ -42,11 +42,11 @@ func init() {
 	// highlightclip.DefaultScore holds the default value on creation for the score field.
 	highlightclip.DefaultScore = highlightclipDescScore.Default.(float64)
 	// highlightclipDescCreatedAt is the schema descriptor for created_at field.
-	highlightclipDescCreatedAt := highlightclipFields[16].Descriptor()
+	highlightclipDescCreatedAt := highlightclipFields[19].Descriptor()
 	// highlightclip.DefaultCreatedAt holds the default value on creation for the created_at field.
 	highlightclip.DefaultCreatedAt = highlightclipDescCreatedAt.Default.(func() time.Time)
 	// highlightclipDescUpdatedAt is the schema descriptor for updated_at field.
-	highlightclipDescUpdatedAt := highlightclipFields[17].Descriptor()
+	highlightclipDescUpdatedAt := highlightclipFields[20].Descriptor()
 	// highlightclip.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	highlightclip.DefaultUpdatedAt = highlightclipDescUpdatedAt.Default.(func() time.Time)
 	// highlightclip.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
@@ -69,12 +69,16 @@ func init() {
 	larkbitablerecord.UpdateDefaultUpdatedAt = larkbitablerecordDescUpdatedAt.UpdateDefault.(func() time.Time)
 	larkmessageFields := schema.LarkMessage{}.Fields()
 	_ = larkmessageFields
+	// larkmessageDescCardSequence is the schema descriptor for card_sequence field.
+	larkmessageDescCardSequence := larkmessageFields[4].Descriptor()
+	// larkmessage.DefaultCardSequence holds the default value on creation for the card_sequence field.
+	larkmessage.DefaultCardSequence = larkmessageDescCardSequence.Default.(int64)
 	// larkmessageDescCreatedAt is the schema descriptor for created_at field.
-	larkmessageDescCreatedAt := larkmessageFields[4].Descriptor()
+	larkmessageDescCreatedAt := larkmessageFields[7].Descriptor()
 	// larkmessage.DefaultCreatedAt holds the default value on creation for the created_at field.
 	larkmessage.DefaultCreatedAt = larkmessageDescCreatedAt.Default.(func() time.Time)
 	// larkmessageDescUpdatedAt is the schema descriptor for updated_at field.
-	larkmessageDescUpdatedAt := larkmessageFields[5].Descriptor()
+	larkmessageDescUpdatedAt := larkmessageFields[8].Descriptor()
 	// larkmessage.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	larkmessage.DefaultUpdatedAt = larkmessageDescUpdatedAt.Default.(func() time.Time)
 	// larkmessage.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
@@ -109,16 +113,20 @@ func init() {
 	match.UpdateDefaultUpdatedAt = matchDescUpdatedAt.UpdateDefault.(func() time.Time)
 	matchroundFields := schema.MatchRound{}.Fields()
 	_ = matchroundFields
+	// matchroundDescSettlementStatus is the schema descriptor for settlement_status field.
+	matchroundDescSettlementStatus := matchroundFields[6].Descriptor()
+	// matchround.DefaultSettlementStatus holds the default value on creation for the settlement_status field.
+	matchround.DefaultSettlementStatus = matchroundDescSettlementStatus.Default.(string)
 	// matchroundDescStartedAt is the schema descriptor for started_at field.
-	matchroundDescStartedAt := matchroundFields[6].Descriptor()
+	matchroundDescStartedAt := matchroundFields[10].Descriptor()
 	// matchround.DefaultStartedAt holds the default value on creation for the started_at field.
 	matchround.DefaultStartedAt = matchroundDescStartedAt.Default.(func() time.Time)
 	// matchroundDescCreatedAt is the schema descriptor for created_at field.
-	matchroundDescCreatedAt := matchroundFields[8].Descriptor()
+	matchroundDescCreatedAt := matchroundFields[12].Descriptor()
 	// matchround.DefaultCreatedAt holds the default value on creation for the created_at field.
 	matchround.DefaultCreatedAt = matchroundDescCreatedAt.Default.(func() time.Time)
 	// matchroundDescUpdatedAt is the schema descriptor for updated_at field.
-	matchroundDescUpdatedAt := matchroundFields[9].Descriptor()
+	matchroundDescUpdatedAt := matchroundFields[13].Descriptor()
 	// matchround.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	matchround.DefaultUpdatedAt = matchroundDescUpdatedAt.Default.(func() time.Time)
 	// matchround.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.

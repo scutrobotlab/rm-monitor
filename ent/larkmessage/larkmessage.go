@@ -22,6 +22,12 @@ const (
 	FieldCardID = "card_id"
 	// FieldCardPayload holds the string denoting the card_payload field in the database.
 	FieldCardPayload = "card_payload"
+	// FieldCardSequence holds the string denoting the card_sequence field in the database.
+	FieldCardSequence = "card_sequence"
+	// FieldLastDeliveryError holds the string denoting the last_delivery_error field in the database.
+	FieldLastDeliveryError = "last_delivery_error"
+	// FieldLastDeliveryAttemptAt holds the string denoting the last_delivery_attempt_at field in the database.
+	FieldLastDeliveryAttemptAt = "last_delivery_attempt_at"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
@@ -46,6 +52,9 @@ var Columns = []string{
 	FieldChatID,
 	FieldCardID,
 	FieldCardPayload,
+	FieldCardSequence,
+	FieldLastDeliveryError,
+	FieldLastDeliveryAttemptAt,
 	FieldCreatedAt,
 	FieldUpdatedAt,
 }
@@ -72,6 +81,8 @@ func ValidColumn(column string) bool {
 }
 
 var (
+	// DefaultCardSequence holds the default value on creation for the "card_sequence" field.
+	DefaultCardSequence int64
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
 	DefaultCreatedAt func() time.Time
 	// DefaultUpdatedAt holds the default value on creation for the "updated_at" field.
@@ -101,6 +112,21 @@ func ByChatID(opts ...sql.OrderTermOption) OrderOption {
 // ByCardID orders the results by the card_id field.
 func ByCardID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCardID, opts...).ToFunc()
+}
+
+// ByCardSequence orders the results by the card_sequence field.
+func ByCardSequence(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCardSequence, opts...).ToFunc()
+}
+
+// ByLastDeliveryError orders the results by the last_delivery_error field.
+func ByLastDeliveryError(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldLastDeliveryError, opts...).ToFunc()
+}
+
+// ByLastDeliveryAttemptAt orders the results by the last_delivery_attempt_at field.
+func ByLastDeliveryAttemptAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldLastDeliveryAttemptAt, opts...).ToFunc()
 }
 
 // ByCreatedAt orders the results by the created_at field.

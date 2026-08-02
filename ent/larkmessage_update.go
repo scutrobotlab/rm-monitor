@@ -95,6 +95,67 @@ func (_u *LarkMessageUpdate) ClearCardPayload() *LarkMessageUpdate {
 	return _u
 }
 
+// SetCardSequence sets the "card_sequence" field.
+func (_u *LarkMessageUpdate) SetCardSequence(v int64) *LarkMessageUpdate {
+	_u.mutation.ResetCardSequence()
+	_u.mutation.SetCardSequence(v)
+	return _u
+}
+
+// SetNillableCardSequence sets the "card_sequence" field if the given value is not nil.
+func (_u *LarkMessageUpdate) SetNillableCardSequence(v *int64) *LarkMessageUpdate {
+	if v != nil {
+		_u.SetCardSequence(*v)
+	}
+	return _u
+}
+
+// AddCardSequence adds value to the "card_sequence" field.
+func (_u *LarkMessageUpdate) AddCardSequence(v int64) *LarkMessageUpdate {
+	_u.mutation.AddCardSequence(v)
+	return _u
+}
+
+// SetLastDeliveryError sets the "last_delivery_error" field.
+func (_u *LarkMessageUpdate) SetLastDeliveryError(v string) *LarkMessageUpdate {
+	_u.mutation.SetLastDeliveryError(v)
+	return _u
+}
+
+// SetNillableLastDeliveryError sets the "last_delivery_error" field if the given value is not nil.
+func (_u *LarkMessageUpdate) SetNillableLastDeliveryError(v *string) *LarkMessageUpdate {
+	if v != nil {
+		_u.SetLastDeliveryError(*v)
+	}
+	return _u
+}
+
+// ClearLastDeliveryError clears the value of the "last_delivery_error" field.
+func (_u *LarkMessageUpdate) ClearLastDeliveryError() *LarkMessageUpdate {
+	_u.mutation.ClearLastDeliveryError()
+	return _u
+}
+
+// SetLastDeliveryAttemptAt sets the "last_delivery_attempt_at" field.
+func (_u *LarkMessageUpdate) SetLastDeliveryAttemptAt(v time.Time) *LarkMessageUpdate {
+	_u.mutation.SetLastDeliveryAttemptAt(v)
+	return _u
+}
+
+// SetNillableLastDeliveryAttemptAt sets the "last_delivery_attempt_at" field if the given value is not nil.
+func (_u *LarkMessageUpdate) SetNillableLastDeliveryAttemptAt(v *time.Time) *LarkMessageUpdate {
+	if v != nil {
+		_u.SetLastDeliveryAttemptAt(*v)
+	}
+	return _u
+}
+
+// ClearLastDeliveryAttemptAt clears the value of the "last_delivery_attempt_at" field.
+func (_u *LarkMessageUpdate) ClearLastDeliveryAttemptAt() *LarkMessageUpdate {
+	_u.mutation.ClearLastDeliveryAttemptAt()
+	return _u
+}
+
 // SetUpdatedAt sets the "updated_at" field.
 func (_u *LarkMessageUpdate) SetUpdatedAt(v time.Time) *LarkMessageUpdate {
 	_u.mutation.SetUpdatedAt(v)
@@ -199,6 +260,24 @@ func (_u *LarkMessageUpdate) sqlSave(ctx context.Context) (_node int, err error)
 	}
 	if _u.mutation.CardPayloadCleared() {
 		_spec.ClearField(larkmessage.FieldCardPayload, field.TypeJSON)
+	}
+	if value, ok := _u.mutation.CardSequence(); ok {
+		_spec.SetField(larkmessage.FieldCardSequence, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.AddedCardSequence(); ok {
+		_spec.AddField(larkmessage.FieldCardSequence, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.LastDeliveryError(); ok {
+		_spec.SetField(larkmessage.FieldLastDeliveryError, field.TypeString, value)
+	}
+	if _u.mutation.LastDeliveryErrorCleared() {
+		_spec.ClearField(larkmessage.FieldLastDeliveryError, field.TypeString)
+	}
+	if value, ok := _u.mutation.LastDeliveryAttemptAt(); ok {
+		_spec.SetField(larkmessage.FieldLastDeliveryAttemptAt, field.TypeTime, value)
+	}
+	if _u.mutation.LastDeliveryAttemptAtCleared() {
+		_spec.ClearField(larkmessage.FieldLastDeliveryAttemptAt, field.TypeTime)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(larkmessage.FieldUpdatedAt, field.TypeTime, value)
@@ -315,6 +394,67 @@ func (_u *LarkMessageUpdateOne) SetCardPayload(v map[string]interface{}) *LarkMe
 // ClearCardPayload clears the value of the "card_payload" field.
 func (_u *LarkMessageUpdateOne) ClearCardPayload() *LarkMessageUpdateOne {
 	_u.mutation.ClearCardPayload()
+	return _u
+}
+
+// SetCardSequence sets the "card_sequence" field.
+func (_u *LarkMessageUpdateOne) SetCardSequence(v int64) *LarkMessageUpdateOne {
+	_u.mutation.ResetCardSequence()
+	_u.mutation.SetCardSequence(v)
+	return _u
+}
+
+// SetNillableCardSequence sets the "card_sequence" field if the given value is not nil.
+func (_u *LarkMessageUpdateOne) SetNillableCardSequence(v *int64) *LarkMessageUpdateOne {
+	if v != nil {
+		_u.SetCardSequence(*v)
+	}
+	return _u
+}
+
+// AddCardSequence adds value to the "card_sequence" field.
+func (_u *LarkMessageUpdateOne) AddCardSequence(v int64) *LarkMessageUpdateOne {
+	_u.mutation.AddCardSequence(v)
+	return _u
+}
+
+// SetLastDeliveryError sets the "last_delivery_error" field.
+func (_u *LarkMessageUpdateOne) SetLastDeliveryError(v string) *LarkMessageUpdateOne {
+	_u.mutation.SetLastDeliveryError(v)
+	return _u
+}
+
+// SetNillableLastDeliveryError sets the "last_delivery_error" field if the given value is not nil.
+func (_u *LarkMessageUpdateOne) SetNillableLastDeliveryError(v *string) *LarkMessageUpdateOne {
+	if v != nil {
+		_u.SetLastDeliveryError(*v)
+	}
+	return _u
+}
+
+// ClearLastDeliveryError clears the value of the "last_delivery_error" field.
+func (_u *LarkMessageUpdateOne) ClearLastDeliveryError() *LarkMessageUpdateOne {
+	_u.mutation.ClearLastDeliveryError()
+	return _u
+}
+
+// SetLastDeliveryAttemptAt sets the "last_delivery_attempt_at" field.
+func (_u *LarkMessageUpdateOne) SetLastDeliveryAttemptAt(v time.Time) *LarkMessageUpdateOne {
+	_u.mutation.SetLastDeliveryAttemptAt(v)
+	return _u
+}
+
+// SetNillableLastDeliveryAttemptAt sets the "last_delivery_attempt_at" field if the given value is not nil.
+func (_u *LarkMessageUpdateOne) SetNillableLastDeliveryAttemptAt(v *time.Time) *LarkMessageUpdateOne {
+	if v != nil {
+		_u.SetLastDeliveryAttemptAt(*v)
+	}
+	return _u
+}
+
+// ClearLastDeliveryAttemptAt clears the value of the "last_delivery_attempt_at" field.
+func (_u *LarkMessageUpdateOne) ClearLastDeliveryAttemptAt() *LarkMessageUpdateOne {
+	_u.mutation.ClearLastDeliveryAttemptAt()
 	return _u
 }
 
@@ -452,6 +592,24 @@ func (_u *LarkMessageUpdateOne) sqlSave(ctx context.Context) (_node *LarkMessage
 	}
 	if _u.mutation.CardPayloadCleared() {
 		_spec.ClearField(larkmessage.FieldCardPayload, field.TypeJSON)
+	}
+	if value, ok := _u.mutation.CardSequence(); ok {
+		_spec.SetField(larkmessage.FieldCardSequence, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.AddedCardSequence(); ok {
+		_spec.AddField(larkmessage.FieldCardSequence, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.LastDeliveryError(); ok {
+		_spec.SetField(larkmessage.FieldLastDeliveryError, field.TypeString, value)
+	}
+	if _u.mutation.LastDeliveryErrorCleared() {
+		_spec.ClearField(larkmessage.FieldLastDeliveryError, field.TypeString)
+	}
+	if value, ok := _u.mutation.LastDeliveryAttemptAt(); ok {
+		_spec.SetField(larkmessage.FieldLastDeliveryAttemptAt, field.TypeTime, value)
+	}
+	if _u.mutation.LastDeliveryAttemptAtCleared() {
+		_spec.ClearField(larkmessage.FieldLastDeliveryAttemptAt, field.TypeTime)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(larkmessage.FieldUpdatedAt, field.TypeTime, value)

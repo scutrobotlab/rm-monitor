@@ -30,6 +30,14 @@ type MatchRound struct {
 	WorkflowUID *string `json:"workflow_uid,omitempty"`
 	// WorkflowPhase holds the value of the "workflow_phase" field.
 	WorkflowPhase *string `json:"workflow_phase,omitempty"`
+	// SettlementStatus holds the value of the "settlement_status" field.
+	SettlementStatus string `json:"settlement_status,omitempty"`
+	// SettlementImagePath holds the value of the "settlement_image_path" field.
+	SettlementImagePath *string `json:"settlement_image_path,omitempty"`
+	// SettlementImageChecksum holds the value of the "settlement_image_checksum" field.
+	SettlementImageChecksum *string `json:"settlement_image_checksum,omitempty"`
+	// SettlementReadyAt holds the value of the "settlement_ready_at" field.
+	SettlementReadyAt *time.Time `json:"settlement_ready_at,omitempty"`
 	// StartedAt holds the value of the "started_at" field.
 	StartedAt time.Time `json:"started_at,omitempty"`
 	// EndedAt holds the value of the "ended_at" field.
@@ -94,9 +102,9 @@ func (*MatchRound) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case matchround.FieldID, matchround.FieldRoundNo:
 			values[i] = new(sql.NullInt64)
-		case matchround.FieldStatus, matchround.FieldWinner, matchround.FieldWorkflowName, matchround.FieldWorkflowUID, matchround.FieldWorkflowPhase:
+		case matchround.FieldStatus, matchround.FieldWinner, matchround.FieldWorkflowName, matchround.FieldWorkflowUID, matchround.FieldWorkflowPhase, matchround.FieldSettlementStatus, matchround.FieldSettlementImagePath, matchround.FieldSettlementImageChecksum:
 			values[i] = new(sql.NullString)
-		case matchround.FieldStartedAt, matchround.FieldEndedAt, matchround.FieldCreatedAt, matchround.FieldUpdatedAt:
+		case matchround.FieldSettlementReadyAt, matchround.FieldStartedAt, matchround.FieldEndedAt, matchround.FieldCreatedAt, matchround.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
 		case matchround.ForeignKeys[0]: // match_rounds
 			values[i] = new(sql.NullString)
@@ -160,6 +168,33 @@ func (_m *MatchRound) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.WorkflowPhase = new(string)
 				*_m.WorkflowPhase = value.String
+			}
+		case matchround.FieldSettlementStatus:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field settlement_status", values[i])
+			} else if value.Valid {
+				_m.SettlementStatus = value.String
+			}
+		case matchround.FieldSettlementImagePath:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field settlement_image_path", values[i])
+			} else if value.Valid {
+				_m.SettlementImagePath = new(string)
+				*_m.SettlementImagePath = value.String
+			}
+		case matchround.FieldSettlementImageChecksum:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field settlement_image_checksum", values[i])
+			} else if value.Valid {
+				_m.SettlementImageChecksum = new(string)
+				*_m.SettlementImageChecksum = value.String
+			}
+		case matchround.FieldSettlementReadyAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field settlement_ready_at", values[i])
+			} else if value.Valid {
+				_m.SettlementReadyAt = new(time.Time)
+				*_m.SettlementReadyAt = value.Time
 			}
 		case matchround.FieldStartedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -268,6 +303,24 @@ func (_m *MatchRound) String() string {
 	if v := _m.WorkflowPhase; v != nil {
 		builder.WriteString("workflow_phase=")
 		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	builder.WriteString("settlement_status=")
+	builder.WriteString(_m.SettlementStatus)
+	builder.WriteString(", ")
+	if v := _m.SettlementImagePath; v != nil {
+		builder.WriteString("settlement_image_path=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	if v := _m.SettlementImageChecksum; v != nil {
+		builder.WriteString("settlement_image_checksum=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	if v := _m.SettlementReadyAt; v != nil {
+		builder.WriteString("settlement_ready_at=")
+		builder.WriteString(v.Format(time.ANSIC))
 	}
 	builder.WriteString(", ")
 	builder.WriteString("started_at=")

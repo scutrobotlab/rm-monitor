@@ -120,6 +120,21 @@ func ModelPayload(v string) predicate.HighlightClip {
 	return predicate.HighlightClip(sql.FieldEQ(FieldModelPayload, v))
 }
 
+// PreviewPath applies equality check predicate on the "preview_path" field. It's identical to PreviewPathEQ.
+func PreviewPath(v string) predicate.HighlightClip {
+	return predicate.HighlightClip(sql.FieldEQ(FieldPreviewPath, v))
+}
+
+// PreviewChecksum applies equality check predicate on the "preview_checksum" field. It's identical to PreviewChecksumEQ.
+func PreviewChecksum(v string) predicate.HighlightClip {
+	return predicate.HighlightClip(sql.FieldEQ(FieldPreviewChecksum, v))
+}
+
+// ArtifactReadyAt applies equality check predicate on the "artifact_ready_at" field. It's identical to ArtifactReadyAtEQ.
+func ArtifactReadyAt(v time.Time) predicate.HighlightClip {
+	return predicate.HighlightClip(sql.FieldEQ(FieldArtifactReadyAt, v))
+}
+
 // CompletedAt applies equality check predicate on the "completed_at" field. It's identical to CompletedAtEQ.
 func CompletedAt(v time.Time) predicate.HighlightClip {
 	return predicate.HighlightClip(sql.FieldEQ(FieldCompletedAt, v))
@@ -888,6 +903,206 @@ func ModelPayloadEqualFold(v string) predicate.HighlightClip {
 // ModelPayloadContainsFold applies the ContainsFold predicate on the "model_payload" field.
 func ModelPayloadContainsFold(v string) predicate.HighlightClip {
 	return predicate.HighlightClip(sql.FieldContainsFold(FieldModelPayload, v))
+}
+
+// PreviewPathEQ applies the EQ predicate on the "preview_path" field.
+func PreviewPathEQ(v string) predicate.HighlightClip {
+	return predicate.HighlightClip(sql.FieldEQ(FieldPreviewPath, v))
+}
+
+// PreviewPathNEQ applies the NEQ predicate on the "preview_path" field.
+func PreviewPathNEQ(v string) predicate.HighlightClip {
+	return predicate.HighlightClip(sql.FieldNEQ(FieldPreviewPath, v))
+}
+
+// PreviewPathIn applies the In predicate on the "preview_path" field.
+func PreviewPathIn(vs ...string) predicate.HighlightClip {
+	return predicate.HighlightClip(sql.FieldIn(FieldPreviewPath, vs...))
+}
+
+// PreviewPathNotIn applies the NotIn predicate on the "preview_path" field.
+func PreviewPathNotIn(vs ...string) predicate.HighlightClip {
+	return predicate.HighlightClip(sql.FieldNotIn(FieldPreviewPath, vs...))
+}
+
+// PreviewPathGT applies the GT predicate on the "preview_path" field.
+func PreviewPathGT(v string) predicate.HighlightClip {
+	return predicate.HighlightClip(sql.FieldGT(FieldPreviewPath, v))
+}
+
+// PreviewPathGTE applies the GTE predicate on the "preview_path" field.
+func PreviewPathGTE(v string) predicate.HighlightClip {
+	return predicate.HighlightClip(sql.FieldGTE(FieldPreviewPath, v))
+}
+
+// PreviewPathLT applies the LT predicate on the "preview_path" field.
+func PreviewPathLT(v string) predicate.HighlightClip {
+	return predicate.HighlightClip(sql.FieldLT(FieldPreviewPath, v))
+}
+
+// PreviewPathLTE applies the LTE predicate on the "preview_path" field.
+func PreviewPathLTE(v string) predicate.HighlightClip {
+	return predicate.HighlightClip(sql.FieldLTE(FieldPreviewPath, v))
+}
+
+// PreviewPathContains applies the Contains predicate on the "preview_path" field.
+func PreviewPathContains(v string) predicate.HighlightClip {
+	return predicate.HighlightClip(sql.FieldContains(FieldPreviewPath, v))
+}
+
+// PreviewPathHasPrefix applies the HasPrefix predicate on the "preview_path" field.
+func PreviewPathHasPrefix(v string) predicate.HighlightClip {
+	return predicate.HighlightClip(sql.FieldHasPrefix(FieldPreviewPath, v))
+}
+
+// PreviewPathHasSuffix applies the HasSuffix predicate on the "preview_path" field.
+func PreviewPathHasSuffix(v string) predicate.HighlightClip {
+	return predicate.HighlightClip(sql.FieldHasSuffix(FieldPreviewPath, v))
+}
+
+// PreviewPathIsNil applies the IsNil predicate on the "preview_path" field.
+func PreviewPathIsNil() predicate.HighlightClip {
+	return predicate.HighlightClip(sql.FieldIsNull(FieldPreviewPath))
+}
+
+// PreviewPathNotNil applies the NotNil predicate on the "preview_path" field.
+func PreviewPathNotNil() predicate.HighlightClip {
+	return predicate.HighlightClip(sql.FieldNotNull(FieldPreviewPath))
+}
+
+// PreviewPathEqualFold applies the EqualFold predicate on the "preview_path" field.
+func PreviewPathEqualFold(v string) predicate.HighlightClip {
+	return predicate.HighlightClip(sql.FieldEqualFold(FieldPreviewPath, v))
+}
+
+// PreviewPathContainsFold applies the ContainsFold predicate on the "preview_path" field.
+func PreviewPathContainsFold(v string) predicate.HighlightClip {
+	return predicate.HighlightClip(sql.FieldContainsFold(FieldPreviewPath, v))
+}
+
+// PreviewChecksumEQ applies the EQ predicate on the "preview_checksum" field.
+func PreviewChecksumEQ(v string) predicate.HighlightClip {
+	return predicate.HighlightClip(sql.FieldEQ(FieldPreviewChecksum, v))
+}
+
+// PreviewChecksumNEQ applies the NEQ predicate on the "preview_checksum" field.
+func PreviewChecksumNEQ(v string) predicate.HighlightClip {
+	return predicate.HighlightClip(sql.FieldNEQ(FieldPreviewChecksum, v))
+}
+
+// PreviewChecksumIn applies the In predicate on the "preview_checksum" field.
+func PreviewChecksumIn(vs ...string) predicate.HighlightClip {
+	return predicate.HighlightClip(sql.FieldIn(FieldPreviewChecksum, vs...))
+}
+
+// PreviewChecksumNotIn applies the NotIn predicate on the "preview_checksum" field.
+func PreviewChecksumNotIn(vs ...string) predicate.HighlightClip {
+	return predicate.HighlightClip(sql.FieldNotIn(FieldPreviewChecksum, vs...))
+}
+
+// PreviewChecksumGT applies the GT predicate on the "preview_checksum" field.
+func PreviewChecksumGT(v string) predicate.HighlightClip {
+	return predicate.HighlightClip(sql.FieldGT(FieldPreviewChecksum, v))
+}
+
+// PreviewChecksumGTE applies the GTE predicate on the "preview_checksum" field.
+func PreviewChecksumGTE(v string) predicate.HighlightClip {
+	return predicate.HighlightClip(sql.FieldGTE(FieldPreviewChecksum, v))
+}
+
+// PreviewChecksumLT applies the LT predicate on the "preview_checksum" field.
+func PreviewChecksumLT(v string) predicate.HighlightClip {
+	return predicate.HighlightClip(sql.FieldLT(FieldPreviewChecksum, v))
+}
+
+// PreviewChecksumLTE applies the LTE predicate on the "preview_checksum" field.
+func PreviewChecksumLTE(v string) predicate.HighlightClip {
+	return predicate.HighlightClip(sql.FieldLTE(FieldPreviewChecksum, v))
+}
+
+// PreviewChecksumContains applies the Contains predicate on the "preview_checksum" field.
+func PreviewChecksumContains(v string) predicate.HighlightClip {
+	return predicate.HighlightClip(sql.FieldContains(FieldPreviewChecksum, v))
+}
+
+// PreviewChecksumHasPrefix applies the HasPrefix predicate on the "preview_checksum" field.
+func PreviewChecksumHasPrefix(v string) predicate.HighlightClip {
+	return predicate.HighlightClip(sql.FieldHasPrefix(FieldPreviewChecksum, v))
+}
+
+// PreviewChecksumHasSuffix applies the HasSuffix predicate on the "preview_checksum" field.
+func PreviewChecksumHasSuffix(v string) predicate.HighlightClip {
+	return predicate.HighlightClip(sql.FieldHasSuffix(FieldPreviewChecksum, v))
+}
+
+// PreviewChecksumIsNil applies the IsNil predicate on the "preview_checksum" field.
+func PreviewChecksumIsNil() predicate.HighlightClip {
+	return predicate.HighlightClip(sql.FieldIsNull(FieldPreviewChecksum))
+}
+
+// PreviewChecksumNotNil applies the NotNil predicate on the "preview_checksum" field.
+func PreviewChecksumNotNil() predicate.HighlightClip {
+	return predicate.HighlightClip(sql.FieldNotNull(FieldPreviewChecksum))
+}
+
+// PreviewChecksumEqualFold applies the EqualFold predicate on the "preview_checksum" field.
+func PreviewChecksumEqualFold(v string) predicate.HighlightClip {
+	return predicate.HighlightClip(sql.FieldEqualFold(FieldPreviewChecksum, v))
+}
+
+// PreviewChecksumContainsFold applies the ContainsFold predicate on the "preview_checksum" field.
+func PreviewChecksumContainsFold(v string) predicate.HighlightClip {
+	return predicate.HighlightClip(sql.FieldContainsFold(FieldPreviewChecksum, v))
+}
+
+// ArtifactReadyAtEQ applies the EQ predicate on the "artifact_ready_at" field.
+func ArtifactReadyAtEQ(v time.Time) predicate.HighlightClip {
+	return predicate.HighlightClip(sql.FieldEQ(FieldArtifactReadyAt, v))
+}
+
+// ArtifactReadyAtNEQ applies the NEQ predicate on the "artifact_ready_at" field.
+func ArtifactReadyAtNEQ(v time.Time) predicate.HighlightClip {
+	return predicate.HighlightClip(sql.FieldNEQ(FieldArtifactReadyAt, v))
+}
+
+// ArtifactReadyAtIn applies the In predicate on the "artifact_ready_at" field.
+func ArtifactReadyAtIn(vs ...time.Time) predicate.HighlightClip {
+	return predicate.HighlightClip(sql.FieldIn(FieldArtifactReadyAt, vs...))
+}
+
+// ArtifactReadyAtNotIn applies the NotIn predicate on the "artifact_ready_at" field.
+func ArtifactReadyAtNotIn(vs ...time.Time) predicate.HighlightClip {
+	return predicate.HighlightClip(sql.FieldNotIn(FieldArtifactReadyAt, vs...))
+}
+
+// ArtifactReadyAtGT applies the GT predicate on the "artifact_ready_at" field.
+func ArtifactReadyAtGT(v time.Time) predicate.HighlightClip {
+	return predicate.HighlightClip(sql.FieldGT(FieldArtifactReadyAt, v))
+}
+
+// ArtifactReadyAtGTE applies the GTE predicate on the "artifact_ready_at" field.
+func ArtifactReadyAtGTE(v time.Time) predicate.HighlightClip {
+	return predicate.HighlightClip(sql.FieldGTE(FieldArtifactReadyAt, v))
+}
+
+// ArtifactReadyAtLT applies the LT predicate on the "artifact_ready_at" field.
+func ArtifactReadyAtLT(v time.Time) predicate.HighlightClip {
+	return predicate.HighlightClip(sql.FieldLT(FieldArtifactReadyAt, v))
+}
+
+// ArtifactReadyAtLTE applies the LTE predicate on the "artifact_ready_at" field.
+func ArtifactReadyAtLTE(v time.Time) predicate.HighlightClip {
+	return predicate.HighlightClip(sql.FieldLTE(FieldArtifactReadyAt, v))
+}
+
+// ArtifactReadyAtIsNil applies the IsNil predicate on the "artifact_ready_at" field.
+func ArtifactReadyAtIsNil() predicate.HighlightClip {
+	return predicate.HighlightClip(sql.FieldIsNull(FieldArtifactReadyAt))
+}
+
+// ArtifactReadyAtNotNil applies the NotNil predicate on the "artifact_ready_at" field.
+func ArtifactReadyAtNotNil() predicate.HighlightClip {
+	return predicate.HighlightClip(sql.FieldNotNull(FieldArtifactReadyAt))
 }
 
 // CompletedAtEQ applies the EQ predicate on the "completed_at" field.

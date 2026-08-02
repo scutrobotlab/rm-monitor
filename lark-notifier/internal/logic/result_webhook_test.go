@@ -188,7 +188,7 @@ func TestCreateCardPayload(t *testing.T) {
 	baseDir := t.TempDir()
 	svcCtx := &svc.ServiceContext{
 		Config: notifierconfig.Config{
-			RecordConf: struct{ BaseDir string }{BaseDir: baseDir},
+			RecordConf: common.RecordConf{BaseDir: baseDir},
 			HighlightConf: common.HighlightConf{
 				Enabled:          true,
 				Role:             "主视角",
@@ -222,6 +222,9 @@ func TestCreateCardPayload(t *testing.T) {
 		SetRoundNo(1).
 		SetStatus(matchround.StatusENDED).
 		SetWinner(winner).
+		SetSettlementStatus("CONFIRMED").
+		SetSettlementImagePath("RMUC/南部赛区/32. 红方大学-Alpha VS 蓝方大学-Beta/Round-1/settlement.jpg").
+		SetSettlementReadyAt(time.Now()).
 		SaveX(ctx)
 
 	sourcePath := "RMUC/南部赛区/32. 红方大学-Alpha VS 蓝方大学-Beta/Round-1/主视角.flv"
@@ -263,6 +266,8 @@ func TestCreateCardPayload(t *testing.T) {
 		SetDescription(desc).
 		SetModelPayload(modelPayload).
 		SetScore(9.5).
+		SetPreviewPath(filepath.ToSlash(filepath.Join(previewRel, "preview.gif"))).
+		SetArtifactReadyAt(time.Now()).
 		SaveX(ctx)
 
 	payload, err := CreateCardPayload(ctx, svcCtx, "match-1")
@@ -661,18 +666,6 @@ func TestIsContextDone(t *testing.T) {
 	}
 	if isContextDone(nil) {
 		t.Fatal("nil should not be context done")
-	}
-}
-
-func TestCardDataUpdatedAt(t *testing.T) {
-	matchUpdatedAt := time.Date(2026, 5, 20, 1, 0, 0, 0, time.UTC)
-	roundUpdatedAt := matchUpdatedAt.Add(time.Minute)
-	m := &ent.Match{UpdatedAt: matchUpdatedAt, Edges: ent.MatchEdges{Rounds: []*ent.MatchRound{
-		{UpdatedAt: matchUpdatedAt.Add(-time.Minute)},
-		{UpdatedAt: roundUpdatedAt},
-	}}}
-	if got := cardDataUpdatedAt(m); !got.Equal(roundUpdatedAt) {
-		t.Fatalf("cardDataUpdatedAt() = %s, want %s", got, roundUpdatedAt)
 	}
 }
 

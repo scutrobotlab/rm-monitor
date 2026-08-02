@@ -3,19 +3,10 @@ package argowf
 import (
 	"crypto/sha1"
 	"encoding/hex"
-	"encoding/json"
 	"strings"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
-
-func mustJSON(v any) []byte {
-	raw, err := json.Marshal(v)
-	if err != nil {
-		panic(err)
-	}
-	return raw
-}
 
 func isNotFound(err error) bool {
 	return apierrors.IsNotFound(err)

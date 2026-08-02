@@ -70,6 +70,21 @@ func CardID(v string) predicate.LarkMessage {
 	return predicate.LarkMessage(sql.FieldEQ(FieldCardID, v))
 }
 
+// CardSequence applies equality check predicate on the "card_sequence" field. It's identical to CardSequenceEQ.
+func CardSequence(v int64) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldEQ(FieldCardSequence, v))
+}
+
+// LastDeliveryError applies equality check predicate on the "last_delivery_error" field. It's identical to LastDeliveryErrorEQ.
+func LastDeliveryError(v string) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldEQ(FieldLastDeliveryError, v))
+}
+
+// LastDeliveryAttemptAt applies equality check predicate on the "last_delivery_attempt_at" field. It's identical to LastDeliveryAttemptAtEQ.
+func LastDeliveryAttemptAt(v time.Time) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldEQ(FieldLastDeliveryAttemptAt, v))
+}
+
 // CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
 func CreatedAt(v time.Time) predicate.LarkMessage {
 	return predicate.LarkMessage(sql.FieldEQ(FieldCreatedAt, v))
@@ -303,6 +318,171 @@ func CardPayloadIsNil() predicate.LarkMessage {
 // CardPayloadNotNil applies the NotNil predicate on the "card_payload" field.
 func CardPayloadNotNil() predicate.LarkMessage {
 	return predicate.LarkMessage(sql.FieldNotNull(FieldCardPayload))
+}
+
+// CardSequenceEQ applies the EQ predicate on the "card_sequence" field.
+func CardSequenceEQ(v int64) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldEQ(FieldCardSequence, v))
+}
+
+// CardSequenceNEQ applies the NEQ predicate on the "card_sequence" field.
+func CardSequenceNEQ(v int64) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldNEQ(FieldCardSequence, v))
+}
+
+// CardSequenceIn applies the In predicate on the "card_sequence" field.
+func CardSequenceIn(vs ...int64) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldIn(FieldCardSequence, vs...))
+}
+
+// CardSequenceNotIn applies the NotIn predicate on the "card_sequence" field.
+func CardSequenceNotIn(vs ...int64) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldNotIn(FieldCardSequence, vs...))
+}
+
+// CardSequenceGT applies the GT predicate on the "card_sequence" field.
+func CardSequenceGT(v int64) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldGT(FieldCardSequence, v))
+}
+
+// CardSequenceGTE applies the GTE predicate on the "card_sequence" field.
+func CardSequenceGTE(v int64) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldGTE(FieldCardSequence, v))
+}
+
+// CardSequenceLT applies the LT predicate on the "card_sequence" field.
+func CardSequenceLT(v int64) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldLT(FieldCardSequence, v))
+}
+
+// CardSequenceLTE applies the LTE predicate on the "card_sequence" field.
+func CardSequenceLTE(v int64) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldLTE(FieldCardSequence, v))
+}
+
+// LastDeliveryErrorEQ applies the EQ predicate on the "last_delivery_error" field.
+func LastDeliveryErrorEQ(v string) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldEQ(FieldLastDeliveryError, v))
+}
+
+// LastDeliveryErrorNEQ applies the NEQ predicate on the "last_delivery_error" field.
+func LastDeliveryErrorNEQ(v string) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldNEQ(FieldLastDeliveryError, v))
+}
+
+// LastDeliveryErrorIn applies the In predicate on the "last_delivery_error" field.
+func LastDeliveryErrorIn(vs ...string) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldIn(FieldLastDeliveryError, vs...))
+}
+
+// LastDeliveryErrorNotIn applies the NotIn predicate on the "last_delivery_error" field.
+func LastDeliveryErrorNotIn(vs ...string) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldNotIn(FieldLastDeliveryError, vs...))
+}
+
+// LastDeliveryErrorGT applies the GT predicate on the "last_delivery_error" field.
+func LastDeliveryErrorGT(v string) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldGT(FieldLastDeliveryError, v))
+}
+
+// LastDeliveryErrorGTE applies the GTE predicate on the "last_delivery_error" field.
+func LastDeliveryErrorGTE(v string) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldGTE(FieldLastDeliveryError, v))
+}
+
+// LastDeliveryErrorLT applies the LT predicate on the "last_delivery_error" field.
+func LastDeliveryErrorLT(v string) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldLT(FieldLastDeliveryError, v))
+}
+
+// LastDeliveryErrorLTE applies the LTE predicate on the "last_delivery_error" field.
+func LastDeliveryErrorLTE(v string) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldLTE(FieldLastDeliveryError, v))
+}
+
+// LastDeliveryErrorContains applies the Contains predicate on the "last_delivery_error" field.
+func LastDeliveryErrorContains(v string) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldContains(FieldLastDeliveryError, v))
+}
+
+// LastDeliveryErrorHasPrefix applies the HasPrefix predicate on the "last_delivery_error" field.
+func LastDeliveryErrorHasPrefix(v string) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldHasPrefix(FieldLastDeliveryError, v))
+}
+
+// LastDeliveryErrorHasSuffix applies the HasSuffix predicate on the "last_delivery_error" field.
+func LastDeliveryErrorHasSuffix(v string) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldHasSuffix(FieldLastDeliveryError, v))
+}
+
+// LastDeliveryErrorIsNil applies the IsNil predicate on the "last_delivery_error" field.
+func LastDeliveryErrorIsNil() predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldIsNull(FieldLastDeliveryError))
+}
+
+// LastDeliveryErrorNotNil applies the NotNil predicate on the "last_delivery_error" field.
+func LastDeliveryErrorNotNil() predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldNotNull(FieldLastDeliveryError))
+}
+
+// LastDeliveryErrorEqualFold applies the EqualFold predicate on the "last_delivery_error" field.
+func LastDeliveryErrorEqualFold(v string) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldEqualFold(FieldLastDeliveryError, v))
+}
+
+// LastDeliveryErrorContainsFold applies the ContainsFold predicate on the "last_delivery_error" field.
+func LastDeliveryErrorContainsFold(v string) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldContainsFold(FieldLastDeliveryError, v))
+}
+
+// LastDeliveryAttemptAtEQ applies the EQ predicate on the "last_delivery_attempt_at" field.
+func LastDeliveryAttemptAtEQ(v time.Time) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldEQ(FieldLastDeliveryAttemptAt, v))
+}
+
+// LastDeliveryAttemptAtNEQ applies the NEQ predicate on the "last_delivery_attempt_at" field.
+func LastDeliveryAttemptAtNEQ(v time.Time) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldNEQ(FieldLastDeliveryAttemptAt, v))
+}
+
+// LastDeliveryAttemptAtIn applies the In predicate on the "last_delivery_attempt_at" field.
+func LastDeliveryAttemptAtIn(vs ...time.Time) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldIn(FieldLastDeliveryAttemptAt, vs...))
+}
+
+// LastDeliveryAttemptAtNotIn applies the NotIn predicate on the "last_delivery_attempt_at" field.
+func LastDeliveryAttemptAtNotIn(vs ...time.Time) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldNotIn(FieldLastDeliveryAttemptAt, vs...))
+}
+
+// LastDeliveryAttemptAtGT applies the GT predicate on the "last_delivery_attempt_at" field.
+func LastDeliveryAttemptAtGT(v time.Time) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldGT(FieldLastDeliveryAttemptAt, v))
+}
+
+// LastDeliveryAttemptAtGTE applies the GTE predicate on the "last_delivery_attempt_at" field.
+func LastDeliveryAttemptAtGTE(v time.Time) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldGTE(FieldLastDeliveryAttemptAt, v))
+}
+
+// LastDeliveryAttemptAtLT applies the LT predicate on the "last_delivery_attempt_at" field.
+func LastDeliveryAttemptAtLT(v time.Time) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldLT(FieldLastDeliveryAttemptAt, v))
+}
+
+// LastDeliveryAttemptAtLTE applies the LTE predicate on the "last_delivery_attempt_at" field.
+func LastDeliveryAttemptAtLTE(v time.Time) predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldLTE(FieldLastDeliveryAttemptAt, v))
+}
+
+// LastDeliveryAttemptAtIsNil applies the IsNil predicate on the "last_delivery_attempt_at" field.
+func LastDeliveryAttemptAtIsNil() predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldIsNull(FieldLastDeliveryAttemptAt))
+}
+
+// LastDeliveryAttemptAtNotNil applies the NotNil predicate on the "last_delivery_attempt_at" field.
+func LastDeliveryAttemptAtNotNil() predicate.LarkMessage {
+	return predicate.LarkMessage(sql.FieldNotNull(FieldLastDeliveryAttemptAt))
 }
 
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.

@@ -45,6 +45,12 @@ const (
 	FieldScore = "score"
 	// FieldModelPayload holds the string denoting the model_payload field in the database.
 	FieldModelPayload = "model_payload"
+	// FieldPreviewPath holds the string denoting the preview_path field in the database.
+	FieldPreviewPath = "preview_path"
+	// FieldPreviewChecksum holds the string denoting the preview_checksum field in the database.
+	FieldPreviewChecksum = "preview_checksum"
+	// FieldArtifactReadyAt holds the string denoting the artifact_ready_at field in the database.
+	FieldArtifactReadyAt = "artifact_ready_at"
 	// FieldCompletedAt holds the string denoting the completed_at field in the database.
 	FieldCompletedAt = "completed_at"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
@@ -91,6 +97,9 @@ var Columns = []string{
 	FieldTags,
 	FieldScore,
 	FieldModelPayload,
+	FieldPreviewPath,
+	FieldPreviewChecksum,
+	FieldArtifactReadyAt,
 	FieldCompletedAt,
 	FieldCreatedAt,
 	FieldUpdatedAt,
@@ -233,6 +242,21 @@ func ByScore(opts ...sql.OrderTermOption) OrderOption {
 // ByModelPayload orders the results by the model_payload field.
 func ByModelPayload(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldModelPayload, opts...).ToFunc()
+}
+
+// ByPreviewPath orders the results by the preview_path field.
+func ByPreviewPath(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPreviewPath, opts...).ToFunc()
+}
+
+// ByPreviewChecksum orders the results by the preview_checksum field.
+func ByPreviewChecksum(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPreviewChecksum, opts...).ToFunc()
+}
+
+// ByArtifactReadyAt orders the results by the artifact_ready_at field.
+func ByArtifactReadyAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldArtifactReadyAt, opts...).ToFunc()
 }
 
 // ByCompletedAt orders the results by the completed_at field.

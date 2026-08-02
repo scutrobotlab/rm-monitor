@@ -439,7 +439,11 @@ func (l *MatchScanLogic) ensureMatchWorkflow(m scannedMatch) error {
 	if planGameCount > 5 {
 		planGameCount = 5
 	}
-	_, err = l.svcCtx.ArgoClient.EnsureWorkflowFromTemplate(l.ctx, argowf.WorkflowTemplateRef{
+	roleSpecsJSON, err := marshalJSON(roleSpecs)
+	if err != nil {
+		return errors.Wrap(err, "marshal match role specs")
+	}
+	wf, err := l.svcCtx.ArgoClient.EnsureWorkflowFromTemplate(l.ctx, argowf.WorkflowTemplateRef{
 		Namespace:    conf.Namespace,
 		Name:         argowf.MatchWorkflowName(m.Event, m.Zone, m.Order, m.ID),
 		TemplateName: conf.MatchWorkflowTemplate,
@@ -449,10 +453,11 @@ func (l *MatchScanLogic) ensureMatchWorkflow(m scannedMatch) error {
 			"rm-monitor/workflow":    "match",
 		},
 		Annotations: map[string]string{
-			"rm-monitor/event":      m.Event,
-			"rm-monitor/zone":       m.Zone,
-			"rm-monitor/order":      strconv.Itoa(m.Order),
-			"rm-monitor/match-type": m.MatchType,
+			"rm-monitor/event":            m.Event,
+			"rm-monitor/zone":             m.Zone,
+			"rm-monitor/order":            strconv.Itoa(m.Order),
+			"rm-monitor/match-type":       m.MatchType,
+			"rm-monitor/recovery-enabled": "true",
 		},
 		Arguments: map[string]string{
 			"match_id":        m.ID,
@@ -464,7 +469,7 @@ func (l *MatchScanLogic) ensureMatchWorkflow(m scannedMatch) error {
 			"total_rounds":    strconv.Itoa(m.TotalRounds),
 			"plan_game_count": strconv.Itoa(planGameCount),
 			"priority":        strconv.Itoa(priority.ForSchools(l.svcCtx.Config.Priority, m.RedTeam.SchoolName, m.BlueTeam.SchoolName)),
-			"role_specs":      mustJSON(roleSpecs),
+			"role_specs":      roleSpecsJSON,
 			"chat_room_id":    chatRoomID,
 			"red_team_id":     m.RedTeam.ID,
 			"red_team":        m.RedTeam.Name,
@@ -476,7 +481,16 @@ func (l *MatchScanLogic) ensureMatchWorkflow(m scannedMatch) error {
 			"record_base_dir": l.svcCtx.Config.RecordConf.WithDefaults().BaseDir,
 		},
 	})
-	return err
+	if err != nil {
+		return errors.Wrap(err, "ensure match workflow")
+	}
+	uid, phase := string(wf.GetUID()), argowf.WorkflowPhase(wf)
+	_, err = l.svcCtx.DB.Match.Update().Where(match.IDEQ(m.ID), match.Or(
+		match.WorkflowNameIsNil(), match.WorkflowNameNEQ(wf.GetName()),
+		match.WorkflowUIDIsNil(), match.WorkflowUIDNEQ(uid),
+		match.WorkflowPhaseIsNil(), match.WorkflowPhaseNEQ(phase),
+	)).SetWorkflowName(wf.GetName()).SetWorkflowUID(uid).SetWorkflowPhase(phase).Save(l.ctx)
+	return errors.Wrap(err, "save match workflow state")
 }
 
 func (l *MatchScanLogic) roleSpecsForMatch(m scannedMatch) ([]roleSpec, string, error) {
@@ -567,10 +581,10 @@ func (l *MatchScanLogic) roundWorkflowArguments(m scannedMatch, r *ent.MatchRoun
 	args := map[string]string{
 		"main_record_context":       "{}",
 		"fpv_record_available":      strconv.FormatBool(len(fpvRecordContexts) > 0),
-		"fpv_record_contexts":       mustJSON(fpvRecordContexts),
+		"fpv_record_contexts":       "[]",
 		"main_record_trim_context":  "{}",
 		"fpv_record_trim_available": strconv.FormatBool(len(fpvRecordTrimContexts) > 0),
-		"fpv_record_trim_contexts":  mustJSON(fpvRecordTrimContexts),
+		"fpv_record_trim_contexts":  "[]",
 		"danmu_enabled":             strconv.FormatBool(l.svcCtx.Config.DanmuConf.Enabled && strings.TrimSpace(chatRoomID) != ""),
 		"main_source_available":     "false",
 		"analyze_enabled":           "false",
@@ -580,31 +594,45 @@ func (l *MatchScanLogic) roundWorkflowArguments(m scannedMatch, r *ent.MatchRoun
 		"main_lark_record_enabled":  strconv.FormatBool(larkRecordEnabled),
 		"main_lark_record_context":  "{}",
 		"fpv_lark_record_enabled":   strconv.FormatBool(len(fpvLarkRecordContexts) > 0),
-		"fpv_lark_record_contexts":  mustJSON(fpvLarkRecordContexts),
+		"fpv_lark_record_contexts":  "[]",
 		"main_transcode_context":    "{}",
 		"fpv_transcode_available":   strconv.FormatBool(len(fpvTranscodeContexts) > 0),
-		"fpv_transcode_contexts":    mustJSON(fpvTranscodeContexts),
+		"fpv_transcode_contexts":    "[]",
 		"highlight_enabled":         "false",
 		"highlight_context":         "{}",
-		"danmu_context": mustJSON(jobcontract.DanmuContext{
+	}
+	for key, value := range map[string]any{
+		"fpv_record_contexts":      fpvRecordContexts,
+		"fpv_record_trim_contexts": fpvRecordTrimContexts,
+		"fpv_lark_record_contexts": fpvLarkRecordContexts,
+		"fpv_transcode_contexts":   fpvTranscodeContexts,
+		"danmu_context": jobcontract.DanmuContext{
 			Schema:       "rm-monitor/danmu-context/v1",
 			MatchRoundID: r.ID,
 			ChatRoomID:   chatRoomID,
 			RoundDir:     roundDir,
 			StartedAt:    r.StartedAt,
-		}),
+		},
+	} {
+		if err := setJSON(args, key, value); err != nil {
+			return nil, err
+		}
 	}
 	if mainSourcePath != "" {
 		args["main_source_available"] = "true"
-		args["main_record_context"] = mustJSON(mainRecordContext)
+		if err := setJSON(args, "main_record_context", mainRecordContext); err != nil {
+			return nil, err
+		}
 		mainMP4Path := mp4PathForSource(mainSourcePath)
 		mainRecordTrimContext = recordTrimContextForRole(m, r, recordConf, mainSourcePath, mainMP4Path, roundDir, mainRole, true)
-		args["main_record_trim_context"] = mustJSON(mainRecordTrimContext)
+		if err := setJSON(args, "main_record_trim_context", mainRecordTrimContext); err != nil {
+			return nil, err
+		}
 		sourceAbs := filepath.Join(recordConf.BaseDir, filepath.FromSlash(mainSourcePath))
 		ocrServerConf := l.svcCtx.Config.OCRServerConf.WithDefaults()
 		if analyzeConf.Enabled {
 			args["analyze_enabled"] = "true"
-			args["analyze_context"] = mustJSON(jobcontract.AnalyzeContext{
+			if err := setJSON(args, "analyze_context", jobcontract.AnalyzeContext{
 				Schema:            "rm-monitor/analyze-context/v1",
 				MatchRoundID:      r.ID,
 				SourcePath:        sourceAbs,
@@ -625,12 +653,14 @@ func (l *MatchScanLogic) roundWorkflowArguments(m scannedMatch, r *ent.MatchRoun
 					SettlementRefineWindowSeconds: analyzeConf.Scan.SettlementRefineWindowSeconds,
 					SettlementRefineFPS:           analyzeConf.Scan.SettlementRefineFPS,
 				},
-			})
+			}); err != nil {
+				return nil, err
+			}
 		}
 		if strings.TrimSpace(recordConf.STTRole) != "" {
 			sttSourcePath := filepath.Join(recordConf.BaseDir, filepath.FromSlash(mainMP4Path))
 			args["stt_enabled"] = "true"
-			args["stt_context"] = mustJSON(jobcontract.STTContext{
+			if err := setJSON(args, "stt_context", jobcontract.STTContext{
 				Schema:            "rm-monitor/stt-context/v1",
 				MatchRoundID:      r.ID,
 				MatchID:           m.ID,
@@ -641,15 +671,21 @@ func (l *MatchScanLogic) roundWorkflowArguments(m scannedMatch, r *ent.MatchRoun
 				STTPath:           filepath.Join(roundDir, "stt.jsonl"),
 				SubtitleName:      mainRole + ".srt",
 				WhisperServerURLs: resolveWhisperServerURLs(l.svcCtx.Config.WhisperServerUrls),
-			})
+			}); err != nil {
+				return nil, err
+			}
 		}
 		if larkRecordEnabled {
-			args["main_lark_record_context"] = mustJSON(larkRecordContextForRole(m, r, recordConf, uploadConf, mainMP4Path, mainRole))
+			if err := setJSON(args, "main_lark_record_context", larkRecordContextForRole(m, r, recordConf, uploadConf, mainMP4Path, mainRole)); err != nil {
+				return nil, err
+			}
 		}
-		args["main_transcode_context"] = mustJSON(transcodeContextForRole(m, r, recordConf, mainMP4Path, roundDir, mainRole))
+		if err := setJSON(args, "main_transcode_context", transcodeContextForRole(m, r, recordConf, mainMP4Path, roundDir, mainRole)); err != nil {
+			return nil, err
+		}
 		if highlightConf.Enabled {
 			args["highlight_enabled"] = "true"
-			args["highlight_context"] = mustJSON(map[string]any{
+			if err := setJSON(args, "highlight_context", map[string]any{
 				"schema":         "rm-monitor/highlight-context/v1",
 				"match_id":       m.ID,
 				"match_round_id": r.ID,
@@ -666,7 +702,9 @@ func (l *MatchScanLogic) roundWorkflowArguments(m scannedMatch, r *ent.MatchRoun
 				"blue_school":    m.BlueTeam.SchoolName,
 				"blue_name":      m.BlueTeam.Name,
 				"priority":       priority.ForSchools(l.svcCtx.Config.Priority, m.RedTeam.SchoolName, m.BlueTeam.SchoolName),
-			})
+			}); err != nil {
+				return nil, err
+			}
 		}
 	}
 	return args, nil
@@ -789,12 +827,21 @@ func resolveWhisperServerURLs(urls []string) []string {
 	return out
 }
 
-func mustJSON(v any) string {
+func marshalJSON(v any) (string, error) {
 	raw, err := json.Marshal(v)
 	if err != nil {
-		return "{}"
+		return "", err
 	}
-	return string(raw)
+	return string(raw), nil
+}
+
+func setJSON(values map[string]string, key string, value any) error {
+	raw, err := marshalJSON(value)
+	if err != nil {
+		return errors.Wrapf(err, "marshal workflow argument %s", key)
+	}
+	values[key] = raw
+	return nil
 }
 
 func (l *MatchScanLogic) roundDir(m scannedMatch, roundNo int) (string, error) {

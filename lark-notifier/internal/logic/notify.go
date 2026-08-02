@@ -2,12 +2,13 @@ package logic
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"html"
 	"os"
 	"path/filepath"
-	"reflect"
 	"sort"
 	"strings"
 	"time"
@@ -17,8 +18,10 @@ import (
 	"scutbot.cn/web/rm-monitor/ent"
 	"scutbot.cn/web/rm-monitor/ent/highlightclip"
 	"scutbot.cn/web/rm-monitor/ent/larkbitablerecord"
+	"scutbot.cn/web/rm-monitor/ent/larkmessage"
 	"scutbot.cn/web/rm-monitor/ent/match"
 	"scutbot.cn/web/rm-monitor/ent/matchround"
+	"scutbot.cn/web/rm-monitor/ent/team"
 	"scutbot.cn/web/rm-monitor/lark-notifier/internal/svc"
 	"scutbot.cn/web/rm-monitor/lark-notifier/internal/utils"
 	"scutbot.cn/web/rm-monitor/match-controller/types"
@@ -38,6 +41,22 @@ type CardPayload struct {
 	Map     map[string]any
 }
 
+type UpdateResult struct {
+	MatchID string             `json:"match_id"`
+	Chats   []ChatUpdateResult `json:"chats"`
+}
+
+type ChatUpdateResult struct {
+	ChatID   string `json:"chat_id"`
+	Action   string `json:"action"`
+	Sequence int64  `json:"sequence"`
+	Error    string `json:"error,omitempty"`
+}
+
+func (r UpdateResult) HasFailures() bool {
+	return lo.SomeBy(r.Chats, func(item ChatUpdateResult) bool { return item.Action == "failed" })
+}
+
 func NewNotifyLogic(ctx context.Context, svcCtx *svc.ServiceContext) *NotifyLogic {
 	return &NotifyLogic{ctx: ctx, svcCtx: svcCtx, Logger: logx.WithContext(ctx)}
 }
@@ -55,27 +74,28 @@ func (l *NotifyLogic) SyncWindow(since time.Time) error {
 	total := 0
 	updated := 0
 	for offset := 0; ; offset += pageSize {
-		matches, err := l.matchesForWindow(since, pageSize, offset)
+		matchIDs, err := l.matchesForWindow(since, pageSize, offset)
 		if err != nil {
 			return err
 		}
-		for _, m := range matches {
+		for _, matchID := range matchIDs {
 			if l.ctx.Err() != nil {
 				return nil
 			}
 			total++
-			changed, err := l.syncMatchCard(m, chatIDs)
+			result, err := ApplyMatchUpdate(l.ctx, l.svcCtx, matchID)
 			if err != nil {
 				if isContextDone(err) {
 					return nil
 				}
-				return err
+				l.Errorf("lark match update failed match=%s result=%+v err=%v", matchID, result, err)
+				continue
 			}
-			if changed {
+			if lo.SomeBy(result.Chats, func(item ChatUpdateResult) bool { return item.Action == "created" || item.Action == "updated" }) {
 				updated++
 			}
 		}
-		if len(matches) < pageSize {
+		if len(matchIDs) < pageSize {
 			break
 		}
 	}
@@ -83,34 +103,24 @@ func (l *NotifyLogic) SyncWindow(since time.Time) error {
 	return nil
 }
 
-func (l *NotifyLogic) matchesForWindow(since time.Time, limit, offset int) ([]*ent.Match, error) {
-	matches, err := l.svcCtx.DB.Match.Query().
+func (l *NotifyLogic) matchesForWindow(since time.Time, limit, offset int) ([]string, error) {
+	ids, err := l.svcCtx.DB.Match.Query().
 		Where(match.Or(
-			match.LatestStatusNEQ("DONE"),
 			match.UpdatedAtGTE(since),
+			match.HasRedTeamWith(team.UpdatedAtGTE(since)),
+			match.HasBlueTeamWith(team.UpdatedAtGTE(since)),
 			match.HasRoundsWith(matchround.UpdatedAtGTE(since)),
 			match.HasRoundsWith(matchround.HasLarkBitableRecordsWith(larkbitablerecord.UpdatedAtGTE(since))),
 			match.HasRoundsWith(matchround.HasHighlightClipsWith(highlightclip.UpdatedAtGTE(since))),
 		)).
 		Order(match.ByUpdatedAt(), match.ByID()).
-		WithRedTeam().
-		WithBlueTeam().
-		WithLarkMessages().
-		WithRounds(func(q *ent.MatchRoundQuery) {
-			q.Order(matchround.ByRoundNo()).
-				WithLarkBitableRecords().
-				WithHighlightClips(func(q *ent.HighlightClipQuery) {
-					q.Where(highlightclip.StatusEQ(highlightclip.StatusAVAILABLE)).
-						Order(highlightclip.ByHighlightIndex())
-				})
-		}).
 		Limit(limit).
 		Offset(offset).
-		All(l.ctx)
+		IDs(l.ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "query lark scan matches")
 	}
-	return matches, nil
+	return ids, nil
 }
 
 func CreateCardPayload(ctx context.Context, svcCtx *svc.ServiceContext, matchID string) ([]byte, error) {
@@ -129,16 +139,36 @@ func BuildCardPayload(ctx context.Context, svcCtx *svc.ServiceContext, matchID s
 	return buildCardPayloadForMatch(ctx, svcCtx, m)
 }
 
-func ApplyMatchUpdate(ctx context.Context, svcCtx *svc.ServiceContext, matchID string) (bool, error) {
+func ApplyMatchUpdate(ctx context.Context, svcCtx *svc.ServiceContext, matchID string) (UpdateResult, error) {
+	result := UpdateResult{MatchID: matchID}
 	chatIDs, err := utils.JoinedChatIDs(ctx, svcCtx)
 	if err != nil {
-		return false, err
+		return result, err
 	}
 	m, err := queryMatchForCard(ctx, svcCtx, matchID)
 	if err != nil {
-		return false, err
+		return result, err
 	}
-	return NewNotifyLogic(ctx, svcCtx).syncMatchCard(m, chatIDs)
+	if !matchShouldHaveCard(m) {
+		return result, nil
+	}
+	payload, err := buildCardPayloadForMatch(ctx, svcCtx, m)
+	if err != nil {
+		return result, err
+	}
+	logic := NewNotifyLogic(ctx, svcCtx)
+	for _, chatID := range chatIDs {
+		chatID = strings.TrimSpace(chatID)
+		if chatID == "" {
+			continue
+		}
+		item := logic.applyChatUpdate(m.ID, chatID, payload)
+		result.Chats = append(result.Chats, item)
+	}
+	if result.HasFailures() {
+		return result, errors.Errorf("lark match update failed for one or more chats")
+	}
+	return result, nil
 }
 
 func buildCardPayloadForMatch(ctx context.Context, svcCtx *svc.ServiceContext, m *ent.Match) (*CardPayload, error) {
@@ -167,7 +197,7 @@ func queryMatchForCard(ctx context.Context, svcCtx *svc.ServiceContext, matchID 
 			q.Order(matchround.ByRoundNo()).
 				WithLarkBitableRecords().
 				WithHighlightClips(func(q *ent.HighlightClipQuery) {
-					q.Where(highlightclip.StatusEQ(highlightclip.StatusAVAILABLE)).
+					q.Where(highlightclip.StatusEQ(highlightclip.StatusAVAILABLE), highlightclip.ArtifactReadyAtNotNil()).
 						Order(highlightclip.ByHighlightIndex())
 				})
 		}).
@@ -176,21 +206,6 @@ func queryMatchForCard(ctx context.Context, svcCtx *svc.ServiceContext, matchID 
 		return nil, errors.Wrap(err, "query match for lark card")
 	}
 	return m, nil
-}
-
-func (l *NotifyLogic) syncMatchCard(m *ent.Match, chatIDs []string) (bool, error) {
-	if m == nil || !matchShouldHaveCard(m) {
-		return false, nil
-	}
-	before := cardPayloadFingerprint(m.Edges.LarkMessages)
-	if err := l.ensureMatchMessages(m, chatIDs); err != nil {
-		return false, err
-	}
-	if err := l.patchMatchCards(m); err != nil {
-		return false, err
-	}
-	after := cardPayloadFingerprint(m.Edges.LarkMessages)
-	return before != after, nil
 }
 
 func matchShouldHaveCard(m *ent.Match) bool {
@@ -203,6 +218,173 @@ func matchShouldHaveCard(m *ent.Match) bool {
 	return lo.SomeBy(m.Edges.Rounds, func(r *ent.MatchRound) bool {
 		return r.Status == matchround.StatusSTARTED || r.Status == matchround.StatusENDED
 	})
+}
+
+func (l *NotifyLogic) applyChatUpdate(matchID, chatID string, payload *CardPayload) ChatUpdateResult {
+	result := ChatUpdateResult{ChatID: chatID}
+	err := l.withCardLock(matchID, chatID, func() error {
+		message, err := l.svcCtx.DB.LarkMessage.Query().
+			Where(larkmessage.ChatIDEQ(chatID), larkmessage.HasMatchWith(match.ID(matchID))).
+			Only(l.ctx)
+		if err != nil && !ent.IsNotFound(err) {
+			return errors.Wrap(err, "query lark message for chat")
+		}
+		if ent.IsNotFound(err) {
+			return l.createChatMessage(matchID, chatID, payload, &result)
+		}
+		return l.updateChatMessage(matchID, message, payload, &result)
+	})
+	if err != nil {
+		result.Action = "failed"
+		result.Error = err.Error()
+		l.Error(errors.Wrapf(err, "apply lark chat update match=%s chat=%s", matchID, chatID))
+	}
+	return result
+}
+
+func (l *NotifyLogic) withCardLock(matchID, chatID string, fn func() error) error {
+	tx, err := l.svcCtx.SQLDB.BeginTx(l.ctx, nil)
+	if err != nil {
+		return errors.Wrap(err, "begin lark advisory lock transaction")
+	}
+	defer func() { _ = tx.Rollback() }()
+	sum := sha256.Sum256([]byte(matchID + "\x00" + chatID))
+	key := int64(binary.BigEndian.Uint64(sum[:8]))
+	if _, err := tx.ExecContext(l.ctx, "SELECT pg_advisory_xact_lock($1)", key); err != nil {
+		return errors.Wrap(err, "acquire lark advisory lock")
+	}
+	if err := fn(); err != nil {
+		return err
+	}
+	return errors.Wrap(tx.Commit(), "release lark advisory lock")
+}
+
+func (l *NotifyLogic) createChatMessage(matchID, chatID string, payload *CardPayload, result *ChatUpdateResult) error {
+	cardID, storedPayload, err := utils.CreateCardEntity(l.ctx, l.svcCtx.LarkClient, l.retryLark, payload.Content)
+	if err != nil {
+		return err
+	}
+	messageID, err := utils.SendCardReferenceMessage(l.ctx, l.svcCtx.LarkClient, l.retryLark, chatID, cardID, utils.MatchCardUUID(matchID, chatID))
+	if err != nil {
+		return err
+	}
+	if err := utils.PatchCardReferenceMessage(l.ctx, l.svcCtx.LarkClient, l.retryLark, messageID, cardID); err != nil {
+		return errors.Wrap(err, "converge lark message card reference")
+	}
+	now := time.Now()
+	created, err := l.svcCtx.DB.LarkMessage.Create().
+		SetMatchID(matchID).
+		SetMessageID(messageID).
+		SetChatID(chatID).
+		SetCardID(cardID).
+		SetCardPayload(storedPayload).
+		SetLastDeliveryAttemptAt(now).
+		Save(l.ctx)
+	if err != nil {
+		if !ent.IsConstraintError(err) {
+			return errors.Wrap(err, "save lark message")
+		}
+		existing, queryErr := l.svcCtx.DB.LarkMessage.Query().
+			Where(larkmessage.ChatIDEQ(chatID), larkmessage.HasMatchWith(match.ID(matchID))).
+			Only(l.ctx)
+		if queryErr != nil {
+			return errors.Wrap(queryErr, "query concurrently created lark message")
+		}
+		return l.updateChatMessage(matchID, existing, payload, result)
+	}
+	result.Action = "created"
+	result.Sequence = created.CardSequence
+	return nil
+}
+
+func (l *NotifyLogic) updateChatMessage(matchID string, message *ent.LarkMessage, payload *CardPayload, result *ChatUpdateResult) error {
+	if message == nil {
+		return errors.New("lark message is nil")
+	}
+	if message.CardID == nil || strings.TrimSpace(*message.CardID) == "" || strings.HasPrefix(message.MessageID, "legacy:") {
+		cardID, storedPayload, err := utils.CreateCardEntity(l.ctx, l.svcCtx.LarkClient, l.retryLark, payload.Content)
+		if err != nil {
+			return l.recordDeliveryFailure(message.ID, err)
+		}
+		if strings.HasPrefix(message.MessageID, "legacy:") {
+			return l.recordDeliveryFailure(message.ID, errors.New("legacy lark message cannot be patched without a real message_id"))
+		}
+		if err := utils.PatchCardReferenceMessage(l.ctx, l.svcCtx.LarkClient, l.retryLark, message.MessageID, cardID); err != nil {
+			return l.recordDeliveryFailure(message.ID, err)
+		}
+		updated, err := l.svcCtx.DB.LarkMessage.UpdateOneID(message.ID).
+			SetCardID(cardID).
+			SetCardPayload(storedPayload).
+			SetLastDeliveryAttemptAt(time.Now()).
+			ClearLastDeliveryError().
+			Save(l.ctx)
+		if err != nil {
+			return errors.Wrap(err, "save recovered lark card")
+		}
+		result.Action = "updated"
+		result.Sequence = updated.CardSequence
+		return nil
+	}
+	if equalCardPayload(message.CardPayload, payload.Map) {
+		result.Action = "unchanged"
+		result.Sequence = message.CardSequence
+		return nil
+	}
+	reserved, err := l.svcCtx.DB.LarkMessage.UpdateOneID(message.ID).
+		AddCardSequence(1).
+		SetLastDeliveryAttemptAt(time.Now()).
+		ClearLastDeliveryError().
+		Save(l.ctx)
+	if err != nil {
+		return errors.Wrap(err, "reserve lark card sequence")
+	}
+	result.Sequence = reserved.CardSequence
+	hash := cardPayloadHash(payload.Bytes)
+	uuid := utils.MatchCardUpdateUUID(matchID, *message.CardID, reserved.CardSequence, hash)
+	storedPayload, updateErr := utils.UpdateCardEntity(l.ctx, l.svcCtx.LarkClient, l.retryLark, *message.CardID, uuid, reserved.CardSequence, payload.Content)
+	if updateErr != nil && !utils.IsCardUpdateAlreadyApplied(updateErr) {
+		return l.recordDeliveryFailure(message.ID, updateErr)
+	}
+	if _, err := l.svcCtx.DB.LarkMessage.UpdateOneID(message.ID).
+		SetCardPayload(storedPayloadOrDesired(storedPayload, payload.Map)).
+		SetLastDeliveryAttemptAt(time.Now()).
+		ClearLastDeliveryError().
+		Save(l.ctx); err != nil {
+		return errors.Wrap(err, "save lark card payload")
+	}
+	result.Action = "updated"
+	return nil
+}
+
+func (l *NotifyLogic) recordDeliveryFailure(messageID int, cause error) error {
+	if messageID != 0 {
+		_, err := l.svcCtx.DB.LarkMessage.UpdateOneID(messageID).
+			SetLastDeliveryError(cause.Error()).
+			SetLastDeliveryAttemptAt(time.Now()).
+			Save(l.ctx)
+		if err != nil {
+			return errors.Wrapf(cause, "also failed to save delivery error: %v", err)
+		}
+	}
+	return cause
+}
+
+func equalCardPayload(a, b map[string]any) bool {
+	aRaw, _ := json.Marshal(a)
+	bRaw, _ := json.Marshal(b)
+	return string(aRaw) == string(bRaw)
+}
+
+func cardPayloadHash(raw []byte) string {
+	sum := sha256.Sum256(raw)
+	return fmt.Sprintf("%x", sum[:12])
+}
+
+func storedPayloadOrDesired(stored, desired map[string]any) map[string]any {
+	if stored != nil {
+		return stored
+	}
+	return desired
 }
 
 func cardPayloadFingerprint(messages []*ent.LarkMessage) string {
@@ -338,86 +520,6 @@ func isContextDone(err error) bool {
 	return errors.Cause(err) == context.Canceled || errors.Cause(err) == context.DeadlineExceeded
 }
 
-func (l *NotifyLogic) patchMatchCards(m *ent.Match) error {
-	if m == nil {
-		return nil
-	}
-	payload, err := buildCardPayloadForMatch(l.ctx, l.svcCtx, m)
-	if err != nil {
-		return err
-	}
-	content := payload.Content
-	contentMap := payload.Map
-	dataUpdatedAt := cardDataUpdatedAt(m)
-	sequence := dataUpdatedAt.Unix()
-	attempted := 0
-	updated := 0
-	skipped := 0
-	failed := 0
-	for _, card := range m.Edges.LarkMessages {
-		if !cardIDReady(card) {
-			skipped++
-			l.Infof("skip lark card update match=%s message=%s reason=card_not_ready", m.ID, card.MessageID)
-			continue
-		}
-		if reflect.DeepEqual(card.CardPayload, contentMap) && !dataUpdatedAt.After(card.UpdatedAt) {
-			skipped++
-			l.Infof("skip lark card update match=%s message=%s card=%s reason=payload_unchanged data_updated_at=%s lark_updated_at=%s", m.ID, card.MessageID, *card.CardID, dataUpdatedAt.Format(time.RFC3339Nano), card.UpdatedAt.Format(time.RFC3339Nano))
-			continue
-		}
-		attempted++
-		l.Infof("attempt lark card update match=%s message=%s card=%s sequence=%d data_updated_at=%s lark_updated_at=%s forced=%t", m.ID, card.MessageID, *card.CardID, sequence, dataUpdatedAt.Format(time.RFC3339Nano), card.UpdatedAt.Format(time.RFC3339Nano), dataUpdatedAt.After(card.UpdatedAt))
-		payload, err := utils.UpdateCardEntity(l.ctx, l.svcCtx.LarkClient, l.retryLark, *card.CardID, utils.MatchCardUpdateUUID(m.ID, *card.CardID, sequence), sequence, content)
-		if err != nil {
-			if utils.IsCardUpdateAlreadyApplied(err) {
-				if err := l.svcCtx.DB.LarkMessage.UpdateOneID(card.ID).SetCardPayload(contentMap).Exec(l.ctx); err != nil {
-					l.Error(errors.Wrap(err, "update lark card payload after idempotent card update"))
-				}
-				card.CardPayload = contentMap
-				updated++
-				l.Infof("lark card update already applied match=%s message=%s card=%s", m.ID, card.MessageID, *card.CardID)
-				continue
-			}
-			failed++
-			l.Error(errors.Wrap(err, "update lark card entity"))
-			continue
-		}
-		if err := l.svcCtx.DB.LarkMessage.UpdateOneID(card.ID).SetCardPayload(payload).Exec(l.ctx); err != nil {
-			failed++
-			l.Error(errors.Wrap(err, "update lark card payload"))
-			continue
-		}
-		card.CardPayload = payload
-		updated++
-		l.Infof("updated lark card match=%s message=%s card=%s", m.ID, card.MessageID, *card.CardID)
-	}
-	l.Infof("lark card patch finished match=%s attempted=%d updated=%d skipped=%d failed=%d", m.ID, attempted, updated, skipped, failed)
-	return nil
-}
-
-func cardDataUpdatedAt(m *ent.Match) time.Time {
-	if m == nil {
-		return time.Time{}
-	}
-	updatedAt := m.UpdatedAt
-	for _, r := range m.Edges.Rounds {
-		if r.UpdatedAt.After(updatedAt) {
-			updatedAt = r.UpdatedAt
-		}
-		for _, record := range r.Edges.LarkBitableRecords {
-			if record.UpdatedAt.After(updatedAt) {
-				updatedAt = record.UpdatedAt
-			}
-		}
-		for _, clip := range r.Edges.HighlightClips {
-			if clip.UpdatedAt.After(updatedAt) {
-				updatedAt = clip.UpdatedAt
-			}
-		}
-	}
-	return updatedAt
-}
-
 func (l *NotifyLogic) retryLark(chatID string, f func() error) error {
 	return l.svcCtx.RetryLark(l.ctx, chatID, f)
 }
@@ -528,17 +630,14 @@ func (l *NotifyLogic) roundCards(m *ent.Match) []utils.MatchRoundCard {
 }
 
 func (l *NotifyLogic) roundSettlementImageKey(r *ent.MatchRound) string {
-	if r == nil {
+	if r == nil || r.SettlementStatus != "CONFIRMED" || r.SettlementReadyAt == nil || r.SettlementImagePath == nil {
 		return ""
 	}
-	roundDir := l.roundDirFromRecords(r)
-	if roundDir == "" {
-		return ""
+	baseDir := strings.TrimSpace(l.svcCtx.Config.RecordConf.BaseDir)
+	if baseDir == "" {
+		baseDir = "/records"
 	}
-	if !roundSettlementConfirmed(filepath.Join(roundDir, "round.json")) {
-		return ""
-	}
-	imagePath := filepath.Join(roundDir, "settlement.jpg")
+	imagePath := filepath.Join(baseDir, filepath.FromSlash(*r.SettlementImagePath))
 	if !fileExists(imagePath) {
 		return ""
 	}

@@ -102,6 +102,7 @@ func (l *RoundGateLogic) tryRun(matchID string, roundNo int, specs []roleSpec, c
 	args["round_skip_reason"] = ""
 	args["round_dir"] = roundDir
 	args["round_no"] = strconv.Itoa(roundNo)
+	args["match_round_id"] = strconv.Itoa(r.ID)
 	return true, jobcontract.WriteArgoOutputs(anyMap(args))
 }
 
@@ -110,6 +111,7 @@ func (l *RoundGateLogic) writeInactive(roundDir, reason string) error {
 		"round_active":              false,
 		"round_skip_reason":         reason,
 		"round_dir":                 roundDir,
+		"match_round_id":            0,
 		"main_record_context":       "{}",
 		"fpv_record_available":      false,
 		"fpv_record_contexts":       "[]",

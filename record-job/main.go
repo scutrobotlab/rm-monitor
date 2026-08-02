@@ -48,7 +48,7 @@ func main() {
 	var jobCtx jobcontract.RecordContext
 	if err := jobcontract.ContextFromEnv(&jobCtx); err != nil {
 		logx.Error(err)
-		os.Exit(1)
+		os.Exit(jobcontract.ExitContract)
 	}
 	if jobCtx.BaseDir == "" {
 		jobCtx.BaseDir = c.RecordConf.WithDefaults().BaseDir

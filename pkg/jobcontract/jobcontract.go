@@ -2,8 +2,12 @@ package jobcontract
 
 import (
 	"encoding/json"
+	stderrors "errors"
+	"net"
 	"os"
 	"path/filepath"
+	"reflect"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -18,6 +22,29 @@ const (
 	TempJobDir  = "/tmp/job"
 	ArgoOutDir  = "/tmp/argo"
 )
+
+const (
+	ExitFailed    = 1
+	ExitContract  = 2
+	ExitTemporary = 75
+)
+
+func ExitCode(err error) int {
+	if err == nil {
+		return 0
+	}
+	var netErr net.Error
+	if stderrors.As(err, &netErr) {
+		return ExitTemporary
+	}
+	message := strings.ToLower(err.Error())
+	for _, marker := range []string{"timeout", "temporarily unavailable", "connection reset", "connection refused", "broken pipe", "too many requests", "status 429", "status 500", "status 502", "status 503", "status 504", "database is locked", "i/o timeout"} {
+		if strings.Contains(message, marker) {
+			return ExitTemporary
+		}
+	}
+	return ExitFailed
+}
 
 type ErrorResult struct {
 	Schema       string    `json:"schema"`
@@ -222,7 +249,51 @@ func ContextFromEnv(v any) error {
 	if err := json.Unmarshal([]byte(raw), v); err != nil {
 		return errors.Wrap(err, "decode job context")
 	}
-	return nil
+	return validateContext(v)
+}
+
+func validateContext(v any) error {
+	required := func(schema, expected string, fields map[string]bool) error {
+		if schema != expected || !strings.HasPrefix(schema, "rm-monitor/") || !strings.HasSuffix(schema, "/v1") {
+			return errors.Errorf("invalid context schema %q, expected %q", schema, expected)
+		}
+		for name, ok := range fields {
+			if !ok {
+				return errors.Errorf("context field %s is required", name)
+			}
+		}
+		return nil
+	}
+	switch c := v.(type) {
+	case *TranscodeContext:
+		return required(c.Schema, "rm-monitor/transcode-context/v1", map[string]bool{"source_path": c.SourcePath != "", "archive_path": c.ArchivePath != "", "base_dir": c.BaseDir != ""})
+	case *RecordContext:
+		return required(c.Schema, "rm-monitor/record-context/v1", map[string]bool{"match_round_id": c.MatchRoundID > 0, "role": c.Role != "", "source_url": c.SourceURL != "", "output_path": c.OutputPath != "", "base_dir": c.BaseDir != ""})
+	case *RecordTrimContext:
+		return required(c.Schema, "rm-monitor/record-trim-context/v1", map[string]bool{"match_round_id": c.MatchRoundID > 0, "role": c.Role != "", "source_path": c.SourcePath != "", "output_path": c.OutputPath != ""})
+	case *LarkRecordContext:
+		return required(c.Schema, "rm-monitor/lark-record-context/v1", map[string]bool{"match_id": c.MatchID != "", "match_round_id": c.MatchRoundID > 0, "role": c.Role != "", "source_path": c.SourcePath != "", "bitable_app_token": c.BitableAppToken != ""})
+	case *STTContext:
+		return required(c.Schema, "rm-monitor/stt-context/v1", map[string]bool{"match_round_id": c.MatchRoundID > 0, "source_path": c.SourcePath != "", "round_dir": c.RoundDir != "", "stt_path": c.STTPath != "", "whisper_server_urls": len(c.WhisperServerURLs) > 0})
+	case *DanmuContext:
+		return required(c.Schema, "rm-monitor/danmu-context/v1", map[string]bool{"match_round_id": c.MatchRoundID > 0, "chat_room_id": c.ChatRoomID != "", "round_dir": c.RoundDir != ""})
+	case *AnalyzeContext:
+		return required(c.Schema, "rm-monitor/analyze-context/v1", map[string]bool{"match_round_id": c.MatchRoundID > 0, "source_path": c.SourcePath != "", "round_dir": c.RoundDir != "", "role": c.Role != ""})
+	default:
+		value := reflect.ValueOf(v)
+		if value.Kind() != reflect.Pointer || value.IsNil() || value.Elem().Kind() != reflect.Struct {
+			return errors.Errorf("job context must be a non-nil struct pointer, got %T", v)
+		}
+		field := value.Elem().FieldByName("Schema")
+		if !field.IsValid() || field.Kind() != reflect.String {
+			return errors.Errorf("context type %T must define a schema field", v)
+		}
+		schema := field.String()
+		if !strings.HasPrefix(schema, "rm-monitor/") || !strings.HasSuffix(schema, "/v1") {
+			return errors.Errorf("invalid context schema %q", schema)
+		}
+		return nil
+	}
 }
 
 func WriteContext(_ string, v any) error {

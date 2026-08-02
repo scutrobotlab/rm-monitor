@@ -64,6 +64,9 @@ var (
 		{Name: "tags", Type: field.TypeJSON, Nullable: true},
 		{Name: "score", Type: field.TypeFloat64, Default: 0},
 		{Name: "model_payload", Type: field.TypeString, Nullable: true, Size: 2147483647},
+		{Name: "preview_path", Type: field.TypeString, Nullable: true},
+		{Name: "preview_checksum", Type: field.TypeString, Nullable: true},
+		{Name: "artifact_ready_at", Type: field.TypeTime, Nullable: true},
 		{Name: "completed_at", Type: field.TypeTime, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
@@ -77,7 +80,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "highlight_clips_match_rounds_highlight_clips",
-				Columns:    []*schema.Column{HighlightClipsColumns[19]},
+				Columns:    []*schema.Column{HighlightClipsColumns[22]},
 				RefColumns: []*schema.Column{MatchRoundsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -86,7 +89,7 @@ var (
 			{
 				Name:    "highlightclip_role_algorithm_version_highlight_index_match_round_highlight_clips",
 				Unique:  true,
-				Columns: []*schema.Column{HighlightClipsColumns[2], HighlightClipsColumns[3], HighlightClipsColumns[1], HighlightClipsColumns[19]},
+				Columns: []*schema.Column{HighlightClipsColumns[2], HighlightClipsColumns[3], HighlightClipsColumns[1], HighlightClipsColumns[22]},
 			},
 			{
 				Name:    "highlightclip_status",
@@ -144,6 +147,9 @@ var (
 		{Name: "chat_id", Type: field.TypeString, Nullable: true},
 		{Name: "card_id", Type: field.TypeString, Unique: true, Nullable: true},
 		{Name: "card_payload", Type: field.TypeJSON, Nullable: true},
+		{Name: "card_sequence", Type: field.TypeInt64, Default: 0},
+		{Name: "last_delivery_error", Type: field.TypeString, Nullable: true, Size: 2147483647},
+		{Name: "last_delivery_attempt_at", Type: field.TypeTime, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "match_lark_messages", Type: field.TypeString},
@@ -156,7 +162,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "lark_messages_matches_lark_messages",
-				Columns:    []*schema.Column{LarkMessagesColumns[7]},
+				Columns:    []*schema.Column{LarkMessagesColumns[10]},
 				RefColumns: []*schema.Column{MatchesColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -165,7 +171,7 @@ var (
 			{
 				Name:    "larkmessage_chat_id_match_lark_messages",
 				Unique:  true,
-				Columns: []*schema.Column{LarkMessagesColumns[2], LarkMessagesColumns[7]},
+				Columns: []*schema.Column{LarkMessagesColumns[2], LarkMessagesColumns[10]},
 			},
 		},
 	}
@@ -233,6 +239,10 @@ var (
 		{Name: "workflow_name", Type: field.TypeString, Nullable: true},
 		{Name: "workflow_uid", Type: field.TypeString, Nullable: true},
 		{Name: "workflow_phase", Type: field.TypeString, Nullable: true},
+		{Name: "settlement_status", Type: field.TypeString, Default: ""},
+		{Name: "settlement_image_path", Type: field.TypeString, Nullable: true},
+		{Name: "settlement_image_checksum", Type: field.TypeString, Nullable: true},
+		{Name: "settlement_ready_at", Type: field.TypeTime, Nullable: true},
 		{Name: "started_at", Type: field.TypeTime},
 		{Name: "ended_at", Type: field.TypeTime, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
@@ -247,7 +257,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "match_rounds_matches_rounds",
-				Columns:    []*schema.Column{MatchRoundsColumns[11]},
+				Columns:    []*schema.Column{MatchRoundsColumns[15]},
 				RefColumns: []*schema.Column{MatchesColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -256,7 +266,7 @@ var (
 			{
 				Name:    "matchround_round_no_match_rounds",
 				Unique:  true,
-				Columns: []*schema.Column{MatchRoundsColumns[1], MatchRoundsColumns[11]},
+				Columns: []*schema.Column{MatchRoundsColumns[1], MatchRoundsColumns[15]},
 			},
 			{
 				Name:    "matchround_status",
@@ -266,12 +276,12 @@ var (
 			{
 				Name:    "matchround_updated_at",
 				Unique:  false,
-				Columns: []*schema.Column{MatchRoundsColumns[10]},
+				Columns: []*schema.Column{MatchRoundsColumns[14]},
 			},
 			{
 				Name:    "matchround_status_updated_at",
 				Unique:  false,
-				Columns: []*schema.Column{MatchRoundsColumns[2], MatchRoundsColumns[10]},
+				Columns: []*schema.Column{MatchRoundsColumns[2], MatchRoundsColumns[14]},
 			},
 		},
 	}

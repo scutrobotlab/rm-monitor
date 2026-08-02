@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"encoding/xml"
 	"flag"
@@ -32,6 +34,7 @@ import (
 )
 
 var configFile = flag.String("f", "etc/config.yml", "the config file")
+var finalizeArtifact = flag.Bool("finalize-artifact", false, "publish highlight artifact readiness")
 
 func init() {
 	logx.MustSetup(logx.LogConf{ServiceName: "highlight-job", Mode: "console", Encoding: "plain"})
@@ -59,6 +62,7 @@ type Context struct {
 }
 
 type ArtifactContext struct {
+	Schema             string          `json:"schema"`
 	HighlightClipID    int             `json:"highlight_clip_id"`
 	HighlightIndex     int             `json:"highlight_index"`
 	Role               string          `json:"role"`
@@ -104,10 +108,28 @@ func main() {
 	flag.Parse()
 	var c config.Config
 	app.MustLoadConfig(*configFile, &c)
+	if *finalizeArtifact {
+		var artifactCtx ArtifactContext
+		if err := jobcontract.ContextFromEnv(&artifactCtx); err != nil {
+			logx.Error(err)
+			os.Exit(2)
+		}
+		client, err := db.Open(context.Background(), c.PostgresConf)
+		if err != nil {
+			logx.Error(err)
+			os.Exit(75)
+		}
+		defer client.Close()
+		if err := finalizeHighlightArtifact(context.Background(), client, c.RecordConf.WithDefaults(), artifactCtx); err != nil {
+			logx.Error(err)
+			os.Exit(75)
+		}
+		return
+	}
 	var jobCtx Context
 	if err := jobcontract.ContextFromEnv(&jobCtx); err != nil {
 		logx.Error(err)
-		os.Exit(1)
+		os.Exit(jobcontract.ExitContract)
 	}
 	if err := jobcontract.WriteContext("", jobCtx); err != nil {
 		logx.Error(err)
@@ -116,14 +138,42 @@ func main() {
 	client, err := db.Open(context.Background(), c.PostgresConf)
 	if err != nil {
 		logx.Error(err)
-		os.Exit(1)
+		os.Exit(jobcontract.ExitTemporary)
 	}
 	defer client.Close()
 	if err := run(context.Background(), client, c, jobCtx); err != nil {
 		_ = jobcontract.WriteError("", "highlight", 0, err)
 		logx.Error(err)
-		os.Exit(1)
+		os.Exit(jobcontract.ExitCode(err))
 	}
+}
+
+func finalizeHighlightArtifact(ctx context.Context, client *ent.Client, recordConf common.RecordConf, jobCtx ArtifactContext) error {
+	if jobCtx.HighlightClipID <= 0 {
+		return errors.New("highlight_clip_id is required")
+	}
+	outputDir := storagepath.Resolve(recordConf.BaseDir, jobCtx.OutputDir)
+	for _, name := range []string{"video.mp4", "preview.gif", "highlight.json"} {
+		info, err := os.Stat(filepath.Join(outputDir, name))
+		if err != nil {
+			return errors.Wrapf(err, "stat highlight artifact %s", name)
+		}
+		if info.Size() <= 0 {
+			return errors.Errorf("highlight artifact %s is empty", name)
+		}
+	}
+	preview := filepath.Join(outputDir, "preview.gif")
+	raw, err := os.ReadFile(preview)
+	if err != nil {
+		return err
+	}
+	sum := sha256.Sum256(raw)
+	previewPath := path.Join(jobCtx.OutputDir, "preview.gif")
+	return client.HighlightClip.UpdateOneID(jobCtx.HighlightClipID).
+		SetPreviewPath(previewPath).
+		SetPreviewChecksum(hex.EncodeToString(sum[:])).
+		SetArtifactReadyAt(time.Now()).
+		Exec(ctx)
 }
 
 func run(ctx context.Context, client *ent.Client, c config.Config, jobCtx Context) error {
@@ -230,6 +280,7 @@ func createOrUpdateClip(ctx context.Context, client *ent.Client, c config.Config
 		return nil, nil
 	}
 	return &ArtifactContext{
+		Schema:             "rm-monitor/highlight-artifact-context/v1",
 		HighlightClipID:    clip.ID,
 		HighlightIndex:     candidate.Index,
 		Role:               conf.Role,

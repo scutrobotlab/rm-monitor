@@ -19,7 +19,7 @@ func IsNoRows(err error) bool {
 	return err != nil && (errors.Cause(err) == stdsql.ErrNoRows || strings.Contains(err.Error(), "no rows in result set"))
 }
 
-func Open(_ context.Context, c config.PostgresConf) (*ent.Client, error) {
+func OpenSQL(c config.PostgresConf) (*stdsql.DB, error) {
 	if c.DSN == "" {
 		return nil, errors.New("postgres dsn is required")
 	}
@@ -28,10 +28,20 @@ func Open(_ context.Context, c config.PostgresConf) (*ent.Client, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "open postgres")
 	}
-	drv := entsql.OpenDB(dialect.Postgres, sqlDB)
+	return sqlDB, nil
+}
 
-	client := ent.NewClient(ent.Driver(drv))
-	return client, nil
+func NewClient(sqlDB *stdsql.DB) *ent.Client {
+	drv := entsql.OpenDB(dialect.Postgres, sqlDB)
+	return ent.NewClient(ent.Driver(drv))
+}
+
+func Open(_ context.Context, c config.PostgresConf) (*ent.Client, error) {
+	sqlDB, err := OpenSQL(c)
+	if err != nil {
+		return nil, err
+	}
+	return NewClient(sqlDB), nil
 }
 
 func Migrate(ctx context.Context, c config.PostgresConf) error {

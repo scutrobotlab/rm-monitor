@@ -102,6 +102,20 @@ spec:
               parameters:
                 - name: context
                   value: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.analyze_context}}`}}"
+          - name: round-{{ $round }}-analyze-publish
+            when: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.analyze_enabled}}`}} == true"
+            depends: "round-{{ $round }}-analyze.Succeeded"
+            template: analyze-publish
+            arguments:
+              parameters:
+                - name: match-round-id
+                  value: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.match_round_id}}`}}"
+                - name: round-json
+                  value: "{{`{{tasks.round-`}}{{ $round }}{{`-analyze.outputs.parameters.round_json_path}}`}}"
+                - name: settlement-image
+                  value: "{{`{{tasks.round-`}}{{ $round }}{{`-analyze.outputs.parameters.settlement_image_path}}`}}"
+                - name: settlement-status
+                  value: "{{`{{tasks.round-`}}{{ $round }}{{`-analyze.outputs.parameters.settlement_status}}`}}"
           - name: round-{{ $round }}-stt
             when: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.stt_enabled}}`}} == true"
             depends: "round-{{ $round }}-record-trim-main.Succeeded"
@@ -112,7 +126,7 @@ spec:
                   value: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.stt_context}}`}}"
           - name: round-{{ $round }}-record-trim-main
             when: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.main_source_available}}`}} == true && {{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.analyze_enabled}}`}} == true"
-            depends: "round-{{ $round }}-record-main.Succeeded && round-{{ $round }}-analyze.Succeeded && (round-{{ $round }}-danmu.Succeeded || round-{{ $round }}-danmu.Skipped || round-{{ $round }}-danmu.Omitted)"
+            depends: "round-{{ $round }}-record-main.Succeeded && round-{{ $round }}-analyze-publish.Succeeded && (round-{{ $round }}-danmu.Succeeded || round-{{ $round }}-danmu.Skipped || round-{{ $round }}-danmu.Omitted)"
             template: record-trim
             arguments:
               parameters:
@@ -120,7 +134,7 @@ spec:
                   value: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.main_record_trim_context}}`}}"
           - name: round-{{ $round }}-record-trim-fpv
             when: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.fpv_record_trim_available}}`}} == true && {{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.analyze_enabled}}`}} == true"
-            depends: "round-{{ $round }}-record-fpv.Succeeded && round-{{ $round }}-analyze.Succeeded"
+            depends: "round-{{ $round }}-record-fpv.Succeeded && round-{{ $round }}-analyze-publish.Succeeded"
             template: record-trim
             arguments:
               parameters:
@@ -178,8 +192,17 @@ spec:
                 - name: context
                   value: "{{`{{item}}`}}"
             withParam: "{{`{{tasks.round-`}}{{ $round }}{{`-highlight.outputs.parameters.highlight_contexts}}`}}"
+          - name: round-{{ $round }}-highlight-finalize
+            when: "{{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.highlight_enabled}}`}} == true && {{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.danmu_enabled}}`}} == true && {{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.analyze_enabled}}`}} == true && {{`{{tasks.round-`}}{{ $round }}{{`-gate.outputs.parameters.stt_enabled}}`}} == true"
+            depends: "round-{{ $round }}-highlight-artifact.Succeeded"
+            template: highlight-finalize
+            arguments:
+              parameters:
+                - name: context
+                  value: "{{`{{item}}`}}"
+            withParam: "{{`{{tasks.round-`}}{{ $round }}{{`-highlight.outputs.parameters.highlight_contexts}}`}}"
           - name: round-{{ $round }}-ready
-            depends: "round-{{ $round }}-gate.Succeeded && (round-{{ $round }}-record-main.Succeeded || round-{{ $round }}-record-main.Skipped || round-{{ $round }}-record-main.Omitted) && (round-{{ $round }}-record-fpv.Succeeded || round-{{ $round }}-record-fpv.Skipped || round-{{ $round }}-record-fpv.Omitted) && (round-{{ $round }}-analyze.Succeeded || round-{{ $round }}-analyze.Skipped || round-{{ $round }}-analyze.Omitted) && (round-{{ $round }}-stt.Succeeded || round-{{ $round }}-stt.Skipped || round-{{ $round }}-stt.Omitted) && (round-{{ $round }}-record-trim-main.Succeeded || round-{{ $round }}-record-trim-main.Skipped || round-{{ $round }}-record-trim-main.Omitted) && (round-{{ $round }}-record-trim-fpv.Succeeded || round-{{ $round }}-record-trim-fpv.Skipped || round-{{ $round }}-record-trim-fpv.Omitted) && (round-{{ $round }}-lark-record-main.Succeeded || round-{{ $round }}-lark-record-main.Skipped || round-{{ $round }}-lark-record-main.Omitted) && (round-{{ $round }}-lark-record-fpv.Succeeded || round-{{ $round }}-lark-record-fpv.Skipped || round-{{ $round }}-lark-record-fpv.Omitted) && (round-{{ $round }}-transcode-main.Succeeded || round-{{ $round }}-transcode-main.Skipped || round-{{ $round }}-transcode-main.Omitted) && (round-{{ $round }}-transcode-fpv.Succeeded || round-{{ $round }}-transcode-fpv.Skipped || round-{{ $round }}-transcode-fpv.Omitted)"
+            depends: "round-{{ $round }}-gate.Succeeded && (round-{{ $round }}-record-main.Succeeded || round-{{ $round }}-record-main.Skipped || round-{{ $round }}-record-main.Omitted) && (round-{{ $round }}-record-fpv.Succeeded || round-{{ $round }}-record-fpv.Skipped || round-{{ $round }}-record-fpv.Omitted) && (round-{{ $round }}-analyze-publish.Succeeded || round-{{ $round }}-analyze-publish.Skipped || round-{{ $round }}-analyze-publish.Omitted) && (round-{{ $round }}-stt.Succeeded || round-{{ $round }}-stt.Skipped || round-{{ $round }}-stt.Omitted) && (round-{{ $round }}-record-trim-main.Succeeded || round-{{ $round }}-record-trim-main.Skipped || round-{{ $round }}-record-trim-main.Omitted) && (round-{{ $round }}-record-trim-fpv.Succeeded || round-{{ $round }}-record-trim-fpv.Skipped || round-{{ $round }}-record-trim-fpv.Omitted) && (round-{{ $round }}-lark-record-main.Succeeded || round-{{ $round }}-lark-record-main.Skipped || round-{{ $round }}-lark-record-main.Omitted) && (round-{{ $round }}-lark-record-fpv.Succeeded || round-{{ $round }}-lark-record-fpv.Skipped || round-{{ $round }}-lark-record-fpv.Omitted) && (round-{{ $round }}-transcode-main.Succeeded || round-{{ $round }}-transcode-main.Skipped || round-{{ $round }}-transcode-main.Omitted) && (round-{{ $round }}-transcode-fpv.Succeeded || round-{{ $round }}-transcode-fpv.Skipped || round-{{ $round }}-transcode-fpv.Omitted) && (round-{{ $round }}-highlight-finalize.Succeeded || round-{{ $round }}-highlight-finalize.Skipped || round-{{ $round }}-highlight-finalize.Omitted)"
             template: noop
           - name: round-{{ $round }}-manifest-ready
             depends: "round-{{ $round }}-gate.Succeeded && (round-{{ $round }}-record-main.Succeeded || round-{{ $round }}-record-main.Skipped || round-{{ $round }}-record-main.Omitted) && (round-{{ $round }}-record-fpv.Succeeded || round-{{ $round }}-record-fpv.Skipped || round-{{ $round }}-record-fpv.Omitted) && (round-{{ $round }}-danmu.Succeeded || round-{{ $round }}-danmu.Skipped || round-{{ $round }}-danmu.Omitted) && (round-{{ $round }}-analyze.Succeeded || round-{{ $round }}-analyze.Skipped || round-{{ $round }}-analyze.Omitted) && (round-{{ $round }}-stt.Succeeded || round-{{ $round }}-stt.Skipped || round-{{ $round }}-stt.Omitted) && (round-{{ $round }}-record-trim-main.Succeeded || round-{{ $round }}-record-trim-main.Skipped || round-{{ $round }}-record-trim-main.Omitted) && (round-{{ $round }}-record-trim-fpv.Succeeded || round-{{ $round }}-record-trim-fpv.Skipped || round-{{ $round }}-record-trim-fpv.Omitted)"
@@ -228,6 +251,8 @@ spec:
             valueFrom: {path: /tmp/argo/round_skip_reason}
           - name: round_dir
             valueFrom: {path: /tmp/argo/round_dir}
+          - name: match_round_id
+            valueFrom: {path: /tmp/argo/match_round_id}
           - name: main_record_context
             valueFrom: {path: /tmp/argo/main_record_context}
           - name: fpv_record_available
@@ -273,6 +298,7 @@ spec:
           - name: highlight_context
             valueFrom: {path: /tmp/argo/highlight_context}
     - name: record
+{{ include "rm-monitor.recordRetryStrategy" . | indent 6 }}
       inputs:
         parameters:
           - name: context
@@ -329,6 +355,7 @@ spec:
           - name: online_count_json
             valueFrom: {path: /tmp/argo/online_count_json}
     - name: analyze
+{{ include "rm-monitor.processingRetryStrategy" . | indent 6 }}
       inputs:
         parameters:
           - name: context
@@ -354,7 +381,39 @@ spec:
             valueFrom: {path: /tmp/argo/effective_start_seconds}
           - name: effective_end_seconds
             valueFrom: {path: /tmp/argo/effective_end_seconds}
+    - name: analyze-publish
+{{ include "rm-monitor.processingRetryStrategy" . | indent 6 }}
+      inputs:
+        parameters:
+          - name: match-round-id
+          - name: round-json
+          - name: settlement-image
+          - name: settlement-status
+      container:
+        image: {{ include "rm-monitor.image" (dict "root" . "component" "match-controller") }}
+        imagePullPolicy: {{ include "rm-monitor.jobImagePullPolicy" . }}
+        command: ["/usr/local/bin/app"]
+        args:
+          - "-f"
+          - "{{ include "rm-monitor.configPath" . }}"
+          - "-publish-analyze"
+          - "-match-round-id"
+          - "{{`{{inputs.parameters.match-round-id}}`}}"
+          - "-round-json"
+          - "{{`{{inputs.parameters.round-json}}`}}"
+          - "-settlement-image"
+          - "{{`{{inputs.parameters.settlement-image}}`}}"
+          - "-settlement-status"
+          - "{{`{{inputs.parameters.settlement-status}}`}}"
+        volumeMounts:
+          - name: shared-records
+            mountPath: {{ .Values.jobs.recordsMountPath }}
+          - name: match-controller-config
+            mountPath: {{ include "rm-monitor.configPath" . }}
+            subPath: config.yml
+            readOnly: true
     - name: stt
+{{ include "rm-monitor.processingRetryStrategy" . | indent 6 }}
       inputs:
         parameters:
           - name: context
@@ -380,6 +439,7 @@ spec:
           - name: subtitle_path
             valueFrom: {path: /tmp/argo/subtitle_path}
     - name: record-trim
+{{ include "rm-monitor.processingRetryStrategy" . | indent 6 }}
       inputs:
         parameters:
           - name: context
@@ -413,6 +473,7 @@ spec:
           - name: duration_seconds
             valueFrom: {path: /tmp/argo/duration_seconds}
     - name: lark-record
+{{ include "rm-monitor.processingRetryStrategy" . | indent 6 }}
       synchronization:
         semaphores:
           - configMapKeyRef:
@@ -455,6 +516,8 @@ spec:
         limit: {{ .Values.transcode.retryLimit | quote }}
         retryPolicy: Always
         expression: >-
+          lastRetry.status == 'Error' ||
+          lastRetry.exitCode == '75' ||
           asInt(lastRetry.exitCode) == 255 ||
           lastRetry.message matches 'Unknown \(exit code 255\)|pod deleted|imminent node shutdown|NodeLost'
         backoff:
@@ -511,6 +574,7 @@ spec:
           - name: checksum
             valueFrom: {path: /tmp/argo/checksum}
     - name: highlight
+{{ include "rm-monitor.processingRetryStrategy" . | indent 6 }}
       inputs:
         parameters:
           - name: context
@@ -536,6 +600,7 @@ spec:
           - name: highlight_count
             valueFrom: {path: /tmp/argo/highlight_count}
     - name: highlight-artifact
+{{ include "rm-monitor.processingRetryStrategy" . | indent 6 }}
       inputs:
         parameters:
           - name: context
@@ -564,7 +629,28 @@ spec:
             valueFrom: {path: /tmp/argo/highlight_json_path}
           - name: title
             valueFrom: {path: /tmp/argo/title}
+    - name: highlight-finalize
+{{ include "rm-monitor.processingRetryStrategy" . | indent 6 }}
+      inputs:
+        parameters:
+          - name: context
+      container:
+        image: {{ include "rm-monitor.image" (dict "root" . "component" "highlight-job") }}
+        imagePullPolicy: {{ include "rm-monitor.jobImagePullPolicy" . }}
+        command: ["/usr/local/bin/app"]
+        args: ["-f", "{{ include "rm-monitor.configPath" . }}", "-finalize-artifact"]
+        env:
+          - name: RM_MONITOR_JOB_CONTEXT
+            value: "{{`{{inputs.parameters.context}}`}}"
+        volumeMounts:
+          - name: shared-records
+            mountPath: {{ .Values.jobs.recordsMountPath }}
+          - name: highlight-job-config
+            mountPath: {{ include "rm-monitor.configPath" . }}
+            subPath: config.yml
+            readOnly: true
     - name: manifest
+{{ include "rm-monitor.processingRetryStrategy" . | indent 6 }}
       container:
         image: {{ include "rm-monitor.image" (dict "root" . "component" "manifest-job") }}
         imagePullPolicy: {{ include "rm-monitor.jobImagePullPolicy" . }}

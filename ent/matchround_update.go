@@ -146,6 +146,80 @@ func (_u *MatchRoundUpdate) ClearWorkflowPhase() *MatchRoundUpdate {
 	return _u
 }
 
+// SetSettlementStatus sets the "settlement_status" field.
+func (_u *MatchRoundUpdate) SetSettlementStatus(v string) *MatchRoundUpdate {
+	_u.mutation.SetSettlementStatus(v)
+	return _u
+}
+
+// SetNillableSettlementStatus sets the "settlement_status" field if the given value is not nil.
+func (_u *MatchRoundUpdate) SetNillableSettlementStatus(v *string) *MatchRoundUpdate {
+	if v != nil {
+		_u.SetSettlementStatus(*v)
+	}
+	return _u
+}
+
+// SetSettlementImagePath sets the "settlement_image_path" field.
+func (_u *MatchRoundUpdate) SetSettlementImagePath(v string) *MatchRoundUpdate {
+	_u.mutation.SetSettlementImagePath(v)
+	return _u
+}
+
+// SetNillableSettlementImagePath sets the "settlement_image_path" field if the given value is not nil.
+func (_u *MatchRoundUpdate) SetNillableSettlementImagePath(v *string) *MatchRoundUpdate {
+	if v != nil {
+		_u.SetSettlementImagePath(*v)
+	}
+	return _u
+}
+
+// ClearSettlementImagePath clears the value of the "settlement_image_path" field.
+func (_u *MatchRoundUpdate) ClearSettlementImagePath() *MatchRoundUpdate {
+	_u.mutation.ClearSettlementImagePath()
+	return _u
+}
+
+// SetSettlementImageChecksum sets the "settlement_image_checksum" field.
+func (_u *MatchRoundUpdate) SetSettlementImageChecksum(v string) *MatchRoundUpdate {
+	_u.mutation.SetSettlementImageChecksum(v)
+	return _u
+}
+
+// SetNillableSettlementImageChecksum sets the "settlement_image_checksum" field if the given value is not nil.
+func (_u *MatchRoundUpdate) SetNillableSettlementImageChecksum(v *string) *MatchRoundUpdate {
+	if v != nil {
+		_u.SetSettlementImageChecksum(*v)
+	}
+	return _u
+}
+
+// ClearSettlementImageChecksum clears the value of the "settlement_image_checksum" field.
+func (_u *MatchRoundUpdate) ClearSettlementImageChecksum() *MatchRoundUpdate {
+	_u.mutation.ClearSettlementImageChecksum()
+	return _u
+}
+
+// SetSettlementReadyAt sets the "settlement_ready_at" field.
+func (_u *MatchRoundUpdate) SetSettlementReadyAt(v time.Time) *MatchRoundUpdate {
+	_u.mutation.SetSettlementReadyAt(v)
+	return _u
+}
+
+// SetNillableSettlementReadyAt sets the "settlement_ready_at" field if the given value is not nil.
+func (_u *MatchRoundUpdate) SetNillableSettlementReadyAt(v *time.Time) *MatchRoundUpdate {
+	if v != nil {
+		_u.SetSettlementReadyAt(*v)
+	}
+	return _u
+}
+
+// ClearSettlementReadyAt clears the value of the "settlement_ready_at" field.
+func (_u *MatchRoundUpdate) ClearSettlementReadyAt() *MatchRoundUpdate {
+	_u.mutation.ClearSettlementReadyAt()
+	return _u
+}
+
 // SetStartedAt sets the "started_at" field.
 func (_u *MatchRoundUpdate) SetStartedAt(v time.Time) *MatchRoundUpdate {
 	_u.mutation.SetStartedAt(v)
@@ -378,6 +452,27 @@ func (_u *MatchRoundUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	}
 	if _u.mutation.WorkflowPhaseCleared() {
 		_spec.ClearField(matchround.FieldWorkflowPhase, field.TypeString)
+	}
+	if value, ok := _u.mutation.SettlementStatus(); ok {
+		_spec.SetField(matchround.FieldSettlementStatus, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.SettlementImagePath(); ok {
+		_spec.SetField(matchround.FieldSettlementImagePath, field.TypeString, value)
+	}
+	if _u.mutation.SettlementImagePathCleared() {
+		_spec.ClearField(matchround.FieldSettlementImagePath, field.TypeString)
+	}
+	if value, ok := _u.mutation.SettlementImageChecksum(); ok {
+		_spec.SetField(matchround.FieldSettlementImageChecksum, field.TypeString, value)
+	}
+	if _u.mutation.SettlementImageChecksumCleared() {
+		_spec.ClearField(matchround.FieldSettlementImageChecksum, field.TypeString)
+	}
+	if value, ok := _u.mutation.SettlementReadyAt(); ok {
+		_spec.SetField(matchround.FieldSettlementReadyAt, field.TypeTime, value)
+	}
+	if _u.mutation.SettlementReadyAtCleared() {
+		_spec.ClearField(matchround.FieldSettlementReadyAt, field.TypeTime)
 	}
 	if value, ok := _u.mutation.StartedAt(); ok {
 		_spec.SetField(matchround.FieldStartedAt, field.TypeTime, value)
@@ -645,6 +740,80 @@ func (_u *MatchRoundUpdateOne) ClearWorkflowPhase() *MatchRoundUpdateOne {
 	return _u
 }
 
+// SetSettlementStatus sets the "settlement_status" field.
+func (_u *MatchRoundUpdateOne) SetSettlementStatus(v string) *MatchRoundUpdateOne {
+	_u.mutation.SetSettlementStatus(v)
+	return _u
+}
+
+// SetNillableSettlementStatus sets the "settlement_status" field if the given value is not nil.
+func (_u *MatchRoundUpdateOne) SetNillableSettlementStatus(v *string) *MatchRoundUpdateOne {
+	if v != nil {
+		_u.SetSettlementStatus(*v)
+	}
+	return _u
+}
+
+// SetSettlementImagePath sets the "settlement_image_path" field.
+func (_u *MatchRoundUpdateOne) SetSettlementImagePath(v string) *MatchRoundUpdateOne {
+	_u.mutation.SetSettlementImagePath(v)
+	return _u
+}
+
+// SetNillableSettlementImagePath sets the "settlement_image_path" field if the given value is not nil.
+func (_u *MatchRoundUpdateOne) SetNillableSettlementImagePath(v *string) *MatchRoundUpdateOne {
+	if v != nil {
+		_u.SetSettlementImagePath(*v)
+	}
+	return _u
+}
+
+// ClearSettlementImagePath clears the value of the "settlement_image_path" field.
+func (_u *MatchRoundUpdateOne) ClearSettlementImagePath() *MatchRoundUpdateOne {
+	_u.mutation.ClearSettlementImagePath()
+	return _u
+}
+
+// SetSettlementImageChecksum sets the "settlement_image_checksum" field.
+func (_u *MatchRoundUpdateOne) SetSettlementImageChecksum(v string) *MatchRoundUpdateOne {
+	_u.mutation.SetSettlementImageChecksum(v)
+	return _u
+}
+
+// SetNillableSettlementImageChecksum sets the "settlement_image_checksum" field if the given value is not nil.
+func (_u *MatchRoundUpdateOne) SetNillableSettlementImageChecksum(v *string) *MatchRoundUpdateOne {
+	if v != nil {
+		_u.SetSettlementImageChecksum(*v)
+	}
+	return _u
+}
+
+// ClearSettlementImageChecksum clears the value of the "settlement_image_checksum" field.
+func (_u *MatchRoundUpdateOne) ClearSettlementImageChecksum() *MatchRoundUpdateOne {
+	_u.mutation.ClearSettlementImageChecksum()
+	return _u
+}
+
+// SetSettlementReadyAt sets the "settlement_ready_at" field.
+func (_u *MatchRoundUpdateOne) SetSettlementReadyAt(v time.Time) *MatchRoundUpdateOne {
+	_u.mutation.SetSettlementReadyAt(v)
+	return _u
+}
+
+// SetNillableSettlementReadyAt sets the "settlement_ready_at" field if the given value is not nil.
+func (_u *MatchRoundUpdateOne) SetNillableSettlementReadyAt(v *time.Time) *MatchRoundUpdateOne {
+	if v != nil {
+		_u.SetSettlementReadyAt(*v)
+	}
+	return _u
+}
+
+// ClearSettlementReadyAt clears the value of the "settlement_ready_at" field.
+func (_u *MatchRoundUpdateOne) ClearSettlementReadyAt() *MatchRoundUpdateOne {
+	_u.mutation.ClearSettlementReadyAt()
+	return _u
+}
+
 // SetStartedAt sets the "started_at" field.
 func (_u *MatchRoundUpdateOne) SetStartedAt(v time.Time) *MatchRoundUpdateOne {
 	_u.mutation.SetStartedAt(v)
@@ -907,6 +1076,27 @@ func (_u *MatchRoundUpdateOne) sqlSave(ctx context.Context) (_node *MatchRound, 
 	}
 	if _u.mutation.WorkflowPhaseCleared() {
 		_spec.ClearField(matchround.FieldWorkflowPhase, field.TypeString)
+	}
+	if value, ok := _u.mutation.SettlementStatus(); ok {
+		_spec.SetField(matchround.FieldSettlementStatus, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.SettlementImagePath(); ok {
+		_spec.SetField(matchround.FieldSettlementImagePath, field.TypeString, value)
+	}
+	if _u.mutation.SettlementImagePathCleared() {
+		_spec.ClearField(matchround.FieldSettlementImagePath, field.TypeString)
+	}
+	if value, ok := _u.mutation.SettlementImageChecksum(); ok {
+		_spec.SetField(matchround.FieldSettlementImageChecksum, field.TypeString, value)
+	}
+	if _u.mutation.SettlementImageChecksumCleared() {
+		_spec.ClearField(matchround.FieldSettlementImageChecksum, field.TypeString)
+	}
+	if value, ok := _u.mutation.SettlementReadyAt(); ok {
+		_spec.SetField(matchround.FieldSettlementReadyAt, field.TypeTime, value)
+	}
+	if _u.mutation.SettlementReadyAtCleared() {
+		_spec.ClearField(matchround.FieldSettlementReadyAt, field.TypeTime)
 	}
 	if value, ok := _u.mutation.StartedAt(); ok {
 		_spec.SetField(matchround.FieldStartedAt, field.TypeTime, value)

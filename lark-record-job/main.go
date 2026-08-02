@@ -52,7 +52,7 @@ func main() {
 	var jobCtx jobcontract.LarkRecordContext
 	if err := jobcontract.ContextFromEnv(&jobCtx); err != nil {
 		logx.Error(err)
-		os.Exit(1)
+		os.Exit(jobcontract.ExitContract)
 	}
 	if jobCtx.BaseDir == "" {
 		jobCtx.BaseDir = c.UploadConf.WithDefaults().BaseDir
@@ -66,7 +66,7 @@ func main() {
 	dbClient, err := db.Open(context.Background(), c.PostgresConf)
 	if err != nil {
 		logx.Error(err)
-		os.Exit(1)
+		os.Exit(jobcontract.ExitTemporary)
 	}
 	defer dbClient.Close()
 
@@ -81,7 +81,7 @@ func main() {
 	if err := run(context.Background(), dbClient, redisClient, larkClient, c, jobCtx, jobDir); err != nil {
 		_ = jobcontract.WriteError(jobDir, "lark-record", 0, err)
 		logx.Error(err)
-		os.Exit(1)
+		os.Exit(jobcontract.ExitCode(err))
 	}
 }
 

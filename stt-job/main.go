@@ -59,12 +59,12 @@ func main() {
 	var sttCtx jobcontract.STTContext
 	if err := jobcontract.ContextFromEnv(&sttCtx); err != nil {
 		logx.Error(err)
-		os.Exit(1)
+		os.Exit(jobcontract.ExitContract)
 	}
 	sttCtx.WhisperServerURLs = resolveWhisperServerURLs(sttCtx.WhisperServerURLs, c.WhisperServerUrls)
 	if len(sttCtx.WhisperServerURLs) == 0 {
 		logx.Error(errors.New("WhisperServerURLs is empty"))
-		os.Exit(1)
+		os.Exit(jobcontract.ExitContract)
 	}
 	jobDir := sttJobDir(sttCtx)
 	if err := jobcontract.WriteContext(jobDir, sttCtx); err != nil {
@@ -74,7 +74,7 @@ func main() {
 	if err := runSTT(context.Background(), sttCtx, c); err != nil {
 		_ = jobcontract.WriteError(jobDir, "stt", sttCtx.MatchRoundID, err)
 		logx.Error(err)
-		os.Exit(1)
+		os.Exit(jobcontract.ExitCode(err))
 	}
 }
 
@@ -88,18 +88,20 @@ func runBackfill(conf common.RecordConf) {
 }
 
 func runSTT(ctx context.Context, sttCtx jobcontract.STTContext, conf jobconfig.Config) error {
-	info := roundInfoFromContext(sttCtx)
+	finalInfo := roundInfoFromContext(sttCtx)
+	info := stagingRoundInfo(finalInfo)
 	if strings.TrimSpace(sttCtx.SourcePath) == "" {
 		return errors.New("stt source_path is empty")
 	}
+	defer cleanupStagingInfo(info)
 	if err := os.Remove(info.STTPath); err != nil && !os.IsNotExist(err) {
-		return errors.Wrap(err, "clean old stt jsonl")
+		return errors.Wrap(err, "clean staged stt jsonl")
 	}
 	if err := os.Remove(info.RawSTTPath); err != nil && !os.IsNotExist(err) {
-		return errors.Wrap(err, "clean old raw stt jsonl")
+		return errors.Wrap(err, "clean staged raw stt jsonl")
 	}
 	if err := os.Remove(filepath.Join(info.RoundDir, info.SubtitleName)); err != nil && !os.IsNotExist(err) {
-		return errors.Wrap(err, "clean old subtitle")
+		return errors.Wrap(err, "clean staged subtitle")
 	}
 	tmpDir, err := os.MkdirTemp("", "rm-monitor-stt-*")
 	if err != nil {
@@ -113,7 +115,10 @@ func runSTT(ctx context.Context, sttCtx jobcontract.STTContext, conf jobconfig.C
 			if err := appendLine(info.STTPath, sttLine{Index: 0, Start: 0, End: 0, Status: "NO_AUDIO"}); err != nil {
 				return err
 			}
-			return finishSTT(sttCtx, info)
+			if err := writeRoundSubtitle(info); err != nil {
+				return err
+			}
+			return commitSTT(sttCtx, info, finalInfo)
 		}
 		return err
 	}
@@ -127,7 +132,10 @@ func runSTT(ctx context.Context, sttCtx jobcontract.STTContext, conf jobconfig.C
 	if err := applyQualityCleanSTT(ctx, sttCtx, info, conf); err != nil {
 		return err
 	}
-	return finishSTT(sttCtx, info)
+	if err := writeRoundSubtitle(info); err != nil {
+		return err
+	}
+	return commitSTT(sttCtx, info, finalInfo)
 }
 
 func extractAudio(ctx context.Context, sourcePath, audioPath string, trimStart, trimEnd *float64) error {
@@ -186,6 +194,62 @@ func roundInfoFromContext(sttCtx jobcontract.STTContext) roundInfo {
 		SubtitleName: sttCtx.SubtitleName,
 		Prompt:       sttCtx.Prompt,
 	}
+}
+
+func stagingRoundInfo(final roundInfo) roundInfo {
+	return roundInfo{
+		RoundDir:     final.RoundDir,
+		STTPath:      final.STTPath + ".next",
+		RawSTTPath:   final.RawSTTPath + ".next",
+		SubtitleName: "." + final.SubtitleName + ".next",
+		Prompt:       final.Prompt,
+	}
+}
+
+func cleanupStagingInfo(info roundInfo) {
+	_ = os.Remove(info.STTPath)
+	_ = os.Remove(info.RawSTTPath)
+	_ = os.Remove(filepath.Join(info.RoundDir, info.SubtitleName))
+}
+
+func commitSTT(sttCtx jobcontract.STTContext, staged, final roundInfo) error {
+	for _, pair := range [][2]string{
+		{staged.RawSTTPath, final.RawSTTPath},
+		{filepath.Join(staged.RoundDir, staged.SubtitleName), filepath.Join(final.RoundDir, final.SubtitleName)},
+		{staged.STTPath, final.STTPath},
+	} {
+		if _, err := os.Stat(pair[0]); err != nil {
+			if os.IsNotExist(err) {
+				_ = os.Remove(pair[1])
+				continue
+			}
+			return err
+		}
+		if err := replaceFile(pair[0], pair[1]); err != nil {
+			return err
+		}
+	}
+	return finishSTT(sttCtx, final)
+}
+
+func replaceFile(source, destination string) error {
+	backup := destination + ".previous"
+	_ = os.Remove(backup)
+	hadDestination := false
+	if _, err := os.Stat(destination); err == nil {
+		if err := os.Rename(destination, backup); err != nil {
+			return errors.Wrap(err, "backup existing artifact")
+		}
+		hadDestination = true
+	}
+	if err := os.Rename(source, destination); err != nil {
+		if hadDestination {
+			_ = os.Rename(backup, destination)
+		}
+		return errors.Wrap(err, "publish staged artifact")
+	}
+	_ = os.Remove(backup)
+	return nil
 }
 
 func finishSTT(sttCtx jobcontract.STTContext, info roundInfo) error {

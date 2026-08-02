@@ -22,11 +22,6 @@ var (
 	matchID    = flag.String("match", "", "match id")
 )
 
-type result struct {
-	MatchID string `json:"match_id"`
-	Changed bool   `json:"changed"`
-}
-
 func init() {
 	logx.MustSetup(logx.LogConf{ServiceName: "lark-notifier-force-patch", Mode: "console", Encoding: "plain"})
 }
@@ -56,14 +51,14 @@ func main() {
 	}
 	logx.Infof("cleared card payload for %d lark messages", cleared)
 
-	changed, err := logic.ApplyMatchUpdate(ctx, svcCtx, *matchID)
-	if err != nil {
-		logx.Error(err)
-		os.Exit(1)
-	}
+	result, err := logic.ApplyMatchUpdate(ctx, svcCtx, *matchID)
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetEscapeHTML(false)
-	if err := enc.Encode(result{MatchID: *matchID, Changed: changed}); err != nil {
+	if encodeErr := enc.Encode(result); encodeErr != nil {
+		logx.Error(encodeErr)
+		os.Exit(1)
+	}
+	if err != nil {
 		logx.Error(err)
 		os.Exit(1)
 	}

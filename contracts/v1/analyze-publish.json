@@ -1,0 +1,10 @@
+{
+  "schema": "rm-monitor/analyze-result/v1",
+  "match_round_id": 42,
+  "round_json_path": "event/zone/match/Round-1/round.json",
+  "settlement_image_path": "event/zone/match/Round-1/settlement.png",
+  "settlement_status": "CONFIRMED",
+  "effective_start_seconds": 12.5,
+  "effective_end_seconds": 181.25,
+  "completed_at": "2026-08-02T00:00:00Z"
+}

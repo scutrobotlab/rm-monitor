@@ -1,10 +1,32 @@
 package jobcontract
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
 )
+
+func TestV1FixturesHaveValidSchema(t *testing.T) {
+	paths, err := filepath.Glob(filepath.Join("..", "..", "contracts", "v1", "*.json"))
+	if err != nil || len(paths) == 0 {
+		t.Fatalf("find contract fixtures: paths=%v err=%v", paths, err)
+	}
+	for _, path := range paths {
+		raw, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var fixture map[string]any
+		if err := json.Unmarshal(raw, &fixture); err != nil {
+			t.Fatalf("%s: %v", path, err)
+		}
+		schema, _ := fixture["schema"].(string)
+		if len(schema) < len("rm-monitor/x/v1") || schema[:len("rm-monitor/")] != "rm-monitor/" || schema[len(schema)-3:] != "/v1" {
+			t.Fatalf("%s has invalid schema %q", path, schema)
+		}
+	}
+}
 
 func TestAtomicWriteReadJSON(t *testing.T) {
 	dir := t.TempDir()
@@ -30,13 +52,21 @@ func TestAtomicWriteReadJSON(t *testing.T) {
 }
 
 func TestContextFromEnv(t *testing.T) {
-	t.Setenv(EnvName, `{"match_round_id":7,"source_path":"in.flv","archive_path":"out.mp4"}`)
+	t.Setenv(EnvName, `{"schema":"rm-monitor/transcode-context/v1","match_round_id":7,"source_path":"in.flv","archive_path":"out.mp4","base_dir":"/records","future_field":true}`)
 	var ctx TranscodeContext
 	if err := ContextFromEnv(&ctx); err != nil {
 		t.Fatalf("ContextFromEnv() error = %v", err)
 	}
 	if ctx.MatchRoundID != 7 || ctx.SourcePath != "in.flv" || ctx.ArchivePath != "out.mp4" {
 		t.Fatalf("ContextFromEnv() = %+v", ctx)
+	}
+}
+
+func TestContextFromEnvRejectsMissingRequiredField(t *testing.T) {
+	t.Setenv(EnvName, `{"schema":"rm-monitor/transcode-context/v1","source_path":"in.flv","base_dir":"/records"}`)
+	var ctx TranscodeContext
+	if err := ContextFromEnv(&ctx); err == nil {
+		t.Fatal("ContextFromEnv() accepted a missing archive_path")
 	}
 }
 

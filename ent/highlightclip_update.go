@@ -305,6 +305,66 @@ func (_u *HighlightClipUpdate) ClearModelPayload() *HighlightClipUpdate {
 	return _u
 }
 
+// SetPreviewPath sets the "preview_path" field.
+func (_u *HighlightClipUpdate) SetPreviewPath(v string) *HighlightClipUpdate {
+	_u.mutation.SetPreviewPath(v)
+	return _u
+}
+
+// SetNillablePreviewPath sets the "preview_path" field if the given value is not nil.
+func (_u *HighlightClipUpdate) SetNillablePreviewPath(v *string) *HighlightClipUpdate {
+	if v != nil {
+		_u.SetPreviewPath(*v)
+	}
+	return _u
+}
+
+// ClearPreviewPath clears the value of the "preview_path" field.
+func (_u *HighlightClipUpdate) ClearPreviewPath() *HighlightClipUpdate {
+	_u.mutation.ClearPreviewPath()
+	return _u
+}
+
+// SetPreviewChecksum sets the "preview_checksum" field.
+func (_u *HighlightClipUpdate) SetPreviewChecksum(v string) *HighlightClipUpdate {
+	_u.mutation.SetPreviewChecksum(v)
+	return _u
+}
+
+// SetNillablePreviewChecksum sets the "preview_checksum" field if the given value is not nil.
+func (_u *HighlightClipUpdate) SetNillablePreviewChecksum(v *string) *HighlightClipUpdate {
+	if v != nil {
+		_u.SetPreviewChecksum(*v)
+	}
+	return _u
+}
+
+// ClearPreviewChecksum clears the value of the "preview_checksum" field.
+func (_u *HighlightClipUpdate) ClearPreviewChecksum() *HighlightClipUpdate {
+	_u.mutation.ClearPreviewChecksum()
+	return _u
+}
+
+// SetArtifactReadyAt sets the "artifact_ready_at" field.
+func (_u *HighlightClipUpdate) SetArtifactReadyAt(v time.Time) *HighlightClipUpdate {
+	_u.mutation.SetArtifactReadyAt(v)
+	return _u
+}
+
+// SetNillableArtifactReadyAt sets the "artifact_ready_at" field if the given value is not nil.
+func (_u *HighlightClipUpdate) SetNillableArtifactReadyAt(v *time.Time) *HighlightClipUpdate {
+	if v != nil {
+		_u.SetArtifactReadyAt(*v)
+	}
+	return _u
+}
+
+// ClearArtifactReadyAt clears the value of the "artifact_ready_at" field.
+func (_u *HighlightClipUpdate) ClearArtifactReadyAt() *HighlightClipUpdate {
+	_u.mutation.ClearArtifactReadyAt()
+	return _u
+}
+
 // SetCompletedAt sets the "completed_at" field.
 func (_u *HighlightClipUpdate) SetCompletedAt(v time.Time) *HighlightClipUpdate {
 	_u.mutation.SetCompletedAt(v)
@@ -529,6 +589,24 @@ func (_u *HighlightClipUpdate) sqlSave(ctx context.Context) (_node int, err erro
 	}
 	if _u.mutation.ModelPayloadCleared() {
 		_spec.ClearField(highlightclip.FieldModelPayload, field.TypeString)
+	}
+	if value, ok := _u.mutation.PreviewPath(); ok {
+		_spec.SetField(highlightclip.FieldPreviewPath, field.TypeString, value)
+	}
+	if _u.mutation.PreviewPathCleared() {
+		_spec.ClearField(highlightclip.FieldPreviewPath, field.TypeString)
+	}
+	if value, ok := _u.mutation.PreviewChecksum(); ok {
+		_spec.SetField(highlightclip.FieldPreviewChecksum, field.TypeString, value)
+	}
+	if _u.mutation.PreviewChecksumCleared() {
+		_spec.ClearField(highlightclip.FieldPreviewChecksum, field.TypeString)
+	}
+	if value, ok := _u.mutation.ArtifactReadyAt(); ok {
+		_spec.SetField(highlightclip.FieldArtifactReadyAt, field.TypeTime, value)
+	}
+	if _u.mutation.ArtifactReadyAtCleared() {
+		_spec.ClearField(highlightclip.FieldArtifactReadyAt, field.TypeTime)
 	}
 	if value, ok := _u.mutation.CompletedAt(); ok {
 		_spec.SetField(highlightclip.FieldCompletedAt, field.TypeTime, value)
@@ -907,6 +985,66 @@ func (_u *HighlightClipUpdateOne) ClearModelPayload() *HighlightClipUpdateOne {
 	return _u
 }
 
+// SetPreviewPath sets the "preview_path" field.
+func (_u *HighlightClipUpdateOne) SetPreviewPath(v string) *HighlightClipUpdateOne {
+	_u.mutation.SetPreviewPath(v)
+	return _u
+}
+
+// SetNillablePreviewPath sets the "preview_path" field if the given value is not nil.
+func (_u *HighlightClipUpdateOne) SetNillablePreviewPath(v *string) *HighlightClipUpdateOne {
+	if v != nil {
+		_u.SetPreviewPath(*v)
+	}
+	return _u
+}
+
+// ClearPreviewPath clears the value of the "preview_path" field.
+func (_u *HighlightClipUpdateOne) ClearPreviewPath() *HighlightClipUpdateOne {
+	_u.mutation.ClearPreviewPath()
+	return _u
+}
+
+// SetPreviewChecksum sets the "preview_checksum" field.
+func (_u *HighlightClipUpdateOne) SetPreviewChecksum(v string) *HighlightClipUpdateOne {
+	_u.mutation.SetPreviewChecksum(v)
+	return _u
+}
+
+// SetNillablePreviewChecksum sets the "preview_checksum" field if the given value is not nil.
+func (_u *HighlightClipUpdateOne) SetNillablePreviewChecksum(v *string) *HighlightClipUpdateOne {
+	if v != nil {
+		_u.SetPreviewChecksum(*v)
+	}
+	return _u
+}
+
+// ClearPreviewChecksum clears the value of the "preview_checksum" field.
+func (_u *HighlightClipUpdateOne) ClearPreviewChecksum() *HighlightClipUpdateOne {
+	_u.mutation.ClearPreviewChecksum()
+	return _u
+}
+
+// SetArtifactReadyAt sets the "artifact_ready_at" field.
+func (_u *HighlightClipUpdateOne) SetArtifactReadyAt(v time.Time) *HighlightClipUpdateOne {
+	_u.mutation.SetArtifactReadyAt(v)
+	return _u
+}
+
+// SetNillableArtifactReadyAt sets the "artifact_ready_at" field if the given value is not nil.
+func (_u *HighlightClipUpdateOne) SetNillableArtifactReadyAt(v *time.Time) *HighlightClipUpdateOne {
+	if v != nil {
+		_u.SetArtifactReadyAt(*v)
+	}
+	return _u
+}
+
+// ClearArtifactReadyAt clears the value of the "artifact_ready_at" field.
+func (_u *HighlightClipUpdateOne) ClearArtifactReadyAt() *HighlightClipUpdateOne {
+	_u.mutation.ClearArtifactReadyAt()
+	return _u
+}
+
 // SetCompletedAt sets the "completed_at" field.
 func (_u *HighlightClipUpdateOne) SetCompletedAt(v time.Time) *HighlightClipUpdateOne {
 	_u.mutation.SetCompletedAt(v)
@@ -1161,6 +1299,24 @@ func (_u *HighlightClipUpdateOne) sqlSave(ctx context.Context) (_node *Highlight
 	}
 	if _u.mutation.ModelPayloadCleared() {
 		_spec.ClearField(highlightclip.FieldModelPayload, field.TypeString)
+	}
+	if value, ok := _u.mutation.PreviewPath(); ok {
+		_spec.SetField(highlightclip.FieldPreviewPath, field.TypeString, value)
+	}
+	if _u.mutation.PreviewPathCleared() {
+		_spec.ClearField(highlightclip.FieldPreviewPath, field.TypeString)
+	}
+	if value, ok := _u.mutation.PreviewChecksum(); ok {
+		_spec.SetField(highlightclip.FieldPreviewChecksum, field.TypeString, value)
+	}
+	if _u.mutation.PreviewChecksumCleared() {
+		_spec.ClearField(highlightclip.FieldPreviewChecksum, field.TypeString)
+	}
+	if value, ok := _u.mutation.ArtifactReadyAt(); ok {
+		_spec.SetField(highlightclip.FieldArtifactReadyAt, field.TypeTime, value)
+	}
+	if _u.mutation.ArtifactReadyAtCleared() {
+		_spec.ClearField(highlightclip.FieldArtifactReadyAt, field.TypeTime)
 	}
 	if value, ok := _u.mutation.CompletedAt(); ok {
 		_spec.SetField(highlightclip.FieldCompletedAt, field.TypeTime, value)

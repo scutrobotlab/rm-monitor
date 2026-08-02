@@ -19,6 +19,9 @@ func (LarkMessage) Fields() []ent.Field {
 		field.String("chat_id").Optional().Nillable(),
 		field.String("card_id").Optional().Nillable().Unique(),
 		field.JSON("card_payload", map[string]any{}).Optional(),
+		field.Int64("card_sequence").Default(0),
+		field.Text("last_delivery_error").Optional().Nillable(),
+		field.Time("last_delivery_attempt_at").Optional().Nillable(),
 		field.Time("created_at").Default(time.Now).Immutable(),
 		field.Time("updated_at").Default(time.Now).UpdateDefault(time.Now),
 	}

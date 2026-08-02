@@ -49,6 +49,12 @@ type HighlightClip struct {
 	Score float64 `json:"score,omitempty"`
 	// ModelPayload holds the value of the "model_payload" field.
 	ModelPayload *string `json:"model_payload,omitempty"`
+	// PreviewPath holds the value of the "preview_path" field.
+	PreviewPath *string `json:"preview_path,omitempty"`
+	// PreviewChecksum holds the value of the "preview_checksum" field.
+	PreviewChecksum *string `json:"preview_checksum,omitempty"`
+	// ArtifactReadyAt holds the value of the "artifact_ready_at" field.
+	ArtifactReadyAt *time.Time `json:"artifact_ready_at,omitempty"`
 	// CompletedAt holds the value of the "completed_at" field.
 	CompletedAt *time.Time `json:"completed_at,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
@@ -104,9 +110,9 @@ func (*HighlightClip) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullFloat64)
 		case highlightclip.FieldID, highlightclip.FieldHighlightIndex, highlightclip.FieldPriority:
 			values[i] = new(sql.NullInt64)
-		case highlightclip.FieldRole, highlightclip.FieldAlgorithmVersion, highlightclip.FieldStatus, highlightclip.FieldSourcePath, highlightclip.FieldOutputDir, highlightclip.FieldTitle, highlightclip.FieldDescription, highlightclip.FieldModelPayload:
+		case highlightclip.FieldRole, highlightclip.FieldAlgorithmVersion, highlightclip.FieldStatus, highlightclip.FieldSourcePath, highlightclip.FieldOutputDir, highlightclip.FieldTitle, highlightclip.FieldDescription, highlightclip.FieldModelPayload, highlightclip.FieldPreviewPath, highlightclip.FieldPreviewChecksum:
 			values[i] = new(sql.NullString)
-		case highlightclip.FieldCompletedAt, highlightclip.FieldCreatedAt, highlightclip.FieldUpdatedAt:
+		case highlightclip.FieldArtifactReadyAt, highlightclip.FieldCompletedAt, highlightclip.FieldCreatedAt, highlightclip.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
 		case highlightclip.ForeignKeys[0]: // match_round_highlight_clips
 			values[i] = new(sql.NullInt64)
@@ -225,6 +231,27 @@ func (_m *HighlightClip) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.ModelPayload = new(string)
 				*_m.ModelPayload = value.String
+			}
+		case highlightclip.FieldPreviewPath:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field preview_path", values[i])
+			} else if value.Valid {
+				_m.PreviewPath = new(string)
+				*_m.PreviewPath = value.String
+			}
+		case highlightclip.FieldPreviewChecksum:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field preview_checksum", values[i])
+			} else if value.Valid {
+				_m.PreviewChecksum = new(string)
+				*_m.PreviewChecksum = value.String
+			}
+		case highlightclip.FieldArtifactReadyAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field artifact_ready_at", values[i])
+			} else if value.Valid {
+				_m.ArtifactReadyAt = new(time.Time)
+				*_m.ArtifactReadyAt = value.Time
 			}
 		case highlightclip.FieldCompletedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -347,6 +374,21 @@ func (_m *HighlightClip) String() string {
 	if v := _m.ModelPayload; v != nil {
 		builder.WriteString("model_payload=")
 		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	if v := _m.PreviewPath; v != nil {
+		builder.WriteString("preview_path=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	if v := _m.PreviewChecksum; v != nil {
+		builder.WriteString("preview_checksum=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	if v := _m.ArtifactReadyAt; v != nil {
+		builder.WriteString("artifact_ready_at=")
+		builder.WriteString(v.Format(time.ANSIC))
 	}
 	builder.WriteString(", ")
 	if v := _m.CompletedAt; v != nil {

@@ -75,6 +75,26 @@ func WorkflowPhase(v string) predicate.MatchRound {
 	return predicate.MatchRound(sql.FieldEQ(FieldWorkflowPhase, v))
 }
 
+// SettlementStatus applies equality check predicate on the "settlement_status" field. It's identical to SettlementStatusEQ.
+func SettlementStatus(v string) predicate.MatchRound {
+	return predicate.MatchRound(sql.FieldEQ(FieldSettlementStatus, v))
+}
+
+// SettlementImagePath applies equality check predicate on the "settlement_image_path" field. It's identical to SettlementImagePathEQ.
+func SettlementImagePath(v string) predicate.MatchRound {
+	return predicate.MatchRound(sql.FieldEQ(FieldSettlementImagePath, v))
+}
+
+// SettlementImageChecksum applies equality check predicate on the "settlement_image_checksum" field. It's identical to SettlementImageChecksumEQ.
+func SettlementImageChecksum(v string) predicate.MatchRound {
+	return predicate.MatchRound(sql.FieldEQ(FieldSettlementImageChecksum, v))
+}
+
+// SettlementReadyAt applies equality check predicate on the "settlement_ready_at" field. It's identical to SettlementReadyAtEQ.
+func SettlementReadyAt(v time.Time) predicate.MatchRound {
+	return predicate.MatchRound(sql.FieldEQ(FieldSettlementReadyAt, v))
+}
+
 // StartedAt applies equality check predicate on the "started_at" field. It's identical to StartedAtEQ.
 func StartedAt(v time.Time) predicate.MatchRound {
 	return predicate.MatchRound(sql.FieldEQ(FieldStartedAt, v))
@@ -408,6 +428,271 @@ func WorkflowPhaseEqualFold(v string) predicate.MatchRound {
 // WorkflowPhaseContainsFold applies the ContainsFold predicate on the "workflow_phase" field.
 func WorkflowPhaseContainsFold(v string) predicate.MatchRound {
 	return predicate.MatchRound(sql.FieldContainsFold(FieldWorkflowPhase, v))
+}
+
+// SettlementStatusEQ applies the EQ predicate on the "settlement_status" field.
+func SettlementStatusEQ(v string) predicate.MatchRound {
+	return predicate.MatchRound(sql.FieldEQ(FieldSettlementStatus, v))
+}
+
+// SettlementStatusNEQ applies the NEQ predicate on the "settlement_status" field.
+func SettlementStatusNEQ(v string) predicate.MatchRound {
+	return predicate.MatchRound(sql.FieldNEQ(FieldSettlementStatus, v))
+}
+
+// SettlementStatusIn applies the In predicate on the "settlement_status" field.
+func SettlementStatusIn(vs ...string) predicate.MatchRound {
+	return predicate.MatchRound(sql.FieldIn(FieldSettlementStatus, vs...))
+}
+
+// SettlementStatusNotIn applies the NotIn predicate on the "settlement_status" field.
+func SettlementStatusNotIn(vs ...string) predicate.MatchRound {
+	return predicate.MatchRound(sql.FieldNotIn(FieldSettlementStatus, vs...))
+}
+
+// SettlementStatusGT applies the GT predicate on the "settlement_status" field.
+func SettlementStatusGT(v string) predicate.MatchRound {
+	return predicate.MatchRound(sql.FieldGT(FieldSettlementStatus, v))
+}
+
+// SettlementStatusGTE applies the GTE predicate on the "settlement_status" field.
+func SettlementStatusGTE(v string) predicate.MatchRound {
+	return predicate.MatchRound(sql.FieldGTE(FieldSettlementStatus, v))
+}
+
+// SettlementStatusLT applies the LT predicate on the "settlement_status" field.
+func SettlementStatusLT(v string) predicate.MatchRound {
+	return predicate.MatchRound(sql.FieldLT(FieldSettlementStatus, v))
+}
+
+// SettlementStatusLTE applies the LTE predicate on the "settlement_status" field.
+func SettlementStatusLTE(v string) predicate.MatchRound {
+	return predicate.MatchRound(sql.FieldLTE(FieldSettlementStatus, v))
+}
+
+// SettlementStatusContains applies the Contains predicate on the "settlement_status" field.
+func SettlementStatusContains(v string) predicate.MatchRound {
+	return predicate.MatchRound(sql.FieldContains(FieldSettlementStatus, v))
+}
+
+// SettlementStatusHasPrefix applies the HasPrefix predicate on the "settlement_status" field.
+func SettlementStatusHasPrefix(v string) predicate.MatchRound {
+	return predicate.MatchRound(sql.FieldHasPrefix(FieldSettlementStatus, v))
+}
+
+// SettlementStatusHasSuffix applies the HasSuffix predicate on the "settlement_status" field.
+func SettlementStatusHasSuffix(v string) predicate.MatchRound {
+	return predicate.MatchRound(sql.FieldHasSuffix(FieldSettlementStatus, v))
+}
+
+// SettlementStatusEqualFold applies the EqualFold predicate on the "settlement_status" field.
+func SettlementStatusEqualFold(v string) predicate.MatchRound {
+	return predicate.MatchRound(sql.FieldEqualFold(FieldSettlementStatus, v))
+}
+
+// SettlementStatusContainsFold applies the ContainsFold predicate on the "settlement_status" field.
+func SettlementStatusContainsFold(v string) predicate.MatchRound {
+	return predicate.MatchRound(sql.FieldContainsFold(FieldSettlementStatus, v))
+}
+
+// SettlementImagePathEQ applies the EQ predicate on the "settlement_image_path" field.
+func SettlementImagePathEQ(v string) predicate.MatchRound {
+	return predicate.MatchRound(sql.FieldEQ(FieldSettlementImagePath, v))
+}
+
+// SettlementImagePathNEQ applies the NEQ predicate on the "settlement_image_path" field.
+func SettlementImagePathNEQ(v string) predicate.MatchRound {
+	return predicate.MatchRound(sql.FieldNEQ(FieldSettlementImagePath, v))
+}
+
+// SettlementImagePathIn applies the In predicate on the "settlement_image_path" field.
+func SettlementImagePathIn(vs ...string) predicate.MatchRound {
+	return predicate.MatchRound(sql.FieldIn(FieldSettlementImagePath, vs...))
+}
+
+// SettlementImagePathNotIn applies the NotIn predicate on the "settlement_image_path" field.
+func SettlementImagePathNotIn(vs ...string) predicate.MatchRound {
+	return predicate.MatchRound(sql.FieldNotIn(FieldSettlementImagePath, vs...))
+}
+
+// SettlementImagePathGT applies the GT predicate on the "settlement_image_path" field.
+func SettlementImagePathGT(v string) predicate.MatchRound {
+	return predicate.MatchRound(sql.FieldGT(FieldSettlementImagePath, v))
+}
+
+// SettlementImagePathGTE applies the GTE predicate on the "settlement_image_path" field.
+func SettlementImagePathGTE(v string) predicate.MatchRound {
+	return predicate.MatchRound(sql.FieldGTE(FieldSettlementImagePath, v))
+}
+
+// SettlementImagePathLT applies the LT predicate on the "settlement_image_path" field.
+func SettlementImagePathLT(v string) predicate.MatchRound {
+	return predicate.MatchRound(sql.FieldLT(FieldSettlementImagePath, v))
+}
+
+// SettlementImagePathLTE applies the LTE predicate on the "settlement_image_path" field.
+func SettlementImagePathLTE(v string) predicate.MatchRound {
+	return predicate.MatchRound(sql.FieldLTE(FieldSettlementImagePath, v))
+}
+
+// SettlementImagePathContains applies the Contains predicate on the "settlement_image_path" field.
+func SettlementImagePathContains(v string) predicate.MatchRound {
+	return predicate.MatchRound(sql.FieldContains(FieldSettlementImagePath, v))
+}
+
+// SettlementImagePathHasPrefix applies the HasPrefix predicate on the "settlement_image_path" field.
+func SettlementImagePathHasPrefix(v string) predicate.MatchRound {
+	return predicate.MatchRound(sql.FieldHasPrefix(FieldSettlementImagePath, v))
+}
+
+// SettlementImagePathHasSuffix applies the HasSuffix predicate on the "settlement_image_path" field.
+func SettlementImagePathHasSuffix(v string) predicate.MatchRound {
+	return predicate.MatchRound(sql.FieldHasSuffix(FieldSettlementImagePath, v))
+}
+
+// SettlementImagePathIsNil applies the IsNil predicate on the "settlement_image_path" field.
+func SettlementImagePathIsNil() predicate.MatchRound {
+	return predicate.MatchRound(sql.FieldIsNull(FieldSettlementImagePath))
+}
+
+// SettlementImagePathNotNil applies the NotNil predicate on the "settlement_image_path" field.
+func SettlementImagePathNotNil() predicate.MatchRound {
+	return predicate.MatchRound(sql.FieldNotNull(FieldSettlementImagePath))
+}
+
+// SettlementImagePathEqualFold applies the EqualFold predicate on the "settlement_image_path" field.
+func SettlementImagePathEqualFold(v string) predicate.MatchRound {
+	return predicate.MatchRound(sql.FieldEqualFold(FieldSettlementImagePath, v))
+}
+
+// SettlementImagePathContainsFold applies the ContainsFold predicate on the "settlement_image_path" field.
+func SettlementImagePathContainsFold(v string) predicate.MatchRound {
+	return predicate.MatchRound(sql.FieldContainsFold(FieldSettlementImagePath, v))
+}
+
+// SettlementImageChecksumEQ applies the EQ predicate on the "settlement_image_checksum" field.
+func SettlementImageChecksumEQ(v string) predicate.MatchRound {
+	return predicate.MatchRound(sql.FieldEQ(FieldSettlementImageChecksum, v))
+}
+
+// SettlementImageChecksumNEQ applies the NEQ predicate on the "settlement_image_checksum" field.
+func SettlementImageChecksumNEQ(v string) predicate.MatchRound {
+	return predicate.MatchRound(sql.FieldNEQ(FieldSettlementImageChecksum, v))
+}
+
+// SettlementImageChecksumIn applies the In predicate on the "settlement_image_checksum" field.
+func SettlementImageChecksumIn(vs ...string) predicate.MatchRound {
+	return predicate.MatchRound(sql.FieldIn(FieldSettlementImageChecksum, vs...))
+}
+
+// SettlementImageChecksumNotIn applies the NotIn predicate on the "settlement_image_checksum" field.
+func SettlementImageChecksumNotIn(vs ...string) predicate.MatchRound {
+	return predicate.MatchRound(sql.FieldNotIn(FieldSettlementImageChecksum, vs...))
+}
+
+// SettlementImageChecksumGT applies the GT predicate on the "settlement_image_checksum" field.
+func SettlementImageChecksumGT(v string) predicate.MatchRound {
+	return predicate.MatchRound(sql.FieldGT(FieldSettlementImageChecksum, v))
+}
+
+// SettlementImageChecksumGTE applies the GTE predicate on the "settlement_image_checksum" field.
+func SettlementImageChecksumGTE(v string) predicate.MatchRound {
+	return predicate.MatchRound(sql.FieldGTE(FieldSettlementImageChecksum, v))
+}
+
+// SettlementImageChecksumLT applies the LT predicate on the "settlement_image_checksum" field.
+func SettlementImageChecksumLT(v string) predicate.MatchRound {
+	return predicate.MatchRound(sql.FieldLT(FieldSettlementImageChecksum, v))
+}
+
+// SettlementImageChecksumLTE applies the LTE predicate on the "settlement_image_checksum" field.
+func SettlementImageChecksumLTE(v string) predicate.MatchRound {
+	return predicate.MatchRound(sql.FieldLTE(FieldSettlementImageChecksum, v))
+}
+
+// SettlementImageChecksumContains applies the Contains predicate on the "settlement_image_checksum" field.
+func SettlementImageChecksumContains(v string) predicate.MatchRound {
+	return predicate.MatchRound(sql.FieldContains(FieldSettlementImageChecksum, v))
+}
+
+// SettlementImageChecksumHasPrefix applies the HasPrefix predicate on the "settlement_image_checksum" field.
+func SettlementImageChecksumHasPrefix(v string) predicate.MatchRound {
+	return predicate.MatchRound(sql.FieldHasPrefix(FieldSettlementImageChecksum, v))
+}
+
+// SettlementImageChecksumHasSuffix applies the HasSuffix predicate on the "settlement_image_checksum" field.
+func SettlementImageChecksumHasSuffix(v string) predicate.MatchRound {
+	return predicate.MatchRound(sql.FieldHasSuffix(FieldSettlementImageChecksum, v))
+}
+
+// SettlementImageChecksumIsNil applies the IsNil predicate on the "settlement_image_checksum" field.
+func SettlementImageChecksumIsNil() predicate.MatchRound {
+	return predicate.MatchRound(sql.FieldIsNull(FieldSettlementImageChecksum))
+}
+
+// SettlementImageChecksumNotNil applies the NotNil predicate on the "settlement_image_checksum" field.
+func SettlementImageChecksumNotNil() predicate.MatchRound {
+	return predicate.MatchRound(sql.FieldNotNull(FieldSettlementImageChecksum))
+}
+
+// SettlementImageChecksumEqualFold applies the EqualFold predicate on the "settlement_image_checksum" field.
+func SettlementImageChecksumEqualFold(v string) predicate.MatchRound {
+	return predicate.MatchRound(sql.FieldEqualFold(FieldSettlementImageChecksum, v))
+}
+
+// SettlementImageChecksumContainsFold applies the ContainsFold predicate on the "settlement_image_checksum" field.
+func SettlementImageChecksumContainsFold(v string) predicate.MatchRound {
+	return predicate.MatchRound(sql.FieldContainsFold(FieldSettlementImageChecksum, v))
+}
+
+// SettlementReadyAtEQ applies the EQ predicate on the "settlement_ready_at" field.
+func SettlementReadyAtEQ(v time.Time) predicate.MatchRound {
+	return predicate.MatchRound(sql.FieldEQ(FieldSettlementReadyAt, v))
+}
+
+// SettlementReadyAtNEQ applies the NEQ predicate on the "settlement_ready_at" field.
+func SettlementReadyAtNEQ(v time.Time) predicate.MatchRound {
+	return predicate.MatchRound(sql.FieldNEQ(FieldSettlementReadyAt, v))
+}
+
+// SettlementReadyAtIn applies the In predicate on the "settlement_ready_at" field.
+func SettlementReadyAtIn(vs ...time.Time) predicate.MatchRound {
+	return predicate.MatchRound(sql.FieldIn(FieldSettlementReadyAt, vs...))
+}
+
+// SettlementReadyAtNotIn applies the NotIn predicate on the "settlement_ready_at" field.
+func SettlementReadyAtNotIn(vs ...time.Time) predicate.MatchRound {
+	return predicate.MatchRound(sql.FieldNotIn(FieldSettlementReadyAt, vs...))
+}
+
+// SettlementReadyAtGT applies the GT predicate on the "settlement_ready_at" field.
+func SettlementReadyAtGT(v time.Time) predicate.MatchRound {
+	return predicate.MatchRound(sql.FieldGT(FieldSettlementReadyAt, v))
+}
+
+// SettlementReadyAtGTE applies the GTE predicate on the "settlement_ready_at" field.
+func SettlementReadyAtGTE(v time.Time) predicate.MatchRound {
+	return predicate.MatchRound(sql.FieldGTE(FieldSettlementReadyAt, v))
+}
+
+// SettlementReadyAtLT applies the LT predicate on the "settlement_ready_at" field.
+func SettlementReadyAtLT(v time.Time) predicate.MatchRound {
+	return predicate.MatchRound(sql.FieldLT(FieldSettlementReadyAt, v))
+}
+
+// SettlementReadyAtLTE applies the LTE predicate on the "settlement_ready_at" field.
+func SettlementReadyAtLTE(v time.Time) predicate.MatchRound {
+	return predicate.MatchRound(sql.FieldLTE(FieldSettlementReadyAt, v))
+}
+
+// SettlementReadyAtIsNil applies the IsNil predicate on the "settlement_ready_at" field.
+func SettlementReadyAtIsNil() predicate.MatchRound {
+	return predicate.MatchRound(sql.FieldIsNull(FieldSettlementReadyAt))
+}
+
+// SettlementReadyAtNotNil applies the NotNil predicate on the "settlement_ready_at" field.
+func SettlementReadyAtNotNil() predicate.MatchRound {
+	return predicate.MatchRound(sql.FieldNotNull(FieldSettlementReadyAt))
 }
 
 // StartedAtEQ applies the EQ predicate on the "started_at" field.

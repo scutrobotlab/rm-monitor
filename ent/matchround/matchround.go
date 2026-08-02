@@ -27,6 +27,14 @@ const (
 	FieldWorkflowUID = "workflow_uid"
 	// FieldWorkflowPhase holds the string denoting the workflow_phase field in the database.
 	FieldWorkflowPhase = "workflow_phase"
+	// FieldSettlementStatus holds the string denoting the settlement_status field in the database.
+	FieldSettlementStatus = "settlement_status"
+	// FieldSettlementImagePath holds the string denoting the settlement_image_path field in the database.
+	FieldSettlementImagePath = "settlement_image_path"
+	// FieldSettlementImageChecksum holds the string denoting the settlement_image_checksum field in the database.
+	FieldSettlementImageChecksum = "settlement_image_checksum"
+	// FieldSettlementReadyAt holds the string denoting the settlement_ready_at field in the database.
+	FieldSettlementReadyAt = "settlement_ready_at"
 	// FieldStartedAt holds the string denoting the started_at field in the database.
 	FieldStartedAt = "started_at"
 	// FieldEndedAt holds the string denoting the ended_at field in the database.
@@ -75,6 +83,10 @@ var Columns = []string{
 	FieldWorkflowName,
 	FieldWorkflowUID,
 	FieldWorkflowPhase,
+	FieldSettlementStatus,
+	FieldSettlementImagePath,
+	FieldSettlementImageChecksum,
+	FieldSettlementReadyAt,
 	FieldStartedAt,
 	FieldEndedAt,
 	FieldCreatedAt,
@@ -103,6 +115,8 @@ func ValidColumn(column string) bool {
 }
 
 var (
+	// DefaultSettlementStatus holds the default value on creation for the "settlement_status" field.
+	DefaultSettlementStatus string
 	// DefaultStartedAt holds the default value on creation for the "started_at" field.
 	DefaultStartedAt func() time.Time
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
@@ -196,6 +210,26 @@ func ByWorkflowUID(opts ...sql.OrderTermOption) OrderOption {
 // ByWorkflowPhase orders the results by the workflow_phase field.
 func ByWorkflowPhase(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldWorkflowPhase, opts...).ToFunc()
+}
+
+// BySettlementStatus orders the results by the settlement_status field.
+func BySettlementStatus(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSettlementStatus, opts...).ToFunc()
+}
+
+// BySettlementImagePath orders the results by the settlement_image_path field.
+func BySettlementImagePath(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSettlementImagePath, opts...).ToFunc()
+}
+
+// BySettlementImageChecksum orders the results by the settlement_image_checksum field.
+func BySettlementImageChecksum(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSettlementImageChecksum, opts...).ToFunc()
+}
+
+// BySettlementReadyAt orders the results by the settlement_ready_at field.
+func BySettlementReadyAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSettlementReadyAt, opts...).ToFunc()
 }
 
 // ByStartedAt orders the results by the started_at field.

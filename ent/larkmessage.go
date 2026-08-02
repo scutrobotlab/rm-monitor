@@ -27,6 +27,12 @@ type LarkMessage struct {
 	CardID *string `json:"card_id,omitempty"`
 	// CardPayload holds the value of the "card_payload" field.
 	CardPayload map[string]interface{} `json:"card_payload,omitempty"`
+	// CardSequence holds the value of the "card_sequence" field.
+	CardSequence int64 `json:"card_sequence,omitempty"`
+	// LastDeliveryError holds the value of the "last_delivery_error" field.
+	LastDeliveryError *string `json:"last_delivery_error,omitempty"`
+	// LastDeliveryAttemptAt holds the value of the "last_delivery_attempt_at" field.
+	LastDeliveryAttemptAt *time.Time `json:"last_delivery_attempt_at,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
@@ -65,11 +71,11 @@ func (*LarkMessage) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case larkmessage.FieldCardPayload:
 			values[i] = new([]byte)
-		case larkmessage.FieldID:
+		case larkmessage.FieldID, larkmessage.FieldCardSequence:
 			values[i] = new(sql.NullInt64)
-		case larkmessage.FieldMessageID, larkmessage.FieldChatID, larkmessage.FieldCardID:
+		case larkmessage.FieldMessageID, larkmessage.FieldChatID, larkmessage.FieldCardID, larkmessage.FieldLastDeliveryError:
 			values[i] = new(sql.NullString)
-		case larkmessage.FieldCreatedAt, larkmessage.FieldUpdatedAt:
+		case larkmessage.FieldLastDeliveryAttemptAt, larkmessage.FieldCreatedAt, larkmessage.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
 		case larkmessage.ForeignKeys[0]: // match_lark_messages
 			values[i] = new(sql.NullString)
@@ -121,6 +127,26 @@ func (_m *LarkMessage) assignValues(columns []string, values []any) error {
 				if err := json.Unmarshal(*value, &_m.CardPayload); err != nil {
 					return fmt.Errorf("unmarshal field card_payload: %w", err)
 				}
+			}
+		case larkmessage.FieldCardSequence:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field card_sequence", values[i])
+			} else if value.Valid {
+				_m.CardSequence = value.Int64
+			}
+		case larkmessage.FieldLastDeliveryError:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field last_delivery_error", values[i])
+			} else if value.Valid {
+				_m.LastDeliveryError = new(string)
+				*_m.LastDeliveryError = value.String
+			}
+		case larkmessage.FieldLastDeliveryAttemptAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field last_delivery_attempt_at", values[i])
+			} else if value.Valid {
+				_m.LastDeliveryAttemptAt = new(time.Time)
+				*_m.LastDeliveryAttemptAt = value.Time
 			}
 		case larkmessage.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -197,6 +223,19 @@ func (_m *LarkMessage) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("card_payload=")
 	builder.WriteString(fmt.Sprintf("%v", _m.CardPayload))
+	builder.WriteString(", ")
+	builder.WriteString("card_sequence=")
+	builder.WriteString(fmt.Sprintf("%v", _m.CardSequence))
+	builder.WriteString(", ")
+	if v := _m.LastDeliveryError; v != nil {
+		builder.WriteString("last_delivery_error=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	if v := _m.LastDeliveryAttemptAt; v != nil {
+		builder.WriteString("last_delivery_attempt_at=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))

@@ -91,6 +91,62 @@ func (_c *MatchRoundCreate) SetNillableWorkflowPhase(v *string) *MatchRoundCreat
 	return _c
 }
 
+// SetSettlementStatus sets the "settlement_status" field.
+func (_c *MatchRoundCreate) SetSettlementStatus(v string) *MatchRoundCreate {
+	_c.mutation.SetSettlementStatus(v)
+	return _c
+}
+
+// SetNillableSettlementStatus sets the "settlement_status" field if the given value is not nil.
+func (_c *MatchRoundCreate) SetNillableSettlementStatus(v *string) *MatchRoundCreate {
+	if v != nil {
+		_c.SetSettlementStatus(*v)
+	}
+	return _c
+}
+
+// SetSettlementImagePath sets the "settlement_image_path" field.
+func (_c *MatchRoundCreate) SetSettlementImagePath(v string) *MatchRoundCreate {
+	_c.mutation.SetSettlementImagePath(v)
+	return _c
+}
+
+// SetNillableSettlementImagePath sets the "settlement_image_path" field if the given value is not nil.
+func (_c *MatchRoundCreate) SetNillableSettlementImagePath(v *string) *MatchRoundCreate {
+	if v != nil {
+		_c.SetSettlementImagePath(*v)
+	}
+	return _c
+}
+
+// SetSettlementImageChecksum sets the "settlement_image_checksum" field.
+func (_c *MatchRoundCreate) SetSettlementImageChecksum(v string) *MatchRoundCreate {
+	_c.mutation.SetSettlementImageChecksum(v)
+	return _c
+}
+
+// SetNillableSettlementImageChecksum sets the "settlement_image_checksum" field if the given value is not nil.
+func (_c *MatchRoundCreate) SetNillableSettlementImageChecksum(v *string) *MatchRoundCreate {
+	if v != nil {
+		_c.SetSettlementImageChecksum(*v)
+	}
+	return _c
+}
+
+// SetSettlementReadyAt sets the "settlement_ready_at" field.
+func (_c *MatchRoundCreate) SetSettlementReadyAt(v time.Time) *MatchRoundCreate {
+	_c.mutation.SetSettlementReadyAt(v)
+	return _c
+}
+
+// SetNillableSettlementReadyAt sets the "settlement_ready_at" field if the given value is not nil.
+func (_c *MatchRoundCreate) SetNillableSettlementReadyAt(v *time.Time) *MatchRoundCreate {
+	if v != nil {
+		_c.SetSettlementReadyAt(*v)
+	}
+	return _c
+}
+
 // SetStartedAt sets the "started_at" field.
 func (_c *MatchRoundCreate) SetStartedAt(v time.Time) *MatchRoundCreate {
 	_c.mutation.SetStartedAt(v)
@@ -223,6 +279,10 @@ func (_c *MatchRoundCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (_c *MatchRoundCreate) defaults() {
+	if _, ok := _c.mutation.SettlementStatus(); !ok {
+		v := matchround.DefaultSettlementStatus
+		_c.mutation.SetSettlementStatus(v)
+	}
 	if _, ok := _c.mutation.StartedAt(); !ok {
 		v := matchround.DefaultStartedAt()
 		_c.mutation.SetStartedAt(v)
@@ -254,6 +314,9 @@ func (_c *MatchRoundCreate) check() error {
 		if err := matchround.WinnerValidator(v); err != nil {
 			return &ValidationError{Name: "winner", err: fmt.Errorf(`ent: validator failed for field "MatchRound.winner": %w`, err)}
 		}
+	}
+	if _, ok := _c.mutation.SettlementStatus(); !ok {
+		return &ValidationError{Name: "settlement_status", err: errors.New(`ent: missing required field "MatchRound.settlement_status"`)}
 	}
 	if _, ok := _c.mutation.StartedAt(); !ok {
 		return &ValidationError{Name: "started_at", err: errors.New(`ent: missing required field "MatchRound.started_at"`)}
@@ -316,6 +379,22 @@ func (_c *MatchRoundCreate) createSpec() (*MatchRound, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.WorkflowPhase(); ok {
 		_spec.SetField(matchround.FieldWorkflowPhase, field.TypeString, value)
 		_node.WorkflowPhase = &value
+	}
+	if value, ok := _c.mutation.SettlementStatus(); ok {
+		_spec.SetField(matchround.FieldSettlementStatus, field.TypeString, value)
+		_node.SettlementStatus = value
+	}
+	if value, ok := _c.mutation.SettlementImagePath(); ok {
+		_spec.SetField(matchround.FieldSettlementImagePath, field.TypeString, value)
+		_node.SettlementImagePath = &value
+	}
+	if value, ok := _c.mutation.SettlementImageChecksum(); ok {
+		_spec.SetField(matchround.FieldSettlementImageChecksum, field.TypeString, value)
+		_node.SettlementImageChecksum = &value
+	}
+	if value, ok := _c.mutation.SettlementReadyAt(); ok {
+		_spec.SetField(matchround.FieldSettlementReadyAt, field.TypeTime, value)
+		_node.SettlementReadyAt = &value
 	}
 	if value, ok := _c.mutation.StartedAt(); ok {
 		_spec.SetField(matchround.FieldStartedAt, field.TypeTime, value)

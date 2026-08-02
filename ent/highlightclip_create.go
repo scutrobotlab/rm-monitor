@@ -160,6 +160,48 @@ func (_c *HighlightClipCreate) SetNillableModelPayload(v *string) *HighlightClip
 	return _c
 }
 
+// SetPreviewPath sets the "preview_path" field.
+func (_c *HighlightClipCreate) SetPreviewPath(v string) *HighlightClipCreate {
+	_c.mutation.SetPreviewPath(v)
+	return _c
+}
+
+// SetNillablePreviewPath sets the "preview_path" field if the given value is not nil.
+func (_c *HighlightClipCreate) SetNillablePreviewPath(v *string) *HighlightClipCreate {
+	if v != nil {
+		_c.SetPreviewPath(*v)
+	}
+	return _c
+}
+
+// SetPreviewChecksum sets the "preview_checksum" field.
+func (_c *HighlightClipCreate) SetPreviewChecksum(v string) *HighlightClipCreate {
+	_c.mutation.SetPreviewChecksum(v)
+	return _c
+}
+
+// SetNillablePreviewChecksum sets the "preview_checksum" field if the given value is not nil.
+func (_c *HighlightClipCreate) SetNillablePreviewChecksum(v *string) *HighlightClipCreate {
+	if v != nil {
+		_c.SetPreviewChecksum(*v)
+	}
+	return _c
+}
+
+// SetArtifactReadyAt sets the "artifact_ready_at" field.
+func (_c *HighlightClipCreate) SetArtifactReadyAt(v time.Time) *HighlightClipCreate {
+	_c.mutation.SetArtifactReadyAt(v)
+	return _c
+}
+
+// SetNillableArtifactReadyAt sets the "artifact_ready_at" field if the given value is not nil.
+func (_c *HighlightClipCreate) SetNillableArtifactReadyAt(v *time.Time) *HighlightClipCreate {
+	if v != nil {
+		_c.SetArtifactReadyAt(*v)
+	}
+	return _c
+}
+
 // SetCompletedAt sets the "completed_at" field.
 func (_c *HighlightClipCreate) SetCompletedAt(v time.Time) *HighlightClipCreate {
 	_c.mutation.SetCompletedAt(v)
@@ -419,6 +461,18 @@ func (_c *HighlightClipCreate) createSpec() (*HighlightClip, *sqlgraph.CreateSpe
 	if value, ok := _c.mutation.ModelPayload(); ok {
 		_spec.SetField(highlightclip.FieldModelPayload, field.TypeString, value)
 		_node.ModelPayload = &value
+	}
+	if value, ok := _c.mutation.PreviewPath(); ok {
+		_spec.SetField(highlightclip.FieldPreviewPath, field.TypeString, value)
+		_node.PreviewPath = &value
+	}
+	if value, ok := _c.mutation.PreviewChecksum(); ok {
+		_spec.SetField(highlightclip.FieldPreviewChecksum, field.TypeString, value)
+		_node.PreviewChecksum = &value
+	}
+	if value, ok := _c.mutation.ArtifactReadyAt(); ok {
+		_spec.SetField(highlightclip.FieldArtifactReadyAt, field.TypeTime, value)
+		_node.ArtifactReadyAt = &value
 	}
 	if value, ok := _c.mutation.CompletedAt(); ok {
 		_spec.SetField(highlightclip.FieldCompletedAt, field.TypeTime, value)
