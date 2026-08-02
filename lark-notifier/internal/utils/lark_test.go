@@ -1,11 +1,39 @@
 package utils
 
 import (
+	"encoding/json"
 	"testing"
 
 	larkcardkit "github.com/larksuite/oapi-sdk-go/v3/service/cardkit/v1"
 	"github.com/pkg/errors"
 )
+
+func TestMatchCardRoundIconOmitsEmptyColor(t *testing.T) {
+	content := &MatchCardContent{Data: MatchCardData{
+		MatchProgress: "已结束", MatchIndex: "1", TotalRound: "3",
+		Rounds: []MatchRoundCard{{PanelID: "round-1", ContentID: "round-1-content", Title: "1:0", Content: "主视角"}},
+	}}
+	raw, err := content.RenderJSON()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var card struct {
+		Body struct {
+			Elements []struct {
+				Header struct {
+					Icon map[string]any `json:"icon"`
+				} `json:"header"`
+			} `json:"elements"`
+		} `json:"body"`
+	}
+	if err := json.Unmarshal([]byte(raw), &card); err != nil {
+		t.Fatal(err)
+	}
+	icon := card.Body.Elements[1].Header.Icon
+	if _, ok := icon["color"]; ok {
+		t.Fatalf("round icon contains empty color: %#v", icon)
+	}
+}
 
 func TestMatchCardUUID(t *testing.T) {
 	got := MatchCardUUID("match-1", "chat-1")

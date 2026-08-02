@@ -129,7 +129,6 @@
                     "icon": {
                         "tag": "standard_icon",
                         "token": "down-small-ccm_outlined",
-                        "color": "",
                         "size": "16px 16px"
                     },
                     "vertical_align": "center",
