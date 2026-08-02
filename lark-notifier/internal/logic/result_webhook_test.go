@@ -145,8 +145,11 @@ func TestCardEntityDataRendersCardJSON(t *testing.T) {
 				t.Fatalf("unexpected panel header: %#v", header)
 			}
 			icon := header["icon"].(map[string]any)
-			if icon["tag"] != "standard_icon" || icon["token"] != "down-small-ccm_outlined" || icon["color"] != "" || icon["size"] != "16px 16px" {
+			if icon["tag"] != "standard_icon" || icon["token"] != "down-small-ccm_outlined" || icon["size"] != "16px 16px" {
 				t.Fatalf("unexpected panel icon: %#v", icon)
+			}
+			if _, ok := icon["color"]; ok {
+				t.Fatalf("panel icon color should be omitted: %#v", icon)
 			}
 			title := header["title"].(map[string]any)
 			if title["tag"] != "markdown" || title["content"] != "<font color=red>**1**</font> : <font color=blue>**0** </font>" {
