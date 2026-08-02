@@ -575,7 +575,7 @@ func (l *NotifyLogic) cardContent(m *ent.Match) (*utils.MatchCardContent, error)
 	content.Data.HighlightMarkdown = highlightMarkdown(content.Data.HighlightBullets)
 	content.Data.HighlightMode = highlightCombinationMode(len(content.Data.HighlightImages))
 	if matchCardCompleted(m) {
-		content.Data.MatchProgress = ""
+		content.Data.MatchProgress = "已结束"
 		content.Data.Color = completedCardColor(m.Result)
 	}
 	return content, nil
