@@ -260,28 +260,9 @@ func (l *NotifyLogic) withCardLock(matchID, chatID string, fn func() error) erro
 }
 
 func (l *NotifyLogic) createChatMessage(matchID, chatID string, payload *CardPayload, result *ChatUpdateResult) error {
-	createdCardID, storedPayload, err := utils.CreateCardEntity(l.ctx, l.svcCtx.LarkClient, l.retryLark, payload.Content)
+	messageID, cardID, sequence, storedPayload, err := l.createRecoverableReference(matchID, chatID, utils.MatchCardUUID(matchID, chatID), payload)
 	if err != nil {
 		return err
-	}
-	messageID, err := utils.SendCardReferenceMessage(l.ctx, l.svcCtx.LarkClient, l.retryLark, chatID, createdCardID, utils.MatchCardUUID(matchID, chatID))
-	if err != nil {
-		return err
-	}
-	cardID, err := utils.ResolveCardEntityID(l.ctx, l.svcCtx.LarkClient, l.retryLark, messageID)
-	if err != nil {
-		return err
-	}
-	sequence := int64(0)
-	if cardID != createdCardID {
-		sequence = time.Now().Unix()
-		hash := cardPayloadHash(payload.Bytes)
-		uuid := utils.MatchCardUpdateUUID(matchID, cardID, sequence, hash)
-		storedPayload, err = utils.UpdateCardEntityData(l.ctx, l.svcCtx.LarkClient, l.retryLark, cardID, uuid, sequence, string(payload.Bytes), payload.Map)
-		if err != nil && !utils.IsCardUpdateAlreadyApplied(err) {
-			return errors.Wrap(err, "converge recovered cardkit card")
-		}
-		storedPayload = storedPayloadOrDesired(storedPayload, payload.Map)
 	}
 	now := time.Now()
 	created, err := l.svcCtx.DB.LarkMessage.Create().
@@ -361,6 +342,9 @@ func (l *NotifyLogic) updateChatMessage(matchID string, message *ent.LarkMessage
 	uuid := utils.MatchCardUpdateUUID(matchID, *message.CardID, reserved.CardSequence, hash)
 	storedPayload, updateErr := utils.UpdateCardEntityData(l.ctx, l.svcCtx.LarkClient, l.retryLark, *message.CardID, uuid, reserved.CardSequence, string(payload.Bytes), payload.Map)
 	if updateErr != nil && !utils.IsCardUpdateAlreadyApplied(updateErr) {
+		if utils.IsCardSourceExpired(updateErr) {
+			return l.replaceExpiredChatMessage(matchID, message, payload, result)
+		}
 		return l.recordDeliveryFailure(message.ID, updateErr)
 	}
 	if _, err := l.svcCtx.DB.LarkMessage.UpdateOneID(message.ID).
@@ -371,6 +355,62 @@ func (l *NotifyLogic) updateChatMessage(matchID string, message *ent.LarkMessage
 		return errors.Wrap(err, "save lark card payload")
 	}
 	result.Action = "updated"
+	return nil
+}
+
+func (l *NotifyLogic) createRecoverableReference(matchID, chatID, requestUUID string, payload *CardPayload) (string, string, int64, map[string]any, error) {
+	createdCardID, storedPayload, err := utils.CreateCardEntity(l.ctx, l.svcCtx.LarkClient, l.retryLark, payload.Content)
+	if err != nil {
+		return "", "", 0, nil, err
+	}
+	messageID, err := utils.SendCardReferenceMessage(l.ctx, l.svcCtx.LarkClient, l.retryLark, chatID, createdCardID, requestUUID)
+	if err != nil {
+		return "", "", 0, nil, err
+	}
+	cardID, err := utils.ResolveCardEntityID(l.ctx, l.svcCtx.LarkClient, l.retryLark, messageID)
+	if err != nil {
+		return "", "", 0, nil, err
+	}
+	sequence := int64(0)
+	if cardID != createdCardID {
+		sequence = time.Now().Unix()
+		hash := cardPayloadHash(payload.Bytes)
+		uuid := utils.MatchCardUpdateUUID(matchID, cardID, sequence, hash)
+		storedPayload, err = utils.UpdateCardEntityData(l.ctx, l.svcCtx.LarkClient, l.retryLark, cardID, uuid, sequence, string(payload.Bytes), payload.Map)
+		if err != nil && !utils.IsCardUpdateAlreadyApplied(err) {
+			return "", "", 0, nil, errors.Wrap(err, "converge recovered cardkit card")
+		}
+		storedPayload = storedPayloadOrDesired(storedPayload, payload.Map)
+	}
+	return messageID, cardID, sequence, storedPayload, nil
+}
+
+func (l *NotifyLogic) replaceExpiredChatMessage(matchID string, message *ent.LarkMessage, payload *CardPayload, result *ChatUpdateResult) error {
+	if message.ChatID == nil || strings.TrimSpace(*message.ChatID) == "" {
+		return l.recordDeliveryFailure(message.ID, errors.New("expired card cannot be replaced without chat_id"))
+	}
+	chatID := strings.TrimSpace(*message.ChatID)
+	replacementUUID := utils.MatchCardReplacementUUID(matchID, chatID, message.MessageID)
+	newMessageID, cardID, sequence, storedPayload, err := l.createRecoverableReference(matchID, chatID, replacementUUID, payload)
+	if err != nil {
+		return l.recordDeliveryFailure(message.ID, err)
+	}
+	updated, err := l.svcCtx.DB.LarkMessage.UpdateOneID(message.ID).
+		SetMessageID(newMessageID).
+		SetCardID(cardID).
+		SetCardSequence(sequence).
+		SetCardPayload(storedPayload).
+		SetLastDeliveryAttemptAt(time.Now()).
+		ClearLastDeliveryError().
+		Save(l.ctx)
+	if err != nil {
+		return errors.Wrap(err, "save replacement lark card")
+	}
+	if err := utils.DeleteMessage(l.ctx, l.svcCtx.LarkClient, l.retryLark, message.MessageID); err != nil {
+		l.Errorf("delete expired lark message match=%s chat=%s message_id=%s: %v", matchID, chatID, message.MessageID, err)
+	}
+	result.Action = "updated"
+	result.Sequence = updated.CardSequence
 	return nil
 }
 

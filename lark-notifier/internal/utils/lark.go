@@ -103,6 +103,10 @@ func MatchCardUpdateUUID(matchID, cardID string, sequence int64, payloadHash ...
 	return shortUUID("rm-card-update", parts...)
 }
 
+func MatchCardReplacementUUID(matchID, chatID, messageID string) string {
+	return shortUUID("rm-card-replace", matchID, chatID, messageID)
+}
+
 func shortUUID(prefix string, parts ...string) string {
 	h := sha256.New()
 	for _, part := range parts {

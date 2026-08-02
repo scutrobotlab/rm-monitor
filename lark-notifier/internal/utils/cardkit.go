@@ -101,6 +101,15 @@ func IsCardUpdateAlreadyApplied(err error) bool {
 	return false
 }
 
+func IsCardSourceExpired(err error) bool {
+	var updateResp *larkcardkit.UpdateCardResp
+	if stderrors.As(err, &updateResp) {
+		return updateResp.Code == 300307
+	}
+	var codeErr *larkcore.CodeError
+	return stderrors.As(err, &codeErr) && codeErr.Code == 300307
+}
+
 func isAlreadyAppliedCardCode(code int) bool {
 	return code == 200770 || code == 300317
 }
@@ -163,6 +172,22 @@ func ResolveCardEntityID(ctx context.Context, client *lark.Client, retry LarkRet
 		return "", errors.New("resolve cardkit card returned empty card_id")
 	}
 	return strings.TrimSpace(*resp.Data.CardId), nil
+}
+
+func DeleteMessage(ctx context.Context, client *lark.Client, retry LarkRetryFunc, messageID string) error {
+	var resp *larkim.DeleteMessageResp
+	return retry("", func() error {
+		req := larkim.NewDeleteMessageReqBuilder().MessageId(messageID).Build()
+		var callErr error
+		resp, callErr = client.Im.V1.Message.Delete(ctx, req)
+		if callErr != nil {
+			return callErr
+		}
+		if !resp.Success() {
+			return resp
+		}
+		return nil
+	})
 }
 
 func PatchCardReferenceMessage(ctx context.Context, client *lark.Client, retry LarkRetryFunc, messageID, cardID string) error {
