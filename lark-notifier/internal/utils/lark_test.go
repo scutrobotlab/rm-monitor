@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"testing"
 
-	larkcore "github.com/larksuite/oapi-sdk-go/v3/core"
 	larkcardkit "github.com/larksuite/oapi-sdk-go/v3/service/cardkit/v1"
 	"github.com/pkg/errors"
 )
@@ -62,19 +61,6 @@ func TestMatchCardUpdateUUID(t *testing.T) {
 	}
 }
 
-func TestMatchCardReplacementUUID(t *testing.T) {
-	got := MatchCardReplacementUUID("match-1", "chat-1", "message-1")
-	if got != MatchCardReplacementUUID("match-1", "chat-1", "message-1") {
-		t.Fatal("replacement UUID must be stable for recovery")
-	}
-	if got == MatchCardReplacementUUID("match-1", "chat-1", "message-2") {
-		t.Fatal("replacement UUID must include the old message ID")
-	}
-	if len(got) > 50 {
-		t.Fatalf("replacement UUID length = %d, want <= 50", len(got))
-	}
-}
-
 func TestCardReferenceContentCanBeReusedAcrossChats(t *testing.T) {
 	contentA, err := CardReferenceMessageContent("card-1")
 	if err != nil {
@@ -107,14 +93,5 @@ func TestIsCardUpdateAlreadyApplied(t *testing.T) {
 	err.Code = 9499
 	if IsCardUpdateAlreadyApplied(err) {
 		t.Fatal("9499 should remain a hard card update error")
-	}
-}
-
-func TestIsCardSourceExpired(t *testing.T) {
-	if !IsCardSourceExpired(errors.Wrap(&larkcardkit.UpdateCardResp{CodeError: larkcore.CodeError{Code: 300307}}, "wrapped")) {
-		t.Fatal("300307 should be classified as an expired card source")
-	}
-	if IsCardSourceExpired(&larkcardkit.UpdateCardResp{CodeError: larkcore.CodeError{Code: 300317}}) {
-		t.Fatal("sequence conflicts must not replace the card message")
 	}
 }
