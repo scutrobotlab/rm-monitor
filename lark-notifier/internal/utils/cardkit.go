@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	stderrors "errors"
+	"strings"
 	"time"
 
 	lark "github.com/larksuite/oapi-sdk-go/v3"
@@ -109,17 +110,17 @@ func SendCardReferenceMessage(ctx context.Context, client *lark.Client, retry La
 	if err != nil {
 		return "", err
 	}
-	req := larkim.NewCreateMessageReqBuilder().
-		ReceiveIdType(larkim.ReceiveIdTypeChatId).
-		Body(larkim.NewCreateMessageReqBodyBuilder().
-			ReceiveId(chatID).
-			MsgType(larkim.MsgTypeInteractive).
-			Content(contentData).
-			Uuid(uuid).
-			Build()).
-		Build()
 	var resp *larkim.CreateMessageResp
 	err = retry(chatID, func() error {
+		req := larkim.NewCreateMessageReqBuilder().
+			ReceiveIdType(larkim.ReceiveIdTypeChatId).
+			Body(larkim.NewCreateMessageReqBodyBuilder().
+				ReceiveId(chatID).
+				MsgType(larkim.MsgTypeInteractive).
+				Content(contentData).
+				Uuid(uuid).
+				Build()).
+			Build()
 		var callErr error
 		resp, callErr = client.Im.V1.Message.Create(ctx, req)
 		if callErr != nil {
@@ -139,17 +140,42 @@ func SendCardReferenceMessage(ctx context.Context, client *lark.Client, retry La
 	return *resp.Data.MessageId, nil
 }
 
+func ResolveCardEntityID(ctx context.Context, client *lark.Client, retry LarkRetryFunc, messageID string) (string, error) {
+	var resp *larkcardkit.IdConvertCardResp
+	err := retry("", func() error {
+		req := larkcardkit.NewIdConvertCardReqBuilder().
+			Body(larkcardkit.NewIdConvertCardReqBodyBuilder().MessageId(messageID).Build()).
+			Build()
+		var callErr error
+		resp, callErr = client.Cardkit.V1.Card.IdConvert(ctx, req)
+		if callErr != nil {
+			return callErr
+		}
+		if !resp.Success() {
+			return resp
+		}
+		return nil
+	})
+	if err != nil {
+		return "", errors.Wrap(err, "resolve cardkit card from message")
+	}
+	if resp.Data == nil || resp.Data.CardId == nil || strings.TrimSpace(*resp.Data.CardId) == "" {
+		return "", errors.New("resolve cardkit card returned empty card_id")
+	}
+	return strings.TrimSpace(*resp.Data.CardId), nil
+}
+
 func PatchCardReferenceMessage(ctx context.Context, client *lark.Client, retry LarkRetryFunc, messageID, cardID string) error {
 	contentData, err := CardReferenceMessageContent(cardID)
 	if err != nil {
 		return err
 	}
-	req := larkim.NewPatchMessageReqBuilder().
-		MessageId(messageID).
-		Body(larkim.NewPatchMessageReqBodyBuilder().Content(contentData).Build()).
-		Build()
 	var resp *larkim.PatchMessageResp
 	return retry("", func() error {
+		req := larkim.NewPatchMessageReqBuilder().
+			MessageId(messageID).
+			Body(larkim.NewPatchMessageReqBodyBuilder().Content(contentData).Build()).
+			Build()
 		var callErr error
 		resp, callErr = client.Im.V1.Message.Patch(ctx, req)
 		if callErr != nil {
