@@ -341,7 +341,7 @@ func (l *NotifyLogic) updateChatMessage(matchID string, message *ent.LarkMessage
 	result.Sequence = reserved.CardSequence
 	hash := cardPayloadHash(payload.Bytes)
 	uuid := utils.MatchCardUpdateUUID(matchID, *message.CardID, reserved.CardSequence, hash)
-	storedPayload, updateErr := utils.UpdateCardEntity(l.ctx, l.svcCtx.LarkClient, l.retryLark, *message.CardID, uuid, reserved.CardSequence, payload.Content)
+	storedPayload, updateErr := utils.UpdateCardEntityData(l.ctx, l.svcCtx.LarkClient, l.retryLark, *message.CardID, uuid, reserved.CardSequence, string(payload.Bytes), payload.Map)
 	if updateErr != nil && !utils.IsCardUpdateAlreadyApplied(updateErr) {
 		return l.recordDeliveryFailure(message.ID, updateErr)
 	}
