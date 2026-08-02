@@ -51,7 +51,7 @@ func main() {
 			logx.Error(err)
 			os.Exit(1)
 		}
-		logx.Infof("artifact readiness backfill settlements=%d highlights=%d", result.Settlements, result.Highlights)
+		logx.Infof("artifact readiness backfill settlements=%d highlights=%d card_sequences=%d", result.Settlements, result.Highlights, result.CardSequences)
 		return
 	}
 

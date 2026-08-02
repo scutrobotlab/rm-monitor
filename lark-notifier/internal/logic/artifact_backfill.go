@@ -13,13 +13,15 @@ import (
 	"github.com/pkg/errors"
 	"scutbot.cn/web/rm-monitor/ent"
 	"scutbot.cn/web/rm-monitor/ent/highlightclip"
+	"scutbot.cn/web/rm-monitor/ent/larkmessage"
 	common "scutbot.cn/web/rm-monitor/pkg/config"
 	"scutbot.cn/web/rm-monitor/pkg/pathfmt"
 )
 
 type ArtifactBackfillResult struct {
-	Settlements int `json:"settlements"`
-	Highlights  int `json:"highlights"`
+	Settlements   int `json:"settlements"`
+	Highlights    int `json:"highlights"`
+	CardSequences int `json:"card_sequences"`
 }
 
 func BackfillArtifactReadiness(ctx context.Context, client *ent.Client, configured common.RecordConf) (ArtifactBackfillResult, error) {
@@ -29,6 +31,15 @@ func BackfillArtifactReadiness(ctx context.Context, client *ent.Client, configur
 	if baseDir == "" {
 		baseDir = "/records"
 	}
+	sequenceFloor := time.Now().Unix()
+	updatedSequences, err := client.LarkMessage.Update().
+		Where(larkmessage.CardSequenceLT(1_000_000_000)).
+		SetCardSequence(sequenceFloor).
+		Save(ctx)
+	if err != nil {
+		return result, errors.Wrap(err, "backfill legacy CardKit sequences")
+	}
+	result.CardSequences = updatedSequences
 	rounds, err := client.MatchRound.Query().WithMatch(func(q *ent.MatchQuery) { q.WithRedTeam().WithBlueTeam() }).WithLarkBitableRecords().All(ctx)
 	if err != nil {
 		return result, errors.Wrap(err, "query rounds for artifact backfill")

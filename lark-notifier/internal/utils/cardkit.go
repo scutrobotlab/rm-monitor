@@ -58,19 +58,16 @@ func UpdateCardEntityData(ctx context.Context, client *lark.Client, retry LarkRe
 	if contentData == "" {
 		return nil, errors.New("update cardkit card payload is empty")
 	}
-	req := larkcardkit.NewUpdateCardReqBuilder().
-		CardId(cardID).
-		Body(larkcardkit.NewUpdateCardReqBodyBuilder().
-			Card(larkcardkit.NewCardBuilder().
-				Type("card_json").
-				Data(contentData).
-				Build()).
-			Uuid(uuid).
-			Sequence(int(sequence)).
-			Build()).
-		Build()
 	var resp *larkcardkit.UpdateCardResp
 	err := retry("", func() error {
+		req := larkcardkit.NewUpdateCardReqBuilder().
+			CardId(cardID).
+			Body(larkcardkit.NewUpdateCardReqBodyBuilder().
+				Card(larkcardkit.NewCardBuilder().Type("card_json").Data(contentData).Build()).
+				Uuid(uuid).
+				Sequence(int(sequence)).
+				Build()).
+			Build()
 		var callErr error
 		resp, callErr = client.Cardkit.V1.Card.Update(ctx, req)
 		if callErr != nil {
