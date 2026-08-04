@@ -156,17 +156,20 @@ func run(ctx context.Context, c config.Config, jobCtx jobcontract.RecordContext,
 	logx.Infof("recording %s to %s", jobCtx.SourceURL, path.Clean(jobCtx.OutputPath))
 	err = cmd.Run()
 	if err != nil && !stopRequested.Load() {
-		if jobCtx.KeepAudio {
+		if !canCommitPartialRecord(jobCtx, partPath) {
 			_ = removeRecordMeta(filepath.Dir(fullPath))
+			msg := commandError(err, stderr.String())
+			return errors.New(msg)
 		}
 		msg := commandError(err, stderr.String())
-		return errors.New(msg)
+		logx.Errorf("ffmpeg exited before round stop for non-primary role, committing partial record role=%q err=%s", jobCtx.Role, msg)
 	}
 	if !stopRequested.Load() {
-		if jobCtx.KeepAudio {
+		if !canCommitPartialRecord(jobCtx, partPath) {
 			_ = removeRecordMeta(filepath.Dir(fullPath))
+			return errors.New("ffmpeg exited before round stop was requested")
 		}
-		return errors.New("ffmpeg exited before round stop was requested")
+		logx.Errorf("ffmpeg exited before round stop for non-primary role, committing partial record role=%q", jobCtx.Role)
 	}
 
 	if err := os.Rename(partPath, fullPath); err != nil {
@@ -267,6 +270,14 @@ func removeRecordMeta(roundDir string) error {
 		return nil
 	}
 	return err
+}
+
+func canCommitPartialRecord(jobCtx jobcontract.RecordContext, partPath string) bool {
+	if jobCtx.KeepAudio {
+		return false
+	}
+	stat, err := os.Stat(partPath)
+	return err == nil && stat.Size() > 0
 }
 
 func isNetworkSource(source string) bool {

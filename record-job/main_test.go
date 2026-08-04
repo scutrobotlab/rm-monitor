@@ -7,6 +7,8 @@ import (
 	"slices"
 	"testing"
 	"time"
+
+	"scutbot.cn/web/rm-monitor/pkg/jobcontract"
 )
 
 func TestRecordFFmpegArgsKeepsAudioForConfiguredRole(t *testing.T) {
@@ -72,6 +74,31 @@ func TestWriteRecordMeta(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(dir, recordMetaFile+".part")); !os.IsNotExist(err) {
 		t.Fatalf("temporary metadata file should not remain, stat err = %v", err)
 	}
+}
+
+func TestCanCommitPartialRecord(t *testing.T) {
+	dir := t.TempDir()
+	partPath := filepath.Join(dir, "role.flv.part")
+	if err := os.WriteFile(partPath, []byte("partial"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if !canCommitPartialRecord(recordContext("蓝方英雄第一视角", false), partPath) {
+		t.Fatal("expected non-audio role with partial file to be committable")
+	}
+	if canCommitPartialRecord(recordContext("主视角", true), partPath) {
+		t.Fatal("primary audio role must not commit early partial files")
+	}
+	emptyPath := filepath.Join(dir, "empty.flv.part")
+	if err := os.WriteFile(emptyPath, nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if canCommitPartialRecord(recordContext("蓝方英雄第一视角", false), emptyPath) {
+		t.Fatal("empty partial file must not be committable")
+	}
+}
+
+func recordContext(role string, keepAudio bool) jobcontract.RecordContext {
+	return jobcontract.RecordContext{Role: role, KeepAudio: keepAudio}
 }
 
 func assertHasSequence(t *testing.T, args []string, want ...string) {
