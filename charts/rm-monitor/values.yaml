@@ -48,6 +48,13 @@ record:
   liveInfoURL: ""
   baseDir: /records
   stopDelaySeconds: 60
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 512Mi
   audioRoles:
     - "主视角"
   roleBlackList:
@@ -187,6 +194,14 @@ recordTrim:
   memoryLimit: "2Gi"
 
 priority: []
+
+scheduling:
+  recordNodeSelector:
+    rm-monitor/record: "true"
+  recordNodeTolerations: []
+  avoidRecordNode:
+    enabled: true
+    weight: 100
 
 storage:
   record:

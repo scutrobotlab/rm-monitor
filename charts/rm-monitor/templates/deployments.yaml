@@ -28,6 +28,7 @@ spec:
       {{- if $cfg.serviceAccount }}
       serviceAccountName: {{ $cfg.serviceAccount }}
       {{- end }}
+{{ include "rm-monitor.avoidRecordNodeAffinity" $ | indent 6 }}
       containers:
         - name: {{ $cfg.name }}
           image: {{ include "rm-monitor.image" (dict "root" $ "component" $component) }}

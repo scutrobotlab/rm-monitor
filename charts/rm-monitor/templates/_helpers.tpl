@@ -199,3 +199,16 @@ retryStrategy:
     factor: 2
     maxDuration: "2m"
 {{- end -}}
+
+{{- define "rm-monitor.avoidRecordNodeAffinity" -}}
+{{- if .Values.scheduling.avoidRecordNode.enabled }}
+affinity:
+  nodeAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: {{ .Values.scheduling.avoidRecordNode.weight }}
+        preference:
+          matchExpressions:
+            - key: rm-monitor/record
+              operator: DoesNotExist
+{{- end -}}
+{{- end -}}

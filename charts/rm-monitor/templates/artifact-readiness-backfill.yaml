@@ -14,6 +14,7 @@ spec:
     spec:
       serviceAccountName: {{ .Values.serviceAccount.name }}
       restartPolicy: Never
+{{ include "rm-monitor.avoidRecordNodeAffinity" . | indent 6 }}
       containers:
         - name: artifact-readiness-backfill
           image: {{ include "rm-monitor.image" (dict "root" . "component" "lark-notifier") }}

@@ -299,6 +299,13 @@ spec:
             valueFrom: {path: /tmp/argo/highlight_context}
     - name: record
 {{ include "rm-monitor.recordRetryStrategy" . | indent 6 }}
+      priorityClassName: {{ .Values.priorityClasses.recordCritical.name }}
+      nodeSelector:
+{{ toYaml .Values.scheduling.recordNodeSelector | indent 8 }}
+      {{- with .Values.scheduling.recordNodeTolerations }}
+      tolerations:
+{{ toYaml . | indent 8 }}
+      {{- end }}
       inputs:
         parameters:
           - name: context
@@ -307,6 +314,8 @@ spec:
         imagePullPolicy: {{ include "rm-monitor.jobImagePullPolicy" . }}
         command: ["/usr/local/bin/app"]
         args: ["-f", "{{ include "rm-monitor.configPath" . }}"]
+        resources:
+{{ toYaml .Values.record.resources | indent 10 }}
         env:
           - name: RM_MONITOR_JOB_CONTEXT
             value: "{{`{{inputs.parameters.context}}`}}"
@@ -328,6 +337,7 @@ spec:
           - name: checksum
             valueFrom: {path: /tmp/argo/checksum}
     - name: danmu
+{{ include "rm-monitor.avoidRecordNodeAffinity" . | indent 6 }}
       inputs:
         parameters:
           - name: context
@@ -356,6 +366,7 @@ spec:
             valueFrom: {path: /tmp/argo/online_count_json}
     - name: analyze
 {{ include "rm-monitor.processingRetryStrategy" . | indent 6 }}
+{{ include "rm-monitor.avoidRecordNodeAffinity" . | indent 6 }}
       inputs:
         parameters:
           - name: context
@@ -440,6 +451,7 @@ spec:
             valueFrom: {path: /tmp/argo/subtitle_path}
     - name: record-trim
 {{ include "rm-monitor.processingRetryStrategy" . | indent 6 }}
+{{ include "rm-monitor.avoidRecordNodeAffinity" . | indent 6 }}
       inputs:
         parameters:
           - name: context
@@ -474,6 +486,7 @@ spec:
             valueFrom: {path: /tmp/argo/duration_seconds}
     - name: lark-record
 {{ include "rm-monitor.processingRetryStrategy" . | indent 6 }}
+{{ include "rm-monitor.avoidRecordNodeAffinity" . | indent 6 }}
       synchronization:
         semaphores:
           - configMapKeyRef:
@@ -575,6 +588,7 @@ spec:
             valueFrom: {path: /tmp/argo/checksum}
     - name: highlight
 {{ include "rm-monitor.processingRetryStrategy" . | indent 6 }}
+{{ include "rm-monitor.avoidRecordNodeAffinity" . | indent 6 }}
       inputs:
         parameters:
           - name: context
@@ -601,6 +615,7 @@ spec:
             valueFrom: {path: /tmp/argo/highlight_count}
     - name: highlight-artifact
 {{ include "rm-monitor.processingRetryStrategy" . | indent 6 }}
+{{ include "rm-monitor.avoidRecordNodeAffinity" . | indent 6 }}
       inputs:
         parameters:
           - name: context
@@ -631,6 +646,7 @@ spec:
             valueFrom: {path: /tmp/argo/title}
     - name: highlight-finalize
 {{ include "rm-monitor.processingRetryStrategy" . | indent 6 }}
+{{ include "rm-monitor.avoidRecordNodeAffinity" . | indent 6 }}
       inputs:
         parameters:
           - name: context
@@ -651,6 +667,7 @@ spec:
             readOnly: true
     - name: manifest
 {{ include "rm-monitor.processingRetryStrategy" . | indent 6 }}
+{{ include "rm-monitor.avoidRecordNodeAffinity" . | indent 6 }}
       container:
         image: {{ include "rm-monitor.image" (dict "root" . "component" "manifest-job") }}
         imagePullPolicy: {{ include "rm-monitor.jobImagePullPolicy" . }}
